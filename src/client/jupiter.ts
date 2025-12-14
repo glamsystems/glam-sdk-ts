@@ -24,6 +24,9 @@ import {
 } from "../utils/jupiterApi";
 
 class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
+  /**
+   * Returns the instructions for a Jupiter swap and the lookup tables
+   */
   async swapIxs(
     options: {
       quoteParams?: QuoteParams;

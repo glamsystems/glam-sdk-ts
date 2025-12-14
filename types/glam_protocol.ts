@@ -8,7 +8,7 @@ export type GlamProtocol = {
   "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz",
   "metadata": {
     "name": "glamProtocol",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "spec": "0.1.0",
     "description": "Glam Protocol"
   },
