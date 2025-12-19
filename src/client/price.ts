@@ -12,15 +12,9 @@ import { BaseClient } from "./base";
 
 import { ASSETS_MAINNET, SOL_ORACLE } from "../assets";
 import { StateModel } from "../models";
-import {
-  DriftProtocolClient,
-  DriftUser,
-  DriftVaultsClient,
-  SpotMarket,
-} from "./drift";
+import { DriftProtocolClient, DriftVaultsClient } from "./drift";
 import {
   bfToDecimal,
-  decodeUser,
   findStakeAccounts,
   Fraction,
   MarketType,
@@ -36,7 +30,16 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { KAMINO_LENDING_PROGRAM, KAMINO_OBTRIGATION_SIZE } from "../constants";
-import { KVaultState, Obligation, Reserve } from "../deser";
+import {
+  DriftSpotMarket,
+  DriftPerpMarket,
+  DriftUser,
+  DriftVault,
+  KVaultState,
+  Obligation,
+  Reserve,
+  DriftVaultDepositor,
+} from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
 
 export class Holding {
@@ -127,7 +130,11 @@ export class PriceClient {
       await this.base.fetchStateAccount(); // fetch state account only, don't need to build entire state model
     const externalPositionsSet = new PkSet(externalPositions);
 
-    let driftPubkeys = new PkMap<PkSet>(); // user -> markets map
+    let glamDriftUserSpotMarketsMap = new PkMap<PkSet>(); // glam-controlled drift user -> spot markets map
+    let dvaultDepositorsAndVaults = new PkMap<DriftVault>(); // dvault depositor -> drift vault map
+    let dvaultUserSpotMarketsMap = new PkMap<PkSet>(); // dvault drift user -> spot markets map
+    let dvaultUserPerpMarketsMap = new PkMap<PkSet>(); // dvault drift user -> perp markets map
+
     let kaminoPubkeys = new PkMap<PkSet>(); // obligation -> reserves map
     let kvaultAtasAndStates = new PkMap<KVaultState>(); // kvault share ata -> kvault state
     let kvaultReserves = new PkSet();
@@ -136,12 +143,37 @@ export class PriceClient {
       acl.integrationProgram.equals(this.base.extDriftProgram.programId),
     );
     if (driftIntegrationAcl) {
-      // drift protocol
+      // drift protocol, fetch up to 8 sub-accounts (aka drift users)
       if (driftIntegrationAcl.protocolsBitmask & 0b01) {
-        driftPubkeys = await this.getPubkeysForSpotHoldings(commitment);
+        const userPdas = Array.from(Array(8).keys()).map((subAccountId) => {
+          const { user } = this.drift.getDriftUserPdas(subAccountId);
+          return user;
+        });
+        glamDriftUserSpotMarketsMap = await this.getPubkeysForSpotHoldings(
+          userPdas,
+          commitment,
+        );
       }
-      // TODO: parse drift vaults holdings
       if (driftIntegrationAcl.protocolsBitmask & 0b10) {
+        // 1. find all depositors
+        // 2. for each depositor, calculate the underlying drift vault AUM
+        //    2.1 fetch drift vault's user accout
+        //    2.2 price drift vault's spot positions and perp PnL
+        //    2.3 drift vault AUM = spot value + perp PnL
+        // 3. glam vault holding = deposit_share / total_shares * drift vault AUM
+        dvaultDepositorsAndVaults =
+          await this.getDepositorsAndDriftVaults(commitment);
+        const userPdas = Array.from(dvaultDepositorsAndVaults.values()).map(
+          ({ user }) => user,
+        );
+        dvaultUserSpotMarketsMap = await this.getPubkeysForSpotHoldings(
+          userPdas,
+          commitment,
+        );
+        dvaultUserPerpMarketsMap = await this.getPubkeysForPerpHoldings(
+          userPdas,
+          commitment,
+        );
       }
     }
 
@@ -172,8 +204,20 @@ export class PriceClient {
       externalPositionsSet,
       commitment,
     );
-    const driftUsers = Array.from(driftPubkeys.pkKeys());
-    const driftSpotMarkets = [...driftPubkeys.values()]
+
+    const glamDriftUsers = Array.from(glamDriftUserSpotMarketsMap.pkKeys());
+    const glamDriftSpotMarkets = [...glamDriftUserSpotMarketsMap.values()]
+      .map((s) => Array.from(s.pkValues()))
+      .flat();
+
+    const dvaultDepositors = Array.from(dvaultDepositorsAndVaults.pkKeys());
+    const dvaultUsers = [...dvaultDepositorsAndVaults.values()].map(
+      (v) => v.user,
+    );
+    const dvaultUserSpotMarkets = [...dvaultUserSpotMarketsMap.values()]
+      .map((s) => Array.from(s.pkValues()))
+      .flat();
+    const dvaultUserPerpMarkets = [...dvaultUserPerpMarketsMap.values()]
       .map((s) => Array.from(s.pkValues()))
       .flat();
 
@@ -188,14 +232,25 @@ export class PriceClient {
     const pubkeys = Array.from(
       new PkSet([
         ...tokenPubkeys,
-        ...driftUsers,
-        ...driftSpotMarkets,
+        ...glamDriftUsers,
+        ...glamDriftSpotMarkets,
+        ...dvaultDepositors,
+        ...dvaultUsers,
+        ...dvaultUserSpotMarkets,
+        ...dvaultUserPerpMarkets,
         ...kaminoObligations,
         ...kaminoReserves,
         ...kvaultAtas,
         SYSVAR_CLOCK_PUBKEY, // read unix timestamp from sysvar clock account
       ]),
     );
+
+    if (pubkeys.length > 100) {
+      throw new Error(
+        `Too many pubkeys to fetch accounts for: ${pubkeys.length} > 100`,
+      );
+    }
+
     const {
       context: { slot },
       value: accountsInfo,
@@ -207,27 +262,57 @@ export class PriceClient {
     // Build a map of pubkey to account data for quick lookup
     const accountsDataMap = new PkMap<Buffer>();
     for (let i = 0; i < accountsInfo.length; i++) {
-      accountsDataMap.set(pubkeys[i], accountsInfo[i]!.data);
+      const accountInfo = accountsInfo[i];
+      if (accountInfo) {
+        accountsDataMap.set(pubkeys[i], accountInfo.data);
+      }
     }
 
     // Build a map of parsed drift spot markets
-    const driftSpotMarketsMap = new PkMap<SpotMarket>();
-    for (let i = 0; i < driftSpotMarkets.length; i++) {
-      const market = this.drift.parseSpotMarket(
-        driftSpotMarkets[i],
-        accountsDataMap.get(driftSpotMarkets[i])!,
-      );
-      driftSpotMarketsMap.set(driftSpotMarkets[i], market);
+    const driftSpotMarketsMap = new PkMap<DriftSpotMarket>();
+    for (const marketPda of glamDriftSpotMarkets) {
+      const data = accountsDataMap.get(marketPda);
+      if (data) {
+        const market = DriftSpotMarket.decode(marketPda, data);
+        driftSpotMarketsMap.set(marketPda, market);
+      }
+    }
+    for (const marketPda of dvaultUserSpotMarkets) {
+      const data = accountsDataMap.get(marketPda);
+      if (data) {
+        const market = DriftSpotMarket.decode(marketPda, data);
+        driftSpotMarketsMap.set(marketPda, market);
+      }
+    }
+
+    // Build a map of parsed drift perp markets
+    const driftPerpMarketsMap = new PkMap<DriftPerpMarket>();
+    for (const marketPda of dvaultUserPerpMarkets) {
+      const data = accountsDataMap.get(marketPda);
+      if (data) {
+        const market = DriftPerpMarket.decode(marketPda, data);
+        driftPerpMarketsMap.set(marketPda, market);
+      }
+    }
+
+    // Build a map of parsed dvault deposits
+    const dvaultDepositorsMap = new PkMap<DriftVaultDepositor>();
+    for (const pubkey of dvaultDepositors) {
+      const data = accountsDataMap.get(pubkey);
+      if (data) {
+        const depositor = DriftVaultDepositor.decode(pubkey, data);
+        dvaultDepositorsMap.set(pubkey, depositor);
+      }
     }
 
     // Build a map of parsed kamino reserves
     const kaminoReservesMap = new PkMap<Reserve>();
     for (let i = 0; i < kaminoReserves.length; i++) {
-      const reserve = Reserve.decode(
-        kaminoReserves[i],
-        accountsDataMap.get(kaminoReserves[i])!,
-      );
-      kaminoReservesMap.set(kaminoReserves[i], reserve);
+      const data = accountsDataMap.get(kaminoReserves[i]);
+      if (data) {
+        const reserve = Reserve.decode(kaminoReserves[i], data);
+        kaminoReservesMap.set(kaminoReserves[i], reserve);
+      }
     }
 
     // Build a map of token prices (in USD)
@@ -245,12 +330,22 @@ export class PriceClient {
       "Jupiter",
     );
     const driftSpotHoldings = this.getDriftSpotHoldings(
-      driftPubkeys.pkKeys(),
+      glamDriftUserSpotMarketsMap.pkKeys(),
       driftSpotMarketsMap,
       accountsDataMap,
       tokenPricesMap,
       "Jupiter",
     );
+    const dvaultHoldings = this.getDriftVaultsHoldings(
+      dvaultDepositorsAndVaults,
+      dvaultDepositorsMap,
+      driftSpotMarketsMap,
+      driftPerpMarketsMap,
+      accountsDataMap,
+      tokenPricesMap,
+      "Jupiter",
+    );
+
     const kaminoLendHoldings = this.getKaminoLendHoldings(
       kaminoPubkeys.pkKeys(),
       kaminoReservesMap,
@@ -266,19 +361,19 @@ export class PriceClient {
       "Jupiter",
     );
 
-    const timestamp = accountsDataMap
-      .get(SYSVAR_CLOCK_PUBKEY)!
-      .readUInt32LE(32);
+    const clockData = accountsDataMap.get(SYSVAR_CLOCK_PUBKEY);
+    const timestamp = clockData ? clockData.readUInt32LE(32) : 0;
     const ret = new VaultHoldings(
       this.base.statePda,
       this.base.vaultPda,
       priceBaseAssetMint,
       slot,
-      timestamp!,
+      timestamp,
       commitment,
     );
     tokenHoldings.forEach((holding) => ret.add(holding));
     driftSpotHoldings.forEach((holding) => ret.add(holding));
+    dvaultHoldings.forEach((holding) => ret.add(holding));
     kaminoLendHoldings.forEach((holding) => ret.add(holding));
     kaminoVaultsHoldings.forEach((holding) => ret.add(holding));
     return ret;
@@ -306,39 +401,81 @@ export class PriceClient {
   }
 
   async getPubkeysForSpotHoldings(
+    driftUserPdas: PublicKey[],
     commitment?: Commitment,
   ): Promise<PkMap<PkSet>> {
-    const userPdas = Array.from(Array(8).keys()).map((subAccountId) => {
-      const { user } = this.drift.getDriftUserPdas(subAccountId);
-      return user;
-    });
-    const accountsInfo =
-      await this.base.provider.connection.getMultipleAccountsInfo(
-        userPdas,
-        commitment,
-      );
+    const accountsInfo = await this.base.connection.getMultipleAccountsInfo(
+      driftUserPdas,
+      commitment,
+    );
     const userMarketsMap = new PkMap<PkSet>();
     for (let i = 0; i < accountsInfo.length; i++) {
       const accountInfo = accountsInfo[i];
       if (accountInfo) {
         // get spot markets user has a position in
-        const { spotPositions } = decodeUser(accountInfo.data);
+        const { spotPositions } = DriftUser.decode(
+          driftUserPdas[i],
+          accountInfo.data,
+        );
         const spotMarketIndexes = spotPositions.map((p) => p.marketIndex);
         const spotMarketPdas = spotMarketIndexes.map((index) =>
           this.drift.getMarketPda(MarketType.SPOT, index),
         );
-        userMarketsMap.set(userPdas[i], new PkSet(spotMarketPdas));
+        userMarketsMap.set(driftUserPdas[i], new PkSet(spotMarketPdas));
       }
     }
 
     return userMarketsMap;
   }
 
-  // TODO: implement
-  async getPubkeysForDriftVaultsHoldings(
+  async getPubkeysForPerpHoldings(
+    driftUserPdas: PublicKey[],
     commitment?: Commitment,
   ): Promise<PkMap<PkSet>> {
-    return new PkMap<PkSet>();
+    const accountsInfo = await this.base.connection.getMultipleAccountsInfo(
+      driftUserPdas,
+      commitment,
+    );
+    const userMarketsMap = new PkMap<PkSet>();
+    for (let i = 0; i < accountsInfo.length; i++) {
+      const accountInfo = accountsInfo[i];
+      if (accountInfo) {
+        // get perp markets user has a position in
+        const { perpPositions } = DriftUser.decode(
+          driftUserPdas[i],
+          accountInfo.data,
+        );
+        const perpMarketIndexes = perpPositions.map((p) => p.marketIndex);
+        const perpMarketPdas = perpMarketIndexes.map((index) =>
+          this.drift.getMarketPda(MarketType.PERP, index),
+        );
+        userMarketsMap.set(driftUserPdas[i], new PkSet(perpMarketPdas));
+      }
+    }
+
+    return userMarketsMap;
+  }
+
+  async getDepositorsAndDriftVaults(
+    commitment?: Commitment,
+  ): Promise<PkMap<DriftVault>> {
+    const depositorVaultMap = new PkMap<DriftVault>(); // depositor pubkey -> drift vault
+    const depositors =
+      await this.dvaults.findAndParseVaultDepositors(commitment);
+    const parsedDriftVaults = await this.dvaults.parseDriftVaults(
+      depositors.map((d) => d.driftVault),
+    );
+    if (depositors.length != parsedDriftVaults.length) {
+      throw new Error(
+        `Depositors length ${depositors.length} does not match parsed drift vaults length ${parsedDriftVaults.length}`,
+      );
+    }
+
+    for (let i = 0; i < depositors.length; i++) {
+      depositorVaultMap.set(depositors[i].address, parsedDriftVaults[i]);
+    }
+
+    return depositorVaultMap;
   }
 
   async getKaminoVaultStates(
@@ -415,9 +552,10 @@ export class PriceClient {
     }
 
     for (const pubkey of tokenAccountPubkeys) {
-      const { amount, mint } = AccountLayout.decode(
-        accountsDataMap.get(pubkey)!,
-      );
+      const data = accountsDataMap.get(pubkey);
+      if (!data) continue;
+
+      const { amount, mint } = AccountLayout.decode(data);
 
       const tokenInfo = tokenPricesMap.get(mint);
       if (tokenInfo) {
@@ -442,7 +580,7 @@ export class PriceClient {
 
   getDriftSpotHoldings(
     userPubkeys: Iterable<PublicKey>,
-    spotMarketsMap: PkMap<SpotMarket>,
+    spotMarketsMap: PkMap<DriftSpotMarket>,
     accountsDataMap: PkMap<Buffer>,
     tokenPricesMap: PkMap<TokenListItem>,
     priceSource: string,
@@ -450,47 +588,89 @@ export class PriceClient {
     const holdings: Holding[] = [];
 
     for (const userPda of userPubkeys) {
-      const { spotPositions } = decodeUser(accountsDataMap.get(userPda)!);
+      const userData = accountsDataMap.get(userPda);
+      if (!userData) continue;
+
+      const { spotPositions } = DriftUser.decode(userPda, userData);
 
       for (const { marketIndex, scaledBalance, balanceType } of spotPositions) {
         const marketPda = this.drift.getMarketPda(MarketType.SPOT, marketIndex);
-        const {
-          mint,
-          decimals,
-          cumulativeDepositInterest,
-          cumulativeBorrowInterest,
-        } = spotMarketsMap.get(marketPda)!;
+        const spotMarket = spotMarketsMap.get(marketPda);
+        if (!spotMarket) continue;
 
-        const interest =
-          balanceType === SpotBalanceType.BORROW
-            ? cumulativeBorrowInterest
-            : cumulativeDepositInterest;
-
-        const amount = this.drift.calcSpotBalanceBn(
-          scaledBalance,
-          decimals,
-          interest,
-        );
+        const amount = spotMarket
+          .calcSpotBalanceBn(scaledBalance, balanceType)
+          .abs();
 
         const direction = Object.keys(balanceType)[0] as "deposit" | "borrow";
-        const { usdPrice, slot } = tokenPricesMap.get(mint)!;
+        const tokenPrice = tokenPricesMap.get(spotMarket.mint);
+        if (!tokenPrice) continue;
+
+        const { usdPrice, slot } = tokenPrice;
         const holding = new Holding(
-          mint,
-          decimals,
+          spotMarket.mint,
+          spotMarket.decimals,
           amount,
           usdPrice,
           { slot, source: priceSource },
           "DriftProtocol",
           {
             user: userPda,
-            marketIndex: marketIndex,
-            direction: direction,
+            marketIndex,
+            direction,
           },
         );
         holdings.push(holding);
       }
     }
 
+    return holdings;
+  }
+
+  getDriftVaultsHoldings(
+    dvaultDepositorsAndVaults: PkMap<DriftVault>,
+    dvaultDepositorsMap: PkMap<DriftVaultDepositor>,
+    spotMarketsMap: PkMap<DriftSpotMarket>,
+    perpMarketsMap: PkMap<DriftPerpMarket>,
+    accountsDataMap: PkMap<Buffer>,
+    tokenPricesMap: PkMap<TokenListItem>,
+    priceSource: string,
+  ): Holding[] {
+    const holdings: Holding[] = [];
+    for (const [pubkey, dvault] of dvaultDepositorsAndVaults.pkEntries()) {
+      const depositor = dvaultDepositorsMap.get(pubkey)!;
+      const dvaultUserData = accountsDataMap.get(dvault.user)!;
+
+      const { spotPositions, perpPositions } = DriftUser.decode(
+        dvault.user,
+        dvaultUserData,
+      );
+      const aum = dvault.aumInBaseAsset(
+        spotPositions,
+        perpPositions,
+        spotMarketsMap,
+        perpMarketsMap,
+      );
+      const amount = depositor.vaultShares.mul(aum).div(dvault.totalShares);
+      const { mint, decimals } = dvault.getBaseAsset(spotMarketsMap);
+      const tokenPrice = tokenPricesMap.get(mint);
+      if (!tokenPrice) continue;
+
+      const { usdPrice, slot } = tokenPrice;
+      const holding = new Holding(
+        mint,
+        decimals,
+        amount,
+        usdPrice,
+        { slot, source: priceSource },
+        "DriftVaults",
+        {
+          vault: pubkey,
+          depositor: depositor.getAddress(),
+        },
+      );
+      holdings.push(holding);
+    }
     return holdings;
   }
 
@@ -503,19 +683,28 @@ export class PriceClient {
   ): Holding[] {
     const holdings: Holding[] = [];
     for (const obligation of obligationPubkeys) {
+      const obligationData = accountsDataMap.get(obligation);
+      if (!obligationData) continue;
+
       const { activeDeposits, activeBorrows } = Obligation.decode(
         obligation,
-        accountsDataMap.get(obligation)!,
+        obligationData,
       );
 
       for (const { depositReserve, depositedAmount } of activeDeposits) {
-        const { collateralExchangeRate, lendingMarket, liquidity } =
-          reservesMap.get(depositReserve)!;
+        const reserve = reservesMap.get(depositReserve);
+        if (!reserve) continue;
+
+        const { collateralExchangeRate, lendingMarket, liquidity } = reserve;
         const supplyAmount = new Decimal(depositedAmount.toString())
           .div(collateralExchangeRate)
           .floor();
         const amount = new BN(supplyAmount.toString());
-        const { usdPrice, slot } = tokenPricesMap.get(liquidity.mintPubkey)!;
+
+        const tokenPrice = tokenPricesMap.get(liquidity.mintPubkey);
+        if (!tokenPrice) continue;
+
+        const { usdPrice, slot } = tokenPrice;
         const holding = new Holding(
           liquidity.mintPubkey,
           liquidity.mintDecimals.toNumber(),
@@ -538,8 +727,10 @@ export class PriceClient {
         borrowedAmountSf,
         cumulativeBorrowRateBsf,
       } of activeBorrows) {
-        const { cumulativeBorrowRate, lendingMarket, liquidity } =
-          reservesMap.get(borrowReserve)!;
+        const reserve = reservesMap.get(borrowReserve);
+        if (!reserve) continue;
+
+        const { cumulativeBorrowRate, lendingMarket, liquidity } = reserve;
         const obligationCumulativeBorrowRate = bfToDecimal(
           cumulativeBorrowRateBsf,
         );
@@ -550,7 +741,11 @@ export class PriceClient {
           .ceil();
 
         const amount = new BN(borrowAmount.toString());
-        const { usdPrice, slot } = tokenPricesMap.get(liquidity.mintPubkey)!;
+
+        const tokenPrice = tokenPricesMap.get(liquidity.mintPubkey);
+        if (!tokenPrice) continue;
+
+        const { usdPrice, slot } = tokenPrice;
         const holding = new Holding(
           liquidity.mintPubkey,
           liquidity.mintDecimals.toNumber(),
@@ -581,11 +776,17 @@ export class PriceClient {
   ): Holding[] {
     const holdings: Holding[] = [];
     for (const [ata, kvaultState] of kvaultAtasAndStates.pkEntries()) {
-      const tokenAccount = AccountLayout.decode(accountsDataMap.get(ata)!);
+      const ataData = accountsDataMap.get(ata);
+      if (!ataData) continue;
+
+      const tokenAccount = AccountLayout.decode(ataData);
 
       let aum = new Decimal(kvaultState.tokenAvailable.toString());
       kvaultState.validAllocations.map((allocation) => {
-        const { collateralExchangeRate } = reservesMap.get(allocation.reserve)!;
+        const reserve = reservesMap.get(allocation.reserve);
+        if (!reserve) return;
+
+        const { collateralExchangeRate } = reserve;
 
         // allocation ctoken amount to liq asset amount
         const liqAmount = new Decimal(allocation.ctokenAllocation.toString())
@@ -599,7 +800,11 @@ export class PriceClient {
         .div(new Decimal(kvaultState.sharesIssued.toString()))
         .mul(aum)
         .floor();
-      const { usdPrice, slot } = tokenPricesMap.get(kvaultState.tokenMint)!;
+
+      const tokenPrice = tokenPricesMap.get(kvaultState.tokenMint);
+      if (!tokenPrice) continue;
+
+      const { usdPrice, slot } = tokenPrice;
       const holding = new Holding(
         kvaultState.tokenMint,
         kvaultState.tokenMintDecimals.toNumber(),
@@ -745,7 +950,7 @@ export class PriceClient {
     for (let i = 0; i < shareAtas.length; i++) {
       [shareAtas[i], shareMints[i], kvaultPdas[i], oracles[i]].map((pubkey) => {
         remainingAccounts.push({
-          pubkey: pubkey!,
+          pubkey,
           isSigner: false,
           isWritable: false,
         });
@@ -815,28 +1020,14 @@ export class PriceClient {
       { pubkey: userStats, isSigner: false, isWritable: false },
     ];
 
-    // Fetch first 8 sub accounts
-    const userPdas = Array.from(Array(8).keys()).map((subAccountId) => {
-      const { user } = this.drift.getDriftUserPdas(subAccountId);
-      return user;
+    const driftUsers = await this.drift.fetchAndParseDriftUsers();
+    driftUsers.forEach((user) => {
+      remainingAccounts.push({
+        pubkey: user.getAddress(),
+        isSigner: false,
+        isWritable: false,
+      });
     });
-    const accountsInfo =
-      await this.base.provider.connection.getMultipleAccountsInfo(userPdas);
-
-    // Parse valid sub accounts
-    const driftUsers: DriftUser[] = [];
-    for (let i = 0; i < accountsInfo.length; i++) {
-      const accountInfo = accountsInfo[i];
-      if (accountInfo) {
-        const user = await this.drift.parseDriftUser(accountInfo, i);
-        driftUsers.push(user);
-        remainingAccounts.push({
-          pubkey: userPdas[i],
-          isSigner: false,
-          isWritable: false,
-        });
-      }
-    }
 
     if (driftUsers.length === 0) {
       return null;

@@ -4,7 +4,6 @@ import {
   VersionedTransaction,
   TransactionSignature,
   TransactionInstruction,
-  AccountInfo,
   AccountMeta,
 } from "@solana/web3.js";
 import {
@@ -12,11 +11,12 @@ import {
   OrderParams,
   PositionDirection,
   ModifyOrderParams,
-  OracleSource,
-  SpotBalanceType,
 } from "../../utils/drift/types";
-import { DriftPerpMarket, DriftSpotMarket } from "../../deser/driftLayouts";
-import { decodeUser } from "../../utils/drift/user";
+import {
+  DriftPerpMarket,
+  DriftSpotMarket,
+  DriftUser,
+} from "../../deser/driftLayouts";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "../base";
 import { DRIFT_PROGRAM_ID, GLAM_REFERRER, WSOL } from "../../constants";
@@ -26,15 +26,11 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { BN } from "@coral-xyz/anchor";
-import { charsToName } from "../../utils/common";
 import { VaultClient } from "../vault";
 import {
   DRIFT_SIGNER,
   DRIFT_MARGIN_PRECISION,
-  SpotMarket,
-  PerpMarket,
   DriftMarketConfigs,
-  DriftUser,
 } from "./types";
 
 class TxBuilder extends BaseTxBuilder<DriftProtocolClient> {
@@ -140,7 +136,7 @@ class TxBuilder extends BaseTxBuilder<DriftProtocolClient> {
     const {
       mint,
       oracle,
-      tokenProgram,
+      tokenProgramId: tokenProgram,
       marketPda,
       vault: driftVault,
       name,
@@ -152,7 +148,7 @@ class TxBuilder extends BaseTxBuilder<DriftProtocolClient> {
     const preInstructions = [];
     const postInstructions = [];
 
-    if (!(await this.client.fetchDriftUser(subAccountId))) {
+    if (!(await this.client.fetchAndParseDriftUser(subAccountId))) {
       if (subAccountId === 0) {
         preInstructions.push(await this.initializeUserStatsIx(glamSigner));
       }
@@ -246,7 +242,7 @@ class TxBuilder extends BaseTxBuilder<DriftProtocolClient> {
     const { user, userStats } = this.client.getDriftUserPdas(subAccountId);
     const {
       mint,
-      tokenProgram,
+      tokenProgramId: tokenProgram,
       vault: driftVault,
     } = await this.client.fetchAndParseSpotMarket(marketIndex);
 
@@ -648,8 +644,8 @@ class TxBuilder extends BaseTxBuilder<DriftProtocolClient> {
 }
 
 export class DriftProtocolClient {
-  private spotMarkets = new Map<number, SpotMarket>();
-  private perpMarkets = new Map<number, PerpMarket>();
+  private spotMarkets = new Map<number, DriftSpotMarket>();
+  private perpMarkets = new Map<number, DriftPerpMarket>();
   private marketConfigs: DriftMarketConfigs | null = null;
   txBuilder: TxBuilder;
 
@@ -818,70 +814,6 @@ export class DriftProtocolClient {
     return await this.base.sendAndConfirm(tx);
   }
 
-  // Utils
-
-  parsePerpMarket(address: PublicKey, data: Buffer): PerpMarket {
-    const perpMarket = DriftPerpMarket.decode(address, data);
-    return {
-      name: perpMarket.nameStr,
-      marketPda: perpMarket.marketPda,
-      marketIndex: perpMarket.marketIndex,
-      oracle: perpMarket.oracle,
-      oracleSource: OracleSource.get(perpMarket.oracleSource),
-    };
-  }
-
-  parseSpotMarket(address: PublicKey, data: Buffer): SpotMarket {
-    const driftSpotMarket = DriftSpotMarket.decode(address, data);
-    return {
-      name: driftSpotMarket.nameStr,
-      marketIndex: driftSpotMarket.marketIndex,
-      poolId: driftSpotMarket.poolId,
-      marketPda: driftSpotMarket.marketPda,
-      oracle: driftSpotMarket.oracle,
-      oracleSource: OracleSource.get(driftSpotMarket.oracleSource),
-      vault: driftSpotMarket.vault,
-      mint: driftSpotMarket.mint,
-      decimals: driftSpotMarket.decimals,
-      tokenProgram:
-        driftSpotMarket.tokenProgram === 0
-          ? TOKEN_PROGRAM_ID
-          : TOKEN_2022_PROGRAM_ID,
-      cumulativeDepositInterest: driftSpotMarket.cumulativeDepositInterest,
-      cumulativeBorrowInterest: driftSpotMarket.cumulativeBorrowInterest,
-    };
-  }
-
-  calcSpotBalance(
-    scaledBalance: BN,
-    scaledBalanceType: SpotBalanceType,
-    decimals: number,
-    cumulativeDepositInterest: BN,
-    cumulativeBorrowInterest: BN,
-  ): { amount: number; uiAmount: number } {
-    const precisionAdjustment = new BN(10 ** (19 - decimals));
-
-    let interest = cumulativeDepositInterest;
-    if (scaledBalanceType === SpotBalanceType.BORROW) {
-      interest = cumulativeBorrowInterest;
-    }
-
-    const balance = scaledBalance.mul(interest).div(precisionAdjustment);
-    const amount =
-      scaledBalanceType === SpotBalanceType.BORROW
-        ? balance.neg().toNumber()
-        : balance.toNumber();
-
-    const uiAmount = amount / 10 ** decimals;
-    return { amount, uiAmount };
-  }
-
-  calcSpotBalanceBn(scaledBalance: BN, decimals: number, interest: BN): BN {
-    const precisionAdjustment = new BN(10 ** (19 - decimals));
-    const balance = scaledBalance.mul(interest).div(precisionAdjustment);
-    return balance;
-  }
-
   // PDA helpers
 
   getMarketPda = (marketType: MarketType, marketIndex: number) =>
@@ -937,7 +869,7 @@ export class DriftProtocolClient {
   public async fetchAndParseSpotMarket(
     marketIndex: number,
     skipCache: boolean = false,
-  ): Promise<SpotMarket> {
+  ): Promise<DriftSpotMarket> {
     const markets = await this.fetchAndParseSpotMarkets(
       [marketIndex],
       skipCache,
@@ -951,7 +883,7 @@ export class DriftProtocolClient {
   public async fetchAndParseSpotMarkets(
     marketIndexes: number[],
     skipCache: boolean = false,
-  ): Promise<SpotMarket[]> {
+  ): Promise<DriftSpotMarket[]> {
     const indexesToFetch = marketIndexes.filter(
       (marketIndex) => skipCache || !this.spotMarkets.has(marketIndex),
     );
@@ -968,7 +900,7 @@ export class DriftProtocolClient {
         await this.base.provider.connection.getMultipleAccountsInfo(marketPdas);
       accounts.forEach((account, index) => {
         if (account) {
-          const spotMarket = this.parseSpotMarket(
+          const spotMarket = DriftSpotMarket.decode(
             marketPdas[index],
             account.data,
           );
@@ -978,8 +910,8 @@ export class DriftProtocolClient {
     }
 
     const spotMarkets = marketIndexes
-      .map((marketIndex) => this.spotMarkets.get(marketIndex)!)
-      .filter((m) => m);
+      .map((marketIndex) => this.spotMarkets.get(marketIndex))
+      .filter((m): m is DriftSpotMarket => m !== undefined);
     const invalidIndexes = marketIndexes.filter(
       (marketIndex) => !this.spotMarkets.has(marketIndex),
     );
@@ -994,7 +926,7 @@ export class DriftProtocolClient {
   public async fetchAndParsePerpMarket(
     marketIndex: number,
     skipCache: boolean = false,
-  ): Promise<PerpMarket> {
+  ): Promise<DriftPerpMarket> {
     const markets = await this.fetchAndParsePerpMarkets(
       [marketIndex],
       skipCache,
@@ -1008,7 +940,7 @@ export class DriftProtocolClient {
   public async fetchAndParsePerpMarkets(
     marketIndexes: number[],
     skipCache: boolean = false,
-  ): Promise<PerpMarket[]> {
+  ): Promise<DriftPerpMarket[]> {
     const indexesToFetch = marketIndexes.filter(
       (marketIndex) => skipCache || !this.perpMarkets.has(marketIndex),
     );
@@ -1025,7 +957,7 @@ export class DriftProtocolClient {
         await this.base.provider.connection.getMultipleAccountsInfo(marketPdas);
       accounts.forEach((account, index) => {
         if (account) {
-          const perpMarket = this.parsePerpMarket(
+          const perpMarket = DriftPerpMarket.decode(
             marketPdas[index],
             account.data,
           );
@@ -1039,8 +971,8 @@ export class DriftProtocolClient {
     }
 
     const perpMarkets = marketIndexes
-      .map((marketIndex) => this.perpMarkets.get(marketIndex)!)
-      .filter((m) => m);
+      .map((marketIndex) => this.perpMarkets.get(marketIndex))
+      .filter((m): m is DriftPerpMarket => m !== undefined);
     const invalidIndexes = marketIndexes.filter(
       (marketIndex) => !this.perpMarkets.has(marketIndex),
     );
@@ -1055,173 +987,55 @@ export class DriftProtocolClient {
   public async fetchMarketConfigs(
     skipCache: boolean = false,
   ): Promise<DriftMarketConfigs> {
-    const glamApi = process.env.NEXT_PUBLIC_GLAM_API || process.env.GLAM_API;
-    if (glamApi) {
-      const response = await fetch(`${glamApi}/v0/drift/market_configs/`);
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch market configs from ${glamApi}: ${response.status}`,
-        );
-      }
-      const data = await response.json();
-      const { orderConstants, perp, spot } = data;
-
-      const perpMarkets = perp.map((m: any) => ({
-        name: m.symbol,
-        marketIndex: m.marketIndex,
-        marketPda: new PublicKey(m.marketPDA),
-        oracle: new PublicKey(m.oracle),
-        oracleSource: OracleSource.fromString(m.oracleSource),
-      })) as PerpMarket[];
-      const spotMarkets = spot.map((m: any) => ({
-        name: m.symbol,
-        marketIndex: m.marketIndex,
-        poolId: m.poolId,
-        marketPda: new PublicKey(m.marketPDA),
-        vault: new PublicKey(m.vaultPDA),
-        oracle: new PublicKey(m.oracle),
-        oracleSource: OracleSource.fromString(m.oracleSource),
-        mint: new PublicKey(m.mint),
-        decimals: m.decimals,
-        tokenProgram: new PublicKey(m.tokenProgram),
-        cumulativeDepositInterest: new BN(m.cumulativeDepositInterest),
-        cumulativeBorrowInterest: new BN(m.cumulativeBorrowInterest),
-      })) as SpotMarket[];
-
-      perpMarkets.forEach((m) => {
-        this.perpMarkets.set(m.marketIndex, m);
-      });
-      spotMarkets.forEach((m) => {
-        this.spotMarkets.set(m.marketIndex, m);
-      });
-
-      const marketConfigs = {
-        orderConstants,
-        perpMarkets,
-        spotMarkets,
-      };
-      this.marketConfigs = marketConfigs;
-      return marketConfigs;
+    if (this.marketConfigs && !skipCache) {
+      return this.marketConfigs;
     }
 
-    if (!this.marketConfigs || skipCache) {
-      const perpMarkets = await this.fetchAndParsePerpMarkets(
-        Array.from(Array(100).keys()),
-        skipCache,
-      );
-      const spotMarkets = await this.fetchAndParseSpotMarkets(
-        Array.from(Array(100).keys()),
-        skipCache,
-      );
+    // FIXME: one day the number of markets will exceed 100 and a better solution will be needed
+    const perpMarkets = await this.fetchAndParsePerpMarkets(
+      Array.from(Array(100).keys()),
+      skipCache,
+    );
+    const spotMarkets = await this.fetchAndParseSpotMarkets(
+      Array.from(Array(100).keys()),
+      skipCache,
+    );
 
-      this.marketConfigs = {
-        orderConstants: { perpBaseScale: 9, quoteScale: 6 },
-        perpMarkets,
-        spotMarkets,
-      };
-    }
+    this.marketConfigs = {
+      orderConstants: { perpBaseScale: 9, quoteScale: 6 },
+      perpMarkets,
+      spotMarkets,
+    };
     return this.marketConfigs;
   }
 
-  async parseDriftUser(
-    accountInfo: AccountInfo<Buffer>,
-    subAccountId: number,
-  ): Promise<DriftUser> {
-    const {
-      delegate,
-      name,
-      spotPositions,
-      marginMode,
-      perpPositions,
-      isMarginTradingEnabled,
-      maxMarginRatio,
-      orders,
-      poolId,
-    } = decodeUser(accountInfo.data);
-
-    const spotMarketIndexes = spotPositions.map((p) => p.marketIndex);
-    const perpMarketIndexes = perpPositions.map((p) => p.marketIndex);
-    await Promise.all([
-      this.fetchAndParseSpotMarkets(spotMarketIndexes),
-      this.fetchAndParsePerpMarkets(perpMarketIndexes),
-    ]);
-
-    const spotPositionsExt = await Promise.all(
-      spotPositions.map(async (p) => {
-        const spotMarket = this.spotMarkets.get(p.marketIndex);
-
-        const { amount, uiAmount } = this.calcSpotBalance(
-          p.scaledBalance,
-          p.balanceType,
-          spotMarket!.decimals,
-          spotMarket!.cumulativeDepositInterest,
-          spotMarket!.cumulativeBorrowInterest,
-        );
-        return {
-          ...p,
-          amount,
-          uiAmount,
-          mint: spotMarket!.mint,
-          decimals: spotMarket!.decimals,
-          marketName: spotMarket!.name,
-        };
-      }),
-    );
-
-    return {
-      delegate,
-      name: charsToName(name),
-      spotPositions: spotPositionsExt,
-      perpPositions,
-      orders,
-      marginMode,
-      subAccountId,
-      isMarginTradingEnabled,
-      maxMarginRatio,
-      poolId,
-    };
-  }
-
-  public async fetchDriftUser(
+  public async fetchAndParseDriftUser(
     subAccountId: number = 0,
-    skipCache: boolean = false,
   ): Promise<DriftUser | null> {
     const { user } = this.getDriftUserPdas(subAccountId);
-    const accountInfo =
-      await this.base.provider.connection.getAccountInfo(user);
+    const accountInfo = await this.base.connection.getAccountInfo(user);
     if (!accountInfo) {
       return null;
     }
 
-    await this.fetchMarketConfigs(skipCache);
-
-    return await this.parseDriftUser(accountInfo, subAccountId);
+    return DriftUser.decode(user, accountInfo.data);
   }
 
-  public async fetchDriftUsers(
-    skipCache: boolean = false,
-  ): Promise<DriftUser[]> {
+  public async fetchAndParseDriftUsers(): Promise<DriftUser[]> {
     const userPdas = Array.from(Array(8).keys()).map((subAccountId) => {
       const { user } = this.getDriftUserPdas(subAccountId);
       return user;
     });
     const accountsInfo =
-      await this.base.provider.connection.getMultipleAccountsInfo(userPdas);
+      await this.base.connection.getMultipleAccountsInfo(userPdas);
 
-    const subAccountsInfoAndIds: [any, number][] = [];
-    accountsInfo.forEach((a, i) => {
-      if (a) {
-        subAccountsInfoAndIds.push([a, i]);
+    const driftUsers: DriftUser[] = [];
+    accountsInfo.forEach((accountInfo, i) => {
+      if (accountInfo) {
+        driftUsers.push(DriftUser.decode(userPdas[i], accountInfo.data));
       }
     });
-
-    await this.fetchMarketConfigs(skipCache);
-
-    return await Promise.all(
-      subAccountsInfoAndIds.map(([accountInfo, subAccountId]) =>
-        this.parseDriftUser(accountInfo, subAccountId),
-      ),
-    );
+    return driftUsers;
   }
 
   marketTypeEquals = (a: MarketType | undefined, b: MarketType) =>
@@ -1232,7 +1046,7 @@ export class DriftProtocolClient {
     marketType?: MarketType,
     marketIndex?: number,
   ): Promise<AccountMeta[]> {
-    const driftUser = await this.fetchDriftUser(subAccountId);
+    const driftUser = await this.fetchAndParseDriftUser(subAccountId);
     if (!driftUser) {
       throw new Error("Drift user not found");
     }

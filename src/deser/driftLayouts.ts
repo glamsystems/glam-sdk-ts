@@ -14,10 +14,81 @@ import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { charsToName } from "../utils/common";
 import { Decodable } from "./base";
+import { PkMap, readSignedBigInt64LE, readUnsignedBigInt64LE } from "../utils";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  MarginMode,
+  MarketType,
+  OracleSource,
+  Order,
+  OrderStatus,
+  OrderTriggerCondition,
+  OrderType,
+  PerpPosition,
+  PositionDirection,
+  SpotBalanceType,
+  SpotPosition,
+  ZERO,
+} from "../utils/drift/types";
+import { DRIFT_PROGRAM_ID } from "../constants";
+
+function readI128LE(buffer: Buffer, offset: number): BN {
+  const lo = buffer.readBigUInt64LE(offset);
+  const hi = buffer.readBigUInt64LE(offset + 8);
+  let v = (hi << 64n) + lo;
+  if ((hi & (1n << 63n)) !== 0n) {
+    v -= 1n << 128n;
+  }
+  return new BN(v.toString());
+}
+
+export class DriftVaultDepositor extends Decodable {
+  discriminator!: number[];
+  vault!: PublicKey;
+  pubkey!: PublicKey;
+  authority!: PublicKey;
+  vaultShares!: BN;
+  lastWithdrawRequest!: {
+    shares: BN;
+    value: BN;
+    ts: BN;
+  };
+  lastValidTs!: BN;
+  netDeposits!: BN;
+  totalDeposits!: BN;
+  totalWithdraws!: BN;
+  cumulativeProfitShareAmount!: BN;
+  profitShareFeePaid!: BN;
+  vaultSharesBase!: number;
+  lastFuelUpdateTs!: number;
+  cumulativeFuelPerShareAmount!: BN;
+  fuelAmount!: BN;
+  padding!: BN[];
+
+  static _layout = struct([
+    array(u8(), 8, "discriminator"),
+    publicKey("vault"),
+    publicKey("pubkey"),
+    publicKey("authority"),
+    u128("vaultShares"),
+    struct([u128("shares"), u64("value"), i64("ts")], "lastWithdrawRequest"),
+    i64("lastValidTs"),
+    i64("netDeposits"),
+    u64("totalDeposits"),
+    u64("totalWithdraws"),
+    i64("cumulativeProfitShareAmount"),
+    u64("profitShareFeePaid"),
+    u32("vaultSharesBase"),
+    u32("lastFuelUpdateTs"),
+    u128("cumulativeFuelPerShareAmount"),
+    u128("fuelAmount"),
+    array(u64(), 4, "padding"),
+  ]);
+}
 
 export class DriftVault extends Decodable {
   discriminator!: number[];
-  name!: number[];
+  nameBytes!: number[];
   pubkey!: PublicKey;
   manager!: PublicKey;
   tokenAccount!: PublicKey;
@@ -61,12 +132,13 @@ export class DriftVault extends Decodable {
   lastCumulativeFuelPerShareTs!: number;
   cumulativeFuelPerShare!: BN;
   cumulativeFuel!: BN;
+  managerBorrowedValue!: BN;
   padding!: BN[];
 
   static _layout = struct([
     array(u8(), 8, "discriminator"),
     // Basic vault info
-    array(u8(), 32, "name"), // [u8; 32]
+    array(u8(), 32, "nameBytes"), // [u8; 32]
     publicKey("pubkey"),
     publicKey("manager"),
     publicKey("tokenAccount"),
@@ -123,13 +195,489 @@ export class DriftVault extends Decodable {
     u32("lastCumulativeFuelPerShareTs"),
     u128("cumulativeFuelPerShare"),
     u128("cumulativeFuel"),
+    u64("managerBorrowedValue"),
 
     // Final padding
-    array(u64(), 3, "padding"), // [u64; 3]
+    array(u64(), 2, "padding"), // [u64; 2]
   ]);
 
-  get nameStr(): string {
-    return charsToName(this.name);
+  get name(): string {
+    return charsToName(this.nameBytes);
+  }
+
+  marketPda(marketType: MarketType, marketIndex: number) {
+    const marketTypeStr = marketType === MarketType.SPOT ? "spot" : "perp";
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from(`${marketTypeStr}_market`),
+        new BN(marketIndex).toArrayLike(Buffer, "le", 2),
+      ],
+      DRIFT_PROGRAM_ID,
+    )[0];
+  }
+
+  aum(
+    spotPositions: SpotPosition[],
+    perpPositions: PerpPosition[],
+    spotMarketsMap: PkMap<DriftSpotMarket>,
+    perpMarketsMap: PkMap<DriftPerpMarket>,
+  ): BN {
+    const positionBalances = [];
+    for (const { marketIndex, scaledBalance, balanceType } of spotPositions) {
+      const marketPda = this.marketPda(MarketType.SPOT, marketIndex);
+      const spotMarket = spotMarketsMap.get(marketPda)!;
+      const amount = spotMarket.calcSpotBalanceBn(scaledBalance, balanceType);
+      const balance = amount
+        .mul(spotMarket.lastOraclePrice)
+        .div(new BN(10 ** spotMarket.decimals));
+      positionBalances.push(balance);
+    }
+
+    for (const perpPosition of perpPositions) {
+      const { baseAssetAmount, quoteAssetAmount, marketIndex } = perpPosition;
+      const marketPda = this.marketPda(MarketType.PERP, marketIndex);
+      const perpMarket = perpMarketsMap.get(marketPda)!;
+      const baseAssetValue = baseAssetAmount
+        .mul(perpMarket.lastOraclePrice)
+        .div(new BN(1_000_000_000));
+      const unrealizedPnl = baseAssetValue.add(quoteAssetAmount);
+      const fundingPayment = perpMarket.calcFundingPayment(perpPosition);
+
+      positionBalances.push(unrealizedPnl.add(fundingPayment));
+    }
+
+    return positionBalances.reduce((a, b) => a.add(b), new BN(0));
+  }
+
+  getBaseAsset(spotMarketsMap: PkMap<DriftSpotMarket>) {
+    const market = spotMarketsMap.get(
+      this.marketPda(MarketType.SPOT, this.spotMarketIndex),
+    )!;
+    return { mint: market.mint, decimals: market.decimals };
+  }
+
+  aumInBaseAsset(
+    spotPositions: SpotPosition[],
+    perpPositions: PerpPosition[],
+    spotMarketsMap: PkMap<DriftSpotMarket>,
+    perpMarketsMap: PkMap<DriftPerpMarket>,
+  ): BN {
+    const aumScaledUsd = this.aum(
+      spotPositions,
+      perpPositions,
+      spotMarketsMap,
+      perpMarketsMap,
+    );
+    const spotMarket = spotMarketsMap.get(
+      this.marketPda(MarketType.SPOT, this.spotMarketIndex),
+    )!;
+    const baseAssetAmount = aumScaledUsd
+      .mul(new BN(10 ** spotMarket.decimals))
+      .div(spotMarket.lastOraclePrice);
+    return baseAssetAmount.sub(this.managerBorrowedValue);
+  }
+}
+
+export class DriftUser {
+  _address!: PublicKey;
+  authority!: PublicKey;
+  delegate!: PublicKey;
+  nameBytes!: number[];
+  subAccountId!: number;
+  spotPositions!: SpotPosition[];
+  perpPositions!: PerpPosition[];
+  orders!: Order[];
+  status!: number;
+  nextLiquidationId!: number;
+  nextOrderId!: number;
+  maxMarginRatio!: number;
+  lastAddPerpLpSharesTs!: BN;
+  settledPerpPnl!: BN;
+  totalDeposits: BN;
+  totalWithdraws: BN;
+  totalSocialLoss: BN;
+  cumulativePerpFunding: BN;
+  cumulativeSpotFees: BN;
+  liquidationMarginFreed: BN;
+  lastActiveSlot: BN;
+  isMarginTradingEnabled!: boolean;
+  idle!: boolean;
+  openOrders!: number;
+  hasOpenOrder!: boolean;
+  openAuctions!: number;
+  hasOpenAuction!: boolean;
+  lastFuelBonusUpdateTs!: number;
+  marginMode!: MarginMode;
+  poolId!: number;
+
+  // Manually decode drift user account so that signed BN can be parsed correctly
+  static decode(address: PublicKey, buffer: Buffer): DriftUser {
+    let offset = 8;
+    const authority = new PublicKey(buffer.subarray(offset, offset + 32));
+    offset += 32;
+    const delegate = new PublicKey(buffer.subarray(offset, offset + 32));
+    offset += 32;
+    const nameBytes = [];
+    for (let i = 0; i < 32; i++) {
+      nameBytes.push(buffer.readUint8(offset + i));
+    }
+    offset += 32;
+
+    const spotPositions: SpotPosition[] = [];
+    for (let i = 0; i < 8; i++) {
+      const scaledBalance = readUnsignedBigInt64LE(buffer, offset);
+      const openOrders = buffer.readUInt8(offset + 35);
+      if (scaledBalance.eq(ZERO) && openOrders === 0) {
+        offset += 40;
+        continue;
+      }
+
+      offset += 8;
+      const openBids = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const openAsks = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const cumulativeDeposits = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const marketIndex = buffer.readUInt16LE(offset);
+      offset += 2;
+      const balanceTypeNum = buffer.readUInt8(offset);
+      let balanceType: SpotBalanceType;
+      if (balanceTypeNum === 0) {
+        balanceType = SpotBalanceType.DEPOSIT;
+      } else {
+        balanceType = SpotBalanceType.BORROW;
+      }
+      offset += 6;
+      spotPositions.push({
+        scaledBalance,
+        openBids,
+        openAsks,
+        cumulativeDeposits,
+        marketIndex,
+        balanceType,
+        openOrders,
+      });
+    }
+
+    const perpPositions: PerpPosition[] = [];
+    for (let i = 0; i < 8; i++) {
+      const baseAssetAmount = readSignedBigInt64LE(buffer, offset + 8);
+      const quoteAssetAmount = readSignedBigInt64LE(buffer, offset + 16);
+      const lpShares = readUnsignedBigInt64LE(buffer, offset + 64);
+      const openOrders = buffer.readUInt8(offset + 94);
+
+      if (
+        baseAssetAmount.eq(ZERO) &&
+        openOrders === 0 &&
+        quoteAssetAmount.eq(ZERO) &&
+        lpShares.eq(ZERO)
+      ) {
+        offset += 96;
+        continue;
+      }
+
+      const lastCumulativeFundingRate = readSignedBigInt64LE(buffer, offset);
+      offset += 24;
+      const quoteBreakEvenAmount = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const quoteEntryAmount = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const openBids = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const openAsks = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const settledPnl = readSignedBigInt64LE(buffer, offset);
+      offset += 16;
+      const lastBaseAssetAmountPerLp = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const lastQuoteAssetAmountPerLp = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const remainderBaseAssetAmount = buffer.readInt32LE(offset);
+      offset += 4;
+      const marketIndex = buffer.readUInt16LE(offset);
+      offset += 3;
+      const perLpBase = buffer.readUInt8(offset);
+      offset += 1;
+
+      perpPositions.push({
+        lastCumulativeFundingRate,
+        baseAssetAmount,
+        quoteAssetAmount,
+        quoteBreakEvenAmount,
+        quoteEntryAmount,
+        openBids,
+        openAsks,
+        settledPnl,
+        lpShares,
+        lastBaseAssetAmountPerLp,
+        lastQuoteAssetAmountPerLp,
+        remainderBaseAssetAmount,
+        marketIndex,
+        openOrders,
+        perLpBase,
+      });
+    }
+
+    const orders: Order[] = [];
+    for (let i = 0; i < 32; i++) {
+      // skip order if it's not open
+      if (buffer.readUint8(offset + 82) !== 1) {
+        offset += 96;
+        continue;
+      }
+
+      const slot = readUnsignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const price = readUnsignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const baseAssetAmount = readUnsignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const baseAssetAmountFilled = readUnsignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const quoteAssetAmountFilled = readUnsignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const triggerPrice = readUnsignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const auctionStartPrice = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const auctionEndPrice = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const maxTs = readSignedBigInt64LE(buffer, offset);
+      offset += 8;
+      const oraclePriceOffset = buffer.readInt32LE(offset);
+      offset += 4;
+      const orderId = buffer.readUInt32LE(offset);
+      offset += 4;
+      const marketIndex = buffer.readUInt16LE(offset);
+      offset += 2;
+      const orderStatusNum = buffer.readUInt8(offset);
+
+      let status: OrderStatus = OrderStatus.INIT;
+      if (orderStatusNum === 0) {
+        status = OrderStatus.INIT;
+      } else if (orderStatusNum === 1) {
+        status = OrderStatus.OPEN;
+      } else if (orderStatusNum === 2) {
+        status = OrderStatus.FILLED;
+      } else if (orderStatusNum === 3) {
+        status = OrderStatus.CANCELED;
+      }
+      offset += 1;
+      const orderTypeNum = buffer.readUInt8(offset);
+      let orderType: OrderType = OrderType.MARKET;
+      if (orderTypeNum === 0) {
+        orderType = OrderType.MARKET;
+      } else if (orderTypeNum === 1) {
+        orderType = OrderType.LIMIT;
+      } else if (orderTypeNum === 2) {
+        orderType = OrderType.TRIGGER_MARKET;
+      } else if (orderTypeNum === 3) {
+        orderType = OrderType.TRIGGER_LIMIT;
+      } else if (orderTypeNum === 4) {
+        orderType = OrderType.ORACLE;
+      }
+      offset += 1;
+      const marketTypeNum = buffer.readUInt8(offset);
+      let marketType: MarketType;
+      if (marketTypeNum === 0) {
+        marketType = MarketType.SPOT;
+      } else {
+        marketType = MarketType.PERP;
+      }
+      offset += 1;
+      const userOrderId = buffer.readUint8(offset);
+      offset += 1;
+      const existingPositionDirectionNum = buffer.readUInt8(offset);
+      let existingPositionDirection: PositionDirection;
+      if (existingPositionDirectionNum === 0) {
+        existingPositionDirection = PositionDirection.LONG;
+      } else {
+        existingPositionDirection = PositionDirection.SHORT;
+      }
+      offset += 1;
+      const positionDirectionNum = buffer.readUInt8(offset);
+      let direction: PositionDirection;
+      if (positionDirectionNum === 0) {
+        direction = PositionDirection.LONG;
+      } else {
+        direction = PositionDirection.SHORT;
+      }
+      offset += 1;
+      const reduceOnly = buffer.readUInt8(offset) === 1;
+      offset += 1;
+      const postOnly = buffer.readUInt8(offset) === 1;
+      offset += 1;
+      const immediateOrCancel = buffer.readUInt8(offset) === 1;
+      offset += 1;
+      const triggerConditionNum = buffer.readUInt8(offset);
+      let triggerCondition: OrderTriggerCondition = OrderTriggerCondition.ABOVE;
+      if (triggerConditionNum === 0) {
+        triggerCondition = OrderTriggerCondition.ABOVE;
+      } else if (triggerConditionNum === 1) {
+        triggerCondition = OrderTriggerCondition.BELOW;
+      } else if (triggerConditionNum === 2) {
+        triggerCondition = OrderTriggerCondition.TRIGGERED_ABOVE;
+      } else if (triggerConditionNum === 3) {
+        triggerCondition = OrderTriggerCondition.TRIGGERED_BELOW;
+      }
+      offset += 1;
+      const auctionDuration = buffer.readUInt8(offset);
+      offset += 1;
+      const postedSlotTail = buffer.readUint8(offset);
+      offset += 1;
+      const bitFlags = buffer.readUint8(offset);
+      offset += 1;
+      offset += 1; // padding
+      orders.push({
+        slot,
+        price,
+        baseAssetAmount,
+        quoteAssetAmount: undefined,
+        baseAssetAmountFilled,
+        quoteAssetAmountFilled,
+        triggerPrice,
+        auctionStartPrice,
+        auctionEndPrice,
+        maxTs,
+        oraclePriceOffset,
+        orderId,
+        marketIndex,
+        status,
+        orderType,
+        marketType,
+        userOrderId,
+        existingPositionDirection,
+        direction,
+        reduceOnly,
+        postOnly,
+        immediateOrCancel,
+        triggerCondition,
+        auctionDuration,
+        bitFlags,
+        postedSlotTail,
+      });
+    }
+
+    const lastAddPerpLpSharesTs = readSignedBigInt64LE(buffer, offset);
+    offset += 8;
+
+    const totalDeposits = readUnsignedBigInt64LE(buffer, offset);
+    offset += 8;
+
+    const totalWithdraws = readUnsignedBigInt64LE(buffer, offset);
+    offset += 8;
+
+    const totalSocialLoss = readUnsignedBigInt64LE(buffer, offset);
+    offset += 8;
+
+    const settledPerpPnl = readSignedBigInt64LE(buffer, offset);
+    offset += 8;
+
+    const cumulativeSpotFees = readSignedBigInt64LE(buffer, offset);
+    offset += 8;
+
+    const cumulativePerpFunding = readSignedBigInt64LE(buffer, offset);
+    offset += 8;
+
+    const liquidationMarginFreed = readUnsignedBigInt64LE(buffer, offset);
+    offset += 8;
+
+    const lastActiveSlot = readUnsignedBigInt64LE(buffer, offset);
+    offset += 8;
+
+    const nextOrderId = buffer.readUInt32LE(offset);
+    offset += 4;
+
+    const maxMarginRatio = buffer.readUInt32LE(offset);
+    offset += 4;
+
+    const nextLiquidationId = buffer.readUInt16LE(offset);
+    offset += 2;
+
+    const subAccountId = buffer.readUInt16LE(offset);
+    offset += 2;
+
+    const status = buffer.readUInt8(offset);
+    offset += 1;
+
+    const isMarginTradingEnabled = buffer.readUInt8(offset) === 1;
+    offset += 1;
+
+    const idle = buffer.readUInt8(offset) === 1;
+    offset += 1;
+
+    const openOrders = buffer.readUInt8(offset);
+    offset += 1;
+
+    const hasOpenOrder = buffer.readUInt8(offset) === 1;
+    offset += 1;
+
+    const openAuctions = buffer.readUInt8(offset);
+    offset += 1;
+
+    const hasOpenAuction = buffer.readUInt8(offset) === 1;
+    offset += 1;
+
+    let marginMode: MarginMode;
+    const marginModeNum = buffer.readUInt8(offset);
+    if (marginModeNum === 0) {
+      marginMode = MarginMode.DEFAULT;
+    } else {
+      marginMode = MarginMode.HIGH_LEVERAGE;
+    }
+    offset += 1;
+
+    const poolId = buffer.readUint8(offset);
+    offset += 1;
+    offset += 3; // padding
+
+    const lastFuelBonusUpdateTs = buffer.readUint32LE(offset);
+    offset += 4;
+
+    const data = {
+      authority,
+      delegate,
+      nameBytes,
+      spotPositions,
+      perpPositions,
+      orders,
+      lastAddPerpLpSharesTs,
+      totalDeposits,
+      totalWithdraws,
+      totalSocialLoss,
+      settledPerpPnl,
+      cumulativeSpotFees,
+      cumulativePerpFunding,
+      liquidationMarginFreed,
+      lastActiveSlot,
+      nextOrderId,
+      maxMarginRatio,
+      nextLiquidationId,
+      subAccountId,
+      status,
+      isMarginTradingEnabled,
+      idle,
+      openOrders,
+      hasOpenOrder,
+      openAuctions,
+      hasOpenAuction,
+      marginMode,
+      poolId,
+      lastFuelBonusUpdateTs,
+    };
+
+    const instance = new this();
+    Object.assign(instance, { _address: address, ...data });
+    return instance;
+  }
+
+  get name(): string {
+    return charsToName(this.nameBytes);
+  }
+
+  getAddress() {
+    return this._address;
   }
 }
 
@@ -137,9 +685,10 @@ export class DriftSpotMarket extends Decodable {
   discriminator!: number[];
   marketPda!: PublicKey;
   oracle!: PublicKey;
+  lastOraclePrice!: BN;
   mint!: PublicKey;
   vault!: PublicKey;
-  name!: number[];
+  nameBytes!: number[];
   padding1!: number[];
   cumulativeDepositInterest!: BN;
   cumulativeBorrowInterest!: BN;
@@ -147,7 +696,7 @@ export class DriftSpotMarket extends Decodable {
   decimals!: number;
   marketIndex!: number;
   padding3!: number;
-  oracleSource!: number;
+  oracleSourceOrd!: number;
   padding4!: number[];
   tokenProgram!: number;
   poolId!: number;
@@ -160,10 +709,11 @@ export class DriftSpotMarket extends Decodable {
     publicKey("mint"),
     publicKey("vault"),
 
-    array(u8(), 32, "name"),
+    array(u8(), 32, "nameBytes"),
+    u64("lastOraclePrice"),
 
     // Padding for bytes between name and cumulativeDepositInterest
-    array(u8(), 464 - 168, "padding1"),
+    array(u8(), 464 - 176, "padding1"),
 
     u128("cumulativeDepositInterest"),
     u128("cumulativeBorrowInterest"),
@@ -174,15 +724,55 @@ export class DriftSpotMarket extends Decodable {
     u32("decimals"), // [680, 684)
     u16("marketIndex"), // [684, 686)
     u8("padding3"), // [686, 687)
-    u8("oracleSource"), // [687, 688)
+    u8("oracleSourceOrd"), // [687, 688)
     array(u8(), 46, "padding4"), // [688, 734)
     u8("tokenProgram"), // [734, 735)
     u8("poolId"), // [735, 736)
     array(u8(), 40, "padding5"), // [736, 776)
   ]);
 
-  get nameStr(): string {
-    return charsToName(this.name);
+  get name(): string {
+    return charsToName(this.nameBytes);
+  }
+
+  get oracleSource(): OracleSource {
+    return OracleSource.get(this.oracleSourceOrd);
+  }
+
+  get tokenProgramId(): PublicKey {
+    return this.tokenProgram === 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+  }
+
+  calcSpotBalance(
+    scaledBalance: BN,
+    scaledBalanceType: SpotBalanceType,
+  ): { amount: number; uiAmount: number } {
+    const precisionAdjustment = new BN(10 ** (19 - this.decimals));
+    const balance = scaledBalance
+      .mul(this._interest(scaledBalanceType))
+      .div(precisionAdjustment);
+    const amount =
+      scaledBalanceType === SpotBalanceType.BORROW
+        ? balance.neg().toNumber()
+        : balance.toNumber();
+    const uiAmount = amount / 10 ** this.decimals;
+    return { amount, uiAmount };
+  }
+
+  calcSpotBalanceBn(scaledBalance: BN, scaledBalanceType: SpotBalanceType): BN {
+    const precisionAdjustment = new BN(10 ** (19 - this.decimals));
+    const sign =
+      scaledBalanceType === SpotBalanceType.BORROW ? new BN(-1) : new BN(1);
+    return scaledBalance
+      .mul(this._interest(scaledBalanceType))
+      .div(precisionAdjustment)
+      .mul(sign);
+  }
+
+  _interest(balanceType: SpotBalanceType): BN {
+    return balanceType === SpotBalanceType.BORROW
+      ? this.cumulativeBorrowInterest
+      : this.cumulativeDepositInterest;
   }
 }
 
@@ -190,27 +780,87 @@ export class DriftPerpMarket extends Decodable {
   discriminator!: number[];
   marketPda!: PublicKey;
   oracle!: PublicKey;
+  lastOraclePrice!: BN;
+  cumulativeFundingRateLong!: BN;
+  cumulativeFundingRateShort!: BN;
   padding1!: number[];
-  oracleSource!: number;
+  oracleSourceOrd!: number;
   padding2!: number[];
-  name!: number[];
+  nameBytes!: number[];
   padding3!: number[];
   marketIndex!: number;
+  padding4!: number[];
+  quoteSpotMarketIndex!: number;
+
+  static decode<T extends Decodable>(
+    this: { new (): T; _layout: ReturnType<typeof struct> },
+    address: PublicKey,
+    buffer: Buffer,
+  ): T {
+    const instance = Decodable.decode.call(this, address, buffer) as T;
+    if (instance instanceof DriftPerpMarket) {
+      (instance as DriftPerpMarket).cumulativeFundingRateLong = readI128LE(
+        buffer,
+        608,
+      );
+      (instance as DriftPerpMarket).cumulativeFundingRateShort = readI128LE(
+        buffer,
+        624,
+      );
+    }
+    return instance;
+  }
 
   static _layout = struct([
     array(u8(), 8, "discriminator"), // [0, 8)
     publicKey("marketPda"), // [8, 40)
     publicKey("oracle"), // [40, 72)
-
-    array(u8(), 854, "padding1"), // [72, 926)
-    u8("oracleSource"), // [926, 927)
+    u64("lastOraclePrice"), // [72, 80)
+    array(u8(), 846, "padding1"), // [80, 926)
+    u8("oracleSourceOrd"), // [926, 927)
     array(u8(), 73, "padding2"), // [927, 1000)
-    array(u8(), 32, "name"), // [1000, 1032)
+    array(u8(), 32, "nameBytes"), // [1000, 1032)
     array(u8(), 128, "padding3"), // [1032, 1160)
     u16("marketIndex"), // [1160, 1162)
+    array(u8(), 4, "padding4"), // [1162, 1166)
+    u16("quoteSpotMarketIndex"), // [1166, 1168)
   ]);
 
-  get nameStr(): string {
-    return charsToName(this.name);
+  get name(): string {
+    return charsToName(this.nameBytes);
+  }
+
+  get oracleSource(): OracleSource {
+    return OracleSource.get(this.oracleSourceOrd);
+  }
+
+  calcFundingPayment(perpPosition: PerpPosition): BN {
+    const fundingRate = perpPosition.baseAssetAmount.isNeg()
+      ? this.cumulativeFundingRateShort
+      : this.cumulativeFundingRateLong;
+    const fundingRateDelta = fundingRate.sub(
+      perpPosition.lastCumulativeFundingRate,
+    );
+    if (fundingRateDelta.eq(new BN(0))) {
+      return new BN(0);
+    }
+
+    const fundingRateDeltaSign = fundingRateDelta.isNeg() ? -1 : 1;
+
+    const usdPricePrecision = new BN(1_000_000);
+    const fundingRatePaymentMagnitude = fundingRateDelta
+      .abs()
+      .mul(perpPosition.baseAssetAmount.abs())
+      .div(usdPricePrecision)
+      .div(new BN(1000));
+
+    const fundingRatePaymentSign = perpPosition.baseAssetAmount.isNeg()
+      ? 1
+      : -1;
+    const sign = fundingRatePaymentSign * fundingRateDeltaSign;
+
+    return sign < 0
+      ? fundingRatePaymentMagnitude.neg()
+      : fundingRatePaymentMagnitude;
   }
 }

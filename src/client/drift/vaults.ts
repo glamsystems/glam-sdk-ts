@@ -3,10 +3,10 @@ import {
   VersionedTransaction,
   TransactionSignature,
   AccountMeta,
+  Commitment,
 } from "@solana/web3.js";
 import { SpotPosition, PerpPosition } from "../../utils/drift/types";
-import { DriftVault } from "../../deser/driftLayouts";
-import { decodeUser } from "../../utils/drift/user";
+import { DriftUser, DriftVault } from "../../deser/driftLayouts";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "../base";
 import {
@@ -81,7 +81,7 @@ class TxBuilder extends BaseTxBuilder<DriftVaultsClient> {
     const {
       vault: driftSpotMarketVault,
       mint,
-      tokenProgram,
+      tokenProgramId: tokenProgram,
     } = await this.client.drift.fetchAndParseSpotMarket(spotMarketIndex);
 
     const remainingAccounts =
@@ -187,7 +187,7 @@ class TxBuilder extends BaseTxBuilder<DriftVaultsClient> {
     const {
       vault: driftSpotMarketVault,
       mint,
-      tokenProgram,
+      tokenProgramId: tokenProgram,
     } = await this.client.drift.fetchAndParseSpotMarket(spotMarketIndex);
     const userTokenAccount = this.client.base.getVaultAta(mint, tokenProgram);
 
@@ -232,12 +232,14 @@ export class DriftVaultsClient {
     perpPositions: PerpPosition[];
     spotPositions: SpotPosition[];
   }> {
-    const accountInfo =
-      await this.base.provider.connection.getAccountInfo(user);
+    const accountInfo = await this.base.connection.getAccountInfo(user);
     if (!accountInfo) {
-      throw new Error(`Drift user ${user} account not found for vault.`);
+      throw new Error(`Drift user account ${user} not found for vault.`);
     }
-    const { spotPositions, perpPositions } = decodeUser(accountInfo.data);
+    const { spotPositions, perpPositions } = DriftUser.decode(
+      user,
+      accountInfo.data,
+    );
     return { perpPositions, spotPositions };
   }
 
@@ -318,16 +320,17 @@ export class DriftVaultsClient {
   /**
    * Finds all drift vault depositors
    */
-  public async findAndParseVaultDepositors(authority?: PublicKey) {
-    const accounts = await this.base.provider.connection.getProgramAccounts(
+  public async findAndParseVaultDepositors(commitment?: Commitment) {
+    const accounts = await this.base.connection.getProgramAccounts(
       DRIFT_VAULTS_PROGRAM_ID,
       {
+        commitment,
         filters: [
           { dataSize: DRIFT_VAULT_DEPOSITOR_SIZE },
           {
             memcmp: {
               offset: 72,
-              bytes: (authority || this.base.vaultPda).toBase58(),
+              bytes: this.base.vaultPda.toBase58(),
             },
           },
         ],

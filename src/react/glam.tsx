@@ -16,7 +16,7 @@ import { GlamClient } from "../client";
 import { useAtomValue, useSetAtom } from "jotai/react";
 import { PublicKey } from "@solana/web3.js";
 import { WSOL } from "../constants";
-import { DriftMarketConfigs, DriftUser } from "../client/drift";
+import { DriftMarketConfigs } from "../client/drift";
 import { TokenAccount } from "../client/base";
 import { useCluster } from "./cluster-provider";
 import {
@@ -24,6 +24,8 @@ import {
   TokenPrice,
   JupiterApiClient,
 } from "../utils/jupiterApi";
+import { DriftUser } from "../deser";
+import { ClusterNetwork } from "../clientConfig";
 
 declare global {
   interface Window {
@@ -42,8 +44,8 @@ interface GlamProviderContext {
   integrationAcls: IntegrationAcl[];
   allGlamStates: StateModel[];
   prices: TokenPrice[];
-  jupTokenList?: TokenListItem[];
-  driftMarketConfigs: DriftMarketConfigs;
+  jupTokenList: TokenListItem[];
+  driftMarketConfigs?: DriftMarketConfigs;
   setActiveGlamState: (f: GlamStateCache) => void;
   refresh: () => Promise<void>; // refresh active glam state
   refetchGlamStates: () => Promise<void>;
@@ -123,11 +125,6 @@ export function GlamProvider({
   const { cluster } = useCluster();
 
   const [allGlamStates, setAllGlamStates] = useState([] as StateModel[]);
-  const [jupTokenList, setJupTokenList] = useState([] as TokenListItem[]);
-  const [tokenPrices, setTokenPrices] = useState([] as TokenPrice[]);
-  const [driftMarketConfigs, setDriftMarketConfigs] = useState(
-    {} as DriftMarketConfigs,
-  );
 
   const activeGlamState = deserializeGlamStateCache(
     useAtomValue(activeGlamStateAtom),
@@ -253,66 +250,23 @@ export function GlamProvider({
   }, [activeGlamState]);
 
   //
-  // Fetch token prices
-  //
-  const { data: tokenPricesData } = useQuery({
-    queryKey: ["/jup-token-prices", vault?.pubkey],
-    enabled: cluster.network === "mainnet-beta",
-    refetchInterval: 30_000,
-    queryFn: () => {
-      const tokenMints = new Set<string>([]);
-
-      tokenMints.add(WSOL.toBase58()); // Always add wSOL feed so that we can price SOL
-
-      // Token accounts owned by the vault
-      (vault.tokenAccounts || []).forEach((ta: TokenAccount) => {
-        tokenMints.add(ta.mint.toBase58());
-      });
-
-      // Drift spot positions
-      (vault?.driftUsers?.[0].spotPositions || []).forEach((position) => {
-        const marketConfig = driftMarketConfigs.spotMarkets.find(
-          (m) => position.marketIndex === m.marketIndex,
-        );
-        if (marketConfig) {
-          tokenMints.add(marketConfig.mint.toBase58());
-        }
-      });
-
-      const tokens = Array.from(tokenMints);
-      return new JupiterApiClient().fetchTokenPrices(tokens);
-    },
-  });
-  useEffect(() => {
-    if (tokenPricesData) {
-      setTokenPrices(tokenPricesData);
-    }
-  }, [tokenPricesData]);
-
-  //
   // Fetch token list from jupiter api
   //
-  const { data: tokenListData } = useQuery({
+  const { data: jupTokenList } = useQuery({
     queryKey: ["jupiter-tokens-list"],
     queryFn: () => new JupiterApiClient().fetchTokensList(),
     staleTime: 1000 * 60 * 60, // 1 hour
   });
-  useEffect(() => setJupTokenList(tokenListData || []), [tokenListData]);
 
   //
   // Fetch drift market configs
   //
-  const { data: marketConfigs } = useQuery({
+  const { data: driftMarketConfigs } = useQuery({
     queryKey: ["drift-market-configs"],
-    enabled: cluster.network === "mainnet-beta",
+    enabled: cluster.network === ClusterNetwork.Mainnet,
     queryFn: () => glamClient.drift.fetchMarketConfigs(),
     staleTime: 1000 * 60 * 60, // 1 hour
   });
-  useEffect(() => {
-    if (marketConfigs) {
-      setDriftMarketConfigs(marketConfigs);
-    }
-  }, [marketConfigs]);
 
   //
   // Fetch drift user
@@ -323,9 +277,10 @@ export function GlamProvider({
     refetch: refetchDriftUser,
   } = useQuery({
     queryKey: ["/drift-users", activeGlamState?.pubkey],
-    enabled: !!activeGlamState?.pubkey,
+    enabled:
+      !!activeGlamState?.pubkey && cluster.network === ClusterNetwork.Mainnet,
     refetchInterval: 30 * 1000,
-    queryFn: () => glamClient.drift.fetchDriftUsers(),
+    queryFn: () => glamClient.drift.fetchAndParseDriftUsers(),
   });
   useEffect(() => {
     if (!driftUsersError && driftUsersData) {
@@ -336,6 +291,39 @@ export function GlamProvider({
     }
   }, [driftUsersData, driftUsersError]);
 
+  //
+  // Fetch token prices
+  //
+  const { data: tokenPrices } = useQuery({
+    queryKey: ["/jup-token-prices", vault?.pubkey],
+    enabled: cluster.network === ClusterNetwork.Mainnet && !!driftMarketConfigs,
+    refetchInterval: 30_000,
+    queryFn: () => {
+      const tokenMints = new Set<string>([WSOL.toBase58()]); // Always add wSOL feed so that we can price SOL
+
+      // Token accounts owned by the vault
+      (vault.tokenAccounts || []).forEach((ta: TokenAccount) => {
+        tokenMints.add(ta.mint.toBase58());
+      });
+
+      // Collect spot positions from all drift users
+      (vault?.driftUsers || [])
+        .map((user) => user.spotPositions)
+        .flat()
+        .forEach((position) => {
+          const marketConfig = driftMarketConfigs?.spotMarkets.find(
+            (m) => position.marketIndex === m.marketIndex,
+          );
+          if (marketConfig) {
+            tokenMints.add(marketConfig.mint.toBase58());
+          }
+        });
+
+      const tokens = Array.from(tokenMints);
+      return new JupiterApiClient().fetchTokenPrices(tokens);
+    },
+  });
+
   const value: GlamProviderContext = {
     glamClient,
     vault,
@@ -344,8 +332,8 @@ export function GlamProvider({
     delegateAcls,
     integrationAcls,
     allGlamStates,
-    jupTokenList,
-    prices: tokenPrices,
+    jupTokenList: jupTokenList || [],
+    prices: tokenPrices || [],
     driftMarketConfigs,
     setActiveGlamState,
     refresh: async () => {

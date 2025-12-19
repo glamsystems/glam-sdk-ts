@@ -56,9 +56,9 @@ class TxBuilder extends BaseTxBuilder<FeesClient> {
 
     // TODO: parse from glam config account
     const protocolFeeAuthority = new PublicKey(
-      "gLJHKPrZLGBiBZ33hFgZh6YnsEhTVxuRT17UCqNp6ff",
+      "9oWi2MjrAujYNTUXXNBLk1ugioaF1mJHc7EoamX4eQLZ",
     );
-    const managerFeeAuthority = stateModel?.owner;
+    const managerFeeAuthority = stateModel.owner;
     if (!managerFeeAuthority) {
       throw new Error("Manager fee authority not found");
     }
