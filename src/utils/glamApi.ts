@@ -1,8 +1,4 @@
 import { AddressLookupTableAccount, PublicKey } from "@solana/web3.js";
-import { DriftMarketConfigs } from "../client/drift/types";
-import { OracleSource } from "./drift/types";
-import { DriftPerpMarket, DriftSpotMarket } from "../deser/driftLayouts";
-import { BN } from "@coral-xyz/anchor";
 
 interface LookupTableResponse {
   tables: string[]; // table addresses

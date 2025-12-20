@@ -23,7 +23,6 @@ import {
 import { PkMap } from "./pkmap";
 import { fetchGlamLookupTableAccounts } from "./glamApi";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
-import { getGlobalConfigPda, getVaultPda } from "./glamPDAs";
 
 export type StakeAccountInfo = {
   address: PublicKey;
@@ -293,12 +292,20 @@ export async function findGlamLookupTables(
   // This is very likely to hit the RPC error "Request deprioritized due to number of accounts requested. Slow down requests or add filters to narrow down results"
   const accounts = await connection.getProgramAccounts(ALT_PROGRAM_ID, {
     filters: [
-      { memcmp: { offset: 0, bytes: bs58.encode([1, 0, 0, 0]) } },
+      {
+        memcmp: {
+          offset: 0,
+          bytes: bs58.encode([
+            1, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+          ]),
+        },
+      },
       { memcmp: { offset: 56, bytes: statePda.toBase58() } }, // 1st entry: state
       { memcmp: { offset: 88, bytes: vaultPda.toBase58() } }, // 2nd entry: vault
       { memcmp: { offset: 120, bytes: GLAM_CONFIG_PROGRAM.toBase58() } }, // 3st entry: global config program
     ],
   });
+
   return accounts.map(
     ({ pubkey, account }) =>
       new AddressLookupTableAccount({
