@@ -20,7 +20,6 @@ import {
   MarketType,
   PkMap,
   PkSet,
-  SpotBalanceType,
   toUiAmount,
 } from "../utils";
 import Decimal from "decimal.js";
@@ -29,7 +28,11 @@ import {
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { KAMINO_LENDING_PROGRAM, KAMINO_OBTRIGATION_SIZE } from "../constants";
+import {
+  KAMINO_LENDING_PROGRAM,
+  KAMINO_OBTRIGATION_SIZE,
+  USDC,
+} from "../constants";
 import {
   DriftSpotMarket,
   DriftPerpMarket,
@@ -131,6 +134,7 @@ export class PriceClient {
     const externalPositionsSet = new PkSet(externalPositions);
 
     let glamDriftUserSpotMarketsMap = new PkMap<PkSet>(); // glam-controlled drift user -> spot markets map
+    let glamDriftUserPerpMarketsMap = new PkMap<PkSet>(); // glam-controlled drift user -> perp markets map
     let dvaultDepositorsAndVaults = new PkMap<DriftVault>(); // dvault depositor -> drift vault map
     let dvaultUserSpotMarketsMap = new PkMap<PkSet>(); // dvault drift user -> spot markets map
     let dvaultUserPerpMarketsMap = new PkMap<PkSet>(); // dvault drift user -> perp markets map
@@ -150,6 +154,10 @@ export class PriceClient {
           return user;
         });
         glamDriftUserSpotMarketsMap = await this.getPubkeysForSpotHoldings(
+          userPdas,
+          commitment,
+        );
+        glamDriftUserPerpMarketsMap = await this.getPubkeysForPerpHoldings(
           userPdas,
           commitment,
         );
@@ -209,6 +217,9 @@ export class PriceClient {
     const glamDriftSpotMarkets = [...glamDriftUserSpotMarketsMap.values()]
       .map((s) => Array.from(s.pkValues()))
       .flat();
+    const glamDriftPerpMarkets = [...glamDriftUserPerpMarketsMap.values()]
+      .map((s) => Array.from(s.pkValues()))
+      .flat();
 
     const dvaultDepositors = Array.from(dvaultDepositorsAndVaults.pkKeys());
     const dvaultUsers = [...dvaultDepositorsAndVaults.values()].map(
@@ -234,6 +245,7 @@ export class PriceClient {
         ...tokenPubkeys,
         ...glamDriftUsers,
         ...glamDriftSpotMarkets,
+        ...glamDriftPerpMarkets,
         ...dvaultDepositors,
         ...dvaultUsers,
         ...dvaultUserSpotMarkets,
@@ -287,6 +299,13 @@ export class PriceClient {
 
     // Build a map of parsed drift perp markets
     const driftPerpMarketsMap = new PkMap<DriftPerpMarket>();
+    for (const marketPda of glamDriftPerpMarkets) {
+      const data = accountsDataMap.get(marketPda);
+      if (data) {
+        const market = DriftPerpMarket.decode(marketPda, data);
+        driftPerpMarketsMap.set(marketPda, market);
+      }
+    }
     for (const marketPda of dvaultUserPerpMarkets) {
       const data = accountsDataMap.get(marketPda);
       if (data) {
@@ -329,13 +348,15 @@ export class PriceClient {
       tokenPricesMap,
       "Jupiter",
     );
-    const driftSpotHoldings = this.getDriftSpotHoldings(
-      glamDriftUserSpotMarketsMap.pkKeys(),
+    const driftSpotHoldings = this.getDriftHoldings(
+      glamDriftUserSpotMarketsMap.pkKeys(), // all drift users controlled by glam vault
       driftSpotMarketsMap,
+      driftPerpMarketsMap,
       accountsDataMap,
       tokenPricesMap,
       "Jupiter",
     );
+
     const dvaultHoldings = this.getDriftVaultsHoldings(
       dvaultDepositorsAndVaults,
       dvaultDepositorsMap,
@@ -578,9 +599,10 @@ export class PriceClient {
     return holdings;
   }
 
-  getDriftSpotHoldings(
+  getDriftHoldings(
     userPubkeys: Iterable<PublicKey>,
     spotMarketsMap: PkMap<DriftSpotMarket>,
+    perpMarketsMap: PkMap<DriftPerpMarket>,
     accountsDataMap: PkMap<Buffer>,
     tokenPricesMap: PkMap<TokenListItem>,
     priceSource: string,
@@ -588,28 +610,34 @@ export class PriceClient {
     const holdings: Holding[] = [];
 
     for (const userPda of userPubkeys) {
-      const userData = accountsDataMap.get(userPda);
-      if (!userData) continue;
+      const userData = accountsDataMap.get(userPda)!;
 
-      const { spotPositions } = DriftUser.decode(userPda, userData);
+      const { spotPositions, perpPositions } = DriftUser.decode(
+        userPda,
+        userData,
+      );
 
-      for (const { marketIndex, scaledBalance, balanceType } of spotPositions) {
-        const marketPda = this.drift.getMarketPda(MarketType.SPOT, marketIndex);
-        const spotMarket = spotMarketsMap.get(marketPda);
-        if (!spotMarket) continue;
+      for (const spotPosition of spotPositions) {
+        const {
+          marketIndex,
+          mint,
+          decimals,
+          cumulativeDepositInterest,
+          cumulativeBorrowInterest,
+        } = spotMarketsMap.get(spotPosition.marketPda)!;
 
-        const amount = spotMarket
-          .calcSpotBalanceBn(scaledBalance, balanceType)
+        const amount = spotPosition
+          .calcBalanceBn(
+            decimals,
+            cumulativeDepositInterest,
+            cumulativeBorrowInterest,
+          )
           .abs();
+        const { usdPrice, slot } = tokenPricesMap.get(mint)!;
 
-        const direction = Object.keys(balanceType)[0] as "deposit" | "borrow";
-        const tokenPrice = tokenPricesMap.get(spotMarket.mint);
-        if (!tokenPrice) continue;
-
-        const { usdPrice, slot } = tokenPrice;
         const holding = new Holding(
-          spotMarket.mint,
-          spotMarket.decimals,
+          mint,
+          decimals,
           amount,
           usdPrice,
           { slot, source: priceSource },
@@ -617,7 +645,40 @@ export class PriceClient {
           {
             user: userPda,
             marketIndex,
-            direction,
+            direction: spotPosition.direction,
+            marketType: "spot",
+          },
+        );
+        holdings.push(holding);
+      }
+
+      for (const perpPosition of perpPositions) {
+        const { marketIndex, marketPda } = perpPosition;
+        const {
+          lastOraclePrice,
+          cumulativeFundingRateLong,
+          cumulativeFundingRateShort,
+        } = perpMarketsMap.get(marketPda)!;
+
+        const amount = perpPosition.getUsdValueScaled(
+          lastOraclePrice,
+          cumulativeFundingRateLong,
+          cumulativeFundingRateShort,
+        );
+        const tokenPrice = tokenPricesMap.get(USDC)!;
+        const { usdPrice, slot } = tokenPrice;
+
+        const holding = new Holding(
+          USDC,
+          6,
+          amount,
+          usdPrice,
+          { slot, source: priceSource },
+          "DriftProtocol",
+          {
+            user: userPda,
+            marketIndex,
+            marketType: "perp",
           },
         );
         holdings.push(holding);
@@ -651,7 +712,10 @@ export class PriceClient {
         spotMarketsMap,
         perpMarketsMap,
       );
-      const amount = depositor.vaultShares.mul(aum).div(dvault.totalShares);
+      const amount = depositor.netShares
+        .mul(aum)
+        .div(dvault.totalShares)
+        .add(depositor.lastWithdrawRequest.value);
       const { mint, decimals } = dvault.getBaseAsset(spotMarketsMap);
       const tokenPrice = tokenPricesMap.get(mint);
       if (!tokenPrice) continue;

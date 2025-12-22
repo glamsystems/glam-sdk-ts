@@ -24,22 +24,178 @@ import {
   OrderStatus,
   OrderTriggerCondition,
   OrderType,
-  PerpPosition,
   PositionDirection,
+  readI128LE,
   SpotBalanceType,
-  SpotPosition,
   ZERO,
 } from "../utils/drift/types";
 import { DRIFT_PROGRAM_ID } from "../constants";
 
-function readI128LE(buffer: Buffer, offset: number): BN {
-  const lo = buffer.readBigUInt64LE(offset);
-  const hi = buffer.readBigUInt64LE(offset + 8);
-  let v = (hi << 64n) + lo;
-  if ((hi & (1n << 63n)) !== 0n) {
-    v -= 1n << 128n;
+export class SpotPosition {
+  marketIndex!: number;
+  balanceType!: SpotBalanceType;
+  scaledBalance!: BN;
+  openOrders!: number;
+  openBids!: BN;
+  openAsks!: BN;
+  cumulativeDeposits!: BN;
+
+  constructor(data: any) {
+    this.marketIndex = data?.marketIndex;
+    this.balanceType = data?.balanceType;
+    this.scaledBalance = data?.scaledBalance;
+    this.openOrders = data?.openOrders;
+    this.openBids = data?.openBids;
+    this.openAsks = data?.openAsks;
+    this.cumulativeDeposits = data?.cumulativeDeposits;
   }
-  return new BN(v.toString());
+
+  get marketPda() {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("spot_market"),
+        new BN(this.marketIndex).toArrayLike(Buffer, "le", 2),
+      ],
+      DRIFT_PROGRAM_ID,
+    )[0];
+  }
+
+  calcBalance(
+    decimals: number,
+    cumulativeDepositInterest: BN,
+    cumulativeBorrowInterest: BN,
+  ): { amount: number; uiAmount: number } {
+    const precisionAdjustment = new BN(10 ** (19 - decimals));
+    const balance = this.scaledBalance
+      .mul(this._interest(cumulativeDepositInterest, cumulativeBorrowInterest))
+      .div(precisionAdjustment);
+    const amount =
+      this.balanceType === SpotBalanceType.BORROW
+        ? balance.neg().toNumber()
+        : balance.toNumber();
+    const uiAmount = amount / 10 ** decimals;
+    return { amount, uiAmount };
+  }
+
+  calcBalanceBn(
+    decimals: number,
+    cumulativeDepositInterest: BN,
+    cumulativeBorrowInterest: BN,
+  ): BN {
+    const precisionAdjustment = new BN(10 ** (19 - decimals));
+    const sign =
+      this.balanceType === SpotBalanceType.BORROW ? new BN(-1) : new BN(1);
+    return this.scaledBalance
+      .mul(this._interest(cumulativeDepositInterest, cumulativeBorrowInterest))
+      .div(precisionAdjustment)
+      .mul(sign);
+  }
+
+  _interest(cumulativeDepositInterest: BN, cumulativeBorrowInterest: BN): BN {
+    return this.balanceType === SpotBalanceType.BORROW
+      ? cumulativeBorrowInterest
+      : cumulativeDepositInterest;
+  }
+
+  get direction() {
+    return this.balanceType === SpotBalanceType.BORROW ? "borrow" : "deposit";
+  }
+}
+
+export class PerpPosition {
+  baseAssetAmount!: BN;
+  lastCumulativeFundingRate!: BN;
+  marketIndex!: number;
+  quoteAssetAmount!: BN;
+  quoteEntryAmount!: BN;
+  quoteBreakEvenAmount!: BN;
+  openOrders!: number;
+  openBids!: BN;
+  openAsks!: BN;
+  settledPnl!: BN;
+  lpShares!: BN;
+  remainderBaseAssetAmount!: number;
+  lastBaseAssetAmountPerLp!: BN;
+  lastQuoteAssetAmountPerLp!: BN;
+  perLpBase!: number;
+
+  constructor(data: any) {
+    this.baseAssetAmount = data?.baseAssetAmount;
+    this.lastCumulativeFundingRate = data?.lastCumulativeFundingRate;
+    this.marketIndex = data?.marketIndex;
+    this.quoteAssetAmount = data?.quoteAssetAmount;
+    this.quoteEntryAmount = data?.quoteEntryAmount;
+    this.quoteBreakEvenAmount = data?.quoteBreakEvenAmount;
+    this.openOrders = data?.openOrders;
+    this.openBids = data?.openBids;
+    this.openAsks = data?.openAsks;
+    this.settledPnl = data?.settledPnl;
+    this.lpShares = data?.lpShares;
+    this.remainderBaseAssetAmount = data?.remainderBaseAssetAmount;
+    this.lastBaseAssetAmountPerLp = data?.lastBaseAssetAmountPerLp;
+    this.lastQuoteAssetAmountPerLp = data?.lastQuoteAssetAmountPerLp;
+    this.perLpBase = data?.perLpBase;
+  }
+
+  get marketPda() {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("perp_market"),
+        new BN(this.marketIndex).toArrayLike(Buffer, "le", 2),
+      ],
+      DRIFT_PROGRAM_ID,
+    )[0];
+  }
+
+  baseAssetValue(oraclePrice: BN): BN {
+    return this.baseAssetAmount.mul(oraclePrice).div(new BN(1_000_000_000));
+  }
+
+  unrealizedPnl(oraclePrice: BN): BN {
+    return this.baseAssetValue(oraclePrice).add(this.quoteAssetAmount);
+  }
+
+  getUsdValueScaled(
+    oraclePrice: BN,
+    cumulativeFundingRateLong: BN,
+    cumulativeFundingRateShort: BN,
+  ): BN {
+    const unrealizedPnl = this.unrealizedPnl(oraclePrice);
+    const fundingPayment = this.calcFundingPayment(
+      cumulativeFundingRateLong,
+      cumulativeFundingRateShort,
+    );
+    return unrealizedPnl.add(fundingPayment);
+  }
+
+  calcFundingPayment(
+    cumulativeFundingRateLong: BN,
+    cumulativeFundingRateShort: BN,
+  ): BN {
+    const fundingRate = this.baseAssetAmount.isNeg()
+      ? cumulativeFundingRateShort
+      : cumulativeFundingRateLong;
+    const fundingRateDelta = fundingRate.sub(this.lastCumulativeFundingRate);
+    if (fundingRateDelta.eq(new BN(0))) {
+      return new BN(0);
+    }
+
+    const fundingRateDeltaSign = fundingRateDelta.isNeg() ? -1 : 1;
+
+    const usdPricePrecision = new BN(1_000_000);
+    const fundingRatePaymentMagnitude = fundingRateDelta
+      .abs()
+      .mul(this.baseAssetAmount.abs())
+      .div(usdPricePrecision)
+      .div(new BN(1000));
+
+    const fundingRatePaymentSign = this.baseAssetAmount.isNeg() ? 1 : -1;
+    const sign = fundingRatePaymentSign * fundingRateDeltaSign;
+
+    return sign < 0
+      ? fundingRatePaymentMagnitude.neg()
+      : fundingRatePaymentMagnitude;
+  }
 }
 
 export class DriftVaultDepositor extends Decodable {
@@ -84,6 +240,10 @@ export class DriftVaultDepositor extends Decodable {
     u128("fuelAmount"),
     array(u64(), 4, "padding"),
   ]);
+
+  get netShares(): BN {
+    return this.vaultShares.sub(this.lastWithdrawRequest.shares);
+  }
 }
 
 export class DriftVault extends Decodable {
@@ -223,27 +383,37 @@ export class DriftVault extends Decodable {
     perpMarketsMap: PkMap<DriftPerpMarket>,
   ): BN {
     const positionBalances = [];
-    for (const { marketIndex, scaledBalance, balanceType } of spotPositions) {
-      const marketPda = this.marketPda(MarketType.SPOT, marketIndex);
-      const spotMarket = spotMarketsMap.get(marketPda)!;
-      const amount = spotMarket.calcSpotBalanceBn(scaledBalance, balanceType);
-      const balance = amount
-        .mul(spotMarket.lastOraclePrice)
-        .div(new BN(10 ** spotMarket.decimals));
+    for (const spotPosition of spotPositions) {
+      const {
+        decimals,
+        lastOraclePrice,
+        cumulativeDepositInterest,
+        cumulativeBorrowInterest,
+      } = spotMarketsMap.get(spotPosition.marketPda)!;
+
+      const amount = spotPosition.calcBalanceBn(
+        decimals,
+        cumulativeDepositInterest,
+        cumulativeBorrowInterest,
+      );
+      const balance = amount.mul(lastOraclePrice).div(new BN(10 ** decimals));
       positionBalances.push(balance);
     }
 
     for (const perpPosition of perpPositions) {
-      const { baseAssetAmount, quoteAssetAmount, marketIndex } = perpPosition;
-      const marketPda = this.marketPda(MarketType.PERP, marketIndex);
-      const perpMarket = perpMarketsMap.get(marketPda)!;
-      const baseAssetValue = baseAssetAmount
-        .mul(perpMarket.lastOraclePrice)
-        .div(new BN(1_000_000_000));
-      const unrealizedPnl = baseAssetValue.add(quoteAssetAmount);
-      const fundingPayment = perpMarket.calcFundingPayment(perpPosition);
+      const {
+        lastOraclePrice,
+        cumulativeFundingRateLong,
+        cumulativeFundingRateShort,
+      } = perpMarketsMap.get(perpPosition.marketPda)!;
 
-      positionBalances.push(unrealizedPnl.add(fundingPayment));
+      positionBalances.push(
+        perpPosition.getUsdValueScaled(
+          lastOraclePrice,
+          cumulativeFundingRateLong,
+          cumulativeFundingRateShort,
+        ),
+      );
     }
 
     return positionBalances.reduce((a, b) => a.add(b), new BN(0));
@@ -349,15 +519,18 @@ export class DriftUser {
         balanceType = SpotBalanceType.BORROW;
       }
       offset += 6;
-      spotPositions.push({
-        scaledBalance,
-        openBids,
-        openAsks,
-        cumulativeDeposits,
-        marketIndex,
-        balanceType,
-        openOrders,
-      });
+
+      spotPositions.push(
+        new SpotPosition({
+          marketIndex,
+          balanceType,
+          scaledBalance,
+          openOrders,
+          openBids,
+          openAsks,
+          cumulativeDeposits,
+        }),
+      );
     }
 
     const perpPositions: PerpPosition[] = [];
@@ -400,23 +573,25 @@ export class DriftUser {
       const perLpBase = buffer.readUInt8(offset);
       offset += 1;
 
-      perpPositions.push({
-        lastCumulativeFundingRate,
-        baseAssetAmount,
-        quoteAssetAmount,
-        quoteBreakEvenAmount,
-        quoteEntryAmount,
-        openBids,
-        openAsks,
-        settledPnl,
-        lpShares,
-        lastBaseAssetAmountPerLp,
-        lastQuoteAssetAmountPerLp,
-        remainderBaseAssetAmount,
-        marketIndex,
-        openOrders,
-        perLpBase,
-      });
+      perpPositions.push(
+        new PerpPosition({
+          baseAssetAmount,
+          lastCumulativeFundingRate,
+          marketIndex,
+          quoteAssetAmount,
+          quoteEntryAmount,
+          quoteBreakEvenAmount,
+          openOrders,
+          openBids,
+          openAsks,
+          settledPnl,
+          lpShares,
+          remainderBaseAssetAmount,
+          lastBaseAssetAmountPerLp,
+          lastQuoteAssetAmountPerLp,
+          perLpBase,
+        }),
+      );
     }
 
     const orders: Order[] = [];
@@ -742,38 +917,6 @@ export class DriftSpotMarket extends Decodable {
   get tokenProgramId(): PublicKey {
     return this.tokenProgram === 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
   }
-
-  calcSpotBalance(
-    scaledBalance: BN,
-    scaledBalanceType: SpotBalanceType,
-  ): { amount: number; uiAmount: number } {
-    const precisionAdjustment = new BN(10 ** (19 - this.decimals));
-    const balance = scaledBalance
-      .mul(this._interest(scaledBalanceType))
-      .div(precisionAdjustment);
-    const amount =
-      scaledBalanceType === SpotBalanceType.BORROW
-        ? balance.neg().toNumber()
-        : balance.toNumber();
-    const uiAmount = amount / 10 ** this.decimals;
-    return { amount, uiAmount };
-  }
-
-  calcSpotBalanceBn(scaledBalance: BN, scaledBalanceType: SpotBalanceType): BN {
-    const precisionAdjustment = new BN(10 ** (19 - this.decimals));
-    const sign =
-      scaledBalanceType === SpotBalanceType.BORROW ? new BN(-1) : new BN(1);
-    return scaledBalance
-      .mul(this._interest(scaledBalanceType))
-      .div(precisionAdjustment)
-      .mul(sign);
-  }
-
-  _interest(balanceType: SpotBalanceType): BN {
-    return balanceType === SpotBalanceType.BORROW
-      ? this.cumulativeBorrowInterest
-      : this.cumulativeDepositInterest;
-  }
 }
 
 export class DriftPerpMarket extends Decodable {
@@ -832,35 +975,5 @@ export class DriftPerpMarket extends Decodable {
 
   get oracleSource(): OracleSource {
     return OracleSource.get(this.oracleSourceOrd);
-  }
-
-  calcFundingPayment(perpPosition: PerpPosition): BN {
-    const fundingRate = perpPosition.baseAssetAmount.isNeg()
-      ? this.cumulativeFundingRateShort
-      : this.cumulativeFundingRateLong;
-    const fundingRateDelta = fundingRate.sub(
-      perpPosition.lastCumulativeFundingRate,
-    );
-    if (fundingRateDelta.eq(new BN(0))) {
-      return new BN(0);
-    }
-
-    const fundingRateDeltaSign = fundingRateDelta.isNeg() ? -1 : 1;
-
-    const usdPricePrecision = new BN(1_000_000);
-    const fundingRatePaymentMagnitude = fundingRateDelta
-      .abs()
-      .mul(perpPosition.baseAssetAmount.abs())
-      .div(usdPricePrecision)
-      .div(new BN(1000));
-
-    const fundingRatePaymentSign = perpPosition.baseAssetAmount.isNeg()
-      ? 1
-      : -1;
-    const sign = fundingRatePaymentSign * fundingRateDeltaSign;
-
-    return sign < 0
-      ? fundingRatePaymentMagnitude.neg()
-      : fundingRatePaymentMagnitude;
   }
 }

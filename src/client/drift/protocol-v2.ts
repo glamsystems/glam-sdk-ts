@@ -27,11 +27,22 @@ import {
 } from "@solana/spl-token";
 import { BN } from "@coral-xyz/anchor";
 import { VaultClient } from "../vault";
-import {
-  DRIFT_SIGNER,
-  DRIFT_MARGIN_PRECISION,
-  DriftMarketConfigs,
-} from "./types";
+
+export const DRIFT_SIGNER = new PublicKey(
+  "JCNCMFXo5M5qwUPg2Utu1u6YWp3MbygxqBsBeXXJfrw",
+);
+export const DRIFT_MARGIN_PRECISION = 10_000;
+
+export interface OrderConstants {
+  perpBaseScale: number;
+  quoteScale: number;
+}
+
+export interface DriftMarketConfigs {
+  orderConstants: OrderConstants;
+  perpMarkets: DriftPerpMarket[];
+  spotMarkets: DriftSpotMarket[];
+}
 
 class TxBuilder extends BaseTxBuilder<DriftProtocolClient> {
   async initializeUserStatsIx(
@@ -976,7 +987,7 @@ export class DriftProtocolClient {
     const invalidIndexes = marketIndexes.filter(
       (marketIndex) => !this.perpMarkets.has(marketIndex),
     );
-    if (invalidIndexes.length > 0) {
+    if (invalidIndexes.length > 0 && process.env.NODE_ENV === "development") {
       console.warn(
         `The following perp markets could not be found: ${invalidIndexes.join(", ")}`,
       );

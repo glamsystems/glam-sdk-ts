@@ -5,8 +5,12 @@ import {
   AccountMeta,
   Commitment,
 } from "@solana/web3.js";
-import { SpotPosition, PerpPosition } from "../../utils/drift/types";
-import { DriftUser, DriftVault } from "../../deser/driftLayouts";
+import {
+  DriftUser,
+  DriftVault,
+  PerpPosition,
+  SpotPosition,
+} from "../../deser/driftLayouts";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "../base";
 import {
@@ -15,8 +19,7 @@ import {
   DRIFT_VAULTS_PROGRAM_ID,
 } from "../../constants";
 import { BN } from "@coral-xyz/anchor";
-import { DriftProtocolClient } from "./protocol-v2";
-import { DRIFT_SIGNER } from "./types";
+import { DRIFT_SIGNER, DriftProtocolClient } from "./protocol-v2";
 
 class TxBuilder extends BaseTxBuilder<DriftVaultsClient> {
   public async initializeVaultDepositorTx(
