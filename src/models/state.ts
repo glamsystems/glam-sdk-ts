@@ -316,4 +316,20 @@ export class StateAccountType {
   static equals(a: StateAccountType, b: StateAccountType) {
     return Object.keys(a)[0] === Object.keys(b)[0];
   }
+
+  static from(s: string) {
+    if (s === "vault") {
+      return StateAccountType.VAULT;
+    }
+
+    if (s === "tokenizedVault") {
+      return StateAccountType.TOKENIZED_VAULT;
+    }
+
+    if (s === "mint") {
+      return StateAccountType.MINT;
+    }
+
+    throw new Error(`Invalid state account type: ${s}`);
+  }
 }
