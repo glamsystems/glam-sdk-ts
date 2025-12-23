@@ -36,8 +36,11 @@ const MESSAGE_RECEIVED_EVENT_DISCM = new Uint8Array([
   0xe7, 0x44, 0x2f, 0x4d, 0xad, 0xf1, 0x9d, 0xa6,
 ]);
 
+const CCTP_DOMAIN_SOLANA = 5;
+
 export class CctpBridgeEvent {
   readonly uiAmount!: number;
+  slot?: number;
 
   constructor(
     readonly amount: BN,
@@ -516,7 +519,6 @@ export class CctpClient {
       MESSAGE_TRANSMITTER_V2,
       {
         ...(options.commitment ? { commitment: options.commitment } : {}),
-        ...(options.minSlot ? { minContextSlot: options.minSlot } : {}),
         filters: [
           { dataSize: 428 },
           { memcmp: { offset: 300, bytes: sender.toBase58() } },
@@ -620,18 +622,24 @@ export class CctpClient {
     txHashes?: string[];
     minSlot?: number;
   }): Promise<CctpBridgeEvent[]> {
-    const { batchSize = 1, commitment = "confirmed", minSlot } = options;
+    const { batchSize = 1, commitment = "confirmed", minSlot = 0 } = options;
 
     const txHashes = new Set<string>(options.txHashes ?? []);
+    const txSlots = new Map<string, number>();
 
     // If no txHashes provided, find transactions involving vault's USDC token account
     if (txHashes.size === 0) {
       const signatures = await this.base.connection.getSignaturesForAddress(
         this.base.getVaultAta(USDC),
-        { ...(minSlot ? { minContextSlot: minSlot } : {}) },
+        {},
         commitment,
       );
-      signatures.forEach((sig) => txHashes.add(sig.signature));
+      signatures
+        .filter((s) => s.slot >= minSlot)
+        .forEach((sig) => {
+          txHashes.add(sig.signature);
+          txSlots.set(sig.signature, sig.slot);
+        });
     }
 
     if (txHashes.size === 0) {
@@ -698,6 +706,9 @@ export class CctpClient {
             nonce,
             txHash,
           });
+          for (const event of events) {
+            event.slot = txSlots.get(txHash);
+          }
           allEvents.push(...events);
         }
       }
@@ -720,21 +731,22 @@ export class CctpClient {
     txHashes?: string[];
     minSlot?: number;
   }): Promise<CctpBridgeEvent[]> {
-    const { batchSize = 1, commitment = "confirmed", minSlot } = options;
+    const { batchSize = 1, commitment = "confirmed", minSlot = 0 } = options;
 
     const txHashes = new Set<string>(options.txHashes ?? []);
+    const txSlots = new Map<string, number>();
 
     // If no txHashes are provided, find all message accounts for the vault
     if (txHashes.size === 0) {
       const messagePubkeys = await this.findV2Messages(this.base.vaultPda, {
         commitment,
-        minSlot,
       });
 
       if (messagePubkeys.length === 0) {
         return [];
       }
 
+      // Get account creation transaction for each message account
       for (let i = 0; i < messagePubkeys.length; i += batchSize) {
         const batch = messagePubkeys.slice(i, i + batchSize);
         const signaturesPromises = batch.map((pubkey) =>
@@ -744,16 +756,25 @@ export class CctpClient {
 
         // Process batch results and collect transaction signatures
         for (let j = 0; j < batch.length; j++) {
-          const sigs = batchSignatures[j];
+          const sigs = batchSignatures[j].filter((s) => s.slot >= minSlot);
+          if (sigs.length === 0) {
+            continue;
+          }
           const createdTx = sigs.sort((a, b) => a.slot - b.slot)[0];
           txHashes.add(createdTx.signature);
+          txSlots.set(createdTx.signature, createdTx.slot);
         }
       }
     }
 
     const allEvents: CctpBridgeEvent[] = [];
     for (const txHash of txHashes) {
-      const events = await this.parseEventsFromAttestion(5, { txHash });
+      const events = await this.parseEventsFromAttestion(CCTP_DOMAIN_SOLANA, {
+        txHash,
+      });
+      for (const event of events) {
+        event.slot = txSlots.get(txHash);
+      }
       allEvents.push(...events);
     }
 
