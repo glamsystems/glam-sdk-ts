@@ -2,14 +2,13 @@ import { Transaction } from "@solana/web3.js";
 import { GlamClient, nameToChars, StateAccountType, WSOL } from "../../src";
 import { airdrop, sleep } from "../test-utils";
 import { BN } from "@coral-xyz/anchor";
-import { InitMintParams } from "../../src/client/mint";
 
 const txOptions = {
   simulate: true,
 };
 
 describe("fees", () => {
-  const glamClient = new GlamClient();
+  const glamClient = new GlamClient({ jupiterApiKey: "jupiter-api-key-mock" });
 
   it("Initialize mint", async () => {
     const name = "GLAM Mint Test Fees";

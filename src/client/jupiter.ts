@@ -185,7 +185,7 @@ export class JupiterSwapClient {
     readonly vault: VaultClient,
   ) {
     this.txBuilder = new TxBuilder(this);
-    this.jupApi = new JupiterApiClient();
+    this.jupApi = new JupiterApiClient({ apiKey: this.base.jupiterApiKey });
   }
 
   public async swap(

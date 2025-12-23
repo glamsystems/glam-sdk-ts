@@ -107,6 +107,7 @@ export class BaseClient {
   cluster: ClusterNetwork;
   provider: anchor.Provider;
   blockhashWithCache: BlockhashWithCache;
+  jupiterApiKey?: string;
 
   private _protocolProgram?: GlamProtocolProgram;
   private _mintProgram?: GlamMintProgram;
@@ -138,14 +139,14 @@ export class BaseClient {
       anchor.setProvider(this.provider);
     }
 
-    this.cluster =
-      config?.cluster ||
-      ClusterNetwork.fromUrl(this.provider.connection.rpcEndpoint);
-
     if (config?.statePda) {
       this.statePda = config.statePda;
     }
 
+    this.cluster =
+      config?.cluster ||
+      ClusterNetwork.fromUrl(this.provider.connection.rpcEndpoint);
+    this.jupiterApiKey = config?.jupiterApiKey;
     this.blockhashWithCache = new BlockhashWithCache(this.provider);
   }
 

@@ -25,7 +25,8 @@ describe("drift_protocol", () => {
   const glamClient = new GlamClient();
 
   const getOpenOrders = async (subAccountId: number = 0): Promise<Order[]> => {
-    const driftUser = await glamClient.drift.fetchDriftUser(subAccountId);
+    const driftUser =
+      await glamClient.drift.fetchAndParseDriftUser(subAccountId);
     return (driftUser?.orders || []).filter(
       (o) => o.status === OrderStatus.OPEN,
     );

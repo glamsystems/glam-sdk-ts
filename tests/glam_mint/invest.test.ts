@@ -5,7 +5,6 @@ import {
   WSOL,
   fetchMintAndTokenProgram,
 } from "../../src";
-import { InitMintParams } from "../../src/client/mint";
 import { airdrop, str2seed } from "../test-utils";
 import { BN, Wallet } from "@coral-xyz/anchor";
 import { Keypair } from "@solana/web3.js";
@@ -15,7 +14,9 @@ const txOptions = {
 };
 
 describe("invest", () => {
-  const glamClientManager = new GlamClient();
+  const glamClientManager = new GlamClient({
+    jupiterApiKey: "jupiter-api-key-mock",
+  });
 
   const userKeypairs = [
     Keypair.fromSeed(str2seed("alice")),
@@ -27,10 +28,22 @@ describe("invest", () => {
   const bob = userKeypairs[1];
   const eve = userKeypairs[2];
   const rich = userKeypairs[3];
-  const glamClientAlice = new GlamClient({ wallet: new Wallet(alice) });
-  const glamClientBob = new GlamClient({ wallet: new Wallet(bob) });
-  const glamClientEve = new GlamClient({ wallet: new Wallet(eve) });
-  const glamClientRich = new GlamClient({ wallet: new Wallet(rich) });
+  const glamClientAlice = new GlamClient({
+    wallet: new Wallet(alice),
+    jupiterApiKey: "jupiter-api-key-mock",
+  });
+  const glamClientBob = new GlamClient({
+    wallet: new Wallet(bob),
+    jupiterApiKey: "jupiter-api-key-mock",
+  });
+  const glamClientEve = new GlamClient({
+    wallet: new Wallet(eve),
+    jupiterApiKey: "jupiter-api-key-mock",
+  });
+  const glamClientRich = new GlamClient({
+    wallet: new Wallet(rich),
+    jupiterApiKey: "jupiter-api-key-mock",
+  });
 
   const fetchGlamMintSupply = async () => {
     const { mint } = await fetchMintAndTokenProgram(
