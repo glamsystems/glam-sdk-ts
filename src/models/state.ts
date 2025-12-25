@@ -133,14 +133,10 @@ export class StateModel extends StateIdlModel {
   }
 
   get sparkleKey() {
-    if (!this.mint && !this.id) {
-      throw new Error("Cannot generate sparkle key");
-    }
-    // An edge case is mint is closed but state account is not
-    // this.mint would be `null`
-    return (
-      !this.mint?.equals(PublicKey.default) ? this.id : this.mint
-    )?.toBase58();
+    const pubkey =
+      (this.mint?.equals(PublicKey.default) ? this.id : this.mint) ||
+      PublicKey.default;
+    return pubkey.toBase58();
   }
 
   get baseAssetTokenProgramId() {
