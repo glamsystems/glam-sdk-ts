@@ -15,17 +15,13 @@ import type { DelegateAcl, StateModel, IntegrationAcl } from "../models";
 import { GlamClient } from "../client";
 import { useAtomValue, useSetAtom } from "jotai/react";
 import { PublicKey } from "@solana/web3.js";
-import { WSOL } from "../constants";
 import { DriftMarketConfigs } from "../client/drift";
 import { TokenAccount } from "../client/base";
 import { useCluster } from "./cluster-provider";
-import {
-  TokenListItem,
-  TokenPrice,
-  JupiterApiClient,
-} from "../utils/jupiterApi";
-import { DriftUser } from "../deser";
+import { JupiterApiClient, JupTokenList } from "../utils/jupiterApi";
 import { ClusterNetwork } from "../clientConfig";
+import { VaultHoldings } from "../client/price";
+import { DriftUser } from "../deser";
 
 declare global {
   interface Window {
@@ -38,16 +34,16 @@ declare global {
 interface GlamProviderContext {
   glamClient: GlamClient;
   vault: Vault;
+  vaultHoldings?: VaultHoldings;
   activeGlamState?: GlamStateCache;
   glamStatesList: GlamStateCache[];
   delegateAcls: DelegateAcl[];
   integrationAcls: IntegrationAcl[];
   allGlamStates: StateModel[];
-  prices: TokenPrice[];
-  jupTokenList: TokenListItem[];
+  jupTokenList?: JupTokenList;
   driftMarketConfigs?: DriftMarketConfigs;
   setActiveGlamState: (f: GlamStateCache) => void;
-  refresh: () => Promise<void>; // refresh active glam state
+  refresh: () => Promise<void>; // refresh active glam vault from onchain data
   refetchGlamStates: () => Promise<void>;
 }
 
@@ -120,6 +116,9 @@ export function GlamProvider({
     [] as IntegrationAcl[],
   );
   const [vault, setVault] = useState({} as Vault);
+  const [vaultHoldings, setVaultHoldings] = useState<VaultHoldings | undefined>(
+    undefined,
+  );
   const wallet = useWallet();
   const { connection } = useConnection();
   const { cluster } = useCluster();
@@ -155,14 +154,28 @@ export function GlamProvider({
         "fetching vault data for active glam state:",
         activeGlamState.address,
       );
-      const balances = await glamClient.getSolAndTokenBalances(
-        glamClient.vaultPda,
-      );
-      setVault((prevVault) => ({
-        ...prevVault,
+
+      // Note: We fetch both datasets in parallel:
+      // - getVaultHoldings: Comprehensive holdings with pricing
+      // - getSolAndTokenBalances: Basic token accounts
+      // While there's some overlap, both are needed for backward compatibility until all forms are migrated to use vaultHoldings
+      const [balances, holdings] = await Promise.all([
+        glamClient.getSolAndTokenBalances(glamClient.vaultPda),
+        glamClient.price.getVaultHoldings("confirmed").catch((err) => {
+          console.warn("Failed to fetch vault holdings:", err);
+          return undefined;
+        }),
+      ]);
+
+      setVault((prev) => ({
+        ...prev,
         ...balances,
         pubkey: glamClient.vaultPda,
       }));
+
+      if (holdings) {
+        setVaultHoldings(holdings);
+      }
     }
   };
 
@@ -182,20 +195,18 @@ export function GlamProvider({
     // Find a list of glam states that the wallet has access to
     const glamStatesList = [] as GlamStateCache[];
     glamStateModels.forEach((s: StateModel) => {
-      if (s.owner && wallet?.publicKey?.equals(s.owner)) {
-        const stateCache = toStateCache(s);
-        glamStatesList.push(stateCache);
-      } else {
-        (s.delegateAcls || []).forEach((acl) => {
-          if (wallet?.publicKey?.equals(acl.pubkey)) {
-            glamStatesList.push(toStateCache(s));
-          }
-        });
+      const isOwner = s.owner && wallet?.publicKey?.equals(s.owner);
+      const isDelegate = (s.delegateAcls || []).some((acl) =>
+        wallet?.publicKey?.equals(acl.pubkey),
+      );
+      if (isOwner || isDelegate) {
+        glamStatesList.push(toStateCache(s));
       }
     });
     setGlamStatesList(glamStatesList);
 
     if (glamStatesList.length > 0) {
+      // If no active glam state, or the cached active glam state is not in the list, set the first one
       if (
         !activeGlamState ||
         !glamStatesList.find(
@@ -214,48 +225,30 @@ export function GlamProvider({
     refreshVaultHoldings();
   }, [glamStateModels, wallet, cluster]);
 
-  const refreshDelegateAcls = async () => {
-    if (activeGlamState?.pubkey) {
-      try {
-        const glamState = await glamClient.fetchStateModel();
-        console.log(
-          `${activeGlamState.address} delegate acls:`,
-          glamState.delegateAcls,
-        );
-        setDelegateAcls(glamState.delegateAcls || []);
-      } catch (error) {
-        setDelegateAcls([]);
-      }
-    }
-  };
-
-  const refreshIntegrationAcls = async () => {
-    if (activeGlamState?.pubkey) {
-      try {
-        const glamState = await glamClient.fetchStateModel();
-        console.log(
-          `${activeGlamState.address} integration acls:`,
-          glamState.integrationAcls,
-        );
-        setIntegrationAcls(glamState.integrationAcls || []);
-      } catch (error) {
-        setIntegrationAcls([]);
-      }
+  const refreshVaultAcls = async () => {
+    try {
+      const glamState = await glamClient.fetchStateAccount();
+      setDelegateAcls(glamState.delegateAcls || []);
+      setIntegrationAcls(glamState.integrationAcls || []);
+    } catch (error) {
+      setDelegateAcls([]);
+      setIntegrationAcls([]);
     }
   };
 
   useEffect(() => {
-    refreshDelegateAcls();
-    refreshIntegrationAcls();
+    if (activeGlamState?.pubkey) {
+      refreshVaultAcls();
+    }
   }, [activeGlamState]);
 
   //
-  // Fetch token list from jupiter api
+  // Fetch token list from jupiter api. The returned data includes token metadata (e.g., name, symbol, decimals, logoURI, etc.) and token prices.
   //
   const { data: jupTokenList } = useQuery({
     queryKey: ["jupiter-tokens-list"],
-    queryFn: () => new JupiterApiClient().fetchTokensList(),
-    staleTime: 1000 * 60 * 60, // 1 hour
+    queryFn: () => new JupiterApiClient().fetchTokensList(true),
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   //
@@ -265,81 +258,47 @@ export function GlamProvider({
     queryKey: ["drift-market-configs"],
     enabled: cluster.network === ClusterNetwork.Mainnet,
     queryFn: () => glamClient.drift.fetchMarketConfigs(),
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60, // 60 seconds
   });
 
   //
-  // Fetch drift user
+  // Fetch drift users
   //
   const {
     data: driftUsersData,
     error: driftUsersError,
     refetch: refetchDriftUser,
   } = useQuery({
-    queryKey: ["/drift-users", activeGlamState?.pubkey],
+    queryKey: ["drift-users", activeGlamState?.pubkey],
     enabled:
       !!activeGlamState?.pubkey && cluster.network === ClusterNetwork.Mainnet,
-    refetchInterval: 30 * 1000,
     queryFn: () => glamClient.drift.fetchAndParseDriftUsers(),
+    refetchInterval: 30 * 1000, // 30 seconds
   });
   useEffect(() => {
     if (!driftUsersError && driftUsersData) {
-      setVault((prevVault) => ({
-        ...prevVault,
+      setVault((prev) => ({
+        ...prev,
         driftUsers: driftUsersData,
       }));
     }
   }, [driftUsersData, driftUsersError]);
 
-  //
-  // Fetch token prices
-  //
-  const { data: tokenPrices } = useQuery({
-    queryKey: ["/jup-token-prices", vault?.pubkey],
-    enabled: cluster.network === ClusterNetwork.Mainnet && !!driftMarketConfigs,
-    refetchInterval: 30_000,
-    queryFn: () => {
-      const tokenMints = new Set<string>([WSOL.toBase58()]); // Always add wSOL feed so that we can price SOL
-
-      // Token accounts owned by the vault
-      (vault.tokenAccounts || []).forEach((ta: TokenAccount) => {
-        tokenMints.add(ta.mint.toBase58());
-      });
-
-      // Collect spot positions from all drift users
-      (vault?.driftUsers || [])
-        .map((user) => user.spotPositions)
-        .flat()
-        .forEach((position) => {
-          const marketConfig = driftMarketConfigs?.spotMarkets.find(
-            (m) => position.marketIndex === m.marketIndex,
-          );
-          if (marketConfig) {
-            tokenMints.add(marketConfig.mint.toBase58());
-          }
-        });
-
-      const tokens = Array.from(tokenMints);
-      return new JupiterApiClient().fetchTokenPrices(tokens);
-    },
-  });
-
   const value: GlamProviderContext = {
     glamClient,
     vault,
+    vaultHoldings,
     activeGlamState,
     glamStatesList: useAtomValue(glamStatesListAtom),
     delegateAcls,
     integrationAcls,
     allGlamStates,
-    jupTokenList: jupTokenList || [],
-    prices: tokenPrices || [],
+    jupTokenList,
     driftMarketConfigs,
     setActiveGlamState,
     refresh: async () => {
       refreshVaultHoldings();
-      refreshDelegateAcls();
-      refreshIntegrationAcls();
+      refreshVaultAcls();
       refetchDriftUser();
     },
     refetchGlamStates: async () => {

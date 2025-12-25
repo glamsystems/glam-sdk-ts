@@ -336,8 +336,8 @@ export class PriceClient {
 
     // Build a map of token prices (in USD)
     const tokenPricesMap = new PkMap<TokenListItem>();
-    const tokenList = await this.jupiterApi.fetchTokensList();
-    tokenList.forEach((item) => {
+    const tokenList = await this.jupiterApi.fetchTokensList(true);
+    tokenList.tokens.forEach((item) => {
       const tokenMint = new PublicKey(item.address);
       tokenPricesMap.set(tokenMint, item);
     });
@@ -729,7 +729,7 @@ export class PriceClient {
         { slot, source: priceSource },
         "DriftVaults",
         {
-          vault: pubkey,
+          vault: dvault.getAddress(),
           depositor: depositor.getAddress(),
         },
       );

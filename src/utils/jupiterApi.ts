@@ -41,6 +41,18 @@ export type TokenListItem = {
   slot: number;
 };
 
+export class JupTokenList {
+  readonly mintMap: Map<string, TokenListItem>;
+
+  constructor(readonly tokens: TokenListItem[]) {
+    this.mintMap = new Map(tokens.map((token) => [token.address, token]));
+  }
+
+  getByMint(mintAddress: string | PublicKey): TokenListItem | undefined {
+    return this.mintMap.get(mintAddress.toString());
+  }
+}
+
 export type JupiterInstruction = {
   programId: string;
   accounts: {
@@ -86,7 +98,7 @@ export class JupiterApiClient {
   isCustomSwapApi: boolean = false;
   apiKey: string | null = null;
 
-  private tokenListCache: { data: TokenListItem[]; timestamp: number } | null =
+  private tokenListCache: { data: JupTokenList; timestamp: number } | null =
     null;
 
   constructor(options: { apiKey?: string; swapApiBaseUrl?: string } = {}) {
@@ -137,7 +149,7 @@ export class JupiterApiClient {
     }));
   }
 
-  async fetchTokensList(forceRefresh = false): Promise<TokenListItem[]> {
+  async fetchTokensList(forceRefresh = false): Promise<JupTokenList> {
     if (
       !forceRefresh &&
       this.tokenListCache &&
@@ -175,8 +187,9 @@ export class JupiterApiClient {
       slot: t.priceBlockId,
     }));
 
-    this.tokenListCache = { data: tokenList, timestamp: Date.now() };
-    return tokenList;
+    const jupTokenList = new JupTokenList(tokenList);
+    this.tokenListCache = { data: jupTokenList, timestamp: Date.now() };
+    return jupTokenList;
   }
 
   async fetchProgramLabels(): Promise<{ [key: string]: string }> {
