@@ -6,7 +6,7 @@ import { atomWithStorage } from "jotai/utils";
 import { createContext, ReactNode, useContext } from "react";
 import { ClusterNetwork } from "../clientConfig";
 
-interface Cluster {
+export interface Cluster {
   name: string;
   endpoint: string;
   network?: ClusterNetwork;
@@ -112,7 +112,7 @@ export function useCluster() {
   return useContext(Context);
 }
 
-function getClusterUrlParam(cluster: Cluster): string {
+export function getClusterUrlParam(cluster: Cluster): string {
   let suffix = "";
   switch (cluster.network) {
     case ClusterNetwork.Devnet:

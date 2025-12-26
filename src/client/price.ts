@@ -573,8 +573,7 @@ export class PriceClient {
     }
 
     for (const pubkey of tokenAccountPubkeys) {
-      const data = accountsDataMap.get(pubkey);
-      if (!data) continue;
+      const data = accountsDataMap.get(pubkey)!;
 
       const { amount, mint } = AccountLayout.decode(data);
 
@@ -717,8 +716,7 @@ export class PriceClient {
         .div(dvault.totalShares)
         .add(depositor.lastWithdrawRequest.value);
       const { mint, decimals } = dvault.getBaseAsset(spotMarketsMap);
-      const tokenPrice = tokenPricesMap.get(mint);
-      if (!tokenPrice) continue;
+      const tokenPrice = tokenPricesMap.get(mint)!;
 
       const { usdPrice, slot } = tokenPrice;
       const holding = new Holding(
@@ -747,8 +745,7 @@ export class PriceClient {
   ): Holding[] {
     const holdings: Holding[] = [];
     for (const obligation of obligationPubkeys) {
-      const obligationData = accountsDataMap.get(obligation);
-      if (!obligationData) continue;
+      const obligationData = accountsDataMap.get(obligation)!;
 
       const { activeDeposits, activeBorrows } = Obligation.decode(
         obligation,
@@ -756,8 +753,7 @@ export class PriceClient {
       );
 
       for (const { depositReserve, depositedAmount } of activeDeposits) {
-        const reserve = reservesMap.get(depositReserve);
-        if (!reserve) continue;
+        const reserve = reservesMap.get(depositReserve)!;
 
         const { collateralExchangeRate, lendingMarket, liquidity } = reserve;
         const supplyAmount = new Decimal(depositedAmount.toString())
@@ -765,8 +761,7 @@ export class PriceClient {
           .floor();
         const amount = new BN(supplyAmount.toString());
 
-        const tokenPrice = tokenPricesMap.get(liquidity.mintPubkey);
-        if (!tokenPrice) continue;
+        const tokenPrice = tokenPricesMap.get(liquidity.mintPubkey)!;
 
         const { usdPrice, slot } = tokenPrice;
         const holding = new Holding(
@@ -791,8 +786,7 @@ export class PriceClient {
         borrowedAmountSf,
         cumulativeBorrowRateBsf,
       } of activeBorrows) {
-        const reserve = reservesMap.get(borrowReserve);
-        if (!reserve) continue;
+        const reserve = reservesMap.get(borrowReserve)!;
 
         const { cumulativeBorrowRate, lendingMarket, liquidity } = reserve;
         const obligationCumulativeBorrowRate = bfToDecimal(
@@ -806,8 +800,7 @@ export class PriceClient {
 
         const amount = new BN(borrowAmount.toString());
 
-        const tokenPrice = tokenPricesMap.get(liquidity.mintPubkey);
-        if (!tokenPrice) continue;
+        const tokenPrice = tokenPricesMap.get(liquidity.mintPubkey)!;
 
         const { usdPrice, slot } = tokenPrice;
         const holding = new Holding(
@@ -840,15 +833,13 @@ export class PriceClient {
   ): Holding[] {
     const holdings: Holding[] = [];
     for (const [ata, kvaultState] of kvaultAtasAndStates.pkEntries()) {
-      const ataData = accountsDataMap.get(ata);
-      if (!ataData) continue;
+      const ataData = accountsDataMap.get(ata)!;
 
       const tokenAccount = AccountLayout.decode(ataData);
 
       let aum = new Decimal(kvaultState.tokenAvailable.toString());
       kvaultState.validAllocations.map((allocation) => {
-        const reserve = reservesMap.get(allocation.reserve);
-        if (!reserve) return;
+        const reserve = reservesMap.get(allocation.reserve)!;
 
         const { collateralExchangeRate } = reserve;
 
@@ -865,8 +856,7 @@ export class PriceClient {
         .mul(aum)
         .floor();
 
-      const tokenPrice = tokenPricesMap.get(kvaultState.tokenMint);
-      if (!tokenPrice) continue;
+      const tokenPrice = tokenPricesMap.get(kvaultState.tokenMint)!;
 
       const { usdPrice, slot } = tokenPrice;
       const holding = new Holding(
