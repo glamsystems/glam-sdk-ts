@@ -38,10 +38,32 @@ export interface OrderConstants {
   quoteScale: number;
 }
 
-export interface DriftMarketConfigs {
-  orderConstants: OrderConstants;
-  perpMarkets: DriftPerpMarket[];
-  spotMarkets: DriftSpotMarket[];
+export class DriftMarketConfigs {
+  constructor(
+    readonly orderConstants: OrderConstants,
+    readonly perpMarkets: DriftPerpMarket[],
+    readonly spotMarkets: DriftSpotMarket[],
+  ) {}
+
+  getPerp(marketIndex: number): DriftPerpMarket | undefined {
+    const market = this.perpMarkets[marketIndex];
+    if (market.marketIndex === marketIndex) {
+      return market;
+    }
+  }
+
+  getSpot(mintOrIndex: PublicKey | number): DriftSpotMarket | undefined {
+    if (typeof mintOrIndex === "number") {
+      const market = this.spotMarkets[mintOrIndex];
+      if (market.marketIndex === mintOrIndex) {
+        return market;
+      }
+    } else {
+      return this.spotMarkets.find(({ mint }) =>
+        mint.equals(mintOrIndex as PublicKey),
+      );
+    }
+  }
 }
 
 class TxBuilder extends BaseTxBuilder<DriftProtocolClient> {
@@ -870,6 +892,16 @@ export class DriftProtocolClient {
     };
   }
 
+  public getSubAccountId(driftUser: PublicKey): number {
+    for (let i = 0; i < 100; ++i) {
+      const { user } = this.getDriftUserPdas(i);
+      if (user.equals(driftUser)) {
+        return i;
+      }
+    }
+    throw new Error("Sub account not found");
+  }
+
   get driftStatePda(): PublicKey {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("drift_state")],
@@ -1012,11 +1044,11 @@ export class DriftProtocolClient {
       skipCache,
     );
 
-    this.marketConfigs = {
-      orderConstants: { perpBaseScale: 9, quoteScale: 6 },
+    this.marketConfigs = new DriftMarketConfigs(
+      { perpBaseScale: 9, quoteScale: 6 },
       perpMarkets,
       spotMarkets,
-    };
+    );
     return this.marketConfigs;
   }
 

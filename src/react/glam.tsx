@@ -94,7 +94,6 @@ const deserializeGlamStateCache = (s: any) => {
 };
 
 const toStateCache = (s: StateModel) => {
-  console.log("toStateCache", s);
   return {
     pubkey: s.id,
     owner: s.owner,
@@ -150,10 +149,12 @@ export function GlamProvider({
   //
   const refreshVaultHoldings = async () => {
     if (activeGlamState?.pubkey && wallet?.publicKey) {
-      console.log(
-        "fetching vault data for active glam state:",
-        activeGlamState.address,
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "fetching vault data for active glam state:",
+          activeGlamState.address,
+        );
+      }
 
       // Note: We fetch both datasets in parallel:
       // - getVaultHoldings: Comprehensive holdings with pricing
