@@ -2983,6 +2983,11 @@
       "value": "1"
     },
     {
+      "name": "PROTO_SYSTEM_PERM_EMERGENCY_UPDATE",
+      "type": "u64",
+      "value": "4"
+    },
+    {
       "name": "PROTO_SYSTEM_PERM_TRANSFER",
       "type": "u64",
       "value": "2"

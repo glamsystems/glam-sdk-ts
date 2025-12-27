@@ -2989,6 +2989,11 @@ export type GlamProtocol = {
       "value": "1"
     },
     {
+      "name": "protoSystemPermEmergencyUpdate",
+      "type": "u64",
+      "value": "4"
+    },
+    {
       "name": "protoSystemPermTransfer",
       "type": "u64",
       "value": "2"
