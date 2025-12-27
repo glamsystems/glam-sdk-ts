@@ -51,6 +51,10 @@ export class JupTokenList {
   getByMint(mintAddress: string | PublicKey): TokenListItem | undefined {
     return this.mintMap.get(mintAddress.toString());
   }
+
+  getBySymbol(symbol: string): TokenListItem | undefined {
+    return this.tokens.find((token) => token.symbol === symbol);
+  }
 }
 
 export type JupiterInstruction = {
