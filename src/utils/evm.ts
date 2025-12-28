@@ -28,3 +28,11 @@ export const publicKeyToEvmAddress = (publicKey: PublicKey): string => {
   const evmAddress = hex.slice(-40);
   return `0x${evmAddress}`;
 };
+
+/**
+ * Validates if a string is a valid EVM address (40 hex characters)
+ */
+export const isValidEvmAddress = (addr: string): boolean => {
+  const cleanAddr = addr.startsWith("0x") ? addr.slice(2) : addr;
+  return /^[0-9a-fA-F]{40}$/.test(cleanAddr);
+};
