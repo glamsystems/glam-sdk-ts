@@ -148,31 +148,39 @@ export const DRIFT_POOL_MAPPING: Record<number, string> = {
 };
 
 /**
- * Get protocol and permission mappings at runtime to ensure correct program IDs based on environment
+ * Get protocol and permission mappings at runtime to ensure correct program IDs based on environment.
+ *
+ * This method provides the source of truth for protocol and permission mappings and staging status in SDK.
  */
 export const getProtocolsAndPermissions = (): Record<
   string,
-  Record<string, { name: string; permissions: Record<number, string> }>
+  Record<
+    string,
+    { name: string; staging: boolean; permissions: Record<number, string> }
+  >
 > => ({
   // Supported protocols and permissions are defined in:
   // @anchor/programs/glam_protocol/src/state/acl.rs
   [getGlamProtocolProgramId().toBase58()]: {
     "0000000000000001": {
-      name: "System Program",
+      name: "SystemProgram",
+      staging: false,
       permissions: {
         [1 << 0]: "WSOL",
         [1 << 1]: "Transfer",
       },
     },
     "0000000000000010": {
-      name: "Stake Program",
+      name: "StakeProgram",
+      staging: true,
       permissions: {
         [1 << 0]: "Stake",
         [1 << 1]: "Unstake",
       },
     },
     "0000000000000100": {
-      name: "Jupiter Swap",
+      name: "JupiterSwap",
+      staging: false,
       permissions: {
         [1 << 0]: "SwapAny",
         [1 << 1]: "SwapLST",
@@ -184,7 +192,8 @@ export const getProtocolsAndPermissions = (): Record<
   // @anchor/programs/glam_mint/src/state/acl.rs
   [getGlamMintProgramId().toBase58()]: {
     "0000000000000001": {
-      name: "Glam Mint",
+      name: "GlamMint",
+      staging: false,
       permissions: {
         [1 << 0]: "MintTokens",
         [1 << 1]: "BurnTokens",
@@ -202,7 +211,8 @@ export const getProtocolsAndPermissions = (): Record<
   // @anchor/programs/ext_kamino/src/state/acl.rs
   [getExtKaminoProgramId().toBase58()]: {
     "0000000000000001": {
-      name: "Kamino Lend",
+      name: "KaminoLend",
+      staging: false,
       permissions: {
         [1 << 0]: "Init",
         [1 << 1]: "Deposit",
@@ -212,14 +222,16 @@ export const getProtocolsAndPermissions = (): Record<
       },
     },
     "0000000000000010": {
-      name: "Kamino Vaults",
+      name: "KaminoVaults",
+      staging: false,
       permissions: {
         [1 << 0]: "Deposit",
         [1 << 1]: "Withdraw",
       },
     },
     "0000000000000100": {
-      name: "Kamino Farms",
+      name: "KaminoFarms",
+      staging: false,
       permissions: {
         [1 << 0]: "Stake",
         [1 << 1]: "Unstake",
@@ -231,7 +243,8 @@ export const getProtocolsAndPermissions = (): Record<
   // @anchor/programs/ext_drift/src/state/acl.rs
   [getExtDriftProgramId().toBase58()]: {
     "0000000000000001": {
-      name: "Drift Protocol",
+      name: "DriftProtocol",
+      staging: false,
       permissions: {
         [1 << 0]: "InitUser",
         [1 << 1]: "UpdateUser",
@@ -247,7 +260,8 @@ export const getProtocolsAndPermissions = (): Record<
       },
     },
     "0000000000000010": {
-      name: "Drift Vaults",
+      name: "DriftVaults",
+      staging: false,
       permissions: {
         [1 << 0]: "Deposit",
         [1 << 1]: "Withdraw",
@@ -258,7 +272,8 @@ export const getProtocolsAndPermissions = (): Record<
   // @anchor/programs/ext_spl/src/state/acl.rs
   [getExtSplProgramId().toBase58()]: {
     "0000000000000001": {
-      name: "Spl Token",
+      name: "SplToken",
+      staging: false,
       permissions: {
         [1 << 0]: "Transfer",
       },
@@ -269,6 +284,7 @@ export const getProtocolsAndPermissions = (): Record<
   [getExtCctpProgramId().toBase58()]: {
     "0000000000000001": {
       name: "CCTP",
+      staging: false,
       permissions: {
         [1 << 0]: "Transfer",
       },
@@ -279,6 +295,7 @@ export const getProtocolsAndPermissions = (): Record<
   [getExtMarinadeProgramId().toBase58()]: {
     "0000000000000001": {
       name: "Marinade",
+      staging: true,
       permissions: {
         [1 << 0]: "Stake",
         [1 << 1]: "Unstake",
@@ -289,7 +306,8 @@ export const getProtocolsAndPermissions = (): Record<
   // @anchor/programs/ext_stake_pool/src/state/acl.rs
   [getExtStakePoolProgramId().toBase58()]: {
     "0000000000000001": {
-      name: "Stake Pool",
+      name: "StakePool",
+      staging: true,
       permissions: {
         [1 << 0]: "DepositSol",
         [1 << 1]: "DepositStake",
@@ -300,7 +318,8 @@ export const getProtocolsAndPermissions = (): Record<
       },
     },
     "0000000000000010": {
-      name: "Sanctum Single",
+      name: "SanctumSingle",
+      staging: true,
       permissions: {
         [1 << 0]: "DepositSol",
         [1 << 1]: "DepositStake",
@@ -311,7 +330,8 @@ export const getProtocolsAndPermissions = (): Record<
       },
     },
     "0000000000000100": {
-      name: "Sanctum Multi",
+      name: "SanctumMulti",
+      staging: true,
       permissions: {
         [1 << 0]: "DepositSol",
         [1 << 1]: "DepositStake",
@@ -351,7 +371,7 @@ export const getProgramAndBitflagByProtocolName = () => {
   Object.entries(getProtocolsAndPermissions()).forEach(
     ([programId, protocols]) => {
       Object.entries(protocols).forEach(([bitflag, protocol]) => {
-        const name = protocol.name.replace(" ", "");
+        const name = protocol.name;
         mapping[name] = [programId, bitflag];
       });
     },

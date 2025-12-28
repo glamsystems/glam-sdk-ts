@@ -1,6 +1,9 @@
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
-import { getProtocolsAndPermissions } from "../constants";
+import {
+  getProgramAndBitflagByProtocolName,
+  getProtocolsAndPermissions,
+} from "../constants";
 
 /**
  * Formats a bitmask as a binary string.
@@ -128,5 +131,60 @@ export function parseProtocolPermissionsBitmask(
   return {
     protocol: protocol.name,
     permissions,
+  };
+}
+
+/**
+ * Given the protocol name and a list of permission names, returns the permissions bitmask.
+ */
+export function parsePermissionNames({
+  protocolName,
+  permissionNames,
+}: {
+  protocolName: string;
+  permissionNames: string[];
+}): {
+  integrationProgram: PublicKey;
+  protocolBitflag: number;
+  permissionsBitmask: BN;
+} {
+  const protocolConfig = getProgramAndBitflagByProtocolName()[protocolName];
+  if (!protocolConfig) {
+    throw new Error(`Unknown protocol name ${protocolName}`);
+  }
+
+  const [programIdStr, bitflagStr] = protocolConfig;
+  const protocolPermissions =
+    getProtocolsAndPermissions()[programIdStr]?.[bitflagStr];
+  if (!protocolPermissions) {
+    throw new Error(
+      `Protocol mapping not found for protocol name ${protocolName}`,
+    );
+  }
+
+  const integrationProgram = new PublicKey(programIdStr);
+  const protocolBitflag = parseInt(bitflagStr, 2);
+
+  // Calculate permissions bitmask
+  const permissionNameToBitflag: Record<string, BN> = {};
+  for (const [bitflag, name] of Object.entries(
+    protocolPermissions.permissions,
+  )) {
+    permissionNameToBitflag[name] = new BN(bitflag);
+  }
+  const permissionsBitmask = permissionNames.reduce((mask: BN, p) => {
+    if (!permissionNameToBitflag[p]) {
+      throw new Error(
+        `Unknown permission name ${p} for protocol name ${protocolName}`,
+      );
+    }
+
+    return mask.or(permissionNameToBitflag[p]);
+  }, new BN(0));
+
+  return {
+    integrationProgram,
+    protocolBitflag,
+    permissionsBitmask,
   };
 }
