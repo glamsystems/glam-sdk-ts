@@ -8,7 +8,7 @@ export class GlamError extends Error {
   constructor(
     message: string,
     rawError?: TransactionError,
-    programLogs?: string[]
+    programLogs?: string[],
   ) {
     super(message);
     this.message = message;
