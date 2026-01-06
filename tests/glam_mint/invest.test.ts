@@ -1,6 +1,6 @@
 import {
   GlamClient,
-  nameToChars,
+  stringToChars,
   StateAccountType,
   WSOL,
   fetchMintAndTokenProgram,
@@ -68,7 +68,7 @@ describe("invest", () => {
     const name = "GLAM Mint Test Investor Flows";
     const params = {
       accountType: StateAccountType.TOKENIZED_VAULT,
-      name: nameToChars(name),
+      name: stringToChars(name),
       symbol: "GMT",
       uri: "https://glam.systems",
       baseAssetMint: WSOL,

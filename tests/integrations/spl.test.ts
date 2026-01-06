@@ -6,7 +6,7 @@ import {
   defaultInitStateParams,
   str2seed,
 } from "../glam_protocol/setup";
-import { GlamClient, MSOL, nameToChars, WSOL } from "../../src";
+import { GlamClient, MSOL, stringToChars, WSOL } from "../../src";
 import { createAssociatedTokenAccountIdempotentInstruction } from "@solana/spl-token";
 import { Keypair, Transaction } from "@solana/web3.js";
 import { TransferPolicy } from "../../src/deser/integrationPolicies";
@@ -31,7 +31,7 @@ describe("spl", () => {
   it("Create vault", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: nameToChars("Spl Tests"),
+      name: stringToChars("Spl Tests"),
       integrationAcls: [
         {
           integrationProgram: glamClient.protocolProgram.programId,

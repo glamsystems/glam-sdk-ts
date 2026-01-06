@@ -9,7 +9,7 @@ import {
   OrderStatus,
   Order,
   WSOL,
-  nameToChars,
+  stringToChars,
 } from "../../src";
 import {
   airdrop,
@@ -64,7 +64,7 @@ describe("drift_protocol", () => {
   it("Create and initialize glam state", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: nameToChars("Drift Protocol Tests"),
+      name: stringToChars("Drift Protocol Tests"),
       integrationAcls: [
         {
           integrationProgram: glamClient.extDriftProgram.programId,

@@ -1,5 +1,5 @@
 import { BN } from "@coral-xyz/anchor";
-import { GlamClient, nameToChars, USDC } from "../../src";
+import { GlamClient, stringToChars, USDC } from "../../src";
 import {
   buildAndSendTx,
   createGlamStateForTest,
@@ -36,7 +36,7 @@ describe("glam_drift_vaults", () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
       baseAssetMint: USDC,
-      name: nameToChars("Drift Vaults Tests"),
+      name: stringToChars("Drift Vaults Tests"),
       integrationAcls: [
         {
           integrationProgram: glamClient.mintProgram.programId,

@@ -11,7 +11,7 @@ import {
 } from "@solana/spl-token";
 import { TokenMetadata, unpack } from "@solana/spl-token-metadata";
 import { BN } from "@coral-xyz/anchor";
-import { charsToName, nameToChars } from "../utils/common";
+import { charsToString, stringToChars } from "../utils/common";
 import { MintPolicy } from "../deser/integrationPolicies";
 import { MintModel } from "./mint";
 import type { RequestQueue } from "./types";
@@ -118,7 +118,7 @@ export class StateModel extends StateIdlModel {
   }
 
   get nameStr() {
-    return this.name ? charsToName(this.name) : "";
+    return this.name ? charsToString(this.name) : "";
   }
 
   get productType(): string {
@@ -232,7 +232,7 @@ export class StateModel extends StateIdlModel {
         ? unpack(extMetadata)
         : ({} as TokenMetadata);
       mintModel["symbol"] = tokenMetadata?.symbol;
-      mintModel["name"] = nameToChars(tokenMetadata?.name);
+      mintModel["name"] = stringToChars(tokenMetadata?.name);
       mintModel["uri"] = tokenMetadata?.uri;
       if (tokenMetadata?.additionalMetadata) {
         tokenMetadata.additionalMetadata.forEach(([k, v]) => {

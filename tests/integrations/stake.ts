@@ -9,7 +9,7 @@ import {
 import {
   getStakeAccountsWithStates,
   GlamClient,
-  nameToChars,
+  stringToChars,
   STAKE_ACCOUNT_SIZE,
 } from "../../src";
 import { PublicKey } from "@solana/web3.js";
@@ -43,7 +43,7 @@ describe("stake", () => {
 
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: nameToChars("Stake Tests"),
+      name: stringToChars("Stake Tests"),
       integrationAcls,
     });
     console.log("State PDA:", statePda);

@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import {
   GlamClient,
-  nameToChars,
+  stringToChars,
   StateAccountType,
   TRANSFER_HOOK_PROGRAM,
   WSOL,
@@ -21,7 +21,7 @@ describe("mint_timelock", () => {
     const name = "GLAM Mint Timelock Test";
     const params = {
       accountType: StateAccountType.MINT,
-      name: nameToChars(name),
+      name: stringToChars(name),
       symbol: "GMT",
       uri: "https://glam.systems",
       baseAssetMint: WSOL,

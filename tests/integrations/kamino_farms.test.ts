@@ -5,7 +5,7 @@ import {
   createGlamStateForTest,
   defaultInitStateParams,
 } from "../glam_protocol/setup";
-import { GlamClient, nameToChars } from "../../src";
+import { GlamClient, stringToChars } from "../../src";
 import { PublicKey } from "@solana/web3.js";
 import { createAssociatedTokenAccountIdempotentInstruction } from "@solana/spl-token";
 
@@ -19,7 +19,7 @@ describe("kamino_farms", () => {
   it("Initialize glam state", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: nameToChars("Kamino Farms Tests"),
+      name: stringToChars("Kamino Farms Tests"),
       integrationAcls: [
         {
           integrationProgram: glamClient.extKaminoProgram.programId,

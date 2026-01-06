@@ -8,7 +8,7 @@ import {
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 import { CreatedModel, StateIdlModel, StateAccountType } from "../models";
 import { getStatePda } from "../utils/glamPDAs";
-import { charsToName } from "../utils/common";
+import { charsToString } from "../utils/common";
 
 export type InitStateParams = {
   accountType: StateAccountType;
@@ -37,7 +37,7 @@ class TxBuilder extends BaseTxBuilder<StateClient> {
     // useful for re-computing state account PDA in the future
     const stateInitKey = [
       ...Buffer.from(
-        anchor.utils.sha256.hash(charsToName(params.name)),
+        anchor.utils.sha256.hash(charsToString(params.name)),
       ).subarray(0, 8),
     ];
     const created = new CreatedModel({ key: stateInitKey });

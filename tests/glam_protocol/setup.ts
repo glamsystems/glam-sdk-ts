@@ -9,7 +9,7 @@ import {
   WSOL,
   MSOL,
   USDC,
-  nameToChars,
+  stringToChars,
   StateAccountType,
 } from "../../src";
 import { Connection } from "@solana/web3.js";
@@ -137,7 +137,7 @@ export const mintToken = async (
 
 export const defaultInitStateParams = {
   accountType: StateAccountType.VAULT,
-  name: nameToChars("Glam Vault Test"),
+  name: stringToChars("Glam Vault Test"),
   baseAssetMint: WSOL,
   enabled: true,
   assets: [WSOL, MSOL],

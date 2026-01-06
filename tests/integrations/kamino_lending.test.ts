@@ -5,7 +5,7 @@ import {
   createGlamStateForTest,
   defaultInitStateParams,
 } from "../glam_protocol/setup";
-import { GlamClient, nameToChars } from "../../src";
+import { GlamClient, stringToChars } from "../../src";
 
 describe("kamino_lending", () => {
   const glamClient = new GlamClient();
@@ -13,7 +13,7 @@ describe("kamino_lending", () => {
   it("Initialize glam state", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: nameToChars("Kamino Lending Tests"),
+      name: stringToChars("Kamino Lending Tests"),
       integrationAcls: [
         {
           integrationProgram: glamClient.extKaminoProgram.programId,

@@ -2,7 +2,7 @@ import { IdlTypes } from "@coral-xyz/anchor";
 import { GlamProtocol, GlamMint } from "../glamExports";
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
-import { charsToName } from "../utils/common";
+import { charsToString } from "../utils/common";
 
 export type FeeStructure = IdlTypes<GlamProtocol>["feeStructure"];
 export type FeeParams = IdlTypes<GlamProtocol>["feeParams"];
@@ -73,7 +73,7 @@ export class MintModel extends MintIdlModel {
   }
 
   get nameStr() {
-    return this.name ? charsToName(this.name) : "";
+    return this.name ? charsToString(this.name) : "";
   }
 }
 

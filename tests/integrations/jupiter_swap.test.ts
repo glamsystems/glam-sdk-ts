@@ -10,7 +10,7 @@ import {
   GlamClient,
   JupiterSwapPolicy,
   MSOL,
-  nameToChars,
+  stringToChars,
   USDC,
   WSOL,
 } from "../../src";
@@ -40,7 +40,7 @@ describe("jupiter_swap", () => {
   it("Create vault and enable JupiterSwap protocol", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: nameToChars("Jupiter Swap Tests"),
+      name: stringToChars("Jupiter Swap Tests"),
       assets: [WSOL],
     });
     glamClientDelegate.statePda = statePda;

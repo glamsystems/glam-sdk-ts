@@ -3,7 +3,7 @@ import { BN } from "@coral-xyz/anchor";
 import {
   getStakeAccountsWithStates,
   GlamClient,
-  nameToChars,
+  stringToChars,
   STAKE_ACCOUNT_SIZE,
 } from "../../src";
 import { PublicKey } from "@solana/web3.js";
@@ -46,7 +46,7 @@ describe("stake_pool", () => {
 
     const created = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: nameToChars("Stake Pool Tests"),
+      name: stringToChars("Stake Pool Tests"),
       integrationAcls,
     });
     statePda = created.statePda;

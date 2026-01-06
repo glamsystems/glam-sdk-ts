@@ -8,7 +8,7 @@ import {
   MSOL,
   USDC,
   WSOL,
-  nameToChars,
+  stringToChars,
 } from "../../src";
 
 const key1 = Keypair.fromSeed(str2seed("acl_test_key1"));
@@ -59,7 +59,7 @@ describe("state_ops", () => {
     const newName = "Updated name";
     try {
       const txSig = await glamClient.state.update({
-        name: nameToChars(newName),
+        name: stringToChars(newName),
       });
       console.log("Update name", txSig);
     } catch (e) {
@@ -121,7 +121,7 @@ describe("state_ops", () => {
     try {
       const txSig = await glamClientCustomWallet.state.update(
         {
-          name: nameToChars("Updated state name"),
+          name: stringToChars("Updated state name"),
         },
         { simulate: true },
       );
@@ -141,7 +141,7 @@ describe("state_ops", () => {
       const txSig = await glamClient.state.update(
         {
           owner: key1.publicKey,
-          portfolioManagerName: nameToChars("New Owner"),
+          portfolioManagerName: stringToChars("New Owner"),
         },
         { simulate: true },
       );
@@ -156,7 +156,7 @@ describe("state_ops", () => {
     // previous owner CANNOT update
     try {
       const txSig = await glamClient.state.update({
-        name: nameToChars("Updated state name"),
+        name: stringToChars("Updated state name"),
       });
       expect(txSig).toBeUndefined();
     } catch (e) {
@@ -167,7 +167,7 @@ describe("state_ops", () => {
     try {
       const txId = await glamClientCustomWallet.state.update({
         owner: glamClient.signer,
-        portfolioManagerName: nameToChars("Default Owner"),
+        portfolioManagerName: stringToChars("Default Owner"),
       });
       console.log("Owner updated from new to default", txId);
     } catch (e) {

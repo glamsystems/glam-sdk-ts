@@ -1,4 +1,4 @@
-import { GlamClient, nameToChars, StateAccountType, WSOL } from "../../src";
+import { GlamClient, stringToChars, StateAccountType, WSOL } from "../../src";
 import { BN, Wallet } from "@coral-xyz/anchor";
 import { Keypair, SystemProgram, Transaction } from "@solana/web3.js";
 
@@ -69,7 +69,7 @@ describe("request_queue_load", () => {
     const name = "GLAM Mint Test Investor Flows";
     const params = {
       accountType: StateAccountType.TOKENIZED_VAULT,
-      name: nameToChars(name),
+      name: stringToChars(name),
       symbol: "GMT",
       uri: "https://glam.systems",
       baseAssetMint: WSOL,

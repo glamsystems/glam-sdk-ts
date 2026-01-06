@@ -2,7 +2,7 @@ import { BN } from "@coral-xyz/anchor";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import {
   GlamClient,
-  nameToChars,
+  stringToChars,
   StateAccountType,
   WSOL,
   fetchMintAndTokenProgram,
@@ -45,7 +45,7 @@ program
       // Initialize the vault, convert name from string to char array
       const txSig = await glamClient.state.initialize(
         {
-          name: nameToChars(name),
+          name: stringToChars(name),
           enabled,
           accountType: StateAccountType.VAULT,
           baseAssetMint: new PublicKey(baseAsset),

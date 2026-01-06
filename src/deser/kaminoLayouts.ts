@@ -11,7 +11,12 @@ import {
 } from "@coral-xyz/borsh";
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { bfToDecimal, BigFractionBytes, charsToName, Fraction } from "../utils";
+import {
+  bfToDecimal,
+  BigFractionBytes,
+  charsToString,
+  Fraction,
+} from "../utils";
 import { Decodable } from "./base";
 import Decimal from "decimal.js";
 import { KAMINO_LENDING_PROGRAM } from "../constants";
@@ -126,7 +131,7 @@ export class KVaultState extends Decodable {
   ]);
 
   get nameStr(): string {
-    return charsToName(this.name);
+    return charsToString(this.name);
   }
 
   get validAllocations(): KVaultAllocation[] {

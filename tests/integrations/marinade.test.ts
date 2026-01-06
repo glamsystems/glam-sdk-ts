@@ -5,7 +5,7 @@ import {
   createGlamStateForTest,
   defaultInitStateParams,
 } from "../glam_protocol/setup";
-import { getStakeAccountsWithStates, GlamClient, nameToChars } from "../../src";
+import { getStakeAccountsWithStates, GlamClient, stringToChars } from "../../src";
 import { PublicKey } from "@solana/web3.js";
 
 describe("marinade", () => {
@@ -30,7 +30,7 @@ describe("marinade", () => {
 
     const created = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: nameToChars("Marinade Tests"),
+      name: stringToChars("Marinade Tests"),
       integrationAcls,
     });
     statePda = created.statePda;

@@ -12,7 +12,7 @@ import {
 } from "@coral-xyz/borsh";
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { charsToName } from "../utils/common";
+import { charsToString } from "../utils/common";
 import { Decodable } from "./base";
 import { PkMap, readSignedBigInt64LE, readUnsignedBigInt64LE } from "../utils";
 import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -362,7 +362,7 @@ export class DriftVault extends Decodable {
   ]);
 
   get name(): string {
-    return charsToName(this.nameBytes);
+    return charsToString(this.nameBytes);
   }
 
   marketPda(marketType: MarketType, marketIndex: number) {
@@ -848,7 +848,7 @@ export class DriftUser {
   }
 
   get name(): string {
-    return charsToName(this.nameBytes);
+    return charsToString(this.nameBytes);
   }
 
   getAddress() {
@@ -907,7 +907,7 @@ export class DriftSpotMarket extends Decodable {
   ]);
 
   get name(): string {
-    return charsToName(this.nameBytes);
+    return charsToString(this.nameBytes);
   }
 
   get oracleSource(): OracleSource {
@@ -970,7 +970,7 @@ export class DriftPerpMarket extends Decodable {
   ]);
 
   get name(): string {
-    return charsToName(this.nameBytes);
+    return charsToString(this.nameBytes);
   }
 
   get oracleSource(): OracleSource {

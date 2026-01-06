@@ -26,7 +26,7 @@ import {
   getStatePda,
 } from "../utils/glamPDAs";
 import { ClusterNetwork } from "../clientConfig";
-import { charsToName } from "../utils/common";
+import { charsToString } from "../utils/common";
 import { UpdateStateParams } from "./state";
 
 export type InitMintParams = {
@@ -337,7 +337,7 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
 
     const stateInitKey = [
       ...Buffer.from(
-        anchorUtils.sha256.hash(charsToName(initMintParams.name)),
+        anchorUtils.sha256.hash(charsToString(initMintParams.name)),
       ).subarray(0, 8),
     ];
     const glamState = getStatePda(
