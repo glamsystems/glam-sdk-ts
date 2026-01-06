@@ -47,6 +47,7 @@ export class CctpBridgeEvent {
     readonly sourceDomain: number,
     readonly sourceAddress: string,
     readonly destinationDomain: number,
+    readonly destinationCaller: string,
     readonly destinationAddress: string,
     readonly attestation: string,
     readonly nonce: string,
@@ -66,7 +67,11 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
     amount: BN,
     domain: number,
     recipient: PublicKey,
-    params: { maxFee: BN; minFinalityThreshold: number },
+    params: {
+      maxFee: BN;
+      minFinalityThreshold: number;
+      destinationCaller?: PublicKey;
+    },
     glamSigner: PublicKey,
   ): Promise<[TransactionInstruction, Keypair]> {
     const usdcAddress = this.client.base.isMainnet ? USDC : USDC_DEVNET;
@@ -81,7 +86,7 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
       amount,
       destinationDomain: domain,
       mintRecipient: recipient,
-      destinationCaller: PublicKey.default,
+      destinationCaller: params.destinationCaller || PublicKey.default,
       ...params,
     };
 
@@ -118,7 +123,11 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
     amount: BN,
     domain: number,
     recipient: PublicKey,
-    params: { maxFee: BN; minFinalityThreshold: number },
+    params: {
+      maxFee: BN;
+      minFinalityThreshold: number;
+      destinationCaller?: PublicKey;
+    },
     txOptions: TxOptions,
   ): Promise<[VersionedTransaction, Keypair]> {
     const signer = txOptions.signer || this.client.base.signer;
@@ -320,7 +329,11 @@ export class CctpClient {
     amount: BN | number,
     domain: number,
     recipient: PublicKey,
-    params: { maxFee: BN; minFinalityThreshold: number },
+    params: {
+      maxFee: BN;
+      minFinalityThreshold: number;
+      destinationCaller?: PublicKey;
+    },
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const [tx, keypair] = await this.txBuilder.bridgeUsdcTx(
@@ -582,6 +595,7 @@ export class CctpClient {
       const destinationDomain = Number(
         message.decodedMessage.destinationDomain,
       );
+      const destinationCaller = message.decodedMessage.destinationCaller;
       const destinationAddress =
         message.decodedMessage.decodedMessageBody.mintRecipient;
       const sourceAddress =
@@ -598,6 +612,7 @@ export class CctpClient {
         sourceDomain,
         sourceAddress,
         destinationDomain,
+        destinationCaller,
         destinationAddress,
         attestation,
         nonce,
