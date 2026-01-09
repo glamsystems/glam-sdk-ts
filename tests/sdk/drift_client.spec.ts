@@ -19,13 +19,13 @@ const glamClient = new GlamClient({
 
 const solSpotMarket = JSON.parse(
   require("fs").readFileSync(
-    "./anchor/fixtures/accounts/drift/3x85u7SWkmmr7YQGYhtjARgxwegTLJgkSLRprfXod6rh.json",
+    "./fixtures/accounts/drift/3x85u7SWkmmr7YQGYhtjARgxwegTLJgkSLRprfXod6rh.json",
     "utf-8",
   ),
 );
 const solPerpMarket = JSON.parse(
   require("fs").readFileSync(
-    "./anchor/fixtures/accounts/drift/8UJgxaiQx5nTrdDgph5FiahMmzduuLTLf5WmsPegYA6W.json",
+    "./fixtures/accounts/drift/8UJgxaiQx5nTrdDgph5FiahMmzduuLTLf5WmsPegYA6W.json",
     "utf-8",
   ),
 );
