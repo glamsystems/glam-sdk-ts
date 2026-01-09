@@ -8,21 +8,21 @@ import {
 describe("kamino_deser", () => {
   const mainMarketUsdcReserve = JSON.parse(
     require("fs").readFileSync(
-      "./fixtures/accounts/kamino/reserve_usdc_main_market.json",
+      "./anchor/fixtures/accounts/kamino/reserve_usdc_main_market.json",
       "utf-8",
     ),
   );
 
   const usdcVaultState = JSON.parse(
     require("fs").readFileSync(
-      "./fixtures/accounts/kamino/kvUSDC_vault_state.json",
+      "./anchor/fixtures/accounts/kamino/kvUSDC_vault_state.json",
       "utf-8",
     ),
   );
 
   const mainMarketObligation = JSON.parse(
     require("fs").readFileSync(
-      "./fixtures/accounts/kamino/obligation_main_market.json",
+      "./anchor/fixtures/accounts/kamino/obligation_main_market.json",
       "utf-8",
     ),
   );
