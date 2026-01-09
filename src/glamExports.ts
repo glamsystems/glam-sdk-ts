@@ -40,7 +40,7 @@ export type ExtMarinadeProgram = Program<ExtMarinade>;
 export type ExtStakePoolProgram = Program<ExtStakePool>;
 export type ExtCctpProgram = Program<ExtCctp>;
 
-const isStaging = () => {
+export const isStaging = () => {
   const s = process.env.NEXT_PUBLIC_GLAM_STAGING || process.env.GLAM_STAGING;
   // Treat "0", "false", "", undefined, null as false
   // Treat "1", "true", or any other truthy string as true

@@ -2953,14 +2953,19 @@
       "value": "4"
     },
     {
-      "name": "PROTO_JUPITER_SWAP_PERM_SWAP_ANY",
+      "name": "PROTO_JUPITER_SWAP_PERM_SWAP_FROM_ANY",
       "type": "u64",
-      "value": "1"
+      "value": "8"
     },
     {
       "name": "PROTO_JUPITER_SWAP_PERM_SWAP_LST",
       "type": "u64",
       "value": "2"
+    },
+    {
+      "name": "PROTO_JUPITER_SWAP_PERM_SWAP_TO_ANY",
+      "type": "u64",
+      "value": "1"
     },
     {
       "name": "PROTO_STAKE",

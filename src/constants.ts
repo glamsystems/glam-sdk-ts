@@ -8,6 +8,7 @@ import {
   getExtStakePoolProgramId,
   getGlamMintProgramId,
   getGlamProtocolProgramId,
+  isStaging,
 } from "./glamExports";
 
 export const SEED_STATE = "state"; // protocol program
@@ -181,11 +182,18 @@ export const getProtocolsAndPermissions = (): Record<
     "0000000000000100": {
       name: "JupiterSwap",
       staging: false,
-      permissions: {
-        [1 << 0]: "SwapAny",
-        [1 << 1]: "SwapLST",
-        [1 << 2]: "SwapAllowlisted",
-      },
+      permissions: isStaging()
+        ? {
+            [1 << 0]: "SwapToAny",
+            [1 << 1]: "SwapLST",
+            [1 << 2]: "SwapAllowlisted",
+            [1 << 3]: "SwapFromAny",
+          }
+        : {
+            [1 << 0]: "SwapAny",
+            [1 << 1]: "SwapLST",
+            [1 << 2]: "SwapAllowlisted",
+          },
     },
   },
   // GLAM mint protocols and permissions are defined in:

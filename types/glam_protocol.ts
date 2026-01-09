@@ -2959,14 +2959,19 @@ export type GlamProtocol = {
       "value": "4"
     },
     {
-      "name": "protoJupiterSwapPermSwapAny",
+      "name": "protoJupiterSwapPermSwapFromAny",
       "type": "u64",
-      "value": "1"
+      "value": "8"
     },
     {
       "name": "protoJupiterSwapPermSwapLst",
       "type": "u64",
       "value": "2"
+    },
+    {
+      "name": "protoJupiterSwapPermSwapToAny",
+      "type": "u64",
+      "value": "1"
     },
     {
       "name": "protoStake",
