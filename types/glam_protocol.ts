@@ -2000,6 +2000,12 @@ export type GlamProtocol = {
           },
           {
             "name": "oracleConfigs"
+          },
+          {
+            "name": "reduceOnly"
+          },
+          {
+            "name": "anyLst"
           }
         ]
       }
@@ -2869,6 +2875,18 @@ export type GlamProtocol = {
               "option": {
                 "vec": "pubkey"
               }
+            }
+          },
+          {
+            "name": "reduceOnly",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "anyLst",
+            "type": {
+              "option": "bool"
             }
           },
           {

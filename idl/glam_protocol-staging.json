@@ -2,7 +2,7 @@
   "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz",
   "metadata": {
     "name": "glam_protocol",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "spec": "0.1.0",
     "description": "Glam Protocol"
   },
@@ -1994,6 +1994,12 @@
           },
           {
             "name": "OracleConfigs"
+          },
+          {
+            "name": "ReduceOnly"
+          },
+          {
+            "name": "AnyLst"
           }
         ]
       }
@@ -2866,6 +2872,18 @@
             }
           },
           {
+            "name": "reduce_only",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "any_lst",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
             "name": "timelock_duration",
             "type": {
               "option": "u32"
@@ -2953,14 +2971,19 @@
       "value": "4"
     },
     {
-      "name": "PROTO_JUPITER_SWAP_PERM_SWAP_ANY",
+      "name": "PROTO_JUPITER_SWAP_PERM_SWAP_FROM_ANY",
       "type": "u64",
-      "value": "1"
+      "value": "8"
     },
     {
       "name": "PROTO_JUPITER_SWAP_PERM_SWAP_LST",
       "type": "u64",
       "value": "2"
+    },
+    {
+      "name": "PROTO_JUPITER_SWAP_PERM_SWAP_TO_ANY",
+      "type": "u64",
+      "value": "1"
     },
     {
       "name": "PROTO_STAKE",
@@ -2981,6 +3004,11 @@
       "name": "PROTO_SYSTEM",
       "type": "u16",
       "value": "1"
+    },
+    {
+      "name": "PROTO_SYSTEM_PERM_EMERGENCY_UPDATE",
+      "type": "u64",
+      "value": "4"
     },
     {
       "name": "PROTO_SYSTEM_PERM_TRANSFER",

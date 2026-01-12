@@ -8,7 +8,7 @@ export type GlamProtocol = {
   "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz",
   "metadata": {
     "name": "glamProtocol",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "spec": "0.1.0",
     "description": "Glam Protocol"
   },
@@ -2000,6 +2000,12 @@ export type GlamProtocol = {
           },
           {
             "name": "oracleConfigs"
+          },
+          {
+            "name": "reduceOnly"
+          },
+          {
+            "name": "anyLst"
           }
         ]
       }
@@ -2872,6 +2878,18 @@ export type GlamProtocol = {
             }
           },
           {
+            "name": "reduceOnly",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "anyLst",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
             "name": "timelockDuration",
             "type": {
               "option": "u32"
@@ -2959,14 +2977,19 @@ export type GlamProtocol = {
       "value": "4"
     },
     {
-      "name": "protoJupiterSwapPermSwapAny",
+      "name": "protoJupiterSwapPermSwapFromAny",
       "type": "u64",
-      "value": "1"
+      "value": "8"
     },
     {
       "name": "protoJupiterSwapPermSwapLst",
       "type": "u64",
       "value": "2"
+    },
+    {
+      "name": "protoJupiterSwapPermSwapToAny",
+      "type": "u64",
+      "value": "1"
     },
     {
       "name": "protoStake",
@@ -2987,6 +3010,11 @@ export type GlamProtocol = {
       "name": "protoSystem",
       "type": "u16",
       "value": "1"
+    },
+    {
+      "name": "protoSystemPermEmergencyUpdate",
+      "type": "u64",
+      "value": "4"
     },
     {
       "name": "protoSystemPermTransfer",

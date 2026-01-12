@@ -2805,6 +2805,12 @@ export type ExtDrift = {
           },
           {
             "name": "oracleConfigs"
+          },
+          {
+            "name": "reduceOnly"
+          },
+          {
+            "name": "anyLst"
           }
         ]
       }

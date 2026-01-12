@@ -1994,6 +1994,12 @@
           },
           {
             "name": "OracleConfigs"
+          },
+          {
+            "name": "ReduceOnly"
+          },
+          {
+            "name": "AnyLst"
           }
         ]
       }
@@ -2863,6 +2869,18 @@
               "option": {
                 "vec": "pubkey"
               }
+            }
+          },
+          {
+            "name": "reduce_only",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "any_lst",
+            "type": {
+              "option": "bool"
             }
           },
           {

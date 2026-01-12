@@ -477,6 +477,12 @@ export type ExtCctp = {
           },
           {
             "name": "oracleConfigs"
+          },
+          {
+            "name": "reduceOnly"
+          },
+          {
+            "name": "anyLst"
           }
         ]
       }

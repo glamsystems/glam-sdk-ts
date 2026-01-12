@@ -37,6 +37,8 @@ export class StateIdlModel implements StateModelType {
   portfolioManagerName: number[] | null;
 
   borrowable: PublicKey[] | null;
+  reduceOnly: boolean | null;
+  anyLst: boolean | null;
   timelockDuration: number | null;
   integrationAcls: IntegrationAcl[] | null;
   delegateAcls: DelegateAcl[] | null;
@@ -53,6 +55,8 @@ export class StateIdlModel implements StateModelType {
     this.portfolioManagerName = data.portfolioManagerName ?? null;
 
     this.borrowable = data.borrowable ?? null;
+    this.reduceOnly = data.reduceOnly ?? null;
+    this.anyLst = data.anyLst ?? null;
     this.timelockDuration = data.timelockDuration ?? null;
     this.delegateAcls = data.delegateAcls ?? null;
     this.integrationAcls = data.integrationAcls ?? null;
@@ -111,6 +115,8 @@ export class StateModel extends StateIdlModel {
     this.externalPositions = data.externalPositions ?? [];
     this.pricedProtocols = data.pricedProtocols ?? [];
     this.borrowable = data.borrowable ?? null;
+    this.reduceOnly = data.reduceOnly ?? null;
+    this.anyLst = data.anyLst ?? null;
   }
 
   get idStr() {

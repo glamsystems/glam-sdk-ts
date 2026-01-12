@@ -2224,6 +2224,12 @@ export type ExtKamino = {
           },
           {
             "name": "oracleConfigs"
+          },
+          {
+            "name": "reduceOnly"
+          },
+          {
+            "name": "anyLst"
           }
         ]
       }
