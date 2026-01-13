@@ -84,10 +84,7 @@ export type GlamConfig = {
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
         },
         {
           "name": "systemProgram",
@@ -219,10 +216,7 @@ export type GlamConfig = {
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
         },
         {
           "name": "systemProgram",
@@ -277,10 +271,7 @@ export type GlamConfig = {
         },
         {
           "name": "feeAuthority",
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
         }
       ],
       "args": [
@@ -335,10 +326,7 @@ export type GlamConfig = {
         },
         {
           "name": "feeAuthority",
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
         }
       ],
       "args": [
@@ -390,10 +378,7 @@ export type GlamConfig = {
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
         },
         {
           "name": "systemProgram",
@@ -440,21 +425,16 @@ export type GlamConfig = {
     },
     {
       "code": 6002,
-      "name": "assetMetaAlreadyExists",
-      "msg": "Asset meta already exists"
-    },
-    {
-      "code": 6003,
       "name": "invalidParameters",
       "msg": "Invalid parameters"
     },
     {
-      "code": 6004,
+      "code": 6003,
       "name": "invalidOracleSource",
       "msg": "Invalid oracle source"
     },
     {
-      "code": 6005,
+      "code": 6004,
       "name": "invalidGlobalConfig",
       "msg": "Invalid global config"
     }

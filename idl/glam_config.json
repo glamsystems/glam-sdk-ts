@@ -78,10 +78,7 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
         },
         {
           "name": "system_program",
@@ -213,10 +210,7 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
         },
         {
           "name": "system_program",
@@ -271,10 +265,7 @@
         },
         {
           "name": "fee_authority",
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
         }
       ],
       "args": [
@@ -329,10 +320,7 @@
         },
         {
           "name": "fee_authority",
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
         }
       ],
       "args": [
@@ -384,10 +372,7 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
         },
         {
           "name": "system_program",
@@ -434,21 +419,16 @@
     },
     {
       "code": 6002,
-      "name": "AssetMetaAlreadyExists",
-      "msg": "Asset meta already exists"
-    },
-    {
-      "code": 6003,
       "name": "InvalidParameters",
       "msg": "Invalid parameters"
     },
     {
-      "code": 6004,
+      "code": 6003,
       "name": "InvalidOracleSource",
       "msg": "Invalid oracle source"
     },
     {
-      "code": 6005,
+      "code": 6004,
       "name": "InvalidGlobalConfig",
       "msg": "Invalid global config"
     }
