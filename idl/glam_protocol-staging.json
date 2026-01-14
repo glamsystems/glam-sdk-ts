@@ -1525,8 +1525,8 @@
     },
     {
       "code": 48010,
-      "name": "UnexpectedProgramOwner",
-      "msg": "Account is owned by an unexpected program"
+      "name": "InvalidAccountOwner",
+      "msg": "Account owner does not match expected program"
     },
     {
       "code": 48011,
@@ -1555,8 +1555,8 @@
     },
     {
       "code": 49004,
-      "name": "InvalidAssetsLen",
-      "msg": "Too many assets: max 100"
+      "name": "InvalidIndex",
+      "msg": "Invalid index"
     },
     {
       "code": 49005,
@@ -1730,8 +1730,13 @@
     },
     {
       "code": 51113,
-      "name": "UnexpectedDiscriminator",
-      "msg": "Invalid account: discriminator mismatch"
+      "name": "InvalidDiscriminator",
+      "msg": "Account discriminator does not match expected value"
+    },
+    {
+      "code": 51114,
+      "name": "InvalidAccountData",
+      "msg": "Invalid account data"
     },
     {
       "code": 52000,

@@ -1531,8 +1531,8 @@ export type GlamProtocol = {
     },
     {
       "code": 48010,
-      "name": "unexpectedProgramOwner",
-      "msg": "Account is owned by an unexpected program"
+      "name": "invalidAccountOwner",
+      "msg": "Account owner does not match expected program"
     },
     {
       "code": 48011,
@@ -1561,8 +1561,8 @@ export type GlamProtocol = {
     },
     {
       "code": 49004,
-      "name": "invalidAssetsLen",
-      "msg": "Too many assets: max 100"
+      "name": "invalidIndex",
+      "msg": "Invalid index"
     },
     {
       "code": 49005,
@@ -1736,8 +1736,13 @@ export type GlamProtocol = {
     },
     {
       "code": 51113,
-      "name": "unexpectedDiscriminator",
-      "msg": "Invalid account: discriminator mismatch"
+      "name": "invalidDiscriminator",
+      "msg": "Account discriminator does not match expected value"
+    },
+    {
+      "code": 51114,
+      "name": "invalidAccountData",
+      "msg": "Invalid account data"
     },
     {
       "code": 52000,

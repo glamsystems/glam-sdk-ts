@@ -30,7 +30,9 @@ const txOptions = {
 };
 
 describe("glam_drift_vaults", () => {
-  const glamClient = new GlamClient();
+  const glamClient = new GlamClient({
+    jupiterApiKey: "mock",
+  });
 
   it("Initialize glam state", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {

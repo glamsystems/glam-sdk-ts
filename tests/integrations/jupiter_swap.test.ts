@@ -26,8 +26,11 @@ const txOptions = { simulate: true };
 const delegate = Keypair.fromSeed(str2seed("delegate"));
 
 describe("jupiter_swap", () => {
-  const glamClient = new GlamClient();
-  const glamClientDelegate = new GlamClient({ wallet: new Wallet(delegate) });
+  const glamClient = new GlamClient({ jupiterApiKey: "mock" });
+  const glamClientDelegate = new GlamClient({
+    wallet: new Wallet(delegate),
+    jupiterApiKey: "mock",
+  });
 
   beforeAll(async () => {
     await airdrop(
