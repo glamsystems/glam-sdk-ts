@@ -32,7 +32,7 @@
     "zod": "^3.24.3"
   },
   "engines": {
-    "node": ">=20.18.0"
+    "node": ">=20.20.0"
   },
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4"
