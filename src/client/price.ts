@@ -20,6 +20,7 @@ import {
   MarketType,
   PkMap,
   PkSet,
+  PositionCategorizer,
   toUiAmount,
 } from "../utils";
 import Decimal from "decimal.js";
@@ -143,6 +144,13 @@ export class PriceClient {
   /**
    * Fetches all holdings in the vault.
    *
+   * The source of truth for external positions is the `externalPositions` array
+   * from the state account, which tracks:
+   * - Drift user PDAs (direct trading positions)
+   * - Drift vault depositor accounts (shares in drift vaults)
+   * - Kamino obligation accounts (lending positions)
+   * - Kamino vault share ATAs (shares in kamino vaults)
+   *
    * @param commitment Commitment level for fetching accounts
    * @param priceBaseAssetMint Price reference/numeraire asset mint (default: PublicKey.default for USD).
    *                           Pass a token mint (e.g., WSOL) to get prices denominated in that asset.
@@ -152,83 +160,81 @@ export class PriceClient {
     commitment: Commitment,
     priceBaseAssetMint: PublicKey = PublicKey.default,
   ): Promise<VaultHoldings> {
-    const { integrationAcls, externalPositions } =
-      await this.base.fetchStateAccount(); // fetch state account only, don't need to build entire state model
+    const { externalPositions } = await this.base.fetchStateAccount();
     const externalPositionsSet = new PkSet(externalPositions);
 
-    let glamDriftUserSpotMarketsMap = new PkMap<PkSet>(); // glam-controlled drift user -> spot markets map
-    let glamDriftUserPerpMarketsMap = new PkMap<PkSet>(); // glam-controlled drift user -> perp markets map
-    let dvaultDepositorsAndVaults = new PkMap<DriftVault>(); // dvault depositor -> drift vault map
-    let dvaultUserSpotMarketsMap = new PkMap<PkSet>(); // dvault drift user -> spot markets map
-    let dvaultUserPerpMarketsMap = new PkMap<PkSet>(); // dvault drift user -> perp markets map
+    // Categorize external positions by protocol type
+    const categorizer = new PositionCategorizer(
+      this.base.connection,
+      this.base.vaultPda,
+    );
+    const {
+      driftUsers,
+      driftVaultDepositors,
+      kaminoObligations,
+      kaminoVaultShareAtas,
+    } = await categorizer.categorizePositions(externalPositions, commitment);
 
-    let kaminoPubkeys = new PkMap<PkSet>(); // obligation -> reserves map
-    let kvaultAtasAndStates = new PkMap<KVaultState>(); // kvault share ata -> kvault state
+    // Initialize maps for holdings data
+    let glamDriftUserSpotMarketsMap = new PkMap<PkSet>();
+    let glamDriftUserPerpMarketsMap = new PkMap<PkSet>();
+    let dvaultDepositorsAndVaultsMap = new PkMap<DriftVault>();
+    let dvaultUserSpotMarketsMap = new PkMap<PkSet>();
+    let dvaultUserPerpMarketsMap = new PkMap<PkSet>();
+    let obligationReservesMap = new PkMap<PkSet>();
+    let kvaultAtasAndStatesMap = new PkMap<KVaultState>();
     let kvaultReserves = new PkSet();
 
-    const driftIntegrationAcl = integrationAcls.find((acl) =>
-      acl.integrationProgram.equals(this.base.extDriftProgram.programId),
-    );
-    if (driftIntegrationAcl) {
-      // drift protocol, fetch up to 8 sub-accounts (aka drift users)
-      if (driftIntegrationAcl.protocolsBitmask & 0b01) {
-        const userPdas = Array.from(Array(8).keys()).map((subAccountId) => {
-          const { user } = this.drift.getDriftUserPdas(subAccountId);
-          return user;
-        });
-        glamDriftUserSpotMarketsMap = await this.getPubkeysForSpotHoldings(
-          userPdas,
-          commitment,
-        );
-        glamDriftUserPerpMarketsMap = await this.getPubkeysForPerpHoldings(
-          userPdas,
-          commitment,
-        );
-      }
-      if (driftIntegrationAcl.protocolsBitmask & 0b10) {
-        // 1. find all depositors
-        // 2. for each depositor, calculate the underlying drift vault AUM
-        //    2.1 fetch drift vault's user accout
-        //    2.2 price drift vault's spot positions and perp PnL
-        //    2.3 drift vault AUM = spot value + perp PnL
-        // 3. glam vault holding = deposit_share / total_shares * drift vault AUM
-        dvaultDepositorsAndVaults =
-          await this.getDepositorsAndDriftVaults(commitment);
-        const userPdas = Array.from(dvaultDepositorsAndVaults.values()).map(
-          ({ user }) => user,
-        );
-        dvaultUserSpotMarketsMap = await this.getPubkeysForSpotHoldings(
-          userPdas,
-          commitment,
-        );
-        dvaultUserPerpMarketsMap = await this.getPubkeysForPerpHoldings(
-          userPdas,
-          commitment,
-        );
-      }
+    // Process drift users from categorized positions
+    if (driftUsers.length > 0) {
+      glamDriftUserSpotMarketsMap = await this.getPubkeysForSpotHoldings(
+        driftUsers,
+        commitment,
+      );
+      glamDriftUserPerpMarketsMap = await this.getPubkeysForPerpHoldings(
+        driftUsers,
+        commitment,
+      );
     }
 
-    const kaminoIntegrationAcl = integrationAcls.find((acl) =>
-      acl.integrationProgram.equals(this.base.extKaminoProgram.programId),
-    );
-    if (kaminoIntegrationAcl) {
-      // kamino lending
-      if (kaminoIntegrationAcl.protocolsBitmask & 0b01) {
-        kaminoPubkeys = await this.getPubkeysForKaminoHoldings(commitment);
-      }
-      // kamino vaults
-      if (kaminoIntegrationAcl.protocolsBitmask & 0b10) {
-        kvaultAtasAndStates = await this.getKaminoVaultStates(
-          externalPositionsSet,
-          commitment,
-        );
-        // from each kvault state we can get the allocations (including reserves)
-        Array.from(kvaultAtasAndStates.pkEntries()).map(([_, kvaultState]) => {
-          kvaultState.validAllocations.forEach(({ reserve }) => {
-            kvaultReserves.add(reserve);
-          });
+    // Process drift vault depositors from categorized positions
+    if (driftVaultDepositors.length > 0) {
+      dvaultDepositorsAndVaultsMap = await this.getDepositorsAndDriftVaults(
+        driftVaultDepositors,
+        commitment,
+      );
+      const userPdas = Array.from(dvaultDepositorsAndVaultsMap.values()).map(
+        ({ user }) => user,
+      );
+      dvaultUserSpotMarketsMap = await this.getPubkeysForSpotHoldings(
+        userPdas,
+        commitment,
+      );
+      dvaultUserPerpMarketsMap = await this.getPubkeysForPerpHoldings(
+        userPdas,
+        commitment,
+      );
+    }
+
+    // Process kamino obligations from categorized positions
+    if (kaminoObligations.length > 0) {
+      obligationReservesMap = await this.getPubkeysForKaminoHoldings(
+        kaminoObligations,
+        commitment,
+      );
+    }
+
+    // Process kamino vault shares from categorized positions
+    if (kaminoVaultShareAtas.length > 0) {
+      kvaultAtasAndStatesMap = await this.getKaminoVaultStatesFromAtas(
+        kaminoVaultShareAtas,
+        commitment,
+      );
+      Array.from(kvaultAtasAndStatesMap.pkEntries()).map(([_, kvaultState]) => {
+        kvaultState.validAllocations.forEach(({ reserve }) => {
+          kvaultReserves.add(reserve);
         });
-      }
+      });
     }
 
     const tokenPubkeys = await this.getPubkeysForTokenHoldings(
@@ -244,8 +250,8 @@ export class PriceClient {
       .map((s) => Array.from(s.pkValues()))
       .flat();
 
-    const dvaultDepositors = Array.from(dvaultDepositorsAndVaults.pkKeys());
-    const dvaultUsers = [...dvaultDepositorsAndVaults.values()].map(
+    const dvaultDepositors = Array.from(dvaultDepositorsAndVaultsMap.pkKeys());
+    const dvaultUsers = [...dvaultDepositorsAndVaultsMap.values()].map(
       (v) => v.user,
     );
     const dvaultUserSpotMarkets = [...dvaultUserSpotMarketsMap.values()]
@@ -255,12 +261,11 @@ export class PriceClient {
       .map((s) => Array.from(s.pkValues()))
       .flat();
 
-    const kaminoObligations = Array.from(kaminoPubkeys.pkKeys());
-    const kaminoReserves = [...kaminoPubkeys.values()]
+    const kaminoReserves = [...obligationReservesMap.values()]
       .map((v) => Array.from(v.pkValues()))
       .flat()
       .concat(Array.from(kvaultReserves));
-    const kvaultAtas = Array.from(kvaultAtasAndStates.pkKeys());
+    const kvaultAtas = Array.from(kvaultAtasAndStatesMap.pkKeys());
 
     // Dedupe keys and fetch all accounts in a single RPC call
     const pubkeys = Array.from(
@@ -387,7 +392,7 @@ export class PriceClient {
         "Jupiter",
       ),
       this.getDriftVaultsHoldings(
-        dvaultDepositorsAndVaults,
+        dvaultDepositorsAndVaultsMap,
         dvaultDepositorsMap,
         driftSpotMarketsMap,
         driftPerpMarketsMap,
@@ -396,14 +401,14 @@ export class PriceClient {
         "Jupiter",
       ),
       this.getKaminoLendHoldings(
-        kaminoPubkeys.pkKeys(),
+        obligationReservesMap.pkKeys(),
         kaminoReservesMap,
         accountsDataMap,
         tokenPricesMap,
         "Jupiter",
       ),
       this.getKaminoVaultsHoldings(
-        kvaultAtasAndStates,
+        kvaultAtasAndStatesMap,
         kaminoReservesMap,
         accountsDataMap,
         tokenPricesMap,
@@ -545,88 +550,126 @@ export class PriceClient {
     return userMarketsMap;
   }
 
+  /**
+   * Parses drift vault depositors from known pubkeys.
+   */
   async getDepositorsAndDriftVaults(
+    depositorPubkeys: PublicKey[],
     commitment?: Commitment,
   ): Promise<PkMap<DriftVault>> {
-    const depositorVaultMap = new PkMap<DriftVault>(); // depositor pubkey -> drift vault
-    const depositors =
-      await this.dvaults.findAndParseVaultDepositors(commitment);
-    const parsedDriftVaults = await this.dvaults.parseDriftVaults(
-      depositors.map((d) => d.driftVault),
-    );
-    if (depositors.length != parsedDriftVaults.length) {
-      throw new Error(
-        `Depositors length ${depositors.length} does not match parsed drift vaults length ${parsedDriftVaults.length}`,
-      );
+    const depositorVaultMap = new PkMap<DriftVault>();
+
+    if (depositorPubkeys.length === 0) {
+      return depositorVaultMap;
     }
 
-    for (let i = 0; i < depositors.length; i++) {
-      depositorVaultMap.set(depositors[i].address, parsedDriftVaults[i]);
+    const accountsInfo = await this.base.connection.getMultipleAccountsInfo(
+      depositorPubkeys,
+      commitment,
+    );
+
+    const driftVaultPubkeys: PublicKey[] = [];
+    const validDepositors: PublicKey[] = [];
+
+    for (let i = 0; i < accountsInfo.length; i++) {
+      const info = accountsInfo[i];
+      if (info) {
+        // Parse drift vault pubkey from depositor account data (offset 8-40)
+        const driftVault = new PublicKey(info.data.subarray(8, 40));
+        driftVaultPubkeys.push(driftVault);
+        validDepositors.push(depositorPubkeys[i]);
+      }
+    }
+
+    if (validDepositors.length === 0) {
+      return depositorVaultMap;
+    }
+
+    const parsedDriftVaults =
+      await this.dvaults.parseDriftVaults(driftVaultPubkeys);
+
+    for (let i = 0; i < validDepositors.length; i++) {
+      depositorVaultMap.set(validDepositors[i], parsedDriftVaults[i]);
     }
 
     return depositorVaultMap;
   }
 
-  async getKaminoVaultStates(
-    externalPositionsSet: PkSet,
-    commitment?: Commitment,
-  ): Promise<PkMap<KVaultState>> {
-    // Get all kvault states and share token mints
-    const allKvaultStates =
-      await this.kvaults.findAndParseKaminoVaults(commitment);
-    const allKvaultMints = allKvaultStates.map((kvault) => kvault.sharesMint);
-    const possibleShareAtas = allKvaultMints.map((mint) =>
-      this.base.getVaultAta(mint),
-    );
-    const possibleShareAtaAccountsInfo =
-      await this.base.provider.connection.getMultipleAccountsInfo(
-        possibleShareAtas,
-        commitment,
-      );
-
-    const map = new PkMap<KVaultState>();
-    possibleShareAtaAccountsInfo.forEach((info, i) => {
-      // share ata must exist and it must be tracked by glam state
-      const ata = possibleShareAtas[i];
-      if (info !== null && externalPositionsSet.has(possibleShareAtas[i])) {
-        map.set(ata, allKvaultStates[i]);
-      }
-    });
-    return map;
-  }
-
+  /**
+   * Gets kamino obligation reserves from known obligation pubkeys.
+   */
   async getPubkeysForKaminoHoldings(
+    obligationPubkeys: PublicKey[],
     commitment?: Commitment,
   ): Promise<PkMap<PkSet>> {
-    const obligationAccounts =
-      await this.base.provider.connection.getProgramAccounts(
-        KAMINO_LENDING_PROGRAM,
-        {
-          commitment,
-          filters: [
-            { dataSize: KAMINO_OBTRIGATION_SIZE },
-            { memcmp: { offset: 64, bytes: this.base.vaultPda.toBase58() } },
-          ],
-        },
-      );
-    if (obligationAccounts.length === 0) {
-      return new PkMap<PkSet>();
+    const obligationReservesMap = new PkMap<PkSet>();
+
+    if (obligationPubkeys.length === 0) {
+      return obligationReservesMap;
     }
 
-    const obligationReservesMap = new PkMap<PkSet>();
-    for (const { pubkey, account } of obligationAccounts) {
-      const { activeDeposits, activeBorrows } = Obligation.decode(
-        pubkey,
-        account.data,
-      );
-      const reservesSet = new PkSet([
-        ...activeDeposits.map((d) => d.depositReserve),
-        ...activeBorrows.map((b) => b.borrowReserve),
-      ]);
-      obligationReservesMap.set(pubkey, reservesSet);
+    const accountsInfo = await this.base.connection.getMultipleAccountsInfo(
+      obligationPubkeys,
+      commitment,
+    );
+
+    for (let i = 0; i < accountsInfo.length; i++) {
+      const info = accountsInfo[i];
+      if (info) {
+        const { activeDeposits, activeBorrows } = Obligation.decode(
+          obligationPubkeys[i],
+          info.data,
+        );
+        const reservesSet = new PkSet([
+          ...activeDeposits.map((d) => d.depositReserve),
+          ...activeBorrows.map((b) => b.borrowReserve),
+        ]);
+        obligationReservesMap.set(obligationPubkeys[i], reservesSet);
+      }
     }
 
     return obligationReservesMap;
+  }
+
+  /**
+   * Gets kamino vault states from known share ATA pubkeys.
+   * Used by getVaultHoldingsV2 to process vault shares from externalPositions.
+   */
+  async getKaminoVaultStatesFromAtas(
+    shareAtaPubkeys: PublicKey[],
+    commitment?: Commitment,
+  ): Promise<PkMap<KVaultState>> {
+    const map = new PkMap<KVaultState>();
+
+    if (shareAtaPubkeys.length === 0) {
+      return map;
+    }
+
+    // Fetch all kvault states to build mint -> state mapping
+    const allKvaultStates =
+      await this.kvaults.findAndParseKaminoVaults(commitment);
+    const shareMintToState = new PkMap<KVaultState>();
+    allKvaultStates.forEach((state) => {
+      shareMintToState.set(state.sharesMint, state);
+    });
+
+    // Fetch the ATA accounts to get their mints
+    const ataAccountsInfo = await this.base.connection.getMultipleAccountsInfo(
+      shareAtaPubkeys,
+      commitment,
+    );
+
+    for (let i = 0; i < ataAccountsInfo.length; i++) {
+      const info = ataAccountsInfo[i];
+      if (info) {
+        const tokenAccount = AccountLayout.decode(info.data);
+        const mint = new PublicKey(tokenAccount.mint);
+        const kvaultState = shareMintToState.get(mint)!;
+        map.set(shareAtaPubkeys[i], kvaultState);
+      }
+    }
+
+    return map;
   }
 
   /**

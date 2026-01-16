@@ -16,3 +16,4 @@ export * from "./pkmap";
 export * from "./pkset";
 export * from "./fraction";
 export * from "./jupiterApi";
+export * from "./positionCategorizer";
