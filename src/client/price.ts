@@ -45,6 +45,17 @@ import {
 } from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
 
+/**
+ * Represents a single asset holding within a vault.
+ *
+ * @param mintAddress - The SPL token mint address of the held asset
+ * @param decimals - Number of decimal places for the token (e.g., 6 for USDC, 9 for SOL)
+ * @param amount - Unsigned token amount in native units; direction (deposit/borrow) is in protocolMeta
+ * @param price - Current price of the asset denominated in the base asset (e.g., USD, SOL)
+ * @param priceMeta - Additional pricing context (e.g., source, slot, base asset). Default base asset, if not specified, is USD.
+ * @param protocol - Protocol identifier where the asset is allocated
+ * @param protocolMeta - Protocol-specific metadata (e.g., market index, position direction, reserve address)
+ */
 export class Holding {
   readonly uiAmount!: number;
 
@@ -61,6 +72,17 @@ export class Holding {
   }
 }
 
+/**
+ * Aggregates all holdings for a GLAM vault.
+ * Includes token balances, DeFi positions (Drift, Kamino).
+ *
+ * @param vaultState - The vault's state account address (stores vault configuration)
+ * @param vaultPda - The vault's PDA that holds tokens and positions
+ * @param priceBaseAssetMint - The base asset mint used for pricing (e.g., PublicKey.default for USD, So11111111111111111111111111111111111111112 for SOL)
+ * @param slot - The Solana slot at which holdings were fetched
+ * @param timestamp - Unix timestamp (seconds) when holdings were fetched
+ * @param commitment - The Solana commitment level used for fetching account data
+ */
 export class VaultHoldings {
   holdings: Holding[];
 
@@ -122,7 +144,8 @@ export class PriceClient {
    * Fetches all holdings in the vault.
    *
    * @param commitment Commitment level for fetching accounts
-   * @param priceBaseAssetMint Price reference/numeraire asset mint (default: USD)
+   * @param priceBaseAssetMint Price reference/numeraire asset mint (default: PublicKey.default for USD).
+   *                           Pass a token mint (e.g., WSOL) to get prices denominated in that asset.
    * @returns VaultHoldings object containing all holdings
    */
   async getVaultHoldings(
@@ -342,49 +365,55 @@ export class PriceClient {
       tokenPricesMap.set(tokenMint, item);
     });
 
-    const tokenHoldings = this.getTokenHoldings(
-      tokenPubkeys,
-      accountsDataMap,
-      tokenPricesMap,
-      "Jupiter",
-    );
-    const driftSpotHoldings = this.getDriftHoldings(
-      glamDriftUserSpotMarketsMap.pkKeys(), // all drift users controlled by glam vault
-      driftSpotMarketsMap,
-      driftPerpMarketsMap,
-      accountsDataMap,
-      tokenPricesMap,
-      "Jupiter",
-    );
-
-    const dvaultHoldings = this.getDriftVaultsHoldings(
-      dvaultDepositorsAndVaults,
-      dvaultDepositorsMap,
-      driftSpotMarketsMap,
-      driftPerpMarketsMap,
-      accountsDataMap,
-      tokenPricesMap,
-      "Jupiter",
-    );
-
-    const kaminoLendHoldings = this.getKaminoLendHoldings(
-      kaminoPubkeys.pkKeys(),
-      kaminoReservesMap,
-      accountsDataMap,
-      tokenPricesMap,
-      "Jupiter",
-    );
-    const kaminoVaultsHoldings = this.getKaminoVaultsHoldings(
-      kvaultAtasAndStates,
-      kaminoReservesMap,
-      accountsDataMap,
-      tokenPricesMap,
-      "Jupiter",
-    );
+    const [
+      tokenHoldings,
+      driftHoldings,
+      dvaultHoldings,
+      kaminoLendHoldings,
+      kaminoVaultsHoldings,
+    ] = await Promise.all([
+      this.getTokenHoldings(
+        tokenPubkeys,
+        accountsDataMap,
+        tokenPricesMap,
+        "Jupiter",
+      ),
+      this.getDriftHoldings(
+        glamDriftUserSpotMarketsMap.pkKeys(), // all drift users controlled by glam vault
+        driftSpotMarketsMap,
+        driftPerpMarketsMap,
+        accountsDataMap,
+        tokenPricesMap,
+        "Jupiter",
+      ),
+      this.getDriftVaultsHoldings(
+        dvaultDepositorsAndVaults,
+        dvaultDepositorsMap,
+        driftSpotMarketsMap,
+        driftPerpMarketsMap,
+        accountsDataMap,
+        tokenPricesMap,
+        "Jupiter",
+      ),
+      this.getKaminoLendHoldings(
+        kaminoPubkeys.pkKeys(),
+        kaminoReservesMap,
+        accountsDataMap,
+        tokenPricesMap,
+        "Jupiter",
+      ),
+      this.getKaminoVaultsHoldings(
+        kvaultAtasAndStates,
+        kaminoReservesMap,
+        accountsDataMap,
+        tokenPricesMap,
+        "Jupiter",
+      ),
+    ]);
 
     const clockData = accountsDataMap.get(SYSVAR_CLOCK_PUBKEY);
     const timestamp = clockData ? clockData.readUInt32LE(32) : 0;
-    const ret = new VaultHoldings(
+    const vaultHoldings = new VaultHoldings(
       this.base.statePda,
       this.base.vaultPda,
       priceBaseAssetMint,
@@ -392,12 +421,51 @@ export class PriceClient {
       timestamp,
       commitment,
     );
-    tokenHoldings.forEach((holding) => ret.add(holding));
-    driftSpotHoldings.forEach((holding) => ret.add(holding));
-    dvaultHoldings.forEach((holding) => ret.add(holding));
-    kaminoLendHoldings.forEach((holding) => ret.add(holding));
-    kaminoVaultsHoldings.forEach((holding) => ret.add(holding));
-    return ret;
+
+    // Collect all holdings
+    const allHoldings = [
+      ...tokenHoldings,
+      ...driftHoldings,
+      ...dvaultHoldings,
+      ...kaminoLendHoldings,
+      ...kaminoVaultsHoldings,
+    ];
+
+    // If priceBaseAssetMint is not default (USD), convert prices to the base asset
+    if (!priceBaseAssetMint.equals(PublicKey.default)) {
+      const { usdPrice: baseAssetUsdPrice } = await this.getTokenPrice(
+        priceBaseAssetMint,
+        tokenPricesMap,
+      );
+      if (baseAssetUsdPrice <= 0) {
+        throw new Error(
+          `Invalid base asset price for ${priceBaseAssetMint.toBase58()}`,
+        );
+      }
+
+      // Convert each holding's price from USD to base asset denomination
+      for (const holding of allHoldings) {
+        const convertedHolding = new Holding(
+          holding.mintAddress,
+          holding.decimals,
+          holding.amount,
+          holding.price / baseAssetUsdPrice,
+          {
+            ...holding.priceMeta,
+            baseAsset: priceBaseAssetMint.toBase58(),
+            baseAssetUsdPrice,
+          },
+          holding.protocol,
+          holding.protocolMeta,
+        );
+        vaultHoldings.add(convertedHolding);
+      }
+    } else {
+      // USD pricing - add holdings as-is
+      allHoldings.forEach((holding) => vaultHoldings.add(holding));
+    }
+
+    return vaultHoldings;
   }
 
   async getPubkeysForTokenHoldings(
@@ -561,12 +629,43 @@ export class PriceClient {
     return obligationReservesMap;
   }
 
-  getTokenHoldings(
+  /**
+   * Fetches token price from the prefetched map, falling back to Jupiter API if not found.
+   * @throws Error if price cannot be fetched from either source
+   */
+  private async getTokenPrice(
+    mint: PublicKey,
+    tokenPricesMap: PkMap<TokenListItem>,
+  ): Promise<{ usdPrice: number; decimals: number; slot?: number }> {
+    const tokenInfo = tokenPricesMap.get(mint);
+    if (tokenInfo) {
+      return {
+        usdPrice: tokenInfo.usdPrice,
+        decimals: tokenInfo.decimals,
+        slot: tokenInfo.slot,
+      };
+    }
+
+    // Fallback: fetch from Jupiter price API (includes decimals and blockId aka slot)
+    const prices = await this.jupiterApi.fetchTokenPrices([mint.toBase58()]);
+    const priceData = prices.find((p) => p.mint === mint.toBase58());
+    if (!priceData) {
+      throw new Error(`Failed to fetch price for token ${mint.toBase58()}`);
+    }
+
+    return {
+      usdPrice: priceData.usdPrice,
+      decimals: priceData.decimals,
+      slot: priceData.blockId,
+    };
+  }
+
+  async getTokenHoldings(
     tokenAccountPubkeys: PublicKey[],
     accountsDataMap: PkMap<Buffer>,
     tokenPricesMap: PkMap<TokenListItem>,
     priceSource: string,
-  ): Holding[] {
+  ): Promise<Holding[]> {
     const holdings: Holding[] = [];
     if (tokenAccountPubkeys.length === 0) {
       return holdings;
@@ -577,35 +676,35 @@ export class PriceClient {
 
       const { amount, mint } = AccountLayout.decode(data);
 
-      const tokenInfo = tokenPricesMap.get(mint);
-      if (tokenInfo) {
-        const { decimals, usdPrice } = tokenInfo;
-        const holding = new Holding(
-          mint,
-          decimals,
-          new BN(amount),
-          usdPrice,
-          { slot: tokenInfo.slot, source: priceSource },
-          "Token",
-          {
-            tokenAccount: pubkey,
-          },
-        );
-        holdings.push(holding);
-      }
+      const { usdPrice, decimals, slot } = await this.getTokenPrice(
+        mint,
+        tokenPricesMap,
+      );
+      const holding = new Holding(
+        mint,
+        decimals,
+        new BN(amount),
+        usdPrice,
+        { slot, source: priceSource },
+        "Token",
+        {
+          tokenAccount: pubkey,
+        },
+      );
+      holdings.push(holding);
     }
 
     return holdings;
   }
 
-  getDriftHoldings(
+  async getDriftHoldings(
     userPubkeys: Iterable<PublicKey>,
     spotMarketsMap: PkMap<DriftSpotMarket>,
     perpMarketsMap: PkMap<DriftPerpMarket>,
     accountsDataMap: PkMap<Buffer>,
     tokenPricesMap: PkMap<TokenListItem>,
     priceSource: string,
-  ): Holding[] {
+  ): Promise<Holding[]> {
     const holdings: Holding[] = [];
 
     for (const userPda of userPubkeys) {
@@ -632,7 +731,10 @@ export class PriceClient {
             cumulativeBorrowInterest,
           )
           .abs();
-        const { usdPrice, slot } = tokenPricesMap.get(mint)!;
+        const { usdPrice, slot } = await this.getTokenPrice(
+          mint,
+          tokenPricesMap,
+        );
 
         const holding = new Holding(
           mint,
@@ -664,8 +766,10 @@ export class PriceClient {
           cumulativeFundingRateLong,
           cumulativeFundingRateShort,
         );
-        const tokenPrice = tokenPricesMap.get(USDC)!;
-        const { usdPrice, slot } = tokenPrice;
+        const { usdPrice, slot } = await this.getTokenPrice(
+          USDC,
+          tokenPricesMap,
+        );
 
         const holding = new Holding(
           USDC,
@@ -687,7 +791,7 @@ export class PriceClient {
     return holdings;
   }
 
-  getDriftVaultsHoldings(
+  async getDriftVaultsHoldings(
     dvaultDepositorsAndVaults: PkMap<DriftVault>,
     dvaultDepositorsMap: PkMap<DriftVaultDepositor>,
     spotMarketsMap: PkMap<DriftSpotMarket>,
@@ -695,7 +799,7 @@ export class PriceClient {
     accountsDataMap: PkMap<Buffer>,
     tokenPricesMap: PkMap<TokenListItem>,
     priceSource: string,
-  ): Holding[] {
+  ): Promise<Holding[]> {
     const holdings: Holding[] = [];
     for (const [pubkey, dvault] of dvaultDepositorsAndVaults.pkEntries()) {
       const depositor = dvaultDepositorsMap.get(pubkey)!;
@@ -716,9 +820,8 @@ export class PriceClient {
         .div(dvault.totalShares)
         .add(depositor.lastWithdrawRequest.value);
       const { mint, decimals } = dvault.getBaseAsset(spotMarketsMap);
-      const tokenPrice = tokenPricesMap.get(mint)!;
+      const { usdPrice, slot } = await this.getTokenPrice(mint, tokenPricesMap);
 
-      const { usdPrice, slot } = tokenPrice;
       const holding = new Holding(
         mint,
         decimals,
@@ -736,13 +839,13 @@ export class PriceClient {
     return holdings;
   }
 
-  getKaminoLendHoldings(
+  async getKaminoLendHoldings(
     obligationPubkeys: Iterable<PublicKey>,
     reservesMap: PkMap<Reserve>,
     accountsDataMap: PkMap<Buffer>,
     tokenPricesMap: PkMap<TokenListItem>,
     priceSource: string,
-  ): Holding[] {
+  ): Promise<Holding[]> {
     const holdings: Holding[] = [];
     for (const obligation of obligationPubkeys) {
       const obligationData = accountsDataMap.get(obligation)!;
@@ -761,9 +864,10 @@ export class PriceClient {
           .floor();
         const amount = new BN(supplyAmount.toString());
 
-        const tokenPrice = tokenPricesMap.get(liquidity.mintPubkey)!;
-
-        const { usdPrice, slot } = tokenPrice;
+        const { usdPrice, slot } = await this.getTokenPrice(
+          liquidity.mintPubkey,
+          tokenPricesMap,
+        );
         const holding = new Holding(
           liquidity.mintPubkey,
           liquidity.mintDecimals.toNumber(),
@@ -800,9 +904,10 @@ export class PriceClient {
 
         const amount = new BN(borrowAmount.toString());
 
-        const tokenPrice = tokenPricesMap.get(liquidity.mintPubkey)!;
-
-        const { usdPrice, slot } = tokenPrice;
+        const { usdPrice, slot } = await this.getTokenPrice(
+          liquidity.mintPubkey,
+          tokenPricesMap,
+        );
         const holding = new Holding(
           liquidity.mintPubkey,
           liquidity.mintDecimals.toNumber(),
@@ -824,13 +929,13 @@ export class PriceClient {
     return holdings;
   }
 
-  getKaminoVaultsHoldings(
+  async getKaminoVaultsHoldings(
     kvaultAtasAndStates: PkMap<KVaultState>,
     reservesMap: PkMap<Reserve>,
     accountsDataMap: PkMap<Buffer>,
     tokenPricesMap: PkMap<TokenListItem>,
     priceSource: string,
-  ): Holding[] {
+  ): Promise<Holding[]> {
     const holdings: Holding[] = [];
     for (const [ata, kvaultState] of kvaultAtasAndStates.pkEntries()) {
       const ataData = accountsDataMap.get(ata)!;
@@ -856,9 +961,10 @@ export class PriceClient {
         .mul(aum)
         .floor();
 
-      const tokenPrice = tokenPricesMap.get(kvaultState.tokenMint)!;
-
-      const { usdPrice, slot } = tokenPrice;
+      const { usdPrice, slot } = await this.getTokenPrice(
+        kvaultState.tokenMint,
+        tokenPricesMap,
+      );
       const holding = new Holding(
         kvaultState.tokenMint,
         kvaultState.tokenMintDecimals.toNumber(),

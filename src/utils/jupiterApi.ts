@@ -85,16 +85,16 @@ export const JUPITER_API_DEFAULT = "https://api.jup.ag";
 const PriceDataSchema = z.object({
   usdPrice: z.number(),
   decimals: z.number(),
-  blockId: z.number().optional(),
-  priceChange24h: z.number().optional(),
+  blockId: z.number(),
 });
 
 const PriceResponseSchema = z.record(z.string(), PriceDataSchema);
 
-// Maintain backward compatibility - old code expects { mint, price }
 export type TokenPrice = {
   mint: string;
-  price: number;
+  usdPrice: number;
+  decimals: number;
+  blockId: number;
 };
 
 export class JupiterApiClient {
@@ -147,10 +147,14 @@ export class JupiterApiClient {
     const data = await response.json();
     const validated = PriceResponseSchema.parse(data);
 
-    return Object.entries(validated).map(([key, val]) => ({
-      mint: key,
-      price: val.usdPrice,
-    }));
+    return Object.entries(validated).map(
+      ([key, { usdPrice, decimals, blockId }]) => ({
+        mint: key,
+        usdPrice,
+        decimals,
+        blockId,
+      }),
+    );
   }
 
   async fetchTokensList(forceRefresh = false): Promise<JupTokenList> {
