@@ -27,6 +27,7 @@ import ExtSplIdlJsonStaging from "../target/idl/ext_spl-staging.json";
 import ExtDriftIdlJsonStaging from "../target/idl/ext_drift-staging.json";
 import ExtKaminoIdlJsonStaging from "../target/idl/ext_kamino-staging.json";
 import ExtStakePoolIdlJsonStaging from "../target/idl/ext_stake_pool-staging.json";
+import ExtMarinadeIdlJsonStaging from "../target/idl/ext_marinade-staging.json";
 
 export { GlamProtocol, GlamMint, GlamConfig };
 
@@ -77,13 +78,11 @@ export function getExtCctpIdl() {
 }
 
 export function getExtMarinadeIdl() {
-  // TODO: Update pubkey after ext_cctp staging program is deployed
-  return isStaging() ? ExtMarinadeIdlJson : ExtMarinadeIdlJson;
+  return isStaging() ? ExtMarinadeIdlJsonStaging : ExtMarinadeIdlJson;
 }
 
 export function getGlamProtocolProgramId() {
-  const idl = isStaging() ? GlamProtocolIdlJsonStaging : GlamProtocolIdlJson;
-  return new PublicKey(idl.address);
+  return new PublicKey(getGlamProtocolIdl().address);
 }
 
 export function getGlamMintProgramId() {
@@ -141,7 +140,7 @@ export function getExtKaminoProgram(provider: Provider): ExtKaminoProgram {
 }
 
 export function getExtMarinadeProgram(provider: Provider): ExtMarinadeProgram {
-  return new Program<ExtMarinade>(ExtMarinadeIdlJson, provider);
+  return new Program<ExtMarinade>(getExtMarinadeIdl(), provider);
 }
 
 export function getExtStakePoolProgram(
