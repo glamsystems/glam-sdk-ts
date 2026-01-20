@@ -441,6 +441,81 @@ export type GlamProtocol = {
         {
           "name": "outputStakePool",
           "optional": true
+        },
+        {
+          "name": "glamConfig",
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                10,
+                11,
+                0,
+                83,
+                72,
+                16,
+                46,
+                144,
+                46,
+                42,
+                79,
+                22,
+                157,
+                123,
+                21,
+                242,
+                192,
+                146,
+                1,
+                78,
+                88,
+                59,
+                102,
+                9,
+                190,
+                226,
+                92,
+                189,
+                187,
+                232,
+                83,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "solUsdOracle",
+          "optional": true
+        },
+        {
+          "name": "inputTokenOracle",
+          "optional": true
+        },
+        {
+          "name": "outputTokenOracle",
+          "optional": true
         }
       ],
       "args": [
