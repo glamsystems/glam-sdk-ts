@@ -20,6 +20,7 @@ import {
 } from "../../constants";
 import { BN } from "@coral-xyz/anchor";
 import { DRIFT_SIGNER, DriftProtocolClient } from "./protocol-v2";
+import { getProgramAccounts } from "../../utils";
 
 class TxBuilder extends BaseTxBuilder<DriftVaultsClient> {
   public async initializeVaultDepositorTx(
@@ -258,7 +259,7 @@ export class DriftVaultsClient {
   }
 
   async parseDriftVaults(driftVaults: PublicKey[]) {
-    const connection = this.base.provider.connection;
+    const connection = this.base.connection;
     const accountsInfo = await connection.getMultipleAccountsInfo(driftVaults);
 
     const validAccountsInfo = accountsInfo.map((accountInfo, i) => {
@@ -324,7 +325,8 @@ export class DriftVaultsClient {
    * Finds all drift vault depositors
    */
   public async findAndParseVaultDepositors(commitment?: Commitment) {
-    const accounts = await this.base.connection.getProgramAccounts(
+    const accounts = await getProgramAccounts(
+      this.base.connection,
       DRIFT_VAULTS_PROGRAM_ID,
       {
         commitment,

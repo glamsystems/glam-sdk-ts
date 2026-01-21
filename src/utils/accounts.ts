@@ -23,6 +23,7 @@ import {
 import { PkMap } from "./pkmap";
 import { fetchGlamLookupTableAccounts } from "./glamApi";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { getProgramAccounts } from "./rpc";
 
 export type StakeAccountInfo = {
   address: PublicKey;
@@ -290,7 +291,7 @@ export async function findGlamLookupTables(
 
   // Fetch lookup table accounts owned by the ALT program with filters
   // This is very likely to hit the RPC error "Request deprioritized due to number of accounts requested. Slow down requests or add filters to narrow down results"
-  const accounts = await connection.getProgramAccounts(ALT_PROGRAM_ID, {
+  const accounts = await getProgramAccounts(connection, ALT_PROGRAM_ID, {
     filters: [
       {
         memcmp: {

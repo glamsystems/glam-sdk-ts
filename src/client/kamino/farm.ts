@@ -3,14 +3,13 @@ import {
   PublicKey,
   VersionedTransaction,
   TransactionSignature,
-  TransactionInstruction,
   Transaction,
 } from "@solana/web3.js";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "../base";
 import { createAssociatedTokenAccountIdempotentInstruction } from "@solana/spl-token";
 import { KAMINO_FARM_PROGRAM } from "../../constants";
-import { getProgramAccountsWithRetry } from "../../utils/rpc";
+import { getProgramAccounts } from "../../utils/rpc";
 import { PkMap } from "../../utils";
 import { KaminoLendingClient } from "./lending";
 import { ParsedFarmState, ParsedFarmUser } from "./types";
@@ -216,10 +215,15 @@ export class KaminoFarmClient {
   async findAndParseFarmUserStates(
     owner: PublicKey,
   ): Promise<ParsedFarmUser[]> {
-    const accounts = await getProgramAccountsWithRetry(
-      this.base.provider.connection,
+    const accounts = await getProgramAccounts(
+      this.base.connection,
       KAMINO_FARM_PROGRAM,
-      [{ dataSize: 920 }, { memcmp: { offset: 48, bytes: owner.toBase58() } }],
+      {
+        filters: [
+          { dataSize: 920 },
+          { memcmp: { offset: 48, bytes: owner.toBase58() } },
+        ],
+      },
     );
     return accounts.map(({ pubkey, account }) => {
       const farmState = new PublicKey(account.data.subarray(16, 48));
@@ -314,7 +318,7 @@ export class KaminoFarmClient {
 
   async fetchAndParseFarmStates(farms: PublicKey[]) {
     const farmAccounts =
-      await this.base.provider.connection.getMultipleAccountsInfo(farms);
+      await this.base.connection.getMultipleAccountsInfo(farms);
 
     const map = new PkMap<ParsedFarmState>();
 

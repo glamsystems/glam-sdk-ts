@@ -335,7 +335,7 @@ export class StakeClient {
   async getStakeAccountVoter(
     stakeAccount: PublicKey,
   ): Promise<PublicKey | null> {
-    const connection = this.base.provider.connection;
+    const connection = this.base.connection;
     const accountInfo = await connection.getParsedAccountInfo(stakeAccount);
     if (!accountInfo || !accountInfo.value) {
       console.warn("No account info found:", stakeAccount.toBase58());
@@ -363,7 +363,7 @@ export class StakeClient {
       StakeProgram.programId,
     );
     const lamports =
-      await this.base.provider.connection.getMinimumBalanceForRentExemption(
+      await this.base.connection.getMinimumBalanceForRentExemption(
         STAKE_ACCOUNT_SIZE,
       );
     const createStakeAccountIx = SystemProgram.createAccountWithSeed({

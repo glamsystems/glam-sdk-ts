@@ -347,7 +347,7 @@ export class StakePoolClient {
   async getStakeAccountVoter(
     stakeAccount: PublicKey,
   ): Promise<PublicKey | null> {
-    const connection = this.base.provider.connection;
+    const connection = this.base.connection;
     const accountInfo = await connection.getParsedAccountInfo(stakeAccount);
     if (!accountInfo || !accountInfo.value) {
       console.warn("No account info found:", stakeAccount.toBase58());
@@ -370,7 +370,7 @@ export class StakePoolClient {
   ): Promise<StakePoolAccountData> {
     // Get stake pool account data
     const stakePoolAccount = await getStakePoolAccount(
-      this.base.provider.connection,
+      this.base.connection,
       stakePool,
     );
     const stakePoolAccountData = stakePoolAccount.account.data;

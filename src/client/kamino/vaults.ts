@@ -9,7 +9,7 @@ import {
 } from "@solana/web3.js";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "../base";
-import { fetchMintAndTokenProgram } from "../../utils/accounts";
+import { fetchMintAndTokenProgram, getProgramAccounts } from "../../utils";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   TOKEN_PROGRAM_ID,
@@ -221,7 +221,8 @@ export class KaminoVaultsClient {
     commitment?: Commitment,
   ): Promise<KVaultState[]> {
     // Find state accounts of all kamino vaults
-    const accounts = await this.base.connection.getProgramAccounts(
+    const accounts = await getProgramAccounts(
+      this.base.connection,
       KAMINO_VAULTS_PROGRAM,
       {
         commitment,
@@ -269,7 +270,7 @@ export class KaminoVaultsClient {
 
   async fetchAndParseVaultState(vault: PublicKey) {
     const vaultAccount =
-      await this.base.provider.connection.getAccountInfo(vault);
+      await this.base.connection.getAccountInfo(vault);
     if (!vaultAccount) {
       throw new Error(`Kamino vault account not found:, ${vault}`);
     }

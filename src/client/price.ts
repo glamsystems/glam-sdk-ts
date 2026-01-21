@@ -29,11 +29,7 @@ import {
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import {
-  KAMINO_LENDING_PROGRAM,
-  KAMINO_OBTRIGATION_SIZE,
-  USDC,
-} from "../constants";
+import { USDC } from "../constants";
 import {
   DriftSpotMarket,
   DriftPerpMarket,
@@ -294,7 +290,7 @@ export class PriceClient {
     const {
       context: { slot },
       value: accountsInfo,
-    } = await this.base.provider.connection.getMultipleAccountsInfoAndContext(
+    } = await this.base.connection.getMultipleAccountsInfoAndContext(
       pubkeys,
       commitment,
     );
@@ -1114,7 +1110,7 @@ export class PriceClient {
     );
 
     const possibleShareAtaAccountsInfo =
-      await this.base.provider.connection.getMultipleAccountsInfo(
+      await this.base.connection.getMultipleAccountsInfo(
         possibleShareAtas,
       );
     const shareAtas: typeof possibleShareAtas = [];

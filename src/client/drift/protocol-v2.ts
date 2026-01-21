@@ -940,7 +940,7 @@ export class DriftProtocolClient {
         this.getMarketPda(MarketType.SPOT, marketIndex),
       );
       const accounts =
-        await this.base.provider.connection.getMultipleAccountsInfo(marketPdas);
+        await this.base.connection.getMultipleAccountsInfo(marketPdas);
       accounts.forEach((account, index) => {
         if (account) {
           const spotMarket = DriftSpotMarket.decode(
@@ -997,7 +997,7 @@ export class DriftProtocolClient {
         this.getMarketPda(MarketType.PERP, marketIndex),
       );
       const accounts =
-        await this.base.provider.connection.getMultipleAccountsInfo(marketPdas);
+        await this.base.connection.getMultipleAccountsInfo(marketPdas);
       accounts.forEach((account, index) => {
         if (account) {
           const perpMarket = DriftPerpMarket.decode(

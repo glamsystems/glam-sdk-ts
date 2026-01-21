@@ -18,7 +18,7 @@ import {
   StateIdlModel,
 } from "../models";
 import { TRANSFER_HOOK_PROGRAM } from "../constants";
-import { fetchMintAndTokenProgram } from "../utils/accounts";
+import { fetchMintAndTokenProgram, getProgramAccounts } from "../utils";
 import {
   getAccountPolicyPda,
   getExtraMetasPda,
@@ -541,7 +541,7 @@ export class MintClient {
     const { token_accounts: tokenAccounts } = data.result;
 
     const { mint, tokenProgram } = await fetchMintAndTokenProgram(
-      this.base.provider.connection,
+      this.base.connection,
       this.base.mintPda,
     );
 
@@ -561,22 +561,19 @@ export class MintClient {
   public async getHolders(
     showZeroBalance: boolean = true,
   ): Promise<TokenAccount[]> {
-    const connection = this.base.provider.connection;
+    const connection = this.base.connection;
 
     // FIXME: enable dataSize filter
     // dataSize varies due to different sets of extensions enabled
     // const dataSize = 175;
-    const accounts = await connection.getProgramAccounts(
-      TOKEN_2022_PROGRAM_ID,
-      {
-        filters: [
-          // { dataSize },
-          { memcmp: { offset: 0, bytes: this.base.mintPda.toBase58() } },
-        ],
-      },
-    );
+    const accounts = await getProgramAccounts(connection, TOKEN_2022_PROGRAM_ID, {
+      filters: [
+        // { dataSize },
+        { memcmp: { offset: 0, bytes: this.base.mintPda.toBase58() } },
+      ],
+    });
     const { mint, tokenProgram } = await fetchMintAndTokenProgram(
-      this.base.provider.connection,
+      this.base.connection,
       this.base.mintPda,
     );
     return accounts

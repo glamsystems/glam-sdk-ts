@@ -18,7 +18,7 @@ import {
   USDC,
   USDC_DEVNET,
 } from "../constants";
-import { hexToBytes, toUiAmount } from "../utils";
+import { hexToBytes, toUiAmount, getProgramAccounts } from "../utils";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { struct, array, u8, vec } from "@coral-xyz/borsh";
 import {
@@ -528,7 +528,8 @@ export class CctpClient {
       minSlot?: number;
     },
   ) {
-    const accounts = await this.base.connection.getProgramAccounts(
+    const accounts = await getProgramAccounts(
+      this.base.connection,
       MESSAGE_TRANSMITTER_V2,
       {
         ...(options.commitment ? { commitment: options.commitment } : {}),

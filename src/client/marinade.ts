@@ -332,7 +332,7 @@ export class MarinadeClient {
     if (!this.marinadeState) {
       const marinade = new Marinade(
         new MarinadeConfig({
-          connection: this.base.provider.connection,
+          connection: this.base.connection,
         }),
       );
       this.marinadeState = await marinade.getMarinadeState();
@@ -342,7 +342,7 @@ export class MarinadeClient {
 
   async getParsedStakeAccountInfo(stakeAccount: PublicKey): Promise<any> {
     const { value: stakeAccountInfo } =
-      await this.base.provider.connection.getParsedAccountInfo(stakeAccount);
+      await this.base.connection.getParsedAccountInfo(stakeAccount);
     if (!stakeAccountInfo) {
       throw new Error(
         `Failed to find the stake account ${stakeAccount.toBase58()}`,
@@ -395,7 +395,7 @@ export class MarinadeClient {
     }
 
     const accountsInfo =
-      await this.base.provider.connection.getMultipleAccountsInfo([
+      await this.base.connection.getMultipleAccountsInfo([
         stakeList.account,
         validatorList.account,
       ]);

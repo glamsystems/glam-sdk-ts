@@ -26,7 +26,7 @@ import {
 } from "../../constants";
 import { Reserve, Obligation } from "../../deser/kaminoLayouts";
 import { VaultClient } from "../vault";
-import { PkSet, PkMap } from "../../utils";
+import { PkSet, PkMap, getProgramAccounts } from "../../utils";
 import {
   DEFAULT_OBLIGATION_ARGS,
   RefreshObligationAccounts,
@@ -913,7 +913,7 @@ export class KaminoLendingClient {
     }
 
     const obligationAccount =
-      await this.base.provider.connection.getAccountInfo(obligation);
+      await this.base.connection.getAccountInfo(obligation);
     if (!obligationAccount) {
       throw new Error("Obligation account not found");
     }
@@ -948,7 +948,7 @@ export class KaminoLendingClient {
     }
 
     const reserveAccounts =
-      await this.base.provider.connection.getMultipleAccountsInfo(
+      await this.base.connection.getMultipleAccountsInfo(
         reservesToFetch,
       );
     if (reserveAccounts.some((a) => !a)) {
@@ -968,7 +968,8 @@ export class KaminoLendingClient {
     market: PublicKey,
     asset: PublicKey,
   ): Promise<Reserve> {
-    const accounts = await this.base.provider.connection.getProgramAccounts(
+    const accounts = await getProgramAccounts(
+      this.base.connection,
       KAMINO_LENDING_PROGRAM,
       {
         filters: [
@@ -993,7 +994,8 @@ export class KaminoLendingClient {
     owner: PublicKey,
     market?: PublicKey,
   ): Promise<Obligation[]> {
-    const accounts = await this.base.provider.connection.getProgramAccounts(
+    const accounts = await getProgramAccounts(
+      this.base.connection,
       KAMINO_LENDING_PROGRAM,
       {
         filters: [
