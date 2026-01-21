@@ -9,6 +9,7 @@ import {
   AccountMeta,
   TransactionInstruction,
   SystemProgram,
+  VersionedTransactionResponse,
 } from "@solana/web3.js";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
@@ -18,7 +19,12 @@ import {
   USDC,
   USDC_DEVNET,
 } from "../constants";
-import { hexToBytes, toUiAmount, getProgramAccounts } from "../utils";
+import {
+  hexToBytes,
+  toUiAmount,
+  getProgramAccounts,
+  getTransactionsForAddress,
+} from "../utils";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { struct, array, u8, vec } from "@coral-xyz/borsh";
 import {
@@ -561,7 +567,7 @@ export class CctpClient {
     const resonse = await fetch(
       `https://iris-api.circle.com/v2/messages/${sourceDomain}?${queryParams}`,
     );
-    if (resonse.status !== 200) {
+    if (!resonse.ok) {
       const { error } = await resonse.json();
       throw new Error(
         `Failed to fetch messages from Circle API: ${resonse.status} ${error}`,
@@ -623,6 +629,25 @@ export class CctpClient {
     });
   }
 
+  async getTransactions(
+    signatures: string[],
+    batchSize: number,
+    commitment?: Finality,
+  ) {
+    const transactions: VersionedTransactionResponse[] = [];
+    for (let i = 0; i < signatures.length; i += batchSize) {
+      const promises = signatures.slice(i, i + batchSize).map((sig) =>
+        this.base.connection.getTransaction(sig, {
+          commitment,
+          maxSupportedTransactionVersion: 0,
+        }),
+      );
+      const batchTransactions = await Promise.all(promises);
+      transactions.push(...batchTransactions.filter((tx) => tx !== null));
+    }
+    return transactions;
+  }
+
   /**
    * Get incoming bridge events (EVM -> Solana)
    *
@@ -641,95 +666,84 @@ export class CctpClient {
     const { batchSize = 1, commitment = "confirmed", minSlot = 0 } = options;
 
     const txHashes = new Set<string>(options.txHashes ?? []);
-    const txSlots = new Map<string, number>();
+    let transactions: VersionedTransactionResponse[] = [];
 
-    // If no txHashes provided, find transactions involving vault's USDC token account
-    if (txHashes.size === 0) {
-      const signatures = await this.base.connection.getSignaturesForAddress(
-        this.base.getVaultAta(USDC),
-        {},
+    if (txHashes.size > 0) {
+      transactions = await this.getTransactions(
+        Array.from(txHashes),
+        batchSize,
         commitment,
       );
-      signatures
-        .filter((s) => s.slot >= minSlot)
-        .forEach((sig) => {
-          txHashes.add(sig.signature);
-          txSlots.set(sig.signature, sig.slot);
-        });
+    } else {
+      transactions = await getTransactionsForAddress(
+        this.base.connection,
+        this.base.getVaultAta(USDC),
+        { commitment },
+      );
     }
 
-    if (txHashes.size === 0) {
-      return [];
-    }
+    const sourcedNonceSlotSig: [number, string, number, string][] = [];
+    for (let i = 0; i < transactions.length; i++) {
+      const tx = transactions[i];
+      if (!tx || !tx.meta || tx.slot < minSlot) continue;
 
-    const allEvents: CctpBridgeEvent[] = [];
-    const txHashArray = Array.from(txHashes);
-
-    // Process transactions in batches
-    for (let i = 0; i < txHashArray.length; i += batchSize) {
-      const batch = txHashArray.slice(i, i + batchSize);
-      const transactionPromises = batch.map((txHash) =>
-        this.base.connection.getTransaction(txHash, {
-          maxSupportedTransactionVersion: 0,
-        }),
+      // Look for CCTP program logs indicating incoming bridge
+      const logs = tx.meta.logMessages || [];
+      const cctpLogs = logs.filter(
+        (log) =>
+          log.includes(
+            "Program CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC invoke",
+          ) || log.includes("ReceiveMessage"),
       );
 
-      const transactions = await Promise.all(transactionPromises);
+      if (cctpLogs.length === 0) {
+        continue;
+      }
 
-      // Parse each transaction for CCTP bridge events
-      for (let j = 0; j < transactions.length; j++) {
-        const tx = transactions[j];
-        const txHash = batch[j];
-
-        if (!tx || !tx.meta) continue;
-
-        // Look for CCTP program logs indicating incoming bridge
-        const logs = tx.meta.logMessages || [];
-        const cctpLogs = logs.filter(
-          (log) =>
-            log.includes(
-              "Program CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC invoke",
-            ) || log.includes("ReceiveMessage"),
-        );
-
-        if (cctpLogs.length === 0) {
-          continue;
-        }
-
-        // This is a potential incoming bridge transaction
-        // Parse the transaction data to extract bridge event details
-        const sourceAndNonce: [number, string][] = [];
-        for (const innerInstruction of tx?.meta?.innerInstructions ?? []) {
-          for (const { data } of innerInstruction.instructions) {
-            const bytes = Buffer.from(bs58.decode(data));
-            if (
-              !bytes.subarray(0, 8).equals(EMIT_CPI_IX_DISCM) ||
-              !bytes.subarray(8, 16).equals(MESSAGE_RECEIVED_EVENT_DISCM)
-            ) {
-              continue;
-            }
-
-            const sourceDomain = bytes.readUInt32LE(48);
-            const nonce = "0x" + bytes.subarray(52, 84).toString("hex");
-
-            sourceAndNonce.push([sourceDomain, nonce]);
+      // This is a potential incoming bridge transaction
+      // Parse the transaction data to extract bridge event details
+      for (const innerInstruction of tx?.meta?.innerInstructions ?? []) {
+        for (const { data } of innerInstruction.instructions) {
+          const bytes = Buffer.from(bs58.decode(data));
+          if (
+            !bytes.subarray(0, 8).equals(EMIT_CPI_IX_DISCM) ||
+            !bytes.subarray(8, 16).equals(MESSAGE_RECEIVED_EVENT_DISCM)
+          ) {
+            continue;
           }
-        }
 
-        // Fetch all messages from Circle API
-        for (const [sourceDomain, nonce] of sourceAndNonce) {
-          const events = await this.parseEventsFromAttestion(sourceDomain, {
+          const sourceDomain = bytes.readUInt32LE(48);
+          const nonce = "0x" + bytes.subarray(52, 84).toString("hex");
+
+          sourcedNonceSlotSig.push([
+            sourceDomain,
             nonce,
-            txHash,
-          });
-          for (const event of events) {
-            event.slot = txSlots.get(txHash);
-          }
-          allEvents.push(...events);
+            tx.slot,
+            tx.transaction.signatures[0],
+          ]);
         }
       }
     }
 
+    const allEvents: CctpBridgeEvent[] = [];
+    for (let i = 0; i < sourcedNonceSlotSig.length; i += batchSize) {
+      const events = await Promise.all(
+        sourcedNonceSlotSig
+          .slice(i, i + batchSize)
+          .map(([source, nonce, slot, sig]) =>
+            this.parseEventsFromAttestion(source, {
+              nonce,
+              txHash: sig,
+            }).then((events) => {
+              for (const event of events) {
+                event.slot = slot;
+              }
+              return events;
+            }),
+          ),
+      );
+      allEvents.push(...events.flat());
+    }
     return allEvents;
   }
 
@@ -783,15 +797,22 @@ export class CctpClient {
       }
     }
 
+    const txHashesArray = Array.from(txHashes);
     const allEvents: CctpBridgeEvent[] = [];
-    for (const txHash of txHashes) {
-      const events = await this.parseEventsFromAttestion(CCTP_DOMAIN_SOLANA, {
-        txHash,
-      });
-      for (const event of events) {
-        event.slot = txSlots.get(txHash);
-      }
-      allEvents.push(...events);
+    for (let i = 0; i < txHashesArray.length; i += batchSize) {
+      const events = await Promise.all(
+        txHashesArray.slice(i, i + batchSize).map((txHash) =>
+          this.parseEventsFromAttestion(CCTP_DOMAIN_SOLANA, {
+            txHash,
+          }).then((events) => {
+            for (const event of events) {
+              event.slot = txSlots.get(event.txHash);
+            }
+            return events;
+          }),
+        ),
+      );
+      allEvents.push(...events.flat());
     }
 
     return allEvents;

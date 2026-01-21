@@ -165,13 +165,15 @@ export async function getTransactionsForAddress(
   connection: Connection,
   address: PublicKey,
   options?: SignaturesForAddressOptions & GetTransactionsOptions,
-): Promise<(VersionedTransactionResponse | null)[]> {
+): Promise<VersionedTransactionResponse[]> {
   if (isHeliusRpc(connection.rpcEndpoint)) {
-    return await getTransactionsForAddressHelius(
-      connection.rpcEndpoint,
-      address,
-      options,
-    );
+    return (
+      await getTransactionsForAddressHelius(
+        connection.rpcEndpoint,
+        address,
+        options,
+      )
+    ).filter((tx) => tx !== null);
   }
 
   const signatures = await connection.getSignaturesForAddress(
@@ -191,9 +193,10 @@ export async function getTransactionsForAddress(
     ),
   );
 
-  return transactions;
+  return transactions.filter((tx) => tx !== null);
 }
 
+// FIXME: The param `limit` now controls page size, not total results
 async function getTransactionsForAddressHelius(
   rpcUrl: string,
   address: PublicKey,
@@ -201,21 +204,29 @@ async function getTransactionsForAddressHelius(
 ): Promise<(VersionedTransactionResponse | null)[]> {
   const {
     transactionDetails = "full",
-    limit = 1000,
+    limit = 100,
     before,
     commitment,
   } = options || {};
-  const result = await rpcRequest(rpcUrl, "getTransactionsForAddress", [
-    address.toBase58(),
-    {
-      transactionDetails,
-      limit,
-      ...(before && { paginationToken: before }),
-      ...(commitment && { commitment }),
-    },
-  ]);
 
-  return result.data || [];
+  const allTransactions: (VersionedTransactionResponse | null)[] = [];
+  let result: any;
+  let paginationToken: any = before;
+  do {
+    result = await rpcRequest(rpcUrl, "getTransactionsForAddress", [
+      address.toBase58(),
+      {
+        transactionDetails,
+        limit,
+        ...(paginationToken && { paginationToken }),
+        ...(commitment && { commitment }),
+      },
+    ]);
+    allTransactions.push(...(result?.data || []));
+    paginationToken = result?.paginationToken;
+  } while (paginationToken);
+
+  return allTransactions;
 }
 
 // https://docs.helius.dev/guides/priority-fee-api
