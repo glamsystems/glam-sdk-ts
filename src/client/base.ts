@@ -72,7 +72,7 @@ import {
 } from "../utils/glamPDAs";
 import { TokenMetadata, unpack } from "@solana/spl-token-metadata";
 import { fetchGlamLookupTableAccounts } from "../utils/glamApi";
-import { PkMap } from "../utils";
+import { JupiterApiClient, PkMap } from "../utils";
 
 const LOOKUP_TABLES = [
   new PublicKey("284iwGtA9X9aLy3KsyV8uT2pXLARhYbiSi5SiM2g47M2"), // kamino lending
@@ -108,6 +108,7 @@ export class BaseClient {
   provider: anchor.Provider;
   blockhashWithCache: BlockhashWithCache;
   jupiterApiKey?: string;
+  jupiterApiClient?: JupiterApiClient;
 
   private _protocolProgram?: GlamProtocolProgram;
   private _mintProgram?: GlamMintProgram;
@@ -147,6 +148,7 @@ export class BaseClient {
       config?.cluster ||
       ClusterNetwork.fromUrl(this.provider.connection.rpcEndpoint);
     this.jupiterApiKey = config?.jupiterApiKey;
+    this.jupiterApiClient = config?.jupiterApiClient;
     this.blockhashWithCache = new BlockhashWithCache(this.provider);
   }
 

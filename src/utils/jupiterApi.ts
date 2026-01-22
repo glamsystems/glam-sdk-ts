@@ -77,7 +77,7 @@ export type SwapInstructions = {
   addressLookupTableAddresses: string[];
 };
 
-const TOKEN_LIST_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_TOKEN_LIST_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export const JUPITER_API_DEFAULT = "https://api.jup.ag";
 
@@ -105,7 +105,16 @@ export class JupiterApiClient {
   private tokenListCache: { data: JupTokenList; timestamp: number } | null =
     null;
 
-  constructor(options: { apiKey?: string; swapApiBaseUrl?: string } = {}) {
+  private tokenListCacheTtl: number;
+
+  constructor(
+    options: {
+      apiKey?: string;
+      swapApiBaseUrl?: string;
+      cacheTtl?: number;
+    } = {},
+  ) {
+    this.tokenListCacheTtl = options.cacheTtl ?? DEFAULT_TOKEN_LIST_CACHE_TTL;
     this.apiKey =
       options.apiKey ||
       process.env.NEXT_PUBLIC_JUPITER_API_KEY ||
@@ -161,7 +170,7 @@ export class JupiterApiClient {
     if (
       !forceRefresh &&
       this.tokenListCache &&
-      Date.now() - this.tokenListCache.timestamp < TOKEN_LIST_CACHE_TTL
+      Date.now() - this.tokenListCache.timestamp < this.tokenListCacheTtl
     ) {
       return this.tokenListCache.data;
     }

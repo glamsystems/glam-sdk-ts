@@ -1,5 +1,6 @@
 import { Provider, Wallet } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
+import { JupiterApiClient } from "./utils";
 
 export enum ClusterNetwork {
   Mainnet = "mainnet-beta",
@@ -54,4 +55,5 @@ export type GlamClientConfig = {
   cluster?: ClusterNetwork;
   statePda?: PublicKey;
   jupiterApiKey?: string;
+  jupiterApiClient?: JupiterApiClient;
 };
