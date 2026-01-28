@@ -43,16 +43,19 @@ export type GlamConfig = {
       "args": []
     },
     {
-      "name": "deleteAssetMeta",
+      "name": "deprecateAssetMeta",
+      "docs": [
+        "Marks an asset meta as deprecated"
+      ],
       "discriminator": [
-        108,
-        173,
-        149,
-        99,
-        144,
-        203,
+        138,
+        242,
+        230,
+        22,
         21,
-        115
+        151,
+        149,
+        19
       ],
       "accounts": [
         {
@@ -381,6 +384,12 @@ export type GlamConfig = {
           "signer": true
         },
         {
+          "name": "asset"
+        },
+        {
+          "name": "oracle"
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
@@ -471,7 +480,7 @@ export type GlamConfig = {
           },
           {
             "name": "priority",
-            "type": "u8"
+            "type": "i8"
           },
           {
             "name": "padding",

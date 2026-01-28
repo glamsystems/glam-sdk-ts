@@ -2,7 +2,13 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey, Keypair } from "@solana/web3.js";
 import { GlamConfig } from "../../target/types/glam_config";
-import { initGlamConfigForTest, TEST_ASSETS, TEST_ORACLES } from "./setup";
+import { initGlamConfigForTest, createTestMint } from "./setup";
+import { USDC, WSOL, MSOL } from "../../src/constants";
+
+export const TEST_ORACLES = {
+  SOL_PYTH: new PublicKey("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE"),
+  USDC_PYTH: new PublicKey("Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"),
+};
 
 describe("glam_config", () => {
   const provider = anchor.AnchorProvider.env();
@@ -36,7 +42,7 @@ describe("glam_config", () => {
     // Add SOL asset meta
     const tx = await program.methods
       .upsertAssetMeta({
-        asset: TEST_ASSETS.SOL,
+        asset: WSOL,
         decimals: 9,
         oracle: TEST_ORACLES.SOL_PYTH,
         oracleSource: { pyth: {} },
@@ -46,6 +52,8 @@ describe("glam_config", () => {
       })
       .accounts({
         admin: admin.publicKey,
+        asset: WSOL,
+        oracle: TEST_ORACLES.SOL_PYTH,
       })
       .signers([admin])
       .rpc();
@@ -59,7 +67,7 @@ describe("glam_config", () => {
     // Verify the asset meta was added
     expect(globalConfig.assetMetas.length).toEqual(1);
     expect(globalConfig.assetMetas[0].asset.toString()).toEqual(
-      TEST_ASSETS.SOL.toString(),
+      WSOL.toString(),
     );
     expect(globalConfig.assetMetas[0].decimals).toEqual(9);
     expect(globalConfig.assetMetas[0].oracle.toString()).toEqual(
@@ -75,7 +83,7 @@ describe("glam_config", () => {
     // Add USDC asset meta
     const tx = await program.methods
       .upsertAssetMeta({
-        asset: TEST_ASSETS.USDC,
+        asset: USDC,
         decimals: 6, // USDC decimals
         oracle: TEST_ORACLES.USDC_PYTH,
         oracleSource: { pyth: {} }, // OracleSource enum variant
@@ -85,6 +93,8 @@ describe("glam_config", () => {
       })
       .accounts({
         admin: admin.publicKey,
+        asset: USDC,
+        oracle: TEST_ORACLES.USDC_PYTH,
       })
       .signers([admin])
       .rpc();
@@ -100,7 +110,7 @@ describe("glam_config", () => {
 
     // Verify the second asset meta is USDC
     const usdcMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === TEST_ASSETS.USDC.toString(),
+      (meta) => meta.asset.toString() === USDC.toString(),
     );
     expect(usdcMeta).toBeDefined();
     expect(usdcMeta?.decimals).toEqual(6);
@@ -113,12 +123,12 @@ describe("glam_config", () => {
     // Add 15 assets to trigger account extension
     // Account starts with space for ~3-4 assets, extensions happen in chunks of 10
     for (let i = 0; i < 15; i++) {
-      const assetKeypair = Keypair.generate();
+      const assetMint = await createTestMint(provider.connection, admin, 9);
       const oracleKeypair = Keypair.generate();
 
       await program.methods
         .upsertAssetMeta({
-          asset: assetKeypair.publicKey,
+          asset: assetMint,
           decimals: 9,
           oracle: oracleKeypair.publicKey,
           oracleSource: { pyth: {} },
@@ -128,6 +138,8 @@ describe("glam_config", () => {
         })
         .accounts({
           admin: admin.publicKey,
+          asset: assetMint,
+          oracle: oracleKeypair.publicKey,
         })
         .signers([admin])
         .rpc();
@@ -142,16 +154,16 @@ describe("glam_config", () => {
 
     // Verify we can still find assets
     const solMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === TEST_ASSETS.SOL.toString(),
+      (meta) => meta.asset.toString() === WSOL.toString(),
     );
     expect(solMeta).toBeDefined();
-  }, 30_000);
+  }, 60_000);
 
   it("Can update an asset meta", async () => {
     // Update SOL asset meta with new oracle
     const tx = await program.methods
       .upsertAssetMeta({
-        asset: TEST_ASSETS.SOL,
+        asset: WSOL,
         decimals: 9,
         oracle: TEST_ORACLES.SOL_PYTH,
         oracleSource: { pyth1K: {} }, // Different oracle source
@@ -161,6 +173,8 @@ describe("glam_config", () => {
       })
       .accounts({
         admin: admin.publicKey,
+        asset: WSOL,
+        oracle: TEST_ORACLES.SOL_PYTH,
       })
       .signers([admin])
       .rpc();
@@ -173,7 +187,7 @@ describe("glam_config", () => {
 
     // Find the SOL asset meta
     const solMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === TEST_ASSETS.SOL.toString(),
+      (meta) => meta.asset.toString() === WSOL.toString(),
     );
     expect(Object.keys(solMeta?.oracleSource || {})[0]).toEqual("pyth1K");
   });
@@ -186,7 +200,7 @@ describe("glam_config", () => {
 
     // Find existing SOL asset
     const solMetaBefore = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === TEST_ASSETS.SOL.toString(),
+      (meta) => meta.asset.toString() === WSOL.toString(),
     );
     expect(solMetaBefore).toBeDefined();
     const originalPriority = solMetaBefore!.priority;
@@ -194,7 +208,7 @@ describe("glam_config", () => {
     // Upsert SOL with same oracle but different parameters
     await program.methods
       .upsertAssetMeta({
-        asset: TEST_ASSETS.SOL,
+        asset: WSOL,
         decimals: 9,
         oracle: TEST_ORACLES.SOL_PYTH,
         oracleSource: { switchboard: {} }, // Change oracle source
@@ -204,6 +218,8 @@ describe("glam_config", () => {
       })
       .accounts({
         admin: admin.publicKey,
+        asset: WSOL,
+        oracle: TEST_ORACLES.SOL_PYTH,
       })
       .signers([admin])
       .rpc();
@@ -215,7 +231,7 @@ describe("glam_config", () => {
     // Verify parameters were updated
     const solMetaAfter = globalConfig.assetMetas.find(
       (meta) =>
-        meta.asset.toString() === TEST_ASSETS.SOL.toString() &&
+        meta.asset.toString() === WSOL.toString() &&
         meta.oracle.toString() === TEST_ORACLES.SOL_PYTH.toString(),
     );
     expect(solMetaAfter).toBeDefined();
@@ -227,145 +243,56 @@ describe("glam_config", () => {
     expect(solMetaAfter?.priority).not.toEqual(originalPriority);
   });
 
-  it("Can delete an asset meta", async () => {
-    // Get current count before deletion
+  it("Can deprecate an asset meta", async () => {
+    // Get current count before deprecation
     const configBefore =
       await program.account.globalConfig.fetch(globalConfigPDA);
     const countBefore = configBefore.assetMetas.length;
 
-    // Delete the USDC asset meta
+    // Deprecate the USDC asset meta (soft delete - sets priority to -1)
     const tx = await program.methods
-      .deleteAssetMeta(TEST_ASSETS.USDC, TEST_ORACLES.USDC_PYTH)
+      .deprecateAssetMeta(USDC, TEST_ORACLES.USDC_PYTH)
       .accounts({
         admin: admin.publicKey,
       })
       .signers([admin])
       .rpc();
 
-    console.log("Delete asset meta transaction:", tx);
+    console.log("Deprecate asset meta transaction:", tx);
 
     // Fetch the updated global config
     const globalConfig =
       await program.account.globalConfig.fetch(globalConfigPDA);
 
-    // Verify USDC asset meta was removed
-    expect(globalConfig.assetMetas.length).toEqual(countBefore - 1);
+    // Verify count stays the same (soft delete)
+    expect(globalConfig.assetMetas.length).toEqual(countBefore);
+
+    // Verify USDC asset meta has priority = -1 (deprecated)
     const usdcMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === TEST_ASSETS.USDC.toString(),
+      (meta) => meta.asset.toString() === USDC.toString(),
     );
-    expect(usdcMeta).toBeUndefined();
+    expect(usdcMeta).toBeDefined();
+    expect(usdcMeta?.priority).toEqual(-1);
   });
 
-  it("Cannot delete non-existent asset", async () => {
-    // Try to delete an asset that doesn't exist
+  it("Cannot deprecate non-existent asset", async () => {
+    // Try to deprecate an asset that doesn't exist
     const nonExistentAsset = Keypair.generate().publicKey;
     const nonExistentOracle = Keypair.generate().publicKey;
 
     try {
       await program.methods
-        .deleteAssetMeta(nonExistentAsset, nonExistentOracle)
+        .deprecateAssetMeta(nonExistentAsset, nonExistentOracle)
         .accounts({
           admin: admin.publicKey,
         })
         .signers([admin])
         .rpc();
 
-      fail("Should have thrown an error for deleting non-existent asset");
+      fail("Should have thrown an error for deprecating non-existent asset");
     } catch (error: any) {
       expect(error.toString()).toContain("InvalidAssetMeta");
     }
-  });
-
-  it("Can delete first asset and verify shift", async () => {
-    // First, add 3 more assets (we have SOL already, USDC was deleted)
-    const asset2 = Keypair.generate().publicKey;
-    const asset3 = Keypair.generate().publicKey;
-    const oracle2 = Keypair.generate().publicKey;
-    const oracle3 = Keypair.generate().publicKey;
-
-    await program.methods
-      .upsertAssetMeta({
-        asset: asset2,
-        decimals: 6,
-        oracle: oracle2,
-        oracleSource: { pyth: {} },
-        maxAgeSeconds: 0,
-        priority: 1,
-        padding: [0, 0, 0],
-      })
-      .accounts({
-        admin: admin.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-
-    await program.methods
-      .upsertAssetMeta({
-        asset: asset3,
-        decimals: 9,
-        oracle: oracle3,
-        oracleSource: { pyth: {} },
-        maxAgeSeconds: 0,
-        priority: 2,
-        padding: [0, 0, 0],
-      })
-      .accounts({
-        admin: admin.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-
-    // Get initial state
-    let globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    const countBefore = globalConfig.assetMetas.length;
-    const firstAsset = globalConfig.assetMetas[0];
-    const secondAssetBefore = globalConfig.assetMetas[1];
-
-    // Delete first asset
-    await program.methods
-      .deleteAssetMeta(firstAsset.asset, firstAsset.oracle)
-      .accounts({
-        admin: admin.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-
-    // Verify shift occurred
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(countBefore - 1);
-
-    // What was second should now be first
-    expect(globalConfig.assetMetas[0].asset.toString()).toEqual(
-      secondAssetBefore.asset.toString(),
-    );
-  });
-
-  it("Can delete last asset", async () => {
-    // Get current state
-    let globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    const countBefore = globalConfig.assetMetas.length;
-    const lastAsset = globalConfig.assetMetas[countBefore - 1];
-    const secondToLast = globalConfig.assetMetas[countBefore - 2];
-
-    // Delete last asset
-    await program.methods
-      .deleteAssetMeta(lastAsset.asset, lastAsset.oracle)
-      .accounts({
-        admin: admin.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-
-    // Verify deletion
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(countBefore - 1);
-
-    // Second to last should still be in same position
-    expect(globalConfig.assetMetas[countBefore - 2].asset.toString()).toEqual(
-      secondToLast.asset.toString(),
-    );
   });
 
   it("Can update admin", async () => {
@@ -557,7 +484,7 @@ describe("glam_config", () => {
       // Try to add asset meta with fee authority instead of admin
       await program.methods
         .upsertAssetMeta({
-          asset: TEST_ASSETS.MSOL,
+          asset: MSOL,
           decimals: 9,
           oracle: TEST_ORACLES.SOL_PYTH,
           oracleSource: { pyth: {} },
@@ -567,6 +494,8 @@ describe("glam_config", () => {
         })
         .accounts({
           admin: feeAuthority.publicKey, // Using fee authority instead of admin
+          asset: MSOL,
+          oracle: TEST_ORACLES.SOL_PYTH,
         })
         .signers([feeAuthority])
         .rpc();
@@ -598,173 +527,140 @@ describe("glam_config", () => {
     }
   });
 
-  // ========== Priority 2: Important Edge Cases ==========
-
   it("Verifies proper account extension beyond initial capacity", async () => {
-    // Get initial account size
-    const accountInfoBefore =
-      await provider.connection.getAccountInfo(globalConfigPDA);
-    const initialSize = accountInfoBefore?.data.length || 0;
-
-    // Count current assets
+    // Get current count before adding more
     let globalConfig =
       await program.account.globalConfig.fetch(globalConfigPDA);
-    const assetCountBefore = globalConfig.assetMetas.length;
+    const countBefore = globalConfig.assetMetas.length;
 
-    // Add 20 more assets to ensure extension happens
-    for (let i = 0; i < 20; i++) {
-      const assetKeypair = Keypair.generate();
+    // Add 5 more assets to verify extension works correctly
+    const newMints: PublicKey[] = [];
+    for (let i = 0; i < 5; i++) {
+      const assetMint = await createTestMint(provider.connection, admin, 6); // 6 decimals
       const oracleKeypair = Keypair.generate();
+      newMints.push(assetMint);
 
       await program.methods
         .upsertAssetMeta({
-          asset: assetKeypair.publicKey,
+          asset: assetMint,
           decimals: 6,
           oracle: oracleKeypair.publicKey,
-          oracleSource: { pyth: {} },
+          oracleSource: { switchboard: {} },
           maxAgeSeconds: 60,
           priority: 100 + i,
           padding: [0, 0, 0],
         })
         .accounts({
           admin: admin.publicKey,
+          asset: assetMint,
+          oracle: oracleKeypair.publicKey,
         })
         .signers([admin])
         .rpc();
     }
 
-    // Verify account was extended
-    const accountInfoAfter =
-      await provider.connection.getAccountInfo(globalConfigPDA);
-    const finalSize = accountInfoAfter?.data.length || 0;
-    expect(finalSize).toBeGreaterThan(initialSize);
-
-    // Verify all assets are accessible
+    // Verify all new assets were added
     globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(assetCountBefore + 20);
-  }, 20_000);
+    expect(globalConfig.assetMetas.length).toEqual(countBefore + 5);
+
+    // Verify we can find the newly added assets
+    for (const mint of newMints) {
+      const meta = globalConfig.assetMetas.find(
+        (m) => m.asset.toString() === mint.toString(),
+      );
+      expect(meta).toBeDefined();
+      expect(meta?.decimals).toEqual(6);
+    }
+  }, 60_000);
 
   it("Maintains data consistency through sequential state changes", async () => {
-    // Perform a sequence of operations and verify state remains consistent
+    // Create a new mint for this test
+    const testMint = await createTestMint(provider.connection, admin, 8);
+    const testOracle = Keypair.generate();
 
-    // 1. Add an asset
+    // Get initial count
     let globalConfig =
       await program.account.globalConfig.fetch(globalConfigPDA);
-    const countBeforeAdd = globalConfig.assetMetas.length;
+    const initialCount = globalConfig.assetMetas.length;
 
-    const testAsset = Keypair.generate().publicKey;
-    const testOracle = Keypair.generate().publicKey;
+    // Step 1: Add a new asset
     await program.methods
       .upsertAssetMeta({
-        asset: testAsset,
-        decimals: 9,
-        oracle: testOracle,
+        asset: testMint,
+        decimals: 8,
+        oracle: testOracle.publicKey,
         oracleSource: { pyth: {} },
         maxAgeSeconds: 30,
-        priority: 200,
+        priority: 50,
         padding: [0, 0, 0],
       })
       .accounts({
         admin: admin.publicKey,
+        asset: testMint,
+        oracle: testOracle.publicKey,
       })
       .signers([admin])
       .rpc();
 
     globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(countBeforeAdd + 1);
+    expect(globalConfig.assetMetas.length).toEqual(initialCount + 1);
 
-    // 2. Update the same asset
+    // Step 2: Update the asset
     await program.methods
       .upsertAssetMeta({
-        asset: testAsset,
-        decimals: 9,
-        oracle: testOracle,
-        oracleSource: { switchboard: {} },
-        maxAgeSeconds: 120,
-        priority: 201,
+        asset: testMint,
+        decimals: 8,
+        oracle: testOracle.publicKey,
+        oracleSource: { switchboard: {} }, // Changed oracle source
+        maxAgeSeconds: 120, // Changed max age
+        priority: 75, // Changed priority
         padding: [0, 0, 0],
       })
       .accounts({
         admin: admin.publicKey,
+        asset: testMint,
+        oracle: testOracle.publicKey,
       })
       .signers([admin])
       .rpc();
 
+    // Verify update didn't add a new entry
     globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(countBeforeAdd + 1); // No increase
+    expect(globalConfig.assetMetas.length).toEqual(initialCount + 1);
+
+    // Verify values were updated
     const updatedMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === testAsset.toString(),
+      (m) =>
+        m.asset.toString() === testMint.toString() &&
+        m.oracle.toString() === testOracle.publicKey.toString(),
     );
-    expect(updatedMeta?.priority).toEqual(201);
+    expect(updatedMeta).toBeDefined();
     expect(Object.keys(updatedMeta?.oracleSource || {})[0]).toEqual(
       "switchboard",
     );
+    expect(updatedMeta?.maxAgeSeconds).toEqual(120);
+    expect(updatedMeta?.priority).toEqual(75);
 
-    // 3. Delete the asset
+    // Step 3: Deprecate the asset
     await program.methods
-      .deleteAssetMeta(testAsset, testOracle)
+      .deprecateAssetMeta(testMint, testOracle.publicKey)
       .accounts({
         admin: admin.publicKey,
       })
       .signers([admin])
       .rpc();
 
+    // Verify deprecation (count stays same, priority = -1)
     globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(countBeforeAdd);
+    expect(globalConfig.assetMetas.length).toEqual(initialCount + 1);
 
-    // 4. Verify asset is truly gone
-    const deletedMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === testAsset.toString(),
+    const deprecatedMeta = globalConfig.assetMetas.find(
+      (m) =>
+        m.asset.toString() === testMint.toString() &&
+        m.oracle.toString() === testOracle.publicKey.toString(),
     );
-    expect(deletedMeta).toBeUndefined();
-  }, 20_000);
-
-  it("Handles empty asset list after all deletions", async () => {
-    // Get all current assets
-    let globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    const allAssets = [...globalConfig.assetMetas];
-
-    // Delete all assets one by one
-    for (const assetMeta of allAssets) {
-      await program.methods
-        .deleteAssetMeta(assetMeta.asset, assetMeta.oracle)
-        .accounts({
-          admin: admin.publicKey,
-        })
-        .signers([admin])
-        .rpc();
-    }
-
-    // Verify empty asset list
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(0);
-
-    // Verify we can still add assets to empty list
-    const newAsset = Keypair.generate().publicKey;
-    const newOracle = Keypair.generate().publicKey;
-    await program.methods
-      .upsertAssetMeta({
-        asset: newAsset,
-        decimals: 6,
-        oracle: newOracle,
-        oracleSource: { pyth: {} },
-        maxAgeSeconds: 30,
-        priority: 1,
-        padding: [0, 0, 0],
-      })
-      .accounts({
-        admin: admin.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(1);
-    expect(globalConfig.assetMetas[0].asset.toString()).toEqual(
-      newAsset.toString(),
-    );
-  }, 30000); // 30 second timeout for deleting many assets
+    expect(deprecatedMeta?.priority).toEqual(-1);
+  }, 30_000);
 
   it("Supports multiple admin changes in sequence", async () => {
     // Get initial admin

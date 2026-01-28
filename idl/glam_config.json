@@ -37,16 +37,19 @@
       "args": []
     },
     {
-      "name": "delete_asset_meta",
+      "name": "deprecate_asset_meta",
+      "docs": [
+        "Marks an asset meta as deprecated"
+      ],
       "discriminator": [
-        108,
-        173,
-        149,
-        99,
-        144,
-        203,
+        138,
+        242,
+        230,
+        22,
         21,
-        115
+        151,
+        149,
+        19
       ],
       "accounts": [
         {
@@ -375,6 +378,12 @@
           "signer": true
         },
         {
+          "name": "asset"
+        },
+        {
+          "name": "oracle"
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -465,7 +474,7 @@
           },
           {
             "name": "priority",
-            "type": "u8"
+            "type": "i8"
           },
           {
             "name": "padding",

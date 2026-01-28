@@ -1,4 +1,4 @@
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 export function expectPublicKeyArrayEqual(
   actual: PublicKey[],
@@ -22,15 +22,22 @@ export const str2seed = (str: String) =>
 export const airdrop = async (
   connection: Connection,
   pubkey: PublicKey,
-  lamports: number,
+  lamports: number = LAMPORTS_PER_SOL,
 ) => {
-  const airdropTx = await connection.requestAirdrop(pubkey, lamports);
-  await connection.confirmTransaction(
-    {
-      ...(await connection.getLatestBlockhash()),
-      signature: airdropTx,
-    },
-    "confirmed",
-  );
-  console.log(`Airdropped ${lamports} lamports to ${pubkey}:`, airdropTx);
+  try {
+    const airdropTx = await connection.requestAirdrop(pubkey, lamports);
+    await connection.confirmTransaction(
+      {
+        ...(await connection.getLatestBlockhash()),
+        signature: airdropTx,
+      },
+      "confirmed",
+    );
+    console.log(
+      `Airdropped ${lamports / LAMPORTS_PER_SOL} SOL to ${pubkey.toBase58()}:`,
+      airdropTx,
+    );
+  } catch (error) {
+    console.error("Airdrop failed:", error);
+  }
 };
