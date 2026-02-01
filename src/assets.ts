@@ -479,15 +479,18 @@ export const USDC_ORACLE = ASSETS_MAINNET.get(
  * @returns Metadata of the asset
  */
 export function getAssetMeta(
-  assetMint: string,
+  assetMint: string | PublicKey,
   cluster: ClusterNetwork = ClusterNetwork.Mainnet,
 ): AssetMeta {
-  let assetMeta = ASSETS_MAINNET.get(assetMint);
+  const mint =
+    assetMint instanceof PublicKey ? assetMint.toBase58() : assetMint;
+
+  let assetMeta = ASSETS_MAINNET.get(mint);
   if (!assetMeta && cluster !== ClusterNetwork.Mainnet) {
-    assetMeta = ASSETS_TESTS.get(assetMint);
+    assetMeta = ASSETS_TESTS.get(mint);
   }
   if (!assetMeta) {
-    throw new Error("Invalid asset: " + assetMint);
+    throw new Error("Asset not supported: " + assetMint);
   }
   return assetMeta;
 }
