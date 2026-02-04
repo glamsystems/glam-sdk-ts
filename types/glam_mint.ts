@@ -4711,7 +4711,7 @@ export type GlamMint = {
           },
           {
             "name": "priority",
-            "type": "u8"
+            "type": "i8"
           },
           {
             "name": "padding",
