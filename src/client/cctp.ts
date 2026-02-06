@@ -72,7 +72,7 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
   public async bridgeUsdcIx(
     amount: BN,
     domain: number,
-    recipient: PublicKey,
+    destinationAddress: PublicKey,
     params: {
       maxFee: BN;
       minFinalityThreshold: number;
@@ -91,7 +91,7 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
     const depositForBurnParams = {
       amount,
       destinationDomain: domain,
-      mintRecipient: recipient,
+      mintRecipient: destinationAddress,
       destinationCaller: params.destinationCaller || PublicKey.default,
       ...params,
     };
@@ -102,7 +102,7 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
     )[0];
     const messageSentEventAccountKeypair = Keypair.generate();
 
-    const burnTokenAccount = this.client.base.getVaultAta(usdcAddress);
+    const senderUsdcAta = this.client.base.getVaultAta(usdcAddress);
 
     const ix = await this.client.base.extCctpProgram.methods
       .depositForBurn(depositForBurnParams)
@@ -110,7 +110,7 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
         glamState: this.client.base.statePda,
         glamSigner,
         senderAuthorityPda: pdas.authorityPda,
-        burnTokenAccount,
+        burnTokenAccount: senderUsdcAta,
         denylistAccount,
         messageTransmitter: pdas.messageTransmitterAccount,
         tokenMessenger: pdas.tokenMessengerAccount,
@@ -128,7 +128,7 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
   public async bridgeUsdcTx(
     amount: BN,
     domain: number,
-    recipient: PublicKey,
+    destinationAddress: PublicKey,
     params: {
       maxFee: BN;
       minFinalityThreshold: number;
@@ -140,7 +140,7 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
     const [ix, messageSentEventAccountKeypair] = await this.bridgeUsdcIx(
       amount,
       domain,
-      recipient,
+      destinationAddress,
       params,
       signer,
     );
@@ -164,6 +164,8 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
         "Invalid message object: missing burnToken in decodedMessage",
       );
     }
+
+    const recipientUsdcAta = this.client.base.getVaultAta(USDC);
 
     // message, attestation, eventNonce, burnToken are hex strings
     const pdas = await this.client.getReceiveMessagePdas(
@@ -241,7 +243,7 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
       {
         isSigner: false,
         isWritable: true,
-        pubkey: this.client.base.getVaultAta(USDC),
+        pubkey: recipientUsdcAta,
       },
       {
         isSigner: false,
@@ -302,10 +304,12 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
       receiveMessageIxs.push(ix);
     }
 
+    const recipientWallet = this.client.base.vaultPda;
+    const recipientUsdcAta = this.client.base.getVaultAta(USDC);
     const createUsdcAtaIx = createAssociatedTokenAccountIdempotentInstruction(
       this.client.base.signer,
-      this.client.base.getVaultAta(USDC),
-      this.client.base.vaultPda,
+      recipientUsdcAta,
+      recipientWallet,
       USDC,
     );
     return await this.buildVersionedTx(
@@ -327,14 +331,14 @@ export class CctpClient {
    *
    * @param amount Amount of USDC to bridge (in smallest units)
    * @param domain Destination domain (e.g., 0 for Ethereum, 1 for Avalanche)
-   * @param recipient Recipient address on destination chain
+   * @param destinationAddress Destination address on target chain (EVM address as PublicKey)
    * @param params Additional parameters (maxFee, minFinalityThreshold)
    * @param txOptions Transaction options
    */
   public async bridgeUsdc(
     amount: BN | number,
     domain: number,
-    recipient: PublicKey,
+    destinationAddress: PublicKey,
     params: {
       maxFee: BN;
       minFinalityThreshold: number;
@@ -345,7 +349,7 @@ export class CctpClient {
     const [tx, keypair] = await this.txBuilder.bridgeUsdcTx(
       new BN(amount),
       domain,
-      recipient,
+      destinationAddress,
       params,
       txOptions,
     );
@@ -523,12 +527,12 @@ export class CctpClient {
   }
 
   /**
-   * Find all message accounts onchain for a given sender
+   * Find all message accounts onchain for a given sender wallet
    *
    * TODO: filter by burned token mint
    */
   async findV2Messages(
-    sender: PublicKey,
+    senderWallet: PublicKey,
     options: {
       commitment?: Commitment;
       minSlot?: number;
@@ -541,7 +545,7 @@ export class CctpClient {
         ...(options.commitment ? { commitment: options.commitment } : {}),
         filters: [
           { dataSize: 428 },
-          { memcmp: { offset: 300, bytes: sender.toBase58() } },
+          { memcmp: { offset: 300, bytes: senderWallet.toBase58() } },
         ],
       },
     );
