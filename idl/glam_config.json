@@ -228,6 +228,57 @@
       ]
     },
     {
+      "name": "update_fee_authority",
+      "discriminator": [
+        31,
+        223,
+        200,
+        21,
+        114,
+        158,
+        65,
+        61
+      ],
+      "accounts": [
+        {
+          "name": "global_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "fee_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "update_protocol_fees",
       "discriminator": [
         158,
@@ -509,18 +560,30 @@
           },
           {
             "name": "referrer",
+            "docs": [
+              "Default GLAM referrer"
+            ],
             "type": "pubkey"
           },
           {
             "name": "base_fee_bps",
+            "docs": [
+              "Default protocol base fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "flow_fee_bps",
+            "docs": [
+              "Default protocol flow fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "asset_metas",
+            "docs": [
+              "List of assets and their oracle configs supported by the protocol"
+            ],
             "type": {
               "vec": {
                 "defined": {

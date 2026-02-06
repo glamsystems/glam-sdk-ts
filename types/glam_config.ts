@@ -234,6 +234,57 @@ export type GlamConfig = {
       ]
     },
     {
+      "name": "updateFeeAuthority",
+      "discriminator": [
+        31,
+        223,
+        200,
+        21,
+        114,
+        158,
+        65,
+        61
+      ],
+      "accounts": [
+        {
+          "name": "globalConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "feeAuthority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "feeAuthority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "updateProtocolFees",
       "discriminator": [
         158,
@@ -515,18 +566,30 @@ export type GlamConfig = {
           },
           {
             "name": "referrer",
+            "docs": [
+              "Default GLAM referrer"
+            ],
             "type": "pubkey"
           },
           {
             "name": "baseFeeBps",
+            "docs": [
+              "Default protocol base fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "flowFeeBps",
+            "docs": [
+              "Default protocol flow fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "assetMetas",
+            "docs": [
+              "List of assets and their oracle configs supported by the protocol"
+            ],
             "type": {
               "vec": {
                 "defined": {

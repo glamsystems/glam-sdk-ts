@@ -479,6 +479,40 @@ describe("glam_config", () => {
     );
   });
 
+  it("Can update fee authority", async () => {
+    // Create a new fee authority
+    const newFeeAuthority = Keypair.generate();
+
+    // Update the fee authority
+    const tx = await program.methods
+      .updateFeeAuthority(newFeeAuthority.publicKey)
+      .accounts({
+        feeAuthority: feeAuthority.publicKey,
+      })
+      .signers([feeAuthority])
+      .rpc();
+
+    console.log("Update fee authority transaction:", tx);
+
+    // Fetch the updated global config
+    const globalConfig =
+      await program.account.globalConfig.fetch(globalConfigPDA);
+
+    // Verify the fee authority was updated
+    expect(globalConfig.feeAuthority.toString()).toEqual(
+      newFeeAuthority.publicKey.toString(),
+    );
+
+    // Update fee authority back to original for remaining tests
+    await program.methods
+      .updateFeeAuthority(feeAuthority.publicKey)
+      .accounts({
+        feeAuthority: newFeeAuthority.publicKey,
+      })
+      .signers([newFeeAuthority])
+      .rpc();
+  });
+
   it("Cannot perform admin operations without admin authority", async () => {
     try {
       // Try to add asset meta with fee authority instead of admin
