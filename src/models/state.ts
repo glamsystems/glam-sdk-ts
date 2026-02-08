@@ -140,8 +140,9 @@ export class StateModel extends StateIdlModel {
 
   get sparkleKey() {
     const pubkey =
-      (this.mint?.equals(PublicKey.default) ? this.id : this.mint) ||
-      PublicKey.default;
+      (this.mint && !this.mint.equals(PublicKey.default)
+        ? this.mint
+        : this.vault) || PublicKey.default;
     return pubkey.toBase58();
   }
 
