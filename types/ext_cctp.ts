@@ -237,6 +237,9 @@ export type ExtCctp = {
           },
           {
             "name": "mint"
+          },
+          {
+            "name": "singleAssetVault"
           }
         ]
       }

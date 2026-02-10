@@ -2050,6 +2050,9 @@ export type ExtKamino = {
           },
           {
             "name": "mint"
+          },
+          {
+            "name": "singleAssetVault"
           }
         ]
       }

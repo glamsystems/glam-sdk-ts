@@ -8,7 +8,7 @@ export type GlamMint = {
   "address": "GM1NtvvnSXUptTrMCqbogAdZJydZSNv98DoU5AZVLmGh",
   "metadata": {
     "name": "glamMint",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "spec": "0.1.0",
     "description": "GLAM mint program"
   },
@@ -2825,6 +2825,167 @@ export type GlamMint = {
       ]
     },
     {
+      "name": "priceSingleAssetVault",
+      "docs": [
+        "Prices a single asset vault."
+      ],
+      "discriminator": [
+        93,
+        213,
+        219,
+        25,
+        38,
+        74,
+        9,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                227,
+                199,
+                235,
+                230,
+                176,
+                132,
+                243,
+                117,
+                43,
+                131,
+                173,
+                18,
+                78,
+                255,
+                26,
+                50,
+                209,
+                135,
+                86,
+                219,
+                140,
+                126,
+                61,
+                255,
+                0,
+                218,
+                252,
+                224,
+                172,
+                8,
+                223,
+                207
+              ]
+            }
+          }
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "baseAssetAta"
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "glamProtocol",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "eventAuthority",
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "eventProgram",
+          "optional": true,
+          "address": "GM1NtvvnSXUptTrMCqbogAdZJydZSNv98DoU5AZVLmGh"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "priceStakeAccounts",
       "discriminator": [
         119,
@@ -4636,6 +4797,9 @@ export type GlamMint = {
           },
           {
             "name": "mint"
+          },
+          {
+            "name": "singleAssetVault"
           }
         ]
       }

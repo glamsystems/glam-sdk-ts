@@ -623,6 +623,9 @@ export type ExtMarinade = {
           },
           {
             "name": "mint"
+          },
+          {
+            "name": "singleAssetVault"
           }
         ]
       }

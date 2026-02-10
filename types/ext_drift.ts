@@ -2591,6 +2591,9 @@ export type ExtDrift = {
           },
           {
             "name": "mint"
+          },
+          {
+            "name": "singleAssetVault"
           }
         ]
       }

@@ -2585,6 +2585,9 @@
           },
           {
             "name": "Mint"
+          },
+          {
+            "name": "SingleAssetVault"
           }
         ]
       }
