@@ -33,6 +33,9 @@ export function parseProgramLogs(logs?: null | string[]): string {
   );
 
   if (errorMsgLog) {
+    if (errorMsgLog.includes("Error Message:")) {
+      return errorMsgLog.split("Error Message:")[1].trim();
+    }
     return errorMsgLog;
   }
 

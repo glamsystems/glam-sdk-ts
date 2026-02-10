@@ -9,7 +9,7 @@ import {
 } from "@solana/spl-token";
 import {
   GlamClient,
-  nameToChars,
+  stringToChars,
   StateAccountType,
   fetchMintAndTokenProgram,
 } from "../../src";
@@ -142,7 +142,7 @@ describe("single_asset_vault", () => {
     const name = "Single Asset Vault Investor Flow";
     const params = {
       accountType: StateAccountType.SINGLE_ASSET_VAULT,
-      name: nameToChars(name),
+      name: stringToChars(name),
       symbol: "SAV",
       uri: "https://glam.systems",
       baseAssetMint: baseAssetMint.publicKey,
