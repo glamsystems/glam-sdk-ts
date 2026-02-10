@@ -315,6 +315,7 @@ export class StateAccountType {
   static readonly VAULT = { vault: {} };
   static readonly TOKENIZED_VAULT = { tokenizedVault: {} };
   static readonly MINT = { mint: {} };
+  static readonly SINGLE_ASSET_VAULT = { singleAssetVault: {} };
 
   static equals(a: StateAccountType, b: StateAccountType) {
     return Object.keys(a)[0] === Object.keys(b)[0];
@@ -327,6 +328,10 @@ export class StateAccountType {
 
     if (s === "tokenizedVault") {
       return StateAccountType.TOKENIZED_VAULT;
+    }
+
+    if (s === "singleAssetVault") {
+      return StateAccountType.SINGLE_ASSET_VAULT;
     }
 
     if (s === "mint") {

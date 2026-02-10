@@ -28,15 +28,12 @@ export function parseProgramLogs(logs?: null | string[]): string {
   const errorMsgLog = (logs || []).find(
     (log) =>
       log.includes("Error Message:") ||
-      log.includes("Error: insufficient funds"),
+      log.includes("Error: insufficient funds") ||
+      log.includes("Transfer: insufficient lamports"),
   );
 
   if (errorMsgLog) {
-    if (errorMsgLog.includes("Error Message:")) {
-      return errorMsgLog.split("Error Message:")[1].trim();
-    } else {
-      return "Insufficient funds";
-    }
+    return errorMsgLog;
   }
 
   // Match the following pattern to find Jupiter error code in logs

@@ -8,7 +8,7 @@ export type GlamProtocol = {
   "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz",
   "metadata": {
     "name": "glamProtocol",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "spec": "0.1.0",
     "description": "Glam Protocol"
   },
@@ -1854,6 +1854,9 @@ export type GlamProtocol = {
           },
           {
             "name": "mint"
+          },
+          {
+            "name": "singleAssetVault"
           }
         ]
       }

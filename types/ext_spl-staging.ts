@@ -295,6 +295,9 @@ export type ExtSpl = {
           },
           {
             "name": "mint"
+          },
+          {
+            "name": "singleAssetVault"
           }
         ]
       }

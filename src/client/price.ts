@@ -11,7 +11,7 @@ import { KaminoLendingClient, KaminoVaultsClient } from "./kamino";
 import { BaseClient } from "./base";
 
 import { ASSETS_MAINNET, SOL_ORACLE } from "../assets";
-import { StateModel } from "../models";
+import { StateAccountType, StateModel } from "../models";
 import { DriftProtocolClient, DriftVaultsClient } from "./drift";
 import {
   bfToDecimal,
@@ -1379,6 +1379,26 @@ export class PriceClient {
   public async priceVaultIxs(): Promise<TransactionInstruction[]> {
     // Cache state model
     this.cachedStateModel = await this.base.fetchStateModel();
+
+    if (
+      StateAccountType.equals(
+        this.cachedStateModel.accountType,
+        StateAccountType.SINGLE_ASSET_VAULT,
+      )
+    ) {
+      const baseAssetAta = this.base.getVaultAta(
+        this.cachedStateModel.baseAssetMint,
+        this.cachedStateModel.baseAssetTokenProgramId,
+      );
+      const ix = await this.base.mintProgram.methods
+        .priceSingleAssetVault()
+        .accounts({
+          glamState: this.base.statePda,
+          baseAssetAta,
+        })
+        .instruction();
+      return [ix];
+    }
 
     const priceVaultIx = await this.priceVaultTokensIx();
 

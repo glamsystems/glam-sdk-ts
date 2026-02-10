@@ -622,6 +622,9 @@ export type ExtStakePool = {
           },
           {
             "name": "mint"
+          },
+          {
+            "name": "singleAssetVault"
           }
         ]
       }

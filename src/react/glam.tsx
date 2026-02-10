@@ -61,7 +61,7 @@ interface GlamStateCache {
   owner: PublicKey;
   sparkleKey: string;
   name: string;
-  product: "Mint" | "Vault" | "TokenizedVault";
+  product: "Mint" | "Vault" | "TokenizedVault" | "SingleAssetVault";
 }
 
 const GlamContext = createContext<GlamProviderContext>(
@@ -248,6 +248,7 @@ export function GlamProvider({
   //
   const { data: jupTokenList } = useQuery({
     queryKey: ["jupiter-tokens-list"],
+    enabled: cluster.network === ClusterNetwork.Mainnet,
     queryFn: () => new JupiterApiClient().fetchTokensList(true),
     staleTime: 1000 * 30, // 30 seconds
   });

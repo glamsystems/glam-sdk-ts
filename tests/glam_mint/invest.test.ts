@@ -128,10 +128,8 @@ describe("invest", () => {
 
     const stateModel = await glamClientManager.fetchStateModel();
     expect(stateModel.nameStr).toEqual(name);
-    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(1);
-    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(
-      2000,
-    );
+    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(20);
+    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(0);
     expect(stateModel.mintModel?.minSubscription.toNumber()).toEqual(
       1_000_000_000,
     );
@@ -143,6 +141,20 @@ describe("invest", () => {
     glamClientEve.statePda = glamClientManager.statePda;
     glamClientRich.statePda = glamClientManager.statePda;
   }, 25_000);
+
+  it("Update protocol fees", async () => {
+    try {
+      const txSig = await glamClientManager.fees.setProtocolFees(
+        1,
+        2000,
+        txOptions,
+      );
+      console.log("Update protocol fees:", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  });
 
   it("Pause subscription", async () => {
     try {

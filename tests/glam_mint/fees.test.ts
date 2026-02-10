@@ -55,10 +55,8 @@ describe("fees", () => {
     expect(stateModel.nameStr).toEqual(name);
     expect(stateModel.baseAssetMint).toEqual(WSOL);
     expect(stateModel.baseAssetTokenProgram).toEqual(0);
-    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(1);
-    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(
-      2000,
-    );
+    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(20);
+    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(0);
   }, 25_000);
 
   it("Set protocol fees: fail before fees crystallized", async () => {

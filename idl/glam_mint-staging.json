@@ -2,7 +2,7 @@
   "address": "gstgm1M39mhgnvgyScGUDRwNn5kNVSd97hTtyow1Et5",
   "metadata": {
     "name": "glam_mint",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "spec": "0.1.0",
     "description": "GLAM mint program"
   },
@@ -2819,6 +2819,167 @@
       ]
     },
     {
+      "name": "price_single_asset_vault",
+      "docs": [
+        "Prices a single asset vault."
+      ],
+      "discriminator": [
+        93,
+        213,
+        219,
+        25,
+        38,
+        74,
+        9,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                10,
+                55,
+                49,
+                193,
+                142,
+                247,
+                75,
+                193,
+                33,
+                61,
+                5,
+                218,
+                254,
+                219,
+                143,
+                206,
+                156,
+                138,
+                14,
+                32,
+                89,
+                232,
+                248,
+                173,
+                46,
+                77,
+                46,
+                206,
+                189,
+                171,
+                68,
+                237
+              ]
+            }
+          }
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "base_asset_ata"
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "event_authority",
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_program",
+          "optional": true,
+          "address": "gstgm1M39mhgnvgyScGUDRwNn5kNVSd97hTtyow1Et5"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "price_stake_accounts",
       "discriminator": [
         119,
@@ -4630,6 +4791,9 @@
           },
           {
             "name": "Mint"
+          },
+          {
+            "name": "SingleAssetVault"
           }
         ]
       }
@@ -4705,7 +4869,7 @@
           },
           {
             "name": "priority",
-            "type": "u8"
+            "type": "i8"
           },
           {
             "name": "padding",
@@ -5200,18 +5364,30 @@
           },
           {
             "name": "referrer",
+            "docs": [
+              "Default GLAM referrer"
+            ],
             "type": "pubkey"
           },
           {
             "name": "base_fee_bps",
+            "docs": [
+              "Default protocol base fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "flow_fee_bps",
+            "docs": [
+              "Default protocol flow fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "asset_metas",
+            "docs": [
+              "List of assets and their oracle configs supported by the protocol"
+            ],
             "type": {
               "vec": {
                 "defined": {
