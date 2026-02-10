@@ -364,9 +364,14 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
     const mintPda = getMintPda(glamState, 0, mintProgram.programId);
     const extraMetasPda = getExtraMetasPda(mintPda);
 
+    // Use glam hosted metadata as a fallback if uri is not provided
+    if (!initMintParams.uri) {
+      initMintParams.uri = `https://static.glam.systems/v0/token/metadata?key=${mintPda}`;
+    }
+
     const ix = await mintProgram.methods
       .initializeMint(
-        new MintIdlModel(initMintParams), // acconType, baseAssetMint, and decmials are dropped,
+        new MintIdlModel(initMintParams), // accountType, baseAssetMint, and decimals are dropped,
         stateInitKey,
         initMintParams.accountType,
         decimals,
