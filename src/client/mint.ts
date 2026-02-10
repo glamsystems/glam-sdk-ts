@@ -566,12 +566,16 @@ export class MintClient {
     // FIXME: enable dataSize filter
     // dataSize varies due to different sets of extensions enabled
     // const dataSize = 175;
-    const accounts = await getProgramAccounts(connection, TOKEN_2022_PROGRAM_ID, {
-      filters: [
-        // { dataSize },
-        { memcmp: { offset: 0, bytes: this.base.mintPda.toBase58() } },
-      ],
-    });
+    const accounts = await getProgramAccounts(
+      connection,
+      TOKEN_2022_PROGRAM_ID,
+      {
+        filters: [
+          // { dataSize },
+          { memcmp: { offset: 0, bytes: this.base.mintPda.toBase58() } },
+        ],
+      },
+    );
     const { mint, tokenProgram } = await fetchMintAndTokenProgram(
       this.base.connection,
       this.base.mintPda,
