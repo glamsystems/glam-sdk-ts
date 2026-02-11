@@ -699,7 +699,12 @@ export class BaseClient {
 
     const stateAccounts = await this.protocolProgram.account.stateAccount.all();
     const filteredStateAccounts = stateAccounts
-      .filter((s) => !type || Object.keys(s.account.accountType)[0] === type)
+      .filter(
+        (s) =>
+          !type ||
+          Object.keys(s.account.accountType)[0].toLowerCase() ===
+            type.toLowerCase(),
+      )
       .filter(
         (s) =>
           // if neither owner nor delegate is set, return all
