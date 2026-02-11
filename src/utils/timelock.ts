@@ -38,6 +38,21 @@ export function getPermissionNamesFromBitmask(
 }
 
 /**
+ * Compare current and staged PublicKey arrays and return added/removed keys
+ */
+export function comparePublicKeyArrays(
+  current: PublicKey[] | null,
+  staged: PublicKey[],
+): { added: PublicKey[]; removed: PublicKey[] } {
+  const currentSet = new PkSet(current || []);
+  const stagedSet = new PkSet(staged);
+  return {
+    added: [...stagedSet].filter((pk) => !currentSet.has(pk)),
+    removed: [...currentSet].filter((pk) => !stagedSet.has(pk)),
+  };
+}
+
+/**
  * Compare current and staged integrationAcls and return the differences
  */
 export function compareIntegrationAcls(
