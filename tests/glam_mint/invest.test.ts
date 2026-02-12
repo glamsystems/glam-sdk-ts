@@ -200,9 +200,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toContain(
-        "Invalid amount for subscription or redemption",
-      );
+      expect(e.message).toContain("Amount below minimum threshold");
     }
   });
 

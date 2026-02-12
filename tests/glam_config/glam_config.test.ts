@@ -291,7 +291,7 @@ describe("glam_config", () => {
 
       fail("Should have thrown an error for deprecating non-existent asset");
     } catch (error: any) {
-      expect(error.toString()).toContain("InvalidAssetMeta");
+      expect(error.toString()).toContain("AssetMetaNotFound");
     }
   });
 
@@ -556,8 +556,8 @@ describe("glam_config", () => {
       // If we reach here, the test should fail
       fail("Should have thrown an error for invalid authority");
     } catch (error: any) {
-      // Verify the error is about invalid authority
-      expect(error.toString()).toContain("InvalidAuthority");
+      // Verify the error is about invalid fee authority
+      expect(error.toString()).toContain("InvalidFeeAuthority");
     }
   });
 

@@ -4708,8 +4708,8 @@
   "errors": [
     {
       "code": 6000,
-      "name": "InvalidAuthority",
-      "msg": "Invalid authority"
+      "name": "AmountBelowMinimum",
+      "msg": "Amount below minimum threshold"
     },
     {
       "code": 6001,
@@ -4724,7 +4724,7 @@
     {
       "code": 6003,
       "name": "InvalidAsset",
-      "msg": "Asset not allowed to subscribe"
+      "msg": "Invalid asset"
     },
     {
       "code": 6004,

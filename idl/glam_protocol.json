@@ -1691,7 +1691,7 @@
     {
       "code": 51105,
       "name": "PriceDivergenceTooLarge",
-      "msg": "No priced assets found"
+      "msg": "Price confidence interval too wide"
     },
     {
       "code": 51106,
@@ -1700,18 +1700,18 @@
     },
     {
       "code": 51107,
-      "name": "MathError",
-      "msg": "Math error"
+      "name": "InvalidSharesRebase",
+      "msg": "Invalid shares rebase: new base must be greater than current"
     },
     {
       "code": 51108,
-      "name": "TypeCastingError",
-      "msg": "Type casting error"
+      "name": "DuplicatePosition",
+      "msg": "Duplicate position already priced"
     },
     {
       "code": 51109,
-      "name": "BaseAssetNotSupported",
-      "msg": "Base asset must have 6 decimals."
+      "name": "UnsupportedVaultState",
+      "msg": "Vault protocol or pending fee update not supported for pricing"
     },
     {
       "code": 51110,

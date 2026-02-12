@@ -486,7 +486,7 @@ export type GlamConfig = {
     {
       "code": 6002,
       "name": "invalidParameters",
-      "msg": "Invalid parameters"
+      "msg": "Invalid fee parameters or insufficient account space"
     },
     {
       "code": 6003,
@@ -496,7 +496,17 @@ export type GlamConfig = {
     {
       "code": 6004,
       "name": "invalidGlobalConfig",
-      "msg": "Invalid global config"
+      "msg": "Invalid or corrupted global config account"
+    },
+    {
+      "code": 6005,
+      "name": "invalidFeeAuthority",
+      "msg": "Invalid fee authority"
+    },
+    {
+      "code": 6006,
+      "name": "assetMetaNotFound",
+      "msg": "Asset meta not found"
     }
   ],
   "types": [

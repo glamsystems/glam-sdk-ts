@@ -480,7 +480,7 @@
     {
       "code": 6002,
       "name": "InvalidParameters",
-      "msg": "Invalid parameters"
+      "msg": "Invalid fee parameters or insufficient account space"
     },
     {
       "code": 6003,
@@ -490,7 +490,17 @@
     {
       "code": 6004,
       "name": "InvalidGlobalConfig",
-      "msg": "Invalid global config"
+      "msg": "Invalid or corrupted global config account"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidFeeAuthority",
+      "msg": "Invalid fee authority"
+    },
+    {
+      "code": 6006,
+      "name": "AssetMetaNotFound",
+      "msg": "Asset meta not found"
     }
   ],
   "types": [

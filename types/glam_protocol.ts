@@ -1697,7 +1697,7 @@ export type GlamProtocol = {
     {
       "code": 51105,
       "name": "priceDivergenceTooLarge",
-      "msg": "No priced assets found"
+      "msg": "Price confidence interval too wide"
     },
     {
       "code": 51106,
@@ -1706,18 +1706,18 @@ export type GlamProtocol = {
     },
     {
       "code": 51107,
-      "name": "mathError",
-      "msg": "Math error"
+      "name": "invalidSharesRebase",
+      "msg": "Invalid shares rebase: new base must be greater than current"
     },
     {
       "code": 51108,
-      "name": "typeCastingError",
-      "msg": "Type casting error"
+      "name": "duplicatePosition",
+      "msg": "Duplicate position already priced"
     },
     {
       "code": 51109,
-      "name": "baseAssetNotSupported",
-      "msg": "Base asset must have 6 decimals."
+      "name": "unsupportedVaultState",
+      "msg": "Vault protocol or pending fee update not supported for pricing"
     },
     {
       "code": 51110,

@@ -384,7 +384,12 @@
     {
       "code": 6002,
       "name": "NotAuthorized",
-      "msg": "Not authorized"
+      "msg": "Signer is not mint authority or permanent delegate"
+    },
+    {
+      "code": 6003,
+      "name": "MissingPermanentDelegate",
+      "msg": "Mint has no permanent delegate extension"
     }
   ],
   "types": [
