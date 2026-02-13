@@ -2711,6 +2711,10 @@ export type ExtDrift = {
             "type": {
               "vec": "pubkey"
             }
+          },
+          {
+            "name": "orderPriceToleranceBps",
+            "type": "u16"
           }
         ]
       }

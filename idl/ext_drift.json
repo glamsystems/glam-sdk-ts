@@ -2705,6 +2705,10 @@
             "type": {
               "vec": "pubkey"
             }
+          },
+          {
+            "name": "order_price_tolerance_bps",
+            "type": "u16"
           }
         ]
       }
