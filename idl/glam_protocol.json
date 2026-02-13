@@ -33,6 +33,249 @@
       "args": []
     },
     {
+      "name": "charge_protocol_fee",
+      "docs": [
+        "Charges protocol base fee on non-tokenized vaults"
+      ],
+      "discriminator": [
+        48,
+        225,
+        89,
+        103,
+        48,
+        65,
+        183,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "deposit_asset"
+        },
+        {
+          "name": "vault_deposit_ata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "glam_vault"
+              },
+              {
+                "kind": "account",
+                "path": "deposit_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "deposit_asset"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "protocol_fee_authority"
+        },
+        {
+          "name": "protocol_fee_authority_ata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "protocol_fee_authority"
+              },
+              {
+                "kind": "account",
+                "path": "deposit_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "deposit_asset"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "glam_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                10,
+                11,
+                0,
+                83,
+                72,
+                16,
+                46,
+                144,
+                46,
+                42,
+                79,
+                22,
+                157,
+                123,
+                21,
+                242,
+                192,
+                146,
+                1,
+                78,
+                88,
+                59,
+                102,
+                9,
+                190,
+                226,
+                92,
+                189,
+                187,
+                232,
+                83,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "deposit_token_program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "close_state",
       "discriminator": [
         25,
@@ -1459,6 +1702,19 @@
   ],
   "accounts": [
     {
+      "name": "GlobalConfig",
+      "discriminator": [
+        149,
+        8,
+        156,
+        202,
+        160,
+        252,
+        176,
+        217
+      ]
+    },
+    {
       "name": "StateAccount",
       "discriminator": [
         142,
@@ -1842,6 +2098,51 @@
           },
           {
             "name": "DeleteAsset"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AssetMeta",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "oracle_source",
+            "type": {
+              "defined": {
+                "name": "OracleSource"
+              }
+            }
+          },
+          {
+            "name": "max_age_seconds",
+            "type": "u16"
+          },
+          {
+            "name": "priority",
+            "type": "i8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
           }
         ]
       }
@@ -2327,6 +2628,62 @@
       }
     },
     {
+      "name": "GlobalConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "The authority that can modify the config"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_authority",
+            "docs": [
+              "The authority that can modify fee structure of individual glam state and claim protocol fees"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "referrer",
+            "docs": [
+              "Default GLAM referrer"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "base_fee_bps",
+            "docs": [
+              "Default protocol base fee applied to all vaults"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "flow_fee_bps",
+            "docs": [
+              "Default protocol flow fee applied to all vaults"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "asset_metas",
+            "docs": [
+              "List of assets and their oracle configs supported by the protocol"
+            ],
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "AssetMeta"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "HurdleType",
       "type": {
         "kind": "enum",
@@ -2545,6 +2902,77 @@
                 12
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleSource",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pyth"
+          },
+          {
+            "name": "Switchboard"
+          },
+          {
+            "name": "QuoteAsset"
+          },
+          {
+            "name": "Pyth1K"
+          },
+          {
+            "name": "Pyth1M"
+          },
+          {
+            "name": "PythStableCoin"
+          },
+          {
+            "name": "Prelaunch"
+          },
+          {
+            "name": "PythPull"
+          },
+          {
+            "name": "Pyth1KPull"
+          },
+          {
+            "name": "Pyth1MPull"
+          },
+          {
+            "name": "PythStableCoinPull"
+          },
+          {
+            "name": "SwitchboardOnDemand"
+          },
+          {
+            "name": "PythLazer"
+          },
+          {
+            "name": "PythLazer1K"
+          },
+          {
+            "name": "PythLazer1M"
+          },
+          {
+            "name": "PythLazerStableCoin"
+          },
+          {
+            "name": "NotSet"
+          },
+          {
+            "name": "LstPoolState"
+          },
+          {
+            "name": "MarinadeState"
+          },
+          {
+            "name": "BaseAsset"
+          },
+          {
+            "name": "ChainlinkRWA"
           }
         ]
       }
@@ -2917,6 +3345,16 @@
                   "defined": {
                     "name": "DelegateAcl"
                   }
+                }
+              }
+            }
+          },
+          {
+            "name": "fee_structure",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "FeeStructure"
                 }
               }
             }
