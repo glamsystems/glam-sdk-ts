@@ -12,8 +12,10 @@ import {
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 import { WSOL } from "../constants";
-import { STAKE_POOLS_MAP } from "../assets";
+import { STAKE_POOLS_MAP, SOL_ORACLE, getAssetMeta } from "../assets";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
+import { isStaging } from "../glamExports";
+import { getGlobalConfigPda } from "../utils/glamPDAs";
 import { VaultClient } from "./vault";
 import {
   JupiterApiClient,
@@ -109,11 +111,20 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
     );
     const ix = await this.client.base.protocolProgram.methods
       .jupiterSwap(swapIx.data)
+      // Only staging supports extra validations based on the oracle accounts
       .accounts({
         glamState: this.client.base.statePda,
         glamSigner,
         inputStakePool,
         outputStakePool,
+        ...(isStaging()
+          ? {
+              glamConfig: getGlobalConfigPda(),
+              solUsdOracle: SOL_ORACLE,
+              inputTokenOracle: getAssetMeta(inputMint).oracle,
+              outputTokenOracle: getAssetMeta(outputMint).oracle,
+            }
+          : {}),
       })
       .remainingAccounts(swapIx.keys)
       .instruction();
