@@ -1,6 +1,7 @@
 import { BN } from "@coral-xyz/anchor";
 import {
   struct,
+  u8,
   u32,
   u64,
   vec,
@@ -321,5 +322,90 @@ export class CctpPolicy {
       map.set(domain, keys);
     }
     return map;
+  }
+}
+
+// PeriodType enum: 0=Day, 1=Week, 2=Month
+export enum PeriodType {
+  Day = 0,
+  Week = 1,
+  Month = 2,
+}
+
+export interface AssetRateLimit {
+  mint: PublicKey;
+  periodType: number; // PeriodType enum value
+  amount: BN;
+}
+
+export interface DelegateRateLimit {
+  delegate: PublicKey;
+  limits: AssetRateLimit[];
+}
+
+const assetRateLimitLayout = struct<AssetRateLimit>([
+  publicKey("mint"),
+  u8("periodType"),
+  u64("amount"),
+]);
+
+const delegateRateLimitLayout = struct<DelegateRateLimit>([
+  publicKey("delegate"),
+  vec(assetRateLimitLayout, "limits"),
+]);
+
+export class TransferRateLimitPolicy {
+  vaultDefaults: AssetRateLimit[];
+  delegateOverrides: DelegateRateLimit[];
+
+  static _layout = struct([
+    vec(assetRateLimitLayout, "vaultDefaults"),
+    vec(delegateRateLimitLayout, "delegateOverrides"),
+  ]);
+
+  constructor(
+    vaultDefaults: AssetRateLimit[],
+    delegateOverrides: DelegateRateLimit[],
+  ) {
+    this.vaultDefaults = vaultDefaults;
+    this.delegateOverrides = delegateOverrides;
+  }
+
+  public static decode(
+    buffer: Buffer<ArrayBufferLike>,
+  ): TransferRateLimitPolicy {
+    const data = TransferRateLimitPolicy._layout.decode(
+      buffer,
+    ) as TransferRateLimitPolicy;
+    return new TransferRateLimitPolicy(
+      data.vaultDefaults,
+      data.delegateOverrides,
+    );
+  }
+
+  public encode(): Buffer {
+    const buf = Buffer.alloc(4096);
+    const written = TransferRateLimitPolicy._layout.encode(this, buf);
+    return buf.subarray(0, written);
+  }
+
+  /**
+   * Derive the TransferTracker PDA address for a given vault state, signer, and mint.
+   */
+  static getTransferTrackerPda(
+    glamState: PublicKey,
+    signer: PublicKey,
+    mint: PublicKey,
+    programId: PublicKey,
+  ): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("transfer-tracker"),
+        glamState.toBuffer(),
+        signer.toBuffer(),
+        mint.toBuffer(),
+      ],
+      programId,
+    );
   }
 }

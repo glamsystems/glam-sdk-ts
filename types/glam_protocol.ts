@@ -282,6 +282,84 @@ export type GlamProtocol = {
       "args": []
     },
     {
+      "name": "checkAndUpdateTransferTracker",
+      "discriminator": [
+        180,
+        225,
+        201,
+        123,
+        192,
+        30,
+        178,
+        195
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "transferTracker",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  110,
+                  115,
+                  102,
+                  101,
+                  114,
+                  45,
+                  116,
+                  114,
+                  97,
+                  99,
+                  107,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "account",
+                "path": "glamSigner"
+              },
+              {
+                "kind": "arg",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "closeState",
       "discriminator": [
         25,
@@ -859,6 +937,40 @@ export type GlamProtocol = {
           "type": {
             "defined": {
               "name": "transferPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "setTransferRateLimitPolicy",
+      "discriminator": [
+        27,
+        40,
+        234,
+        194,
+        151,
+        218,
+        55,
+        203
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "transferRateLimitPolicy"
             }
           }
         }
@@ -1732,6 +1844,19 @@ export type GlamProtocol = {
         249,
         103
       ]
+    },
+    {
+      "name": "transferTracker",
+      "discriminator": [
+        153,
+        136,
+        2,
+        106,
+        24,
+        146,
+        147,
+        60
+      ]
     }
   ],
   "errors": [
@@ -2001,6 +2126,16 @@ export type GlamProtocol = {
       "msg": "Invalid account data"
     },
     {
+      "code": 50100,
+      "name": "transferRateLimitExceeded",
+      "msg": "Transfer rate limit exceeded"
+    },
+    {
+      "code": 50101,
+      "name": "transferRateLimitDenied",
+      "msg": "Transfer denied: no rate limit defined for this asset"
+    },
+    {
       "code": 52000,
       "name": "transfersDisabled",
       "msg": "Policy violation: transfers disabled"
@@ -2154,6 +2289,30 @@ export type GlamProtocol = {
       }
     },
     {
+      "name": "assetRateLimit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "periodType",
+            "type": {
+              "defined": {
+                "name": "periodType"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "createdModel",
       "type": {
         "kind": "struct",
@@ -2200,6 +2359,28 @@ export type GlamProtocol = {
           {
             "name": "expiresAt",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "delegateRateLimit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "limits",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "assetRateLimit"
+                }
+              }
+            }
           }
         ]
       }
@@ -3008,6 +3189,26 @@ export type GlamProtocol = {
       }
     },
     {
+      "name": "periodType",
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "day"
+          },
+          {
+            "name": "week"
+          },
+          {
+            "name": "month"
+          }
+        ]
+      }
+    },
+    {
       "name": "pricedProtocol",
       "type": {
         "kind": "struct",
@@ -3397,6 +3598,66 @@ export type GlamProtocol = {
       }
     },
     {
+      "name": "transferRateLimitPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vaultDefaults",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "assetRateLimit"
+                }
+              }
+            }
+          },
+          {
+            "name": "delegateOverrides",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "delegateRateLimit"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "transferTracker",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "signer",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "periodStart",
+            "type": "i64"
+          },
+          {
+            "name": "amountTransferred",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "valuationModel",
       "type": {
         "kind": "enum",
@@ -3471,6 +3732,11 @@ export type GlamProtocol = {
       "name": "protoSystemPermWsol",
       "type": "u64",
       "value": "1"
+    },
+    {
+      "name": "protoTransferLimit",
+      "type": "u16",
+      "value": "8"
     }
   ]
 };
