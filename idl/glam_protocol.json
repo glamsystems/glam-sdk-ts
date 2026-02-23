@@ -1995,6 +1995,16 @@
       "msg": "Invalid protocol bitflag"
     },
     {
+      "code": 49016,
+      "name": "IntegrationAclLimitExceeded",
+      "msg": "Integration ACL limit exceeded"
+    },
+    {
+      "code": 49017,
+      "name": "DelegateAclLimitExceeded",
+      "msg": "Delegate ACL limit exceeded"
+    },
+    {
       "code": 50000,
       "name": "WithdrawDenied",
       "msg": "Withdraw denied. Only vaults allow withdraws (funds and mints don't)"

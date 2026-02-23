@@ -276,6 +276,84 @@
       "args": []
     },
     {
+      "name": "check_and_update_transfer_tracker",
+      "discriminator": [
+        180,
+        225,
+        201,
+        123,
+        192,
+        30,
+        178,
+        195
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "transfer_tracker",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  110,
+                  115,
+                  102,
+                  101,
+                  114,
+                  45,
+                  116,
+                  114,
+                  97,
+                  99,
+                  107,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "account",
+                "path": "glam_signer"
+              },
+              {
+                "kind": "arg",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "close_state",
       "discriminator": [
         25,
@@ -928,6 +1006,40 @@
           "type": {
             "defined": {
               "name": "TransferPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_transfer_rate_limit_policy",
+      "discriminator": [
+        27,
+        40,
+        234,
+        194,
+        151,
+        218,
+        55,
+        203
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "TransferRateLimitPolicy"
             }
           }
         }
@@ -1801,6 +1913,19 @@
         249,
         103
       ]
+    },
+    {
+      "name": "TransferTracker",
+      "discriminator": [
+        153,
+        136,
+        2,
+        106,
+        24,
+        146,
+        147,
+        60
+      ]
     }
   ],
   "errors": [
@@ -1945,6 +2070,16 @@
       "msg": "Invalid protocol bitflag"
     },
     {
+      "code": 49016,
+      "name": "IntegrationAclLimitExceeded",
+      "msg": "Integration ACL limit exceeded"
+    },
+    {
+      "code": 49017,
+      "name": "DelegateAclLimitExceeded",
+      "msg": "Delegate ACL limit exceeded"
+    },
+    {
       "code": 50000,
       "name": "WithdrawDenied",
       "msg": "Withdraw denied. Only vaults allow withdraws (funds and mints don't)"
@@ -2068,6 +2203,16 @@
       "code": 51114,
       "name": "InvalidAccountData",
       "msg": "Invalid account data"
+    },
+    {
+      "code": 50100,
+      "name": "TransferRateLimitExceeded",
+      "msg": "Transfer rate limit exceeded"
+    },
+    {
+      "code": 50101,
+      "name": "TransferRateLimitDenied",
+      "msg": "Transfer denied: no rate limit defined for this asset"
     },
     {
       "code": 52000,
@@ -2223,6 +2368,30 @@
       }
     },
     {
+      "name": "AssetRateLimit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "period_type",
+            "type": {
+              "defined": {
+                "name": "PeriodType"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "CreatedModel",
       "type": {
         "kind": "struct",
@@ -2269,6 +2438,28 @@
           {
             "name": "expires_at",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateRateLimit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "limits",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "AssetRateLimit"
+                }
+              }
+            }
           }
         ]
       }
@@ -3077,6 +3268,26 @@
       }
     },
     {
+      "name": "PeriodType",
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Day"
+          },
+          {
+            "name": "Week"
+          },
+          {
+            "name": "Month"
+          }
+        ]
+      }
+    },
+    {
       "name": "PricedProtocol",
       "type": {
         "kind": "struct",
@@ -3466,6 +3677,66 @@
       }
     },
     {
+      "name": "TransferRateLimitPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault_defaults",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "AssetRateLimit"
+                }
+              }
+            }
+          },
+          {
+            "name": "delegate_overrides",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "DelegateRateLimit"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferTracker",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "signer",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "period_start",
+            "type": "i64"
+          },
+          {
+            "name": "amount_transferred",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "ValuationModel",
       "type": {
         "kind": "enum",
@@ -3540,6 +3811,11 @@
       "name": "PROTO_SYSTEM_PERM_WSOL",
       "type": "u64",
       "value": "1"
+    },
+    {
+      "name": "PROTO_TRANSFER_LIMIT",
+      "type": "u16",
+      "value": "8"
     }
   ]
 }

@@ -2001,6 +2001,16 @@ export type GlamProtocol = {
       "msg": "Invalid protocol bitflag"
     },
     {
+      "code": 49016,
+      "name": "integrationAclLimitExceeded",
+      "msg": "Integration ACL limit exceeded"
+    },
+    {
+      "code": 49017,
+      "name": "delegateAclLimitExceeded",
+      "msg": "Delegate ACL limit exceeded"
+    },
+    {
       "code": 50000,
       "name": "withdrawDenied",
       "msg": "Withdraw denied. Only vaults allow withdraws (funds and mints don't)"

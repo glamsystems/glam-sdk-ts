@@ -4775,6 +4775,11 @@
       "code": 6013,
       "name": "ProtocolFeesNotCrystallized",
       "msg": "Protocol fees should be crystallized before updating"
+    },
+    {
+      "code": 6014,
+      "name": "ManagerFeesNotCrystallized",
+      "msg": "Manager fees should be crystallized before updating"
     }
   ],
   "types": [

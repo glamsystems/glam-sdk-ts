@@ -4781,6 +4781,11 @@ export type GlamMint = {
       "code": 6013,
       "name": "protocolFeesNotCrystallized",
       "msg": "Protocol fees should be crystallized before updating"
+    },
+    {
+      "code": 6014,
+      "name": "managerFeesNotCrystallized",
+      "msg": "Manager fees should be crystallized before updating"
     }
   ],
   "types": [
