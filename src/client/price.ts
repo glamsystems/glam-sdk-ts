@@ -114,8 +114,12 @@ export class PriceClient {
     readonly kvaults: KaminoVaultsClient,
     readonly drift: DriftProtocolClient,
     readonly dvaults: DriftVaultsClient,
-    readonly jupiterApi: JupiterApiClient,
+    private readonly getJupiterApi: () => JupiterApiClient,
   ) {}
+
+  get jupiterApi(): JupiterApiClient {
+    return this.getJupiterApi();
+  }
 
   get cachedStateModel(): StateModel | null {
     if (!this._stateModel) {

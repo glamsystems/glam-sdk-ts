@@ -6,6 +6,7 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 import { BaseClient, BaseTxBuilder, TokenAccount, TxOptions } from "./base";
+import { PriceClient } from "./price";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   TOKEN_2022_PROGRAM_ID,
@@ -402,6 +403,34 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
     return [tx, glamState];
   }
 
+  public async crystallizeFeesIxs(
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction[]> {
+    const glamState = this.client.base.statePda;
+    const glamMint = this.client.base.mintPda;
+    const escrowPda = this.client.base.escrowPda;
+    const escrowMintAta = this.client.base.getMintAta(escrowPda);
+
+    const priceVaultIxs = await this.client.price.priceVaultIxs();
+    const createEscrowShareAtaIx =
+      createAssociatedTokenAccountIdempotentInstruction(
+        glamSigner,
+        escrowMintAta,
+        escrowPda,
+        glamMint,
+        TOKEN_2022_PROGRAM_ID,
+      );
+
+    const ix = await this.client.base.mintProgram.methods
+      .crystallizeFees()
+      .accounts({
+        glamState,
+        glamMint,
+      })
+      .instruction();
+    return [...priceVaultIxs, createEscrowShareAtaIx, ix];
+  }
+
   public async updateIx(
     mintModel: Partial<MintIdlModel>,
     glamSigner: PublicKey,
@@ -421,8 +450,11 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const glamSigner = txOptions.signer || this.client.base.signer;
+    const preInstructions = mintModel.feeStructure
+      ? await this.crystallizeFeesIxs(glamSigner)
+      : [];
     const ix = await this.updateIx(mintModel, glamSigner);
-    return this.buildVersionedTx([ix], txOptions);
+    return this.buildVersionedTx([...preInstructions, ix], txOptions);
   }
 
   public async emergencyUpdateIx(
@@ -505,8 +537,18 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
 export class MintClient {
   readonly txBuilder: TxBuilder;
 
-  public constructor(readonly base: BaseClient) {
+  public constructor(
+    readonly base: BaseClient,
+    private readonly getPrice?: () => PriceClient,
+  ) {
     this.txBuilder = new TxBuilder(this);
+  }
+
+  get price(): PriceClient {
+    if (!this.getPrice) {
+      throw new Error("PriceClient not available");
+    }
+    return this.getPrice();
   }
 
   /**

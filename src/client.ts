@@ -120,7 +120,7 @@ export class GlamClient extends BaseClient {
         this.kaminoVaults,
         this.drift,
         this.driftVaults,
-        this.jupiterSwap.jupApi,
+        () => this.jupiterSwap.jupApi,
       );
     }
     return this._price;
@@ -142,7 +142,7 @@ export class GlamClient extends BaseClient {
 
   get mint(): MintClient {
     if (!this._mint) {
-      this._mint = new MintClient(this);
+      this._mint = new MintClient(this, () => this.price);
     }
     return this._mint;
   }

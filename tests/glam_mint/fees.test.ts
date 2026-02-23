@@ -8,7 +8,7 @@ const txOptions = {
 };
 
 describe("fees", () => {
-  const glamClient = new GlamClient({ jupiterApiKey: "jupiter-api-key-mock" });
+  const glamClient = new GlamClient();
 
   it("Initialize mint", async () => {
     const name = "GLAM Mint Test Fees";

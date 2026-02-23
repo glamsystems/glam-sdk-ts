@@ -14,9 +14,7 @@ const txOptions = {
 };
 
 describe("invest", () => {
-  const glamClientManager = new GlamClient({
-    jupiterApiKey: "jupiter-api-key-mock",
-  });
+  const glamClientManager = new GlamClient();
 
   const userKeypairs = [
     Keypair.fromSeed(str2seed("alice")),
@@ -30,19 +28,15 @@ describe("invest", () => {
   const rich = userKeypairs[3];
   const glamClientAlice = new GlamClient({
     wallet: new Wallet(alice),
-    jupiterApiKey: "jupiter-api-key-mock",
   });
   const glamClientBob = new GlamClient({
     wallet: new Wallet(bob),
-    jupiterApiKey: "jupiter-api-key-mock",
   });
   const glamClientEve = new GlamClient({
     wallet: new Wallet(eve),
-    jupiterApiKey: "jupiter-api-key-mock",
   });
   const glamClientRich = new GlamClient({
     wallet: new Wallet(rich),
-    jupiterApiKey: "jupiter-api-key-mock",
   });
 
   const fetchGlamMintSupply = async () => {
