@@ -3,7 +3,7 @@
 import { clusterApiUrl, Connection } from "@solana/web3.js";
 import { atom, useAtomValue, useSetAtom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useCallback, useContext, useMemo } from "react";
 import { ClusterNetwork } from "../clientConfig";
 
 export interface Cluster {
@@ -85,26 +85,51 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
   const setCluster = useSetAtom(clusterAtom);
   const setClusters = useSetAtom(clustersAtom);
 
-  const value: ClusterProviderContext = {
-    cluster,
-    clusters: clusters.sort((a, b) => (a.name > b.name ? 1 : -1)),
-    addCluster: (cluster: Cluster) => {
-      try {
-        new Connection(cluster.endpoint);
-        setClusters([...clusters, cluster]);
-      } catch (err) {
-        throw err;
-      }
+  const addCluster = useCallback(
+    (c: Cluster) => {
+      new Connection(c.endpoint); // validates endpoint
+      setClusters([...clusters, c]);
     },
-    deleteCluster: (cluster: Cluster) => {
-      setClusters(clusters.filter((item) => item.name !== cluster.name));
+    [clusters, setClusters],
+  );
+
+  const deleteCluster = useCallback(
+    (c: Cluster) => {
+      setClusters(clusters.filter((item) => item.name !== c.name));
     },
-    setCluster: (cluster: Cluster) => {
-      setCluster(cluster);
+    [clusters, setClusters],
+  );
+
+  const setClusterFn = useCallback(
+    (c: Cluster) => {
+      setCluster(c);
     },
-    getExplorerUrl: (path: string) =>
+    [setCluster],
+  );
+
+  const getExplorerUrl = useCallback(
+    (path: string) =>
       `https://solscan.io/${path}${getClusterUrlParam(cluster)}`,
-  };
+    [cluster],
+  );
+
+  const sortedClusters = useMemo(
+    () => [...clusters].sort((a, b) => (a.name > b.name ? 1 : -1)),
+    [clusters],
+  );
+
+  const value = useMemo<ClusterProviderContext>(
+    () => ({
+      cluster,
+      clusters: sortedClusters,
+      addCluster,
+      deleteCluster,
+      setCluster: setClusterFn,
+      getExplorerUrl,
+    }),
+    [cluster, sortedClusters, addCluster, deleteCluster, setClusterFn, getExplorerUrl],
+  );
+
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

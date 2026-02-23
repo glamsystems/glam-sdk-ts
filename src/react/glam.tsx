@@ -2,13 +2,20 @@
 
 import { AnchorProvider, BN } from "@coral-xyz/anchor";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   AnchorWallet,
   useConnection,
   useWallet,
 } from "@solana/wallet-adapter-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { atomWithStorage } from "jotai/utils";
 
 import type { DelegateAcl, StateModel, IntegrationAcl } from "../models";
@@ -22,6 +29,8 @@ import { JupiterApiClient, JupTokenList } from "../utils/jupiterApi";
 import { ClusterNetwork } from "../clientConfig";
 import { VaultHoldings } from "../client/price";
 import { DriftUser } from "../deser";
+import { queryKeys } from "./query-keys";
+import { useVaultBalanceSubscription } from "./useVaultBalanceSubscription";
 
 declare global {
   interface Window {
@@ -42,6 +51,7 @@ interface GlamProviderContext {
   allGlamStates: StateModel[];
   jupTokenList?: JupTokenList;
   driftMarketConfigs?: DriftMarketConfigs;
+  wsConnected: boolean;
   setActiveGlamState: (f: GlamStateCache) => void;
   refresh: () => Promise<void>; // refresh active glam vault from onchain data
   refetchGlamStates: () => Promise<void>;
@@ -110,19 +120,10 @@ export function GlamProvider({
   const setActiveGlamState = useSetAtom(activeGlamStateAtom);
   const setGlamStatesList = useSetAtom(glamStatesListAtom);
 
-  const [delegateAcls, setDelegateAcls] = useState([] as DelegateAcl[]);
-  const [integrationAcls, setIntegrationAcls] = useState(
-    [] as IntegrationAcl[],
-  );
-  const [vault, setVault] = useState({} as Vault);
-  const [vaultHoldings, setVaultHoldings] = useState<VaultHoldings | undefined>(
-    undefined,
-  );
   const wallet = useWallet();
   const { connection } = useConnection();
   const { cluster } = useCluster();
-
-  const [allGlamStates, setAllGlamStates] = useState([] as StateModel[]);
+  const queryClient = useQueryClient();
 
   const activeGlamState = deserializeGlamStateCache(
     useAtomValue(activeGlamStateAtom),
@@ -142,46 +143,16 @@ export function GlamProvider({
       window.BN = BN;
     }
     return glamClient;
-  }, [connection, wallet, cluster, activeGlamState]);
+  }, [connection, wallet?.publicKey, cluster, activeGlamState?.pubkey]);
+
+  const pk = activeGlamState?.pubkey?.toBase58() ?? "";
+  const [wsConnected, setWsConnected] = useState(false);
 
   //
   // Fetch all glam states
   //
-  const refreshVaultHoldings = async () => {
-    if (activeGlamState?.pubkey && wallet?.publicKey) {
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          "fetching vault data for active glam state:",
-          activeGlamState.address,
-        );
-      }
-
-      // Note: We fetch both datasets in parallel:
-      // - getVaultHoldings: Comprehensive holdings with pricing
-      // - getSolAndTokenBalances: Basic token accounts
-      // While there's some overlap, both are needed for backward compatibility until all forms are migrated to use vaultHoldings
-      const [balances, holdings] = await Promise.all([
-        glamClient.getSolAndTokenBalances(glamClient.vaultPda),
-        glamClient.price.getVaultHoldings("confirmed").catch((err) => {
-          console.warn("Failed to fetch vault holdings:", err);
-          return undefined;
-        }),
-      ]);
-
-      setVault((prev) => ({
-        ...prev,
-        ...balances,
-        pubkey: glamClient.vaultPda,
-      }));
-
-      if (holdings) {
-        setVaultHoldings(holdings);
-      }
-    }
-  };
-
   const { data: glamStateModels, refetch: refetchGlamStates } = useQuery({
-    queryKey: ["/all-glam-states", activeGlamState?.pubkey, cluster.network],
+    queryKey: queryKeys.global.allStates(cluster.network ?? ""),
     queryFn: () => glamClient.fetchGlamStates(),
   });
   useEffect(() => {
@@ -190,8 +161,6 @@ export function GlamProvider({
     if (process.env.NODE_ENV === "development") {
       console.log(`[${cluster.network}] all glam states:`, glamStateModels);
     }
-
-    setAllGlamStates(glamStateModels);
 
     // Find a list of glam states that the wallet has access to
     const glamStatesList = [] as GlamStateCache[];
@@ -223,31 +192,69 @@ export function GlamProvider({
       setActiveGlamState({} as GlamStateCache);
     }
 
-    refreshVaultHoldings();
-  }, [glamStateModels, wallet, cluster]);
+  }, [glamStateModels, wallet?.publicKey, cluster]);
 
-  const refreshVaultAcls = async () => {
-    try {
+  //
+  // Vault balances (SOL + token accounts)
+  //
+  const clusterKey = cluster.network ?? "";
+
+  const { data: vaultBalancesData } = useQuery({
+    queryKey: queryKeys.vault.balances(pk, clusterKey),
+    queryFn: () => glamClient.getSolAndTokenBalances(glamClient.vaultPda),
+    enabled: !!activeGlamState?.pubkey && !!wallet?.publicKey,
+    refetchInterval: wsConnected ? 60_000 : 30_000,
+  });
+
+  //
+  // Vault holdings (priced positions)
+  //
+  const { data: vaultHoldings } = useQuery({
+    queryKey: queryKeys.vault.holdings(pk, clusterKey),
+    queryFn: () =>
+      glamClient.price.getVaultHoldings("confirmed").catch((err) => {
+        console.warn("Failed to fetch vault holdings:", err);
+        return undefined;
+      }),
+    enabled: !!activeGlamState?.pubkey && !!wallet?.publicKey,
+  });
+
+  //
+  // WebSocket subscriptions for vault balance changes.
+  // When WS is connected, balance query stops polling (refetchInterval: 0).
+  // When WS is unavailable, balance query polls every 30s as fallback.
+  //
+  useVaultBalanceSubscription({
+    connection,
+    queryClient,
+    vaultPda: activeGlamState?.pubkey ? glamClient.vaultPda : undefined,
+    pk,
+    cluster: clusterKey,
+    tokenAccounts: vaultBalancesData?.tokenAccounts ?? [],
+    enabled: !!activeGlamState?.pubkey && !!wallet?.publicKey,
+    onWsStatusChange: setWsConnected,
+  });
+
+  //
+  // Vault ACLs (delegates + integrations)
+  //
+  const { data: vaultAclsData } = useQuery({
+    queryKey: queryKeys.vault.acls(pk, clusterKey),
+    queryFn: async () => {
       const glamState = await glamClient.fetchStateAccount();
-      setDelegateAcls(glamState.delegateAcls || []);
-      setIntegrationAcls(glamState.integrationAcls || []);
-    } catch (error) {
-      setDelegateAcls([]);
-      setIntegrationAcls([]);
-    }
-  };
-
-  useEffect(() => {
-    if (activeGlamState?.pubkey) {
-      refreshVaultAcls();
-    }
-  }, [activeGlamState]);
+      return {
+        delegateAcls: glamState.delegateAcls || [],
+        integrationAcls: glamState.integrationAcls || [],
+      };
+    },
+    enabled: !!activeGlamState?.pubkey,
+  });
 
   //
   // Fetch token list from jupiter api. The returned data includes token metadata (e.g., name, symbol, decimals, logoURI, etc.) and token prices.
   //
   const { data: jupTokenList } = useQuery({
-    queryKey: ["jupiter-tokens-list"],
+    queryKey: queryKeys.global.jupTokens(clusterKey),
     enabled: cluster.network === ClusterNetwork.Mainnet,
     queryFn: () => new JupiterApiClient().fetchTokensList(true),
     staleTime: 1000 * 30, // 30 seconds
@@ -257,7 +264,7 @@ export function GlamProvider({
   // Fetch drift market configs
   //
   const { data: driftMarketConfigs } = useQuery({
-    queryKey: ["drift-market-configs"],
+    queryKey: queryKeys.global.driftMarkets(clusterKey),
     enabled: cluster.network === ClusterNetwork.Mainnet,
     queryFn: () => glamClient.drift.fetchMarketConfigs(),
     staleTime: 1000 * 60, // 60 seconds
@@ -266,47 +273,96 @@ export function GlamProvider({
   //
   // Fetch drift users
   //
-  const {
-    data: driftUsersData,
-    error: driftUsersError,
-    refetch: refetchDriftUser,
-  } = useQuery({
-    queryKey: ["drift-users", activeGlamState?.pubkey],
+  const { data: driftUsersData } = useQuery({
+    queryKey: queryKeys.vault.driftUsers(pk, clusterKey),
     enabled:
       !!activeGlamState?.pubkey && cluster.network === ClusterNetwork.Mainnet,
     queryFn: () => glamClient.drift.fetchAndParseDriftUsers(),
     refetchInterval: 30 * 1000, // 30 seconds
   });
-  useEffect(() => {
-    if (!driftUsersError && driftUsersData) {
-      setVault((prev) => ({
-        ...prev,
-        driftUsers: driftUsersData,
-      }));
-    }
-  }, [driftUsersData, driftUsersError]);
 
-  const value: GlamProviderContext = {
-    glamClient,
-    vault,
-    vaultHoldings,
-    activeGlamState,
-    glamStatesList: useAtomValue(glamStatesListAtom),
-    delegateAcls,
-    integrationAcls,
-    allGlamStates,
-    jupTokenList,
-    driftMarketConfigs,
-    setActiveGlamState,
-    refresh: async () => {
-      refreshVaultHoldings();
-      refreshVaultAcls();
-      refetchDriftUser();
-    },
-    refetchGlamStates: async () => {
-      refetchGlamStates();
-    },
-  };
+  // Compose vault object from query data (preserves vault.driftUsers access for consumers)
+  // Guard glamClient.vaultPda — the getter throws if statePda is not set
+  const vault = useMemo<Vault>(
+    () => ({
+      ...(vaultBalancesData ?? ({} as Vault)),
+      ...(activeGlamState?.pubkey ? { pubkey: glamClient.vaultPda } : {}),
+      driftUsers: driftUsersData,
+    }) as Vault,
+    [vaultBalancesData, activeGlamState?.pubkey, glamClient, driftUsersData],
+  );
+
+  const delegateAcls = vaultAclsData?.delegateAcls ?? [];
+  const integrationAcls = vaultAclsData?.integrationAcls ?? [];
+  const allGlamStates = glamStateModels ?? [];
+
+  const glamStatesList = useAtomValue(glamStatesListAtom);
+
+  // Invalidates all vault-scoped queries (["vault", pk, ...] prefix match),
+  // triggering background refetches for balances, holdings, ACLs, and drift users.
+  const refresh = useCallback(async () => {
+    if (!pk) return;
+
+    // Clear stale vault graph cache when not viewing studio,
+    // so navigating to studio shows fresh data instead of a stale→fresh transition.
+    const vaultGraphKey = queryKeys.vaultGraph.vault(pk, clusterKey);
+    const vaultGraphQuery = queryClient
+      .getQueryCache()
+      .find({ queryKey: vaultGraphKey, exact: true });
+    if (vaultGraphQuery && vaultGraphQuery.getObserversCount() === 0) {
+      queryClient.removeQueries({ queryKey: vaultGraphKey, exact: true });
+    } else {
+      queryClient.invalidateQueries({ queryKey: vaultGraphKey });
+    }
+
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.vault.all(pk, clusterKey),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.global.allStates(clusterKey),
+      }),
+    ]);
+  }, [queryClient, pk, clusterKey]);
+
+  const stableRefetchGlamStates = useCallback(async () => {
+    refetchGlamStates();
+  }, [refetchGlamStates]);
+
+  const value = useMemo<GlamProviderContext>(
+    () => ({
+      glamClient,
+      vault,
+      vaultHoldings,
+      activeGlamState,
+      glamStatesList,
+      delegateAcls,
+      integrationAcls,
+      allGlamStates,
+      jupTokenList,
+      driftMarketConfigs,
+      wsConnected,
+      setActiveGlamState,
+      refresh,
+      refetchGlamStates: stableRefetchGlamStates,
+    }),
+    [
+      glamClient,
+      vault,
+      vaultHoldings,
+      activeGlamState,
+      glamStatesList,
+      delegateAcls,
+      integrationAcls,
+      allGlamStates,
+      jupTokenList,
+      driftMarketConfigs,
+      wsConnected,
+      setActiveGlamState,
+      refresh,
+      stableRefetchGlamStates,
+    ],
+  );
 
   return <GlamContext.Provider value={value}>{children}</GlamContext.Provider>;
 }

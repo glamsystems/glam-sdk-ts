@@ -109,6 +109,7 @@ export class BaseClient {
   blockhashWithCache: BlockhashWithCache;
   jupiterApiKey?: string;
   jupiterApiClient?: JupiterApiClient;
+  public onSentListeners = new Set<(sig: string) => void>();
 
   private _protocolProgram?: GlamProtocolProgram;
   private _mintProgram?: GlamMintProgram;
@@ -374,6 +375,7 @@ export class BaseClient {
     const txSig = await txConnection.sendRawTransaction(serializedTx, {
       skipPreflight: true,
     });
+    this.onSentListeners.forEach(fn => fn(txSig));
 
     if (process.env.NODE_ENV === "development") {
       console.log("Confirming tx:", txSig);
@@ -411,10 +413,19 @@ export class BaseClient {
 
     if (useWebSocket) {
       const latestBlockhash = await this.blockhashWithCache.get();
-      return await this.connection.confirmTransaction({
-        ...latestBlockhash,
-        signature: txSig,
-      });
+      try {
+        return await this.connection.confirmTransaction({
+          ...latestBlockhash,
+          signature: txSig,
+        });
+      } catch (err) {
+        if (typeof Event !== "undefined" && err instanceof Event) {
+          throw new Error(
+            `WebSocket error during transaction confirmation: ${(err as Event).type}`,
+          );
+        }
+        throw err;
+      }
     }
 
     if (process.env.NODE_ENV === "development") {
