@@ -176,6 +176,7 @@ export class StateModel extends StateIdlModel {
   static fromOnchainAccounts(
     statePda: PublicKey,
     stateAccount: StateAccount,
+    staging: boolean,
     glamMint?: Mint,
     requestQueue?: RequestQueue,
   ) {
@@ -276,7 +277,7 @@ export class StateModel extends StateIdlModel {
 
       // Parse mint policy
       const mintIntegrationPolicy = stateAccount.integrationAcls?.find((acl) =>
-        acl.integrationProgram.equals(getGlamMintProgramId()),
+        acl.integrationProgram.equals(getGlamMintProgramId(staging)),
       );
       const mintPolicyData = mintIntegrationPolicy?.protocolPolicies?.find(
         (policy: any) => policy.protocolBitflag === 1,

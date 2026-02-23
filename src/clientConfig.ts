@@ -56,4 +56,5 @@ export type GlamClientConfig = {
   statePda?: PublicKey;
   jupiterApiKey?: string;
   jupiterApiClient?: JupiterApiClient;
+  useStaging?: boolean;
 };

@@ -41,114 +41,139 @@ export type ExtMarinadeProgram = Program<ExtMarinade>;
 export type ExtStakePoolProgram = Program<ExtStakePool>;
 export type ExtCctpProgram = Program<ExtCctp>;
 
-export const isStaging = () => {
+const isStaging = () => {
   const s = process.env.NEXT_PUBLIC_GLAM_STAGING || process.env.GLAM_STAGING;
   // Treat "0", "false", "", undefined, null as false
   // Treat "1", "true", or any other truthy string as true
   return !!(s && s !== "0" && s !== "false");
 };
 
-export function getGlamProtocolIdl() {
-  return isStaging() ? GlamProtocolIdlJsonStaging : GlamProtocolIdlJson;
+/** Resolve staging flag: explicit param overrides env-var default */
+export function resolveStaging(useStaging?: boolean): boolean {
+  return useStaging !== undefined ? useStaging : isStaging();
 }
 
-export function getGlamMintIdl() {
-  return isStaging() ? GlamMintIdlJsonStaging : GlamMintIdlJson;
+export function getGlamProtocolIdl(staging: boolean) {
+  return staging ? GlamProtocolIdlJsonStaging : GlamProtocolIdlJson;
 }
 
-export function getExtSplIdl() {
-  return isStaging() ? ExtSplIdlJsonStaging : ExtSplIdlJson;
+export function getGlamMintIdl(staging: boolean) {
+  return staging ? GlamMintIdlJsonStaging : GlamMintIdlJson;
 }
 
-export function getExtDriftIdl() {
-  return isStaging() ? ExtDriftIdlJsonStaging : ExtDriftIdlJson;
+export function getExtSplIdl(staging: boolean) {
+  return staging ? ExtSplIdlJsonStaging : ExtSplIdlJson;
 }
 
-export function getExtKaminoIdl() {
-  return isStaging() ? ExtKaminoIdlJsonStaging : ExtKaminoIdlJson;
+export function getExtDriftIdl(staging: boolean) {
+  return staging ? ExtDriftIdlJsonStaging : ExtDriftIdlJson;
 }
 
-export function getExtStakePoolIdl() {
-  return isStaging() ? ExtStakePoolIdlJsonStaging : ExtStakePoolIdlJson;
+export function getExtKaminoIdl(staging: boolean) {
+  return staging ? ExtKaminoIdlJsonStaging : ExtKaminoIdlJson;
 }
 
-export function getExtCctpIdl() {
+export function getExtStakePoolIdl(staging: boolean) {
+  return staging ? ExtStakePoolIdlJsonStaging : ExtStakePoolIdlJson;
+}
+
+export function getExtCctpIdl(staging: boolean) {
   // TODO: Update pubkey after ext_cctp staging program is deployed
-  return isStaging() ? ExtCctpIdlJson : ExtCctpIdlJson;
+  return staging ? ExtCctpIdlJson : ExtCctpIdlJson;
 }
 
-export function getExtMarinadeIdl() {
-  return isStaging() ? ExtMarinadeIdlJsonStaging : ExtMarinadeIdlJson;
+export function getExtMarinadeIdl(staging: boolean) {
+  return staging ? ExtMarinadeIdlJsonStaging : ExtMarinadeIdlJson;
 }
 
-export function getGlamProtocolProgramId() {
-  return new PublicKey(getGlamProtocolIdl().address);
+export function getGlamProtocolProgramId(staging: boolean) {
+  return new PublicKey(getGlamProtocolIdl(staging).address);
 }
 
-export function getGlamMintProgramId() {
-  return new PublicKey(getGlamMintIdl().address);
+export function getGlamMintProgramId(staging: boolean) {
+  return new PublicKey(getGlamMintIdl(staging).address);
 }
 
-export function getExtSplProgramId() {
-  return new PublicKey(getExtSplIdl().address);
+export function getExtSplProgramId(staging: boolean) {
+  return new PublicKey(getExtSplIdl(staging).address);
 }
 
-export function getExtDriftProgramId() {
-  return new PublicKey(getExtDriftIdl().address);
+export function getExtDriftProgramId(staging: boolean) {
+  return new PublicKey(getExtDriftIdl(staging).address);
 }
 
-export function getExtKaminoProgramId() {
-  return new PublicKey(getExtKaminoIdl().address);
+export function getExtKaminoProgramId(staging: boolean) {
+  return new PublicKey(getExtKaminoIdl(staging).address);
 }
 
-export function getExtStakePoolProgramId() {
-  return new PublicKey(getExtStakePoolIdl().address);
+export function getExtStakePoolProgramId(staging: boolean) {
+  return new PublicKey(getExtStakePoolIdl(staging).address);
 }
 
-export function getExtCctpProgramId() {
-  return new PublicKey(getExtCctpIdl().address);
+export function getExtCctpProgramId(staging: boolean) {
+  return new PublicKey(getExtCctpIdl(staging).address);
 }
 
-export function getExtMarinadeProgramId() {
-  return new PublicKey(getExtMarinadeIdl().address);
+export function getExtMarinadeProgramId(staging: boolean) {
+  return new PublicKey(getExtMarinadeIdl(staging).address);
 }
 
 export function getGlamProtocolProgram(
   provider: Provider,
+  staging: boolean,
 ): GlamProtocolProgram {
-  return new Program<GlamProtocol>(getGlamProtocolIdl(), provider);
+  return new Program<GlamProtocol>(getGlamProtocolIdl(staging), provider);
 }
 
-export function getGlamMintProgram(provider: Provider): GlamMintProgram {
-  return new Program<GlamMint>(getGlamMintIdl(), provider);
+export function getGlamMintProgram(
+  provider: Provider,
+  staging: boolean,
+): GlamMintProgram {
+  return new Program<GlamMint>(getGlamMintIdl(staging), provider);
 }
 
 export function getGlamConfigProgram(provider: Provider): GlamConfigProgram {
   return new Program<GlamConfig>(GlamConfigIdlJson, provider);
 }
 
-export function getExtSplProgram(provider: Provider): ExtSplProgram {
-  return new Program<ExtSpl>(getExtSplIdl(), provider);
+export function getExtSplProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtSplProgram {
+  return new Program<ExtSpl>(getExtSplIdl(staging), provider);
 }
 
-export function getExtDriftProgram(provider: Provider): ExtDriftProgram {
-  return new Program<ExtDrift>(getExtDriftIdl(), provider);
+export function getExtDriftProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtDriftProgram {
+  return new Program<ExtDrift>(getExtDriftIdl(staging), provider);
 }
 
-export function getExtKaminoProgram(provider: Provider): ExtKaminoProgram {
-  return new Program<ExtKamino>(getExtKaminoIdl(), provider);
+export function getExtKaminoProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtKaminoProgram {
+  return new Program<ExtKamino>(getExtKaminoIdl(staging), provider);
 }
 
-export function getExtMarinadeProgram(provider: Provider): ExtMarinadeProgram {
-  return new Program<ExtMarinade>(getExtMarinadeIdl(), provider);
+export function getExtMarinadeProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtMarinadeProgram {
+  return new Program<ExtMarinade>(getExtMarinadeIdl(staging), provider);
 }
 
 export function getExtStakePoolProgram(
   provider: Provider,
+  staging: boolean,
 ): ExtStakePoolProgram {
-  return new Program<ExtStakePool>(getExtStakePoolIdl(), provider);
+  return new Program<ExtStakePool>(getExtStakePoolIdl(staging), provider);
 }
 
-export function getExtCctpProgram(provider: Provider): ExtCctpProgram {
-  return new Program<ExtCctp>(ExtCctpIdlJson, provider);
+export function getExtCctpProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtCctpProgram {
+  return new Program<ExtCctp>(getExtCctpIdl(staging), provider);
 }

@@ -26,11 +26,12 @@ export function formatBits(bitmask: number | BN, padding: number = 16): string {
 export function parseProtocolsBitmask(
   integrationProgram: PublicKey,
   protocolsBitmask: number | BN,
+  staging: boolean,
 ): {
   protocols: { bitflag: number | BN; name: string }[];
 } {
   const integration =
-    getProtocolsAndPermissions()[integrationProgram.toBase58()];
+    getProtocolsAndPermissions(staging)[integrationProgram.toBase58()];
   if (!integration) {
     return {
       protocols: [],
@@ -82,6 +83,7 @@ export function parseProtocolPermissionsBitmask(
   integrationProgram: PublicKey,
   protocolBitflag: number | BN,
   permissionsBitmask: number | BN,
+  staging: boolean,
 ): {
   protocol: string;
   permissions: { bitflag: number | BN; name: string }[];
@@ -91,7 +93,7 @@ export function parseProtocolPermissionsBitmask(
   }
 
   const integration =
-    getProtocolsAndPermissions()[integrationProgram.toBase58()];
+    getProtocolsAndPermissions(staging)[integrationProgram.toBase58()];
   if (!integration) {
     return {
       protocol: formatBits(protocolBitflag), // Unknown protocol bitflag
@@ -140,22 +142,25 @@ export function parseProtocolPermissionsBitmask(
 export function parsePermissionNames({
   protocolName,
   permissionNames,
+  staging,
 }: {
   protocolName: string;
   permissionNames: string[];
+  staging: boolean;
 }): {
   integrationProgram: PublicKey;
   protocolBitflag: number;
   permissionsBitmask: BN;
 } {
-  const protocolConfig = getProgramAndBitflagByProtocolName()[protocolName];
+  const protocolConfig =
+    getProgramAndBitflagByProtocolName(staging)[protocolName];
   if (!protocolConfig) {
     throw new Error(`Unknown protocol name ${protocolName}`);
   }
 
   const [programIdStr, bitflagStr] = protocolConfig;
   const protocolPermissions =
-    getProtocolsAndPermissions()[programIdStr]?.[bitflagStr];
+    getProtocolsAndPermissions(staging)[programIdStr]?.[bitflagStr];
   if (!protocolPermissions) {
     throw new Error(
       `Protocol mapping not found for protocol name ${protocolName}`,

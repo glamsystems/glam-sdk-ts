@@ -69,6 +69,7 @@ export const getSimulationResult = async (
   instructions: Array<TransactionInstruction>,
   payer: PublicKey,
   lookupTables?: Array<AddressLookupTableAccount>,
+  staging: boolean = false,
 ): Promise<{
   unitsConsumed?: number;
   error?: Error;
@@ -97,7 +98,7 @@ export const getSimulationResult = async (
       replaceRecentBlockhash: true,
       sigVerify: false,
     });
-    getErrorFromRpcResponse(rpcResponse);
+    getErrorFromRpcResponse(rpcResponse, staging);
 
     return {
       unitsConsumed: rpcResponse.value.unitsConsumed,
@@ -110,6 +111,7 @@ export const getSimulationResult = async (
 
 const getErrorFromRpcResponse = (
   rpcResponse: RpcResponseAndContext<SimulatedTransactionResponse>,
+  staging: boolean,
 ) => {
   // Note: `confirmTransaction` does not throw an error if the confirmation does not succeed,
   // but rather a `TransactionError` object. so we handle that here
@@ -129,7 +131,7 @@ const getErrorFromRpcResponse = (
         // An instruction error is a custom program error and looks like: [1, {"Custom": 1}]
         // See also https://solana.stackexchange.com/a/931/294
         const customErrorCode = instructionError[1]["Custom"];
-        const { errors: glamErrors } = getGlamProtocolIdl();
+        const { errors: glamErrors } = getGlamProtocolIdl(staging);
         const glamError = glamErrors.find((e) => e.code === customErrorCode);
         if (glamError?.msg) {
           throw new Error(glamError.msg);

@@ -15,8 +15,9 @@ import { PkSet } from "./pkset";
 export function getProtocolNamesFromBitmask(
   integrationProgram: PublicKey,
   bitmask: number,
+  staging: boolean,
 ): string[] {
-  const { protocols } = parseProtocolsBitmask(integrationProgram, bitmask);
+  const { protocols } = parseProtocolsBitmask(integrationProgram, bitmask, staging);
   return protocols.map((p) => p.name);
 }
 
@@ -28,11 +29,13 @@ export function getPermissionNamesFromBitmask(
   integrationProgram: PublicKey,
   protocolBitflag: number,
   permissionsBitmask: BN,
+  staging: boolean,
 ): string[] {
   const { permissions } = parseProtocolPermissionsBitmask(
     integrationProgram,
     protocolBitflag,
     permissionsBitmask,
+    staging,
   );
   return permissions.map((p) => p.name);
 }
@@ -58,6 +61,7 @@ export function comparePublicKeyArrays(
 export function compareIntegrationAcls(
   current: IntegrationAcl[] | null,
   staged: IntegrationAcl[] | null,
+  staging: boolean,
 ): {
   added: IntegrationAcl[];
   removed: IntegrationAcl[];
@@ -113,10 +117,12 @@ export function compareIntegrationAcls(
       const currentProtocols = getProtocolNamesFromBitmask(
         currentAcl.integrationProgram,
         currentAcl.protocolsBitmask,
+        staging,
       );
       const stagedProtocols = getProtocolNamesFromBitmask(
         stagedAcl.integrationProgram,
         stagedAcl.protocolsBitmask,
+        staging,
       );
 
       const enabledProtocols = stagedProtocols.filter(
@@ -145,6 +151,7 @@ export function compareIntegrationAcls(
 export function compareDelegateAcls(
   current: DelegateAcl[] | null,
   staged: DelegateAcl[] | null,
+  staging: boolean,
 ): {
   added: DelegateAcl[];
   removed: DelegateAcl[];
@@ -255,11 +262,13 @@ export function compareDelegateAcls(
           const protocolNames = getProtocolNamesFromBitmask(
             integrationProgram,
             protocolBitflag,
+            staging,
           );
           const addedPermissions = getPermissionNamesFromBitmask(
             integrationProgram,
             protocolBitflag,
             staged,
+            staging,
           );
 
           if (addedPermissions.length > 0) {
@@ -275,11 +284,13 @@ export function compareDelegateAcls(
           const protocolNames = getProtocolNamesFromBitmask(
             integrationProgram,
             protocolBitflag,
+            staging,
           );
           const removedPermissions = getPermissionNamesFromBitmask(
             integrationProgram,
             protocolBitflag,
             current,
+            staging,
           );
 
           if (removedPermissions.length > 0) {
@@ -295,16 +306,19 @@ export function compareDelegateAcls(
           const protocolNames = getProtocolNamesFromBitmask(
             integrationProgram,
             protocolBitflag,
+            staging,
           );
           const currentPermissions = getPermissionNamesFromBitmask(
             integrationProgram,
             protocolBitflag,
             current,
+            staging,
           );
           const stagedPermissions = getPermissionNamesFromBitmask(
             integrationProgram,
             protocolBitflag,
             staged,
+            staging,
           );
 
           const addedPermissions = stagedPermissions.filter(

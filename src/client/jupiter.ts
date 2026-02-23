@@ -14,7 +14,6 @@ import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 import { WSOL } from "../constants";
 import { STAKE_POOLS_MAP, SOL_ORACLE, getAssetMeta } from "../assets";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
-import { isStaging } from "../glamExports";
 import { getGlobalConfigPda } from "../utils/glamPDAs";
 import { VaultClient } from "./vault";
 import {
@@ -117,7 +116,7 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
         glamSigner,
         inputStakePool,
         outputStakePool,
-        ...(isStaging()
+        ...(this.client.base.staging
           ? {
               glamConfig: getGlobalConfigPda(),
               solUsdOracle: SOL_ORACLE,

@@ -53,6 +53,7 @@ import {
   getExtStakePoolProgram,
   getGlamMintProgram,
   getGlamProtocolProgram,
+  resolveStaging,
 } from "../glamExports";
 import { ClusterNetwork, GlamClientConfig } from "../clientConfig";
 import {
@@ -110,6 +111,7 @@ export class BaseClient {
   jupiterApiKey?: string;
   jupiterApiClient?: JupiterApiClient;
   public onSentListeners = new Set<(sig: string) => void>();
+  readonly staging: boolean;
 
   private _protocolProgram?: GlamProtocolProgram;
   private _mintProgram?: GlamMintProgram;
@@ -148,6 +150,7 @@ export class BaseClient {
     this.cluster =
       config?.cluster ||
       ClusterNetwork.fromUrl(this.provider.connection.rpcEndpoint);
+    this.staging = resolveStaging(config?.useStaging);
     this.jupiterApiKey = config?.jupiterApiKey;
     this.jupiterApiClient = config?.jupiterApiClient;
     this.blockhashWithCache = new BlockhashWithCache(this.provider);
@@ -155,56 +158,74 @@ export class BaseClient {
 
   get protocolProgram(): GlamProtocolProgram {
     if (!this._protocolProgram) {
-      this._protocolProgram = getGlamProtocolProgram(this.provider);
+      this._protocolProgram = getGlamProtocolProgram(
+        this.provider,
+        this.staging,
+      );
     }
     return this._protocolProgram;
   }
 
   get mintProgram(): GlamMintProgram {
     if (!this._mintProgram) {
-      this._mintProgram = getGlamMintProgram(this.provider);
+      this._mintProgram = getGlamMintProgram(this.provider, this.staging);
     }
     return this._mintProgram;
   }
 
   get extSplProgram(): ExtSplProgram {
     if (!this._extSplProgram) {
-      this._extSplProgram = getExtSplProgram(this.provider);
+      this._extSplProgram = getExtSplProgram(this.provider, this.staging);
     }
     return this._extSplProgram;
   }
 
   get extDriftProgram(): ExtDriftProgram {
     if (!this._extDriftProgram) {
-      this._extDriftProgram = getExtDriftProgram(this.provider);
+      this._extDriftProgram = getExtDriftProgram(
+        this.provider,
+        this.staging,
+      );
     }
     return this._extDriftProgram;
   }
 
   get extKaminoProgram(): ExtKaminoProgram {
     if (!this._extKaminoProgram) {
-      this._extKaminoProgram = getExtKaminoProgram(this.provider);
+      this._extKaminoProgram = getExtKaminoProgram(
+        this.provider,
+        this.staging,
+      );
     }
     return this._extKaminoProgram;
   }
 
   get extMarinadeProgram(): ExtMarinadeProgram {
     if (!this._extMarinadeProgram) {
-      this._extMarinadeProgram = getExtMarinadeProgram(this.provider);
+      this._extMarinadeProgram = getExtMarinadeProgram(
+        this.provider,
+        this.staging,
+      );
     }
     return this._extMarinadeProgram;
   }
 
   get extStakePoolProgram(): ExtStakePoolProgram {
     if (!this._extStakePoolProgram) {
-      this._extStakePoolProgram = getExtStakePoolProgram(this.provider);
+      this._extStakePoolProgram = getExtStakePoolProgram(
+        this.provider,
+        this.staging,
+      );
     }
     return this._extStakePoolProgram;
   }
 
   get extCctpProgram(): ExtCctpProgram {
     if (!this._extCctpProgram) {
-      this._extCctpProgram = getExtCctpProgram(this.provider);
+      this._extCctpProgram = getExtCctpProgram(
+        this.provider,
+        this.staging,
+      );
     }
     return this._extCctpProgram;
   }
@@ -285,6 +306,7 @@ export class BaseClient {
       instructions,
       signer,
       lookupTableAccounts,
+      this.staging,
     );
     computeUnitLimit = unitsConsumed;
 
@@ -683,6 +705,7 @@ export class BaseClient {
       return StateModel.fromOnchainAccounts(
         glamStatePda,
         stateAccount,
+        this.staging,
         mint,
         requestQueue,
       );
@@ -691,8 +714,7 @@ export class BaseClient {
     return StateModel.fromOnchainAccounts(
       glamStatePda,
       stateAccount,
-      undefined,
-      undefined,
+      this.staging,
     );
   }
 
@@ -755,6 +777,7 @@ export class BaseClient {
       return StateModel.fromOnchainAccounts(
         publicKey,
         stateAccount,
+        this.staging,
         mint,
         requestQueue,
       );
