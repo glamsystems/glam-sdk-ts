@@ -4780,6 +4780,11 @@
       "code": 6014,
       "name": "ManagerFeesNotCrystallized",
       "msg": "Manager fees should be crystallized before updating"
+    },
+    {
+      "code": 6015,
+      "name": "AmountAboveMaximum",
+      "msg": "Amount exceeds maximum threshold"
     }
   ],
   "types": [
@@ -5576,6 +5581,18 @@
             }
           },
           {
+            "name": "max_subscription",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "max_redemption",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
             "name": "allowlist",
             "type": {
               "option": {
@@ -5616,7 +5633,11 @@
             "type": "u64"
           },
           {
-            "name": "reserved",
+            "name": "max_subscription",
+            "type": "u64"
+          },
+          {
+            "name": "max_redemption",
             "type": "u64"
           },
           {

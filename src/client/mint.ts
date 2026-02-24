@@ -46,6 +46,8 @@ export type UpdateMintParams = {
   maxCap?: BN;
   minSubscription?: BN;
   minRedemption?: BN;
+  maxSubscription?: BN;
+  maxRedemption?: BN;
   allowlist?: PublicKey[];
   blocklist?: PublicKey[];
 };

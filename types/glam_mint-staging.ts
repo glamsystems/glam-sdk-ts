@@ -4786,6 +4786,11 @@ export type GlamMint = {
       "code": 6014,
       "name": "managerFeesNotCrystallized",
       "msg": "Manager fees should be crystallized before updating"
+    },
+    {
+      "code": 6015,
+      "name": "amountAboveMaximum",
+      "msg": "Amount exceeds maximum threshold"
     }
   ],
   "types": [
@@ -5582,6 +5587,18 @@ export type GlamMint = {
             }
           },
           {
+            "name": "maxSubscription",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "maxRedemption",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
             "name": "allowlist",
             "type": {
               "option": {
@@ -5622,7 +5639,11 @@ export type GlamMint = {
             "type": "u64"
           },
           {
-            "name": "reserved",
+            "name": "maxSubscription",
+            "type": "u64"
+          },
+          {
+            "name": "maxRedemption",
             "type": "u64"
           },
           {

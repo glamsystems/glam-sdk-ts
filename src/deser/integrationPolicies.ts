@@ -16,7 +16,8 @@ export class MintPolicy {
   maxCap: BN;
   minSubscription: BN;
   minRedemption: BN;
-  reserved: BN;
+  maxSubscription: BN;
+  maxRedemption: BN;
   allowlist: PublicKey[] | null;
   blocklist: PublicKey[] | null;
 
@@ -25,7 +26,18 @@ export class MintPolicy {
     u64("maxCap"),
     u64("minSubscription"),
     u64("minRedemption"),
-    u64("reserved"),
+    u64("maxSubscription"),
+    u64("maxRedemption"),
+    option(vec(publicKey()), "allowlist"),
+    option(vec(publicKey()), "blocklist"),
+  ]);
+
+  static _legacyLayout = struct([
+    u32("lockupPeriod"),
+    u64("maxCap"),
+    u64("minSubscription"),
+    u64("minRedemption"),
+    u64("maxSubscription"), // was: reserved
     option(vec(publicKey()), "allowlist"),
     option(vec(publicKey()), "blocklist"),
   ]);
@@ -35,7 +47,8 @@ export class MintPolicy {
     maxCap: BN,
     minSubscription: BN,
     minRedemption: BN,
-    reserved: BN,
+    maxSubscription: BN,
+    maxRedemption: BN,
     allowlist: PublicKey[] | null,
     blocklist: PublicKey[] | null,
   ) {
@@ -43,19 +56,44 @@ export class MintPolicy {
     this.maxCap = maxCap;
     this.minSubscription = minSubscription;
     this.minRedemption = minRedemption;
-    this.reserved = reserved;
+    this.maxSubscription = maxSubscription;
+    this.maxRedemption = maxRedemption;
     this.allowlist = allowlist;
     this.blocklist = blocklist;
   }
 
   public static decode(buffer: Buffer): MintPolicy {
-    const data = MintPolicy._layout.decode(buffer);
-    return data as MintPolicy;
+    try {
+      const data = MintPolicy._layout.decode(buffer) as MintPolicy;
+      return new MintPolicy(
+        data.lockupPeriod,
+        data.maxCap,
+        data.minSubscription,
+        data.minRedemption,
+        data.maxSubscription,
+        data.maxRedemption,
+        data.allowlist,
+        data.blocklist,
+      );
+    } catch {
+      // Legacy format without maxRedemption field
+      const data = MintPolicy._legacyLayout.decode(buffer) as any;
+      return new MintPolicy(
+        data.lockupPeriod,
+        data.maxCap,
+        data.minSubscription,
+        data.minRedemption,
+        data.maxSubscription ?? new BN(0), // was: reserved
+        new BN(0), // maxRedemption defaults to 0 (no max)
+        data.allowlist,
+        data.blocklist,
+      );
+    }
   }
 
   public encode(): Buffer {
     // Calculate the required buffer size
-    // Fixed fields: 4 + 8 + 8 + 8 + 8 = 36 bytes
+    // Fixed fields: 4 + 8 + 8 + 8 + 8 + 8 = 44 bytes
     // Variable fields: allowlist and blocklist (1 byte option flag + 4 bytes length + 32 bytes per pubkey)
     const allowlistSize = this.allowlist
       ? 1 + 4 + this.allowlist.length * 32
@@ -63,7 +101,7 @@ export class MintPolicy {
     const blocklistSize = this.blocklist
       ? 1 + 4 + this.blocklist.length * 32
       : 1;
-    const totalSize = 36 + allowlistSize + blocklistSize;
+    const totalSize = 44 + allowlistSize + blocklistSize;
 
     const buffer = Buffer.alloc(totalSize);
     MintPolicy._layout.encode(this, buffer);
