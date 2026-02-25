@@ -41,6 +41,7 @@ import {
   ExtDriftProgram,
   ExtKaminoProgram,
   ExtMarinadeProgram,
+  ExtOffchainProgram,
   ExtSplProgram,
   ExtStakePoolProgram,
   GlamMintProgram,
@@ -49,6 +50,7 @@ import {
   getExtDriftProgram,
   getExtKaminoProgram,
   getExtMarinadeProgram,
+  getExtOffchainProgram,
   getExtSplProgram,
   getExtStakePoolProgram,
   getGlamMintProgram,
@@ -121,6 +123,7 @@ export class BaseClient {
   private _extMarinadeProgram?: ExtMarinadeProgram;
   private _extStakePoolProgram?: ExtStakePoolProgram;
   private _extCctpProgram?: ExtCctpProgram;
+  private _extOffchainProgram?: ExtOffchainProgram;
 
   private _statePda?: PublicKey;
 
@@ -182,20 +185,14 @@ export class BaseClient {
 
   get extDriftProgram(): ExtDriftProgram {
     if (!this._extDriftProgram) {
-      this._extDriftProgram = getExtDriftProgram(
-        this.provider,
-        this.staging,
-      );
+      this._extDriftProgram = getExtDriftProgram(this.provider, this.staging);
     }
     return this._extDriftProgram;
   }
 
   get extKaminoProgram(): ExtKaminoProgram {
     if (!this._extKaminoProgram) {
-      this._extKaminoProgram = getExtKaminoProgram(
-        this.provider,
-        this.staging,
-      );
+      this._extKaminoProgram = getExtKaminoProgram(this.provider, this.staging);
     }
     return this._extKaminoProgram;
   }
@@ -222,12 +219,19 @@ export class BaseClient {
 
   get extCctpProgram(): ExtCctpProgram {
     if (!this._extCctpProgram) {
-      this._extCctpProgram = getExtCctpProgram(
+      this._extCctpProgram = getExtCctpProgram(this.provider, this.staging);
+    }
+    return this._extCctpProgram;
+  }
+
+  get extOffchainProgram(): ExtOffchainProgram {
+    if (!this._extOffchainProgram) {
+      this._extOffchainProgram = getExtOffchainProgram(
         this.provider,
         this.staging,
       );
     }
-    return this._extCctpProgram;
+    return this._extOffchainProgram;
   }
 
   get isVaultConnected(): boolean {
@@ -397,7 +401,7 @@ export class BaseClient {
     const txSig = await txConnection.sendRawTransaction(serializedTx, {
       skipPreflight: true,
     });
-    this.onSentListeners.forEach(fn => fn(txSig));
+    this.onSentListeners.forEach((fn) => fn(txSig));
 
     if (process.env.NODE_ENV === "development") {
       console.log("Confirming tx:", txSig);
