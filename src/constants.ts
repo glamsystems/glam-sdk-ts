@@ -6,6 +6,7 @@ import {
   getExtMarinadeProgramId,
   getExtSplProgramId,
   getExtStakePoolProgramId,
+  getExtOffchainProgramId,
   getGlamMintProgramId,
   getGlamProtocolProgramId,
 } from "./glamExports";
@@ -308,6 +309,17 @@ export const getProtocolsAndPermissions = (
       permissions: {
         [1 << 0]: "Stake",
         [1 << 1]: "Unstake",
+      },
+    },
+  },
+  // Off-chain AUM integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_offchain/src/state/access.rs
+  [getExtOffchainProgramId(staging).toBase58()]: {
+    "0000000000000001": {
+      name: "OffchainAum",
+      staging: false,
+      permissions: {
+        [1 << 0]: "UpdateOffchainAum",
       },
     },
   },

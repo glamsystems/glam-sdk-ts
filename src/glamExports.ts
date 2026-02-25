@@ -10,6 +10,7 @@ import type { ExtKamino } from "../target/types/ext_kamino";
 import type { ExtMarinade } from "../target/types/ext_marinade";
 import type { ExtStakePool } from "../target/types/ext_stake_pool";
 import type { ExtCctp } from "../target/types/ext_cctp";
+import type { ExtOffchain } from "../target/types/ext_offchain";
 
 import GlamProtocolIdlJson from "../target/idl/glam_protocol.json";
 import GlamConfigIdlJson from "../target/idl/glam_config.json";
@@ -20,6 +21,7 @@ import ExtKaminoIdlJson from "../target/idl/ext_kamino.json";
 import ExtMarinadeIdlJson from "../target/idl/ext_marinade.json";
 import ExtStakePoolIdlJson from "../target/idl/ext_stake_pool.json";
 import ExtCctpIdlJson from "../target/idl/ext_cctp.json";
+import ExtOffchainIdlJson from "../target/idl/ext_offchain.json";
 
 import GlamProtocolIdlJsonStaging from "../target/idl/glam_protocol-staging.json";
 import GlamMintIdlJsonStaging from "../target/idl/glam_mint-staging.json";
@@ -28,6 +30,7 @@ import ExtDriftIdlJsonStaging from "../target/idl/ext_drift-staging.json";
 import ExtKaminoIdlJsonStaging from "../target/idl/ext_kamino-staging.json";
 import ExtStakePoolIdlJsonStaging from "../target/idl/ext_stake_pool-staging.json";
 import ExtMarinadeIdlJsonStaging from "../target/idl/ext_marinade-staging.json";
+import ExtOffchainIdlJsonStaging from "../target/idl/ext_offchain-staging.json";
 
 export { GlamProtocol, GlamMint, GlamConfig };
 
@@ -40,6 +43,7 @@ export type ExtKaminoProgram = Program<ExtKamino>;
 export type ExtMarinadeProgram = Program<ExtMarinade>;
 export type ExtStakePoolProgram = Program<ExtStakePool>;
 export type ExtCctpProgram = Program<ExtCctp>;
+export type ExtOffchainProgram = Program<ExtOffchain>;
 
 const isStaging = () => {
   const s = process.env.NEXT_PUBLIC_GLAM_STAGING || process.env.GLAM_STAGING;
@@ -86,6 +90,10 @@ export function getExtMarinadeIdl(staging: boolean) {
   return staging ? ExtMarinadeIdlJsonStaging : ExtMarinadeIdlJson;
 }
 
+export function getExtOffchainIdl(staging: boolean) {
+  return staging ? ExtOffchainIdlJsonStaging : ExtOffchainIdlJson;
+}
+
 export function getGlamProtocolProgramId(staging: boolean) {
   return new PublicKey(getGlamProtocolIdl(staging).address);
 }
@@ -116,6 +124,10 @@ export function getExtCctpProgramId(staging: boolean) {
 
 export function getExtMarinadeProgramId(staging: boolean) {
   return new PublicKey(getExtMarinadeIdl(staging).address);
+}
+
+export function getExtOffchainProgramId(staging: boolean) {
+  return new PublicKey(getExtOffchainIdl(staging).address);
 }
 
 export function getGlamProtocolProgram(
@@ -176,4 +188,11 @@ export function getExtCctpProgram(
   staging: boolean,
 ): ExtCctpProgram {
   return new Program<ExtCctp>(getExtCctpIdl(staging), provider);
+}
+
+export function getExtOffchainProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtOffchainProgram {
+  return new Program<ExtOffchain>(getExtOffchainIdl(staging), provider);
 }
