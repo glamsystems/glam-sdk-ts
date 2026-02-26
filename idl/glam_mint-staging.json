@@ -4638,19 +4638,6 @@
   ],
   "accounts": [
     {
-      "name": "GlobalConfig",
-      "discriminator": [
-        149,
-        8,
-        156,
-        202,
-        160,
-        252,
-        176,
-        217
-      ]
-    },
-    {
       "name": "RequestQueue",
       "discriminator": [
         172,
@@ -4785,6 +4772,16 @@
       "code": 6015,
       "name": "AmountAboveMaximum",
       "msg": "Amount exceeds maximum threshold"
+    },
+    {
+      "code": 6016,
+      "name": "InsufficientEscrowBalance",
+      "msg": "Insufficient escrow balance for fee burn"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidAuthority",
+      "msg": "Invalid authority"
     }
   ],
   "types": [
@@ -4844,51 +4841,6 @@
           {
             "name": "protocol_flow_fee",
             "type": "u128"
-          }
-        ]
-      }
-    },
-    {
-      "name": "AssetMeta",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "asset",
-            "type": "pubkey"
-          },
-          {
-            "name": "decimals",
-            "type": "u8"
-          },
-          {
-            "name": "oracle",
-            "type": "pubkey"
-          },
-          {
-            "name": "oracle_source",
-            "type": {
-              "defined": {
-                "name": "OracleSource"
-              }
-            }
-          },
-          {
-            "name": "max_age_seconds",
-            "type": "u16"
-          },
-          {
-            "name": "priority",
-            "type": "i8"
-          },
-          {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u8",
-                3
-              ]
-            }
           }
         ]
       }
@@ -5354,62 +5306,6 @@
       }
     },
     {
-      "name": "GlobalConfig",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "admin",
-            "docs": [
-              "The authority that can modify the config"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "fee_authority",
-            "docs": [
-              "The authority that can modify fee structure of individual glam state and claim protocol fees"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "referrer",
-            "docs": [
-              "Default GLAM referrer"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "base_fee_bps",
-            "docs": [
-              "Default protocol base fee applied to all vaults"
-            ],
-            "type": "u16"
-          },
-          {
-            "name": "flow_fee_bps",
-            "docs": [
-              "Default protocol flow fee applied to all vaults"
-            ],
-            "type": "u16"
-          },
-          {
-            "name": "asset_metas",
-            "docs": [
-              "List of assets and their oracle configs supported by the protocol"
-            ],
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "AssetMeta"
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "HurdleType",
       "type": {
         "kind": "enum",
@@ -5777,77 +5673,6 @@
                 12
               ]
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "OracleSource",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Pyth"
-          },
-          {
-            "name": "Switchboard"
-          },
-          {
-            "name": "QuoteAsset"
-          },
-          {
-            "name": "Pyth1K"
-          },
-          {
-            "name": "Pyth1M"
-          },
-          {
-            "name": "PythStableCoin"
-          },
-          {
-            "name": "Prelaunch"
-          },
-          {
-            "name": "PythPull"
-          },
-          {
-            "name": "Pyth1KPull"
-          },
-          {
-            "name": "Pyth1MPull"
-          },
-          {
-            "name": "PythStableCoinPull"
-          },
-          {
-            "name": "SwitchboardOnDemand"
-          },
-          {
-            "name": "PythLazer"
-          },
-          {
-            "name": "PythLazer1K"
-          },
-          {
-            "name": "PythLazer1M"
-          },
-          {
-            "name": "PythLazerStableCoin"
-          },
-          {
-            "name": "NotSet"
-          },
-          {
-            "name": "LstPoolState"
-          },
-          {
-            "name": "MarinadeState"
-          },
-          {
-            "name": "BaseAsset"
-          },
-          {
-            "name": "ChainlinkRWA"
           }
         ]
       }

@@ -1820,19 +1820,6 @@ export type GlamProtocol = {
   ],
   "accounts": [
     {
-      "name": "globalConfig",
-      "discriminator": [
-        149,
-        8,
-        156,
-        202,
-        160,
-        252,
-        176,
-        217
-      ]
-    },
-    {
       "name": "stateAccount",
       "discriminator": [
         142,
@@ -2249,51 +2236,6 @@ export type GlamProtocol = {
           },
           {
             "name": "deleteAsset"
-          }
-        ]
-      }
-    },
-    {
-      "name": "assetMeta",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "asset",
-            "type": "pubkey"
-          },
-          {
-            "name": "decimals",
-            "type": "u8"
-          },
-          {
-            "name": "oracle",
-            "type": "pubkey"
-          },
-          {
-            "name": "oracleSource",
-            "type": {
-              "defined": {
-                "name": "oracleSource"
-              }
-            }
-          },
-          {
-            "name": "maxAgeSeconds",
-            "type": "u16"
-          },
-          {
-            "name": "priority",
-            "type": "i8"
-          },
-          {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u8",
-                3
-              ]
-            }
           }
         ]
       }
@@ -2825,62 +2767,6 @@ export type GlamProtocol = {
       }
     },
     {
-      "name": "globalConfig",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "admin",
-            "docs": [
-              "The authority that can modify the config"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "feeAuthority",
-            "docs": [
-              "The authority that can modify fee structure of individual glam state and claim protocol fees"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "referrer",
-            "docs": [
-              "Default GLAM referrer"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "baseFeeBps",
-            "docs": [
-              "Default protocol base fee applied to all vaults"
-            ],
-            "type": "u16"
-          },
-          {
-            "name": "flowFeeBps",
-            "docs": [
-              "Default protocol flow fee applied to all vaults"
-            ],
-            "type": "u16"
-          },
-          {
-            "name": "assetMetas",
-            "docs": [
-              "List of assets and their oracle configs supported by the protocol"
-            ],
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "assetMeta"
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "hurdleType",
       "type": {
         "kind": "enum",
@@ -3099,77 +2985,6 @@ export type GlamProtocol = {
                 12
               ]
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "oracleSource",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "pyth"
-          },
-          {
-            "name": "switchboard"
-          },
-          {
-            "name": "quoteAsset"
-          },
-          {
-            "name": "pyth1K"
-          },
-          {
-            "name": "pyth1M"
-          },
-          {
-            "name": "pythStableCoin"
-          },
-          {
-            "name": "prelaunch"
-          },
-          {
-            "name": "pythPull"
-          },
-          {
-            "name": "pyth1KPull"
-          },
-          {
-            "name": "pyth1MPull"
-          },
-          {
-            "name": "pythStableCoinPull"
-          },
-          {
-            "name": "switchboardOnDemand"
-          },
-          {
-            "name": "pythLazer"
-          },
-          {
-            "name": "pythLazer1K"
-          },
-          {
-            "name": "pythLazer1M"
-          },
-          {
-            "name": "pythLazerStableCoin"
-          },
-          {
-            "name": "notSet"
-          },
-          {
-            "name": "lstPoolState"
-          },
-          {
-            "name": "marinadeState"
-          },
-          {
-            "name": "baseAsset"
-          },
-          {
-            "name": "chainlinkRwa"
           }
         ]
       }
