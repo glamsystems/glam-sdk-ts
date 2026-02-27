@@ -4701,8 +4701,8 @@ export type GlamMint = {
   "errors": [
     {
       "code": 6000,
-      "name": "amountBelowMinimum",
-      "msg": "Amount below minimum threshold"
+      "name": "invalidAuthority",
+      "msg": "Invalid authority"
     },
     {
       "code": 6001,
@@ -4781,8 +4781,8 @@ export type GlamMint = {
     },
     {
       "code": 6016,
-      "name": "invalidAuthority",
-      "msg": "Invalid authority"
+      "name": "amountBelowMinimum",
+      "msg": "Amount below minimum threshold"
     }
   ],
   "types": [

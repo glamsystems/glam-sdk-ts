@@ -4695,8 +4695,8 @@
   "errors": [
     {
       "code": 6000,
-      "name": "AmountBelowMinimum",
-      "msg": "Amount below minimum threshold"
+      "name": "InvalidAuthority",
+      "msg": "Invalid authority"
     },
     {
       "code": 6001,
@@ -4775,8 +4775,8 @@
     },
     {
       "code": 6016,
-      "name": "InvalidAuthority",
-      "msg": "Invalid authority"
+      "name": "AmountBelowMinimum",
+      "msg": "Amount below minimum threshold"
     }
   ],
   "types": [
