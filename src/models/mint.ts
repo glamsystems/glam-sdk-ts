@@ -25,8 +25,6 @@ export class MintIdlModel implements MintModelType {
   maxCap: BN | null;
   minSubscription: BN | null;
   minRedemption: BN | null;
-  maxSubscription: BN | null;
-  maxRedemption: BN | null;
   allowlist: PublicKey[] | null;
   blocklist: PublicKey[] | null;
 
@@ -45,8 +43,6 @@ export class MintIdlModel implements MintModelType {
     this.maxCap = data.maxCap ?? null;
     this.minSubscription = data.minSubscription ?? null;
     this.minRedemption = data.minRedemption ?? null;
-    this.maxSubscription = data.maxSubscription ?? null;
-    this.maxRedemption = data.maxRedemption ?? null;
     this.allowlist = data.allowlist ?? null;
     this.blocklist = data.blocklist ?? null;
   }

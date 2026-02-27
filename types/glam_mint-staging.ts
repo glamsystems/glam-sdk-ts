@@ -4776,16 +4776,11 @@ export type GlamMint = {
     },
     {
       "code": 6015,
-      "name": "amountAboveMaximum",
-      "msg": "Amount exceeds maximum threshold"
-    },
-    {
-      "code": 6016,
       "name": "insufficientEscrowBalance",
       "msg": "Insufficient escrow balance for fee burn"
     },
     {
-      "code": 6017,
+      "code": 6016,
       "name": "invalidAuthority",
       "msg": "Invalid authority"
     }
@@ -5483,18 +5478,6 @@ export type GlamMint = {
             }
           },
           {
-            "name": "maxSubscription",
-            "type": {
-              "option": "u64"
-            }
-          },
-          {
-            "name": "maxRedemption",
-            "type": {
-              "option": "u64"
-            }
-          },
-          {
             "name": "allowlist",
             "type": {
               "option": {
@@ -5535,11 +5518,7 @@ export type GlamMint = {
             "type": "u64"
           },
           {
-            "name": "maxSubscription",
-            "type": "u64"
-          },
-          {
-            "name": "maxRedemption",
+            "name": "reserved",
             "type": "u64"
           },
           {

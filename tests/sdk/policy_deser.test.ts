@@ -15,8 +15,7 @@ describe("policy_deser", () => {
         new BN(1000000), // maxCap
         new BN(100), // minSubscription
         new BN(50), // minRedemption
-        new BN(0), // maxSubscription
-        new BN(0), // maxRedemption
+        new BN(0), // reserved
         null, // allowlist
         null, // blocklist
       );
@@ -28,8 +27,7 @@ describe("policy_deser", () => {
       expect(decoded.maxCap.toString()).toEqual("1000000");
       expect(decoded.minSubscription.toString()).toEqual("100");
       expect(decoded.minRedemption.toString()).toEqual("50");
-      expect(decoded.maxSubscription.toString()).toEqual("0");
-      expect(decoded.maxRedemption.toString()).toEqual("0");
+      expect(decoded.reserved.toString()).toEqual("0");
       expect(decoded.allowlist).toBeNull();
       expect(decoded.blocklist).toBeNull();
     });
@@ -45,8 +43,7 @@ describe("policy_deser", () => {
         new BN(2000000), // maxCap
         new BN(200), // minSubscription
         new BN(100), // minRedemption
-        new BN(42), // maxSubscription
-        new BN(21), // maxRedemption
+        new BN(0), // reserved
         allowlist, // allowlist
         null, // blocklist
       );
@@ -58,8 +55,7 @@ describe("policy_deser", () => {
       expect(decoded.maxCap.toString()).toEqual("2000000");
       expect(decoded.minSubscription.toString()).toEqual("200");
       expect(decoded.minRedemption.toString()).toEqual("100");
-      expect(decoded.maxSubscription.toString()).toEqual("42");
-      expect(decoded.maxRedemption.toString()).toEqual("21");
+      expect(decoded.reserved.toString()).toEqual("0");
       expect(decoded.allowlist).toEqual(allowlist);
       expect(decoded.blocklist).toBeNull();
     });
@@ -76,8 +72,7 @@ describe("policy_deser", () => {
         new BN(5000000), // maxCap
         new BN(500), // minSubscription
         new BN(250), // minRedemption
-        new BN(123), // maxSubscription
-        new BN(456), // maxRedemption
+        new BN(0), // reserved
         null, // allowlist
         blocklist, // blocklist
       );
@@ -89,8 +84,7 @@ describe("policy_deser", () => {
       expect(decoded.maxCap.toString()).toEqual("5000000");
       expect(decoded.minSubscription.toString()).toEqual("500");
       expect(decoded.minRedemption.toString()).toEqual("250");
-      expect(decoded.maxSubscription.toString()).toEqual("123");
-      expect(decoded.maxRedemption.toString()).toEqual("456");
+      expect(decoded.reserved.toString()).toEqual("0");
       expect(decoded.allowlist).toBeNull();
       expect(decoded.blocklist).toEqual(blocklist);
     });
@@ -107,8 +101,7 @@ describe("policy_deser", () => {
         new BN(10000000), // maxCap
         new BN(1000), // minSubscription
         new BN(500), // minRedemption
-        new BN(999), // maxSubscription
-        new BN(888), // maxRedemption
+        new BN(0), // reserved
         allowlist, // allowlist
         blocklist, // blocklist
       );
@@ -120,8 +113,7 @@ describe("policy_deser", () => {
       expect(decoded.maxCap.toString()).toEqual("10000000");
       expect(decoded.minSubscription.toString()).toEqual("1000");
       expect(decoded.minRedemption.toString()).toEqual("500");
-      expect(decoded.maxSubscription.toString()).toEqual("999");
-      expect(decoded.maxRedemption.toString()).toEqual("888");
+      expect(decoded.reserved.toString()).toEqual("0");
       expect(decoded.allowlist).toEqual(allowlist);
       expect(decoded.blocklist).toEqual(blocklist);
     });
@@ -132,8 +124,7 @@ describe("policy_deser", () => {
         new BN(0), // maxCap
         new BN(0), // minSubscription
         new BN(0), // minRedemption
-        new BN(0), // maxSubscription
-        new BN(0), // maxRedemption
+        new BN(0), // reserved
         [], // empty allowlist
         [], // empty blocklist
       );
@@ -447,8 +438,7 @@ describe("policy_deser", () => {
         new BN("999999999999999999"), // maxCap (large number)
         new BN("1000000000000"), // minSubscription
         new BN("500000000000"), // minRedemption
-        new BN("42424242424242"), // maxSubscription
-        new BN("21212121212121"), // maxRedemption
+        new BN(0), // reserved
         largeAllowlist.slice(0, 50), // first 50 for allowlist
         largeAllowlist.slice(50, 100), // last 50 for blocklist
       );
@@ -459,8 +449,6 @@ describe("policy_deser", () => {
       expect(decoded.allowlist?.length).toEqual(50);
       expect(decoded.blocklist?.length).toEqual(50);
       expect(decoded.maxCap.toString()).toEqual("999999999999999999");
-      expect(decoded.maxSubscription.toString()).toEqual("42424242424242");
-      expect(decoded.maxRedemption.toString()).toEqual("21212121212121");
     });
 
     it("should produce consistent encoding results", () => {
@@ -469,7 +457,6 @@ describe("policy_deser", () => {
         new BN(1000000),
         new BN(100),
         new BN(50),
-        new BN(0),
         new BN(0),
         [new PublicKey("11111111111111111111111111111112")],
         null,

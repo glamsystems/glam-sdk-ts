@@ -4770,16 +4770,11 @@
     },
     {
       "code": 6015,
-      "name": "AmountAboveMaximum",
-      "msg": "Amount exceeds maximum threshold"
-    },
-    {
-      "code": 6016,
       "name": "InsufficientEscrowBalance",
       "msg": "Insufficient escrow balance for fee burn"
     },
     {
-      "code": 6017,
+      "code": 6016,
       "name": "InvalidAuthority",
       "msg": "Invalid authority"
     }
@@ -5477,18 +5472,6 @@
             }
           },
           {
-            "name": "max_subscription",
-            "type": {
-              "option": "u64"
-            }
-          },
-          {
-            "name": "max_redemption",
-            "type": {
-              "option": "u64"
-            }
-          },
-          {
             "name": "allowlist",
             "type": {
               "option": {
@@ -5529,11 +5512,7 @@
             "type": "u64"
           },
           {
-            "name": "max_subscription",
-            "type": "u64"
-          },
-          {
-            "name": "max_redemption",
+            "name": "reserved",
             "type": "u64"
           },
           {
