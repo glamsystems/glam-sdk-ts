@@ -4,7 +4,6 @@ export * from "./blockhash";
 export * from "./computeBudget";
 export * from "./evm";
 export * from "./common";
-export * from "./glamApi";
 export * from "./glamPDAs";
 export * from "./lookupTables";
 export * from "./rpc";

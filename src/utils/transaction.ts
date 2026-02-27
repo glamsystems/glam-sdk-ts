@@ -82,18 +82,19 @@ export const getSimulationResult = async (
     ...instructions,
   ];
 
-  const testTx = new VersionedTransaction(
-    new TransactionMessage({
-      instructions: testIxs,
-      payerKey: payer,
-      // RecentBlockhash can by any public key during simulation
-      // since 'replaceRecentBlockhash' is set to 'true' below
-      recentBlockhash: PublicKey.default.toString(),
-    }).compileToV0Message(lookupTables),
-  );
-
-  const serializedTx = Buffer.from(testTx.serialize()).toString("base64");
+  let serializedTx;
   try {
+    const testTx = new VersionedTransaction(
+      new TransactionMessage({
+        instructions: testIxs,
+        payerKey: payer,
+        // RecentBlockhash can by any public key during simulation
+        // since 'replaceRecentBlockhash' is set to 'true' below
+        recentBlockhash: PublicKey.default.toString(),
+      }).compileToV0Message(lookupTables),
+    );
+    serializedTx = Buffer.from(testTx.serialize()).toString("base64");
+
     const rpcResponse = await connection.simulateTransaction(testTx, {
       replaceRecentBlockhash: true,
       sigVerify: false,

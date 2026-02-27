@@ -1114,9 +1114,7 @@ export class PriceClient {
     );
 
     const possibleShareAtaAccountsInfo =
-      await this.base.connection.getMultipleAccountsInfo(
-        possibleShareAtas,
-      );
+      await this.base.connection.getMultipleAccountsInfo(possibleShareAtas);
     const shareAtas: typeof possibleShareAtas = [];
     const shareMints: typeof allKvaultMints = [];
     const kvaultStates: typeof allKvaultStates = [];

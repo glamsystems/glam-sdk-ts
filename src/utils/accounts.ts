@@ -21,7 +21,6 @@ import {
   unpackMint,
 } from "@solana/spl-token";
 import { PkMap } from "./pkmap";
-import { fetchGlamLookupTableAccounts } from "./glamApi";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { getProgramAccounts } from "./rpc";
 
@@ -284,11 +283,6 @@ export async function findGlamLookupTables(
   vaultPda: PublicKey,
   connection: Connection,
 ): Promise<AddressLookupTableAccount[]> {
-  const glamLookupTableAccounts = await fetchGlamLookupTableAccounts(statePda);
-  if (glamLookupTableAccounts.length > 0) {
-    return glamLookupTableAccounts;
-  }
-
   // Fetch lookup table accounts owned by the ALT program with filters
   // This is very likely to hit the RPC error "Request deprioritized due to number of accounts requested. Slow down requests or add filters to narrow down results"
   const accounts = await getProgramAccounts(connection, ALT_PROGRAM_ID, {
@@ -303,7 +297,7 @@ export async function findGlamLookupTables(
       },
       { memcmp: { offset: 56, bytes: statePda.toBase58() } }, // 1st entry: state
       { memcmp: { offset: 88, bytes: vaultPda.toBase58() } }, // 2nd entry: vault
-      { memcmp: { offset: 120, bytes: GLAM_CONFIG_PROGRAM.toBase58() } }, // 3st entry: global config program
+      { memcmp: { offset: 120, bytes: GLAM_CONFIG_PROGRAM.toBase58() } }, // 3rd entry: global config program
     ],
   });
 

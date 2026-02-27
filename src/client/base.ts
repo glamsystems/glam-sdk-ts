@@ -23,6 +23,7 @@ import { fetchAddressLookupTableAccounts } from "../utils/lookupTables";
 import {
   fetchMintAndTokenProgram,
   fetchMintsAndTokenPrograms,
+  findGlamLookupTables,
   getTokenAccountsByOwner,
 } from "../utils/accounts";
 import {
@@ -74,7 +75,6 @@ import {
   getVaultPda,
 } from "../utils/glamPDAs";
 import { TokenMetadata, unpack } from "@solana/spl-token-metadata";
-import { fetchGlamLookupTableAccounts } from "../utils/glamApi";
 import { JupiterApiClient, PkMap } from "../utils";
 
 const LOOKUP_TABLES = [
@@ -290,8 +290,10 @@ export class BaseClient {
 
     // Fetch GLAM specific lookup tables only if vault state has been set
     if (this.isVaultConnected) {
-      const glamLookupTableAccounts = await fetchGlamLookupTableAccounts(
+      const glamLookupTableAccounts = await findGlamLookupTables(
         this.statePda,
+        this.vaultPda,
+        this.connection,
       );
       lookupTableAccounts.push(...glamLookupTableAccounts);
     }
