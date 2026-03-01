@@ -931,6 +931,294 @@ export type ExtKamino = {
       ]
     },
     {
+      "name": "lendingFlashBorrowReserveLiquidity",
+      "discriminator": [
+        216,
+        48,
+        26,
+        198,
+        100,
+        238,
+        23,
+        248
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "lendingMarket"
+        },
+        {
+          "name": "lendingMarketAuthority"
+        },
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "reserveLiquidityMint"
+        },
+        {
+          "name": "reserveSourceLiquidity",
+          "writable": true
+        },
+        {
+          "name": "userDestinationLiquidity",
+          "writable": true
+        },
+        {
+          "name": "reserveLiquidityFeeReceiver",
+          "writable": true
+        },
+        {
+          "name": "referrerTokenState",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "referrerAccount",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "instructionSysvarAccount"
+        },
+        {
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidityAmount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "lendingFlashRepayReserveLiquidity",
+      "discriminator": [
+        138,
+        218,
+        62,
+        231,
+        28,
+        59,
+        222,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "lendingMarket"
+        },
+        {
+          "name": "lendingMarketAuthority"
+        },
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "reserveLiquidityMint"
+        },
+        {
+          "name": "reserveDestinationLiquidity",
+          "writable": true
+        },
+        {
+          "name": "userSourceLiquidity",
+          "writable": true
+        },
+        {
+          "name": "reserveLiquidityFeeReceiver",
+          "writable": true
+        },
+        {
+          "name": "referrerTokenState",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "referrerAccount",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "instructionSysvarAccount"
+        },
+        {
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidityAmount",
+          "type": "u64"
+        },
+        {
+          "name": "borrowInstructionIndex",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "lendingInitObligation",
       "discriminator": [
         188,

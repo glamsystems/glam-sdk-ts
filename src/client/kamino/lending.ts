@@ -726,6 +726,107 @@ class TxBuilder extends BaseTxBuilder<KaminoLendingClient> {
     return await this.client.base.intoVersionedTransaction(tx, txOptions);
   }
 
+  public async flashBorrowReserveLiquidityTx(
+    market: PublicKey,
+    asset: PublicKey,
+    amount: BN,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    if (!this.client.base.staging) {
+      throw new Error(
+        "flashBorrowReserveLiquidityTx is only available in staging mode",
+      );
+    }
+
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const vault = this.client.base.vaultPda;
+    const reserve = await this.client.findAndParseReserve(market, asset);
+
+    const { tokenProgram } = await fetchMintAndTokenProgram(
+      this.client.base.provider.connection,
+      asset,
+    );
+    const userDestinationLiquidity = this.client.base.getVaultAta(
+      asset,
+      tokenProgram,
+    );
+    const createAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      glamSigner,
+      userDestinationLiquidity,
+      vault,
+      asset,
+      tokenProgram,
+    );
+
+    const ix = await this.client.base.extKaminoProgram.methods
+      // @ts-expect-error staging only
+      .lendingFlashBorrowReserveLiquidity(amount)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        lendingMarket: market,
+        lendingMarketAuthority: this.client.getMarketAuthority(market),
+        reserve: reserve.getAddress(),
+        reserveLiquidityMint: asset,
+        reserveSourceLiquidity: reserve.liquidity.supplyVault,
+        userDestinationLiquidity,
+        reserveLiquidityFeeReceiver: reserve.liquidityFeeReceiver,
+        referrerTokenState: null,
+        referrerAccount: null,
+        instructionSysvarAccount: SYSVAR_INSTRUCTIONS_PUBKEY,
+        tokenProgram,
+      })
+      .instruction();
+
+    const tx = this.build([createAtaIx, ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async flashRepayReserveLiquidityTx(
+    market: PublicKey,
+    asset: PublicKey,
+    amount: BN,
+    borrowInstructionIndex: number,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    if (!this.client.base.staging) {
+      throw new Error(
+        "flashRepayReserveLiquidityTx is only available in staging mode",
+      );
+    }
+
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const reserve = await this.client.findAndParseReserve(market, asset);
+
+    const { tokenProgram } = await fetchMintAndTokenProgram(
+      this.client.base.provider.connection,
+      asset,
+    );
+
+    const ix = await this.client.base.extKaminoProgram.methods
+      // @ts-expect-error staging only
+      .lendingFlashRepayReserveLiquidity(amount, borrowInstructionIndex)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        lendingMarket: market,
+        lendingMarketAuthority: this.client.getMarketAuthority(market),
+        reserve: reserve.getAddress(),
+        reserveLiquidityMint: asset,
+        reserveDestinationLiquidity: reserve.liquidity.supplyVault,
+        userSourceLiquidity: this.client.base.getVaultAta(asset, tokenProgram),
+        reserveLiquidityFeeReceiver: reserve.liquidityFeeReceiver,
+        referrerTokenState: null,
+        referrerAccount: null,
+        instructionSysvarAccount: SYSVAR_INSTRUCTIONS_PUBKEY,
+        tokenProgram,
+      })
+      .instruction();
+
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
   public async repayIxs(
     market: PublicKey,
     asset: PublicKey,
@@ -890,6 +991,58 @@ export class KaminoLendingClient {
     const tx = await this.txBuilder.requestElevationGroupTx(
       new PublicKey(market),
       elevationGroup,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  /**
+   * Flash borrows liquidity from a reserve. Must be paired with
+   * flashRepayReserveLiquidity in the same transaction.
+   */
+  public async flashBorrowReserveLiquidity(
+    market: PublicKey | string,
+    asset: PublicKey | string,
+    amount: BN | number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    if (!this.base.staging) {
+      throw new Error(
+        "flashBorrowReserveLiquidity is only available in staging mode",
+      );
+    }
+
+    const tx = await this.txBuilder.flashBorrowReserveLiquidityTx(
+      new PublicKey(market),
+      new PublicKey(asset),
+      new BN(amount),
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  /**
+   * Flash repays liquidity to a reserve. Must be paired with a prior
+   * flashBorrowReserveLiquidity in the same transaction.
+   */
+  public async flashRepayReserveLiquidity(
+    market: PublicKey | string,
+    asset: PublicKey | string,
+    amount: BN | number,
+    borrowInstructionIndex: number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    if (!this.base.staging) {
+      throw new Error(
+        "flashRepayReserveLiquidity is only available in staging mode",
+      );
+    }
+
+    const tx = await this.txBuilder.flashRepayReserveLiquidityTx(
+      new PublicKey(market),
+      new PublicKey(asset),
+      new BN(amount),
+      borrowInstructionIndex,
       txOptions,
     );
     return await this.base.sendAndConfirm(tx);
