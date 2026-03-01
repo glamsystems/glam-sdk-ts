@@ -107,7 +107,8 @@ async function getProgramAccountsV2Helius(
       });
     }
 
-    paginationKey = result.paginationKey;
+    paginationKey =
+      result.accounts.length > 0 ? result.paginationKey : null;
   } while (paginationKey);
 
   return allAccounts;
