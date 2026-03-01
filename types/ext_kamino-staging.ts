@@ -1459,6 +1459,114 @@ export type ExtKamino = {
       ]
     },
     {
+      "name": "lendingRequestElevationGroup",
+      "discriminator": [
+        162,
+        119,
+        197,
+        54,
+        246,
+        84,
+        55,
+        153
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        },
+        {
+          "name": "lendingMarket"
+        }
+      ],
+      "args": [
+        {
+          "name": "elevationGroup",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "lendingWithdrawObligationCollateralAndRedeemReserveCollateralV2",
       "discriminator": [
         217,

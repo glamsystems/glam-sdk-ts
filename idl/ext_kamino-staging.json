@@ -1453,6 +1453,114 @@
       ]
     },
     {
+      "name": "lending_request_elevation_group",
+      "discriminator": [
+        162,
+        119,
+        197,
+        54,
+        246,
+        84,
+        55,
+        153
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        }
+      ],
+      "args": [
+        {
+          "name": "elevation_group",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "lending_withdraw_obligation_collateral_and_redeem_reserve_collateral_v2",
       "discriminator": [
         217,

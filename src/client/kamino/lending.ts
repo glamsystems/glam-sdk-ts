@@ -696,6 +696,36 @@ class TxBuilder extends BaseTxBuilder<KaminoLendingClient> {
     return await this.client.base.intoVersionedTransaction(tx, txOptions);
   }
 
+  public async requestElevationGroupTx(
+    market: PublicKey,
+    elevationGroup: number,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    if (!this.client.base.staging) {
+      throw new Error(
+        "requestElevationGroupTx is only available in staging mode",
+      );
+    }
+
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const vault = this.client.base.vaultPda;
+    const obligation = this.client.getObligationPda(vault, market);
+
+    const ix = await this.client.base.extKaminoProgram.methods
+      // @ts-expect-error staging only
+      .lendingRequestElevationGroup(elevationGroup)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        obligation,
+        lendingMarket: market,
+      })
+      .instruction();
+
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
   public async repayIxs(
     market: PublicKey,
     asset: PublicKey,
@@ -844,6 +874,28 @@ export class KaminoLendingClient {
   }
 
   /**
+   * Requests an elevation group for an obligation.
+   */
+  public async requestElevationGroup(
+    market: PublicKey | string,
+    elevationGroup: number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    if (!this.base.staging) {
+      throw new Error(
+        "requestElevationGroup is only available in staging mode",
+      );
+    }
+
+    const tx = await this.txBuilder.requestElevationGroupTx(
+      new PublicKey(market),
+      elevationGroup,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  /**
    * Repays asset to the lending market.
    */
   public async repay(
@@ -948,9 +1000,7 @@ export class KaminoLendingClient {
     }
 
     const reserveAccounts =
-      await this.base.connection.getMultipleAccountsInfo(
-        reservesToFetch,
-      );
+      await this.base.connection.getMultipleAccountsInfo(reservesToFetch);
     if (reserveAccounts.some((a) => !a)) {
       throw new Error("Not all reserves can be found");
     }
