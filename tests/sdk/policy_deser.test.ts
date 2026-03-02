@@ -423,6 +423,44 @@ describe("policy_deser", () => {
 
       expect(encoded1.equals(encoded2)).toBeTruthy();
     });
+
+    it("should encode and decode with orderPriceToleranceBps when staging=true", () => {
+      const policy = new DriftProtocolPolicy([0, 1], [10], [], 500);
+
+      const encoded = policy.encode(true);
+      const decoded = DriftProtocolPolicy.decode(encoded, true);
+
+      expect(decoded.spotMarketsAllowlist).toEqual([0, 1]);
+      expect(decoded.perpMarketsAllowlist).toEqual([10]);
+      expect(decoded.borrowAllowlist).toEqual([]);
+      expect(decoded.orderPriceToleranceBps).toEqual(500);
+    });
+
+    it("should exclude orderPriceToleranceBps when staging=false", () => {
+      const policy = new DriftProtocolPolicy([0], [], [], 500);
+
+      const encodedStaging = policy.encode(true);
+      const encodedProd = policy.encode(false);
+
+      // Staging buffer should be 2 bytes larger (u16 for orderPriceToleranceBps)
+      expect(encodedStaging.length).toEqual(encodedProd.length + 2);
+
+      // Decoding production buffer should default orderPriceToleranceBps to 0
+      const decoded = DriftProtocolPolicy.decode(encodedProd, false);
+      expect(decoded.orderPriceToleranceBps).toEqual(0);
+    });
+
+    it("should decode old staging data without orderPriceToleranceBps when staging=true", () => {
+      // Encode without orderPriceToleranceBps (production format)
+      const policy = new DriftProtocolPolicy([0, 1], [10], []);
+      const encodedProd = policy.encode(false);
+
+      // Staging decode should handle missing field gracefully
+      const decoded = DriftProtocolPolicy.decode(encodedProd, true);
+      expect(decoded.spotMarketsAllowlist).toEqual([0, 1]);
+      expect(decoded.perpMarketsAllowlist).toEqual([10]);
+      expect(decoded.orderPriceToleranceBps).toEqual(0);
+    });
   });
 
   describe("Cross-compatibility", () => {

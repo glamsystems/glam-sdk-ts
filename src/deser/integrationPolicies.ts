@@ -176,13 +176,13 @@ export class DriftProtocolPolicy {
     vec(u16(), "spotMarketsAllowlist"),
     vec(u16(), "perpMarketsAllowlist"),
     vec(publicKey(), "borrowAllowlist"),
-    u16("orderPriceToleranceBps"),
   ]);
 
-  static _legacyLayout = struct([
+  static _stagingLayout = struct([
     vec(u16(), "spotMarketsAllowlist"),
     vec(u16(), "perpMarketsAllowlist"),
     vec(publicKey(), "borrowAllowlist"),
+    u16("orderPriceToleranceBps"),
   ]);
 
   constructor(
@@ -197,44 +197,49 @@ export class DriftProtocolPolicy {
     this.orderPriceToleranceBps = orderPriceToleranceBps;
   }
 
-  public static decode(buffer: Buffer<ArrayBufferLike>): DriftProtocolPolicy {
-    try {
-      const data = DriftProtocolPolicy._layout.decode(
-        buffer,
-      ) as DriftProtocolPolicy;
-      return new DriftProtocolPolicy(
-        data.spotMarketsAllowlist,
-        data.perpMarketsAllowlist,
-        data.borrowAllowlist,
-        data.orderPriceToleranceBps ?? 0,
-      );
-    } catch {
-      // Legacy format without orderPriceToleranceBps
-      const data = DriftProtocolPolicy._legacyLayout.decode(
-        buffer,
-      ) as DriftProtocolPolicy;
-      return new DriftProtocolPolicy(
-        data.spotMarketsAllowlist,
-        data.perpMarketsAllowlist,
-        data.borrowAllowlist,
-        0,
-      );
+  public static decode(
+    buffer: Buffer<ArrayBufferLike>,
+    staging = false,
+  ): DriftProtocolPolicy {
+    if (staging) {
+      try {
+        const data = DriftProtocolPolicy._stagingLayout.decode(
+          buffer,
+        ) as DriftProtocolPolicy;
+        return new DriftProtocolPolicy(
+          data.spotMarketsAllowlist,
+          data.perpMarketsAllowlist,
+          data.borrowAllowlist,
+          data.orderPriceToleranceBps ?? 0,
+        );
+      } catch {
+        // Backward compat: old staging data without orderPriceToleranceBps
+        // falls through to the base layout decoding
+      }
     }
+    const data = DriftProtocolPolicy._layout.decode(
+      buffer,
+    ) as DriftProtocolPolicy;
+    return new DriftProtocolPolicy(
+      data.spotMarketsAllowlist,
+      data.perpMarketsAllowlist,
+      data.borrowAllowlist,
+      0,
+    );
   }
 
-  public encode(): Buffer {
-    // Calculate buffer size needed
-    // 4 bytes for spot markets length + 2 bytes per spot market
-    // 4 bytes for perp markets length + 2 bytes per perp market
-    // 4 bytes for borrow allowlist length + 32 bytes per pubkey
-    // 2 bytes for orderPriceToleranceBps
+  public encode(staging = false): Buffer {
     const spotMarketsSize = 4 + this.spotMarketsAllowlist.length * 2;
     const perpMarketsSize = 4 + this.perpMarketsAllowlist.length * 2;
     const borrowAllowlistSize = 4 + this.borrowAllowlist.length * 32;
-    const totalSize =
-      spotMarketsSize + perpMarketsSize + borrowAllowlistSize + 2;
+    const baseSize = spotMarketsSize + perpMarketsSize + borrowAllowlistSize;
 
-    const buffer = Buffer.alloc(totalSize);
+    if (staging) {
+      const buffer = Buffer.alloc(baseSize + 2); // +2 for orderPriceToleranceBps
+      DriftProtocolPolicy._stagingLayout.encode(this, buffer);
+      return buffer;
+    }
+    const buffer = Buffer.alloc(baseSize);
     DriftProtocolPolicy._layout.encode(this, buffer);
     return buffer;
   }

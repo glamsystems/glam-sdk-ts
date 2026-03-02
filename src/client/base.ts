@@ -794,7 +794,7 @@ export class BaseClient {
   public async fetchProtocolPolicy<T>(
     integProgramId: PublicKey,
     protocolBitflag: number,
-    policyClass: { decode(buffer: Buffer): T },
+    policyClass: { decode(buffer: Buffer, staging?: boolean): T },
   ): Promise<T | null> {
     const stateAccount = await this.fetchStateAccount();
     const integrationPolicy = stateAccount.integrationAcls?.find((acl) =>
@@ -804,7 +804,7 @@ export class BaseClient {
       (policy: any) => policy.protocolBitflag === protocolBitflag,
     )?.data;
     if (policyData) {
-      return policyClass.decode(policyData);
+      return policyClass.decode(policyData, this.staging);
     }
     return null;
   }
