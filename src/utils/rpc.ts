@@ -29,13 +29,14 @@ export async function getProgramAccounts(
   programId: PublicKey,
   config: GetProgramAccountsConfig & HeliusGetProgramAccountsV2Config,
 ): Promise<GetProgramAccountsResponse> {
-  if (isHeliusRpc(connection.rpcEndpoint)) {
-    return await getProgramAccountsV2Helius(
-      connection.rpcEndpoint,
-      programId,
-      config,
-    );
-  }
+  // 2026-03-02: Helius getProgramAccountsV2 cannot find ALTs, disable it for now
+  // if (isHeliusRpc(connection.rpcEndpoint)) {
+  //   return await getProgramAccountsV2Helius(
+  //     connection.rpcEndpoint,
+  //     programId,
+  //     config,
+  //   );
+  // }
   return await getProgramAccountsWithRetry(connection, programId, config);
 }
 
@@ -107,8 +108,7 @@ async function getProgramAccountsV2Helius(
       });
     }
 
-    paginationKey =
-      result.accounts.length > 0 ? result.paginationKey : null;
+    paginationKey = result.accounts.length > 0 ? result.paginationKey : null;
   } while (paginationKey);
 
   return allAccounts;

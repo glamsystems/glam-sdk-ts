@@ -416,10 +416,11 @@ export class BaseClient {
       const errTx = await this.connection.getTransaction(txSig, {
         maxSupportedTransactionVersion: 0,
       });
+      const logs = errTx?.meta?.logMessages || [];
       throw new GlamError(
-        parseProgramLogs(errTx?.meta?.logMessages),
-        errTx?.meta?.err || undefined,
-        errTx?.meta?.logMessages || [],
+        parseProgramLogs(logs, this.staging),
+        errTx?.meta?.err,
+        logs,
       );
     }
     return txSig;

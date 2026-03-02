@@ -9,55 +9,44 @@ import {
   RpcResponseAndContext,
   SimulatedTransactionResponse,
 } from "@solana/web3.js";
-import { getGlamProtocolIdl } from "../glamExports";
-
-const JUPITER_SWAP_ERRORS: Record<number, string> = {
-  6001: "Jupiter swap failed: Slippage tolerance exceeded",
-  6008: "Jupiter swap failed: Not enough account keys",
-  6014: "Jupiter swap failed: Incorrect token program ID",
-  6024: "Jupiter swap failed: Insufficient funds",
-  6025: "Jupiter swap failed: Invalid token account",
-};
+import { resolveErrorCode, extractFailedProgramId } from "../error";
 
 /**
- * Parses program logs to extract error message
+ * Parses program logs to extract error message.
+ * Checks in order: Anchor "Error Message:", insufficient funds/lamports,
+ * and custom program error codes (resolved via IDL when possible).
+ * Returns "Unknown error" if no recognizable error pattern is found.
  */
-export function parseProgramLogs(logs?: null | string[]): string {
-  // "Error Message:" indicates an anchor program error
-  // Other messages are manually sourced & handled
-  const errorMsgLog = (logs || []).find(
+export function parseProgramLogs(logs: string[], staging: boolean): string {
+  if (logs.length === 0) return "Invalid program logs";
+
+  // Anchor "Error Message:" from program logs
+  const errorMsgLog = logs.find((log) => log.includes("Error Message:"));
+  if (errorMsgLog) {
+    return errorMsgLog.split("Error Message:")[1].trim();
+  }
+
+  // "insufficient funds" / "insufficient lamports" from logs
+  const fundsLog = logs.find(
     (log) =>
-      log.includes("Error Message:") ||
       log.includes("Error: insufficient funds") ||
       log.includes("Transfer: insufficient lamports"),
   );
+  if (fundsLog) return fundsLog;
 
-  if (errorMsgLog) {
-    if (errorMsgLog.includes("Error Message:")) {
-      return errorMsgLog.split("Error Message:")[1].trim();
-    }
-    return errorMsgLog;
-  }
-
-  // Match the following pattern to find Jupiter error code in logs
-  // "Program JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 failed: custom program error: 0x1788"
-  const jupiterErrorLog = (logs || []).find(
-    (log) =>
-      log.includes("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4") &&
-      log.includes("custom program error:"),
+  // Custom program error code in logs (covers GLAM, Jupiter, etc.)
+  const customErrorLog = logs.find((log) =>
+    log.includes("custom program error:"),
   );
-
-  if (jupiterErrorLog) {
-    const match = jupiterErrorLog.match(
+  if (customErrorLog) {
+    const match = customErrorLog.match(
       /custom program error: (0x[0-9a-fA-F]+)/,
     );
     if (match) {
-      const errorCodeHex = match[1];
-      const errorCode = parseInt(errorCodeHex, 16);
-      const jupiterError = JUPITER_SWAP_ERRORS[errorCode];
-      if (jupiterError) {
-        return jupiterError;
-      }
+      const failedProgramId = extractFailedProgramId(logs);
+      const resolved = resolveErrorCode(match[1], staging, failedProgramId);
+      if (resolved) return resolved;
+      return `Program error: ${match[1]}`;
     }
   }
 
@@ -114,34 +103,28 @@ const getErrorFromRpcResponse = (
   rpcResponse: RpcResponseAndContext<SimulatedTransactionResponse>,
   staging: boolean,
 ) => {
-  // Note: `confirmTransaction` does not throw an error if the confirmation does not succeed,
-  // but rather a `TransactionError` object. so we handle that here
-
   const error = rpcResponse.value.err;
-  if (error) {
-    // Can be a string or an object (literally just {}, no further typing is provided by the library)
-    // https://github.com/solana-labs/solana-web3.js/blob/4436ba5189548fc3444a9f6efb51098272926945/packages/library-legacy/src/connection.ts#L2930
-    if (typeof error === "object") {
-      const errorKeys = Object.keys(error);
-      if (errorKeys.length === 1) {
-        if (errorKeys[0] !== "InstructionError") {
-          throw new Error(`Unknown RPC error: ${error}`);
-        }
-        // @ts-ignore due to missing typing information mentioned above.
-        const instructionError = error["InstructionError"];
-        // An instruction error is a custom program error and looks like: [1, {"Custom": 1}]
-        // See also https://solana.stackexchange.com/a/931/294
-        const customErrorCode = instructionError[1]["Custom"];
-        const { errors: glamErrors } = getGlamProtocolIdl(staging);
-        const glamError = glamErrors.find((e) => e.code === customErrorCode);
-        if (glamError?.msg) {
-          throw new Error(glamError.msg);
-        }
-        // Unrecognized error code, try to parse program logs to get error message
-        const errMsg = parseProgramLogs(rpcResponse.value.logs);
-        throw new Error(errMsg);
+  if (!error) return;
+
+  if (typeof error === "object") {
+    const errorKeys = Object.keys(error);
+    if (errorKeys.length === 1) {
+      if (errorKeys[0] !== "InstructionError") {
+        throw new Error(`Unknown RPC error: ${JSON.stringify(error)}`);
       }
+      // @ts-ignore due to missing typing information
+      const instructionError = error["InstructionError"];
+      const customErrorCode = instructionError?.[1]?.["Custom"];
+      if (customErrorCode !== undefined) {
+        const failedProgramId = extractFailedProgramId(rpcResponse.value.logs);
+        const msg = resolveErrorCode(customErrorCode, staging, failedProgramId);
+        if (msg) throw new Error(msg);
+      }
+      // Fallback to log-based parsing
+      throw new Error(parseProgramLogs(rpcResponse.value.logs || [], staging));
     }
-    throw Error("Unknown error");
+    throw new Error(`Unknown RPC error: ${JSON.stringify(error)}`);
   }
+
+  throw new Error(typeof error === "string" ? error : "Unknown error");
 };
