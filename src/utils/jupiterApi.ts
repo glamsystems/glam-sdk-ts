@@ -258,6 +258,7 @@ export class JupiterApiClient {
   async getSwapInstructions(
     quoteResponse: any,
     from: PublicKey,
+    trackingAccount?: PublicKey,
   ): Promise<SwapInstructions> {
     if (!this.isCustomSwapApi && !this.apiKey) {
       throw new Error("Jupiter API key must be set");
@@ -275,6 +276,9 @@ export class JupiterApiClient {
       body: JSON.stringify({
         quoteResponse,
         userPublicKey: from.toBase58(),
+        ...(trackingAccount && {
+          trackingAccount: trackingAccount.toBase58(),
+        }),
       }),
     });
 

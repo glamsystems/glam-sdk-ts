@@ -33,6 +33,7 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
       quoteParams?: QuoteParams;
       quoteResponse?: QuoteResponse;
       swapInstructions?: SwapInstructions;
+      trackingAccount?: PublicKey;
     },
     glamSigner: PublicKey,
   ): Promise<[TransactionInstruction[], PublicKey[]]> {
@@ -67,6 +68,7 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
       swapInstructions = await this.client.jupApi.getSwapInstructions(
         resolvedQuoteResponse,
         glamVault,
+        options.trackingAccount,
       );
     } else {
       // If swapInstructions is provided, we need to extract mints and amount from quoteParams or quoteResponse
@@ -135,6 +137,7 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
       quoteParams?: QuoteParams;
       quoteResponse?: QuoteResponse;
       swapInstructions?: SwapInstructions;
+      trackingAccount?: PublicKey;
     },
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
@@ -205,6 +208,7 @@ export class JupiterSwapClient {
       quoteParams?: QuoteParams;
       quoteResponse?: QuoteResponse;
       swapInstructions?: SwapInstructions;
+      trackingAccount?: PublicKey;
     },
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
