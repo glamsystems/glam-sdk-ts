@@ -696,8 +696,54 @@ class TxBuilder extends BaseTxBuilder<KaminoLendingClient> {
     return await this.client.base.intoVersionedTransaction(tx, txOptions);
   }
 
+  public async requestElevationGroupIxs(
+    lendingMarket: PublicKey,
+    elevationGroup: number,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction[]> {
+    const vault = this.client.base.vaultPda;
+    const obligation = this.client.getObligationPda(vault, lendingMarket);
+
+    // Find all reserve keys
+    const { activeDeposits, activeBorrows } =
+      await this.client.fetchAndParseObligation(obligation);
+    const reserveKeys = [
+      ...activeDeposits.map(({ depositReserve }) => depositReserve),
+      ...activeBorrows.map(({ borrowReserve }) => borrowReserve),
+    ];
+
+    // Build refresh ixs
+    const reserves = await this.client.fetchAndParseReserves(reserveKeys);
+    const refreshReservesIx = this.refreshReservesBatchIx(reserves, false);
+    const refreshObligationIx = this.refreshObligationIx({
+      lendingMarket,
+      obligation,
+      reserves: reserveKeys,
+    });
+
+    const ix = await this.client.base.extKaminoProgram.methods
+      // @ts-expect-error staging only
+      .lendingRequestElevationGroup(elevationGroup)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        obligation,
+        lendingMarket,
+      })
+      .remainingAccounts(
+        reserveKeys.map((pubkey) => ({
+          pubkey,
+          isSigner: false,
+          isWritable: false,
+        })),
+      )
+      .instruction();
+
+    return [refreshReservesIx, refreshObligationIx, ix];
+  }
+
   public async requestElevationGroupTx(
-    market: PublicKey,
+    lendingMarket: PublicKey,
     elevationGroup: number,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
@@ -708,21 +754,13 @@ class TxBuilder extends BaseTxBuilder<KaminoLendingClient> {
     }
 
     const glamSigner = txOptions.signer || this.client.base.signer;
-    const vault = this.client.base.vaultPda;
-    const obligation = this.client.getObligationPda(vault, market);
+    const ixs = await this.requestElevationGroupIxs(
+      lendingMarket,
+      elevationGroup,
+      glamSigner,
+    );
 
-    const ix = await this.client.base.extKaminoProgram.methods
-      // @ts-expect-error staging only
-      .lendingRequestElevationGroup(elevationGroup)
-      .accounts({
-        glamState: this.client.base.statePda,
-        glamSigner,
-        obligation,
-        lendingMarket: market,
-      })
-      .instruction();
-
-    const tx = this.build([ix], txOptions);
+    const tx = this.build(ixs, txOptions);
     return await this.client.base.intoVersionedTransaction(tx, txOptions);
   }
 
