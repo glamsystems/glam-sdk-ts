@@ -29,6 +29,8 @@ export const queryKeys = {
       ["global", "drift-markets", cluster] as const,
     kaminoMarkets: (cluster: string) =>
       ["global", "kamino-markets", cluster] as const,
+    kaminoVaults: (cluster: string) =>
+      ["global", "kamino-vaults", cluster] as const,
     priorityFee: (cluster: string) =>
       ["global", "priority-fee", cluster] as const,
   },

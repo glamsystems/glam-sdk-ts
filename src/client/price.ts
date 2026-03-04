@@ -809,6 +809,7 @@ export class PriceClient {
           cumulativeFundingRateLong,
           cumulativeFundingRateShort,
         );
+        const baseAssetAmountUi = toUiAmount(perpPosition.baseAssetAmount, 9);
         const { usdPrice, slot } = await this.getTokenPrice(
           USDC,
           tokenPricesMap,
@@ -825,6 +826,10 @@ export class PriceClient {
             user: userPda,
             marketIndex,
             marketType: "perp",
+            // Preserve both USD value and signed base size for downstream UIs.
+            usdValueUi: toUiAmount(amount, 6),
+            baseAssetAmount: perpPosition.baseAssetAmount.toString(),
+            baseAssetAmountUi,
           },
         );
         holdings.push(holding);
@@ -858,10 +863,53 @@ export class PriceClient {
         spotMarketsMap,
         perpMarketsMap,
       );
-      const amount = depositor.netShares
-        .mul(aum)
-        .div(dvault.totalShares)
-        .add(depositor.lastWithdrawRequest.value);
+
+      // Deduct accrued management fee from AUM (matches Rust logic)
+      const clockData = accountsDataMap.get(SYSVAR_CLOCK_PUBKEY);
+      const nowTs = new BN(clockData ? clockData.readUInt32LE(32) : 0);
+      let aumPostMgmt = aum;
+      if (dvault.managementFee.gtn(0) && aum.gtn(0)) {
+        const sinceLast = nowTs.sub(dvault.lastFeeUpdateTs);
+        const depositorsAum = aum
+          .mul(dvault.userShares)
+          .div(dvault.totalShares);
+        const mgmtFee = depositorsAum
+          .mul(dvault.managementFee)
+          .div(new BN(1_000_000))
+          .mul(sinceLast)
+          .div(new BN(31_536_000));
+        aumPostMgmt = aum.sub(mgmtFee);
+      }
+
+      // Compute depositor position WITHOUT pending withdrawal (matches Rust logic)
+      const depositorNetShares = depositor.netSharesRebased(dvault.sharesBase);
+      const sharesPosition = depositorNetShares
+        .mul(aumPostMgmt)
+        .div(dvault.totalShares);
+      const pendingWithdrawalValue = depositor.lastWithdrawRequest.value;
+
+      // PnL & fee breakdown (perf fee is computed on shares position only)
+      const costBasis = depositor.netDeposits.add(
+        depositor.cumulativeProfitShareAmount,
+      );
+      const pnlBeforeFees = sharesPosition.sub(costBasis);
+
+      let pendingPerfFee = new BN(0);
+      if (dvault.profitShare > 0) {
+        const hurdleBaseline = costBasis
+          .mul(new BN(dvault.hurdleRate))
+          .div(new BN(1_000_000));
+        if (pnlBeforeFees.gt(hurdleBaseline)) {
+          pendingPerfFee = pnlBeforeFees
+            .mul(new BN(dvault.profitShare))
+            .div(new BN(1_000_000));
+        }
+      }
+
+      // final = shares_position - perf_fee + pending_withdrawal
+      const amount = sharesPosition
+        .sub(pendingPerfFee)
+        .add(pendingWithdrawalValue);
       const { mint, decimals } = dvault.getBaseAsset(spotMarketsMap);
       const { usdPrice, slot } = await this.getTokenPrice(mint, tokenPricesMap);
 
@@ -875,6 +923,9 @@ export class PriceClient {
         {
           vault: dvault.getAddress(),
           depositor: depositor.getAddress(),
+          pnlBeforeFees,
+          pendingPerfFee,
+          profitSharePct: dvault.profitShare / 10_000,
         },
       );
       holdings.push(holding);
@@ -980,12 +1031,17 @@ export class PriceClient {
     priceSource: string,
   ): Promise<Holding[]> {
     const holdings: Holding[] = [];
+    const FRACTION_SCALE = new Decimal(2).pow(60); // U68F60 fixed-point scale
+    const SECONDS_PER_YEAR_KAMINO = 31_556_926;
+    const clockData = accountsDataMap.get(SYSVAR_CLOCK_PUBKEY);
+    const nowTs = clockData ? clockData.readUInt32LE(32) : 0;
+
     for (const [ata, kvaultState] of kvaultAtasAndStates.pkEntries()) {
       const ataData = accountsDataMap.get(ata)!;
 
       const tokenAccount = AccountLayout.decode(ataData);
 
-      let aum = new Decimal(kvaultState.tokenAvailable.toString());
+      let aumAndFees = new Decimal(kvaultState.tokenAvailable.toString());
       kvaultState.validAllocations.map((allocation) => {
         const reserve = reservesMap.get(allocation.reserve)!;
 
@@ -995,13 +1051,44 @@ export class PriceClient {
         const liqAmount = new Decimal(allocation.ctokenAllocation.toString())
           .div(collateralExchangeRate)
           .floor();
-        aum = aum.add(liqAmount);
+        aumAndFees = aumAndFees.add(liqAmount);
       });
 
-      // calculate liquidity token amount
+      // Deduct pending fees from AUM (matches Rust: aum = available + allocated - pending_fees)
+      const pendingFees = new Decimal(kvaultState.pendingFeesSf.toString()).div(FRACTION_SCALE);
+      let vaultAum = aumAndFees.sub(pendingFees);
+
+      const sharesIssued = new Decimal(kvaultState.sharesIssued.toString());
+      if (vaultAum.lte(0) || sharesIssued.lte(0)) {
+        continue; // early return like Rust: if vault_aum == 0 || shares_issued == 0
+      }
+
+      // Management fee: prev_aum * from_bps(mgmt_fee_bps) * since_last / SECONDS_PER_YEAR
+      const prevAum = new Decimal(kvaultState.prevAumSf.toString()).div(FRACTION_SCALE);
+      const sinceLast = Math.max(0, nowTs - kvaultState.lastFeeChargeTimestamp.toNumber());
+
+      let mgmtCharge = new Decimal(0);
+      if (sinceLast > 0) {
+        const mgmtFeeRate = new Decimal(kvaultState.managementFeeBps.toString()).div(10_000);
+        mgmtCharge = prevAum
+          .mul(mgmtFeeRate)
+          .mul(sinceLast)
+          .div(SECONDS_PER_YEAR_KAMINO);
+      }
+
+      // Performance fee: from_bps(perf_fee_bps) * max(0, vault_aum - prev_aum)
+      const earnedInterest = Decimal.max(0, vaultAum.sub(prevAum));
+      const perfCharge = new Decimal(kvaultState.performanceFeeBps.toString())
+        .div(10_000)
+        .mul(earnedInterest);
+
+      // Deduct fees from AUM (matches Rust: vault_aum = vault_aum - mgmt_charge - perf_charge)
+      vaultAum = vaultAum.sub(mgmtCharge).sub(perfCharge);
+
+      // calculate liquidity token amount: shares * vault_aum.floor() / shares_issued
       const amount = new Decimal(tokenAccount.amount.toString())
-        .div(new Decimal(kvaultState.sharesIssued.toString()))
-        .mul(aum)
+        .mul(vaultAum.floor())
+        .div(sharesIssued)
         .floor();
 
       const { usdPrice, slot } = await this.getTokenPrice(
@@ -1018,6 +1105,10 @@ export class PriceClient {
         {
           kaminoVault: kvaultState._address,
           kaminoVaultAta: ata,
+          pendingMgmtFee: mgmtCharge.toFixed(0),
+          pendingPerfFee: perfCharge.toFixed(0),
+          managementFeeBps: kvaultState.managementFeeBps.toNumber(),
+          performanceFeeBps: kvaultState.performanceFeeBps.toNumber(),
         },
       );
       holdings.push(holding);

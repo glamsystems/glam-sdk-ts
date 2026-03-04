@@ -244,6 +244,24 @@ export class DriftVaultDepositor extends Decodable {
   get netShares(): BN {
     return this.vaultShares.sub(this.lastWithdrawRequest.shares);
   }
+
+  /** Rebase shares to match the vault's current shares base. */
+  private rebaseShares(shares: BN, vaultSharesBase: number): BN {
+    if (this.vaultSharesBase === vaultSharesBase) return shares;
+    const expoDiff = vaultSharesBase - this.vaultSharesBase;
+    const divisor = new BN(10).pow(new BN(expoDiff));
+    return shares.div(divisor);
+  }
+
+  /** Net shares rebased to the vault's current shares base. */
+  netSharesRebased(vaultSharesBase: number): BN {
+    const rebased = this.rebaseShares(this.vaultShares, vaultSharesBase);
+    const pendingRebased = this.rebaseShares(
+      this.lastWithdrawRequest.shares,
+      vaultSharesBase,
+    );
+    return rebased.sub(pendingRebased);
+  }
 }
 
 export class DriftVault extends Decodable {
@@ -444,7 +462,7 @@ export class DriftVault extends Decodable {
     const baseAssetAmount = aumScaledUsd
       .mul(new BN(10 ** spotMarket.decimals))
       .div(spotMarket.lastOraclePrice);
-    return baseAssetAmount.sub(this.managerBorrowedValue);
+    return baseAssetAmount.add(this.managerBorrowedValue);
   }
 }
 
