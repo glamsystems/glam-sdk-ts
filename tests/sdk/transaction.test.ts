@@ -13,7 +13,7 @@ describe("parseProgramLogs", () => {
       "Program GLAMpLuXu78TA4ao3DPZvT1zQ7woxoQ8ahdYbhnqY9mP failed: custom program error: 0xbc4",
     ];
     expect(parseProgramLogs(logs, false)).toBe(
-      "The program expected this account to be already initialized.",
+      "The program expected this account to be already initialized",
     );
   });
 
@@ -77,7 +77,7 @@ describe("parseProgramLogs", () => {
       "Program GLAMpLuXu78TA4ao3DPZvT1zQ7woxoQ8ahdYbhnqY9mP failed: custom program error: 0x1770",
     ];
     // "Error Message:" appears first, so it should be returned
-    expect(parseProgramLogs(logs, false)).toBe("Invalid input provided.");
+    expect(parseProgramLogs(logs, false)).toBe("Invalid input provided");
   });
 
   it("should handle custom error code with lowercase hex", () => {
