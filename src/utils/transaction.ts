@@ -23,7 +23,7 @@ export function parseProgramLogs(logs: string[], staging: boolean): string {
   // Anchor "Error Message:" from program logs
   const errorMsgLog = logs.find((log) => log.includes("Error Message:"));
   if (errorMsgLog) {
-    return errorMsgLog.split("Error Message:")[1].trim();
+    return errorMsgLog.split("Error Message:")[1].trim().replace(/\.$/, "");
   }
 
   // "insufficient funds" / "insufficient lamports" from logs

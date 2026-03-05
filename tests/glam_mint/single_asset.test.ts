@@ -275,7 +275,7 @@ describe("single_asset_vault", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("New request is not allowed.");
+      expect(e.message).toBe("New request is not allowed");
     }
 
     const glamMintSupplyAfter = await fetchGlamMintSupply();

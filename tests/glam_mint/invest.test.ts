@@ -170,7 +170,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("Requested action is paused.");
+      expect(e.message).toBe("Requested action is paused");
     }
   });
 
@@ -339,7 +339,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("Requested action is paused.");
+      expect(e.message).toBe("Requested action is paused");
     }
   });
 
@@ -381,7 +381,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("New request is not allowed.");
+      expect(e.message).toBe("New request is not allowed");
     }
 
     const glamMintSupplyAfter = await fetchGlamMintSupply();

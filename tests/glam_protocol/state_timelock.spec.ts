@@ -110,7 +110,7 @@ describe("state_timelock", () => {
       const txSig = await glamClient.timelock.apply();
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toEqual("Timelock still active.");
+      expect(e.message).toEqual("Timelock still active");
     }
   }, 15_000);
 
