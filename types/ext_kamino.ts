@@ -1314,6 +1314,206 @@ export type ExtKamino = {
       ]
     },
     {
+      "name": "lendingLiquidateObligationAndRedeemReserveCollateralV2",
+      "discriminator": [
+        179,
+        45,
+        146,
+        167,
+        246,
+        239,
+        18,
+        242
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        },
+        {
+          "name": "lendingMarket"
+        },
+        {
+          "name": "lendingMarketAuthority"
+        },
+        {
+          "name": "repayReserve",
+          "writable": true
+        },
+        {
+          "name": "repayReserveLiquidityMint"
+        },
+        {
+          "name": "repayReserveLiquiditySupply",
+          "writable": true
+        },
+        {
+          "name": "withdrawReserve",
+          "writable": true
+        },
+        {
+          "name": "withdrawReserveLiquidityMint"
+        },
+        {
+          "name": "withdrawReserveCollateralMint",
+          "writable": true
+        },
+        {
+          "name": "withdrawReserveCollateralSupply",
+          "writable": true
+        },
+        {
+          "name": "withdrawReserveLiquiditySupply",
+          "writable": true
+        },
+        {
+          "name": "withdrawReserveLiquidityFeeReceiver",
+          "writable": true
+        },
+        {
+          "name": "userSourceLiquidity",
+          "writable": true
+        },
+        {
+          "name": "userDestinationCollateral",
+          "writable": true
+        },
+        {
+          "name": "userDestinationLiquidity",
+          "writable": true
+        },
+        {
+          "name": "collateralTokenProgram"
+        },
+        {
+          "name": "repayLiquidityTokenProgram"
+        },
+        {
+          "name": "withdrawLiquidityTokenProgram"
+        },
+        {
+          "name": "instructionSysvarAccount"
+        },
+        {
+          "name": "collateralObligationFarmUserState",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "collateralReserveFarmState",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "debtObligationFarmUserState",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "debtReserveFarmState",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "farmsProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidityAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minAcceptableReceivedLiquidityAmount",
+          "type": "u64"
+        },
+        {
+          "name": "maxAllowedLtvOverridePercent",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "lendingRepayObligationLiquidityV2",
       "discriminator": [
         79,
@@ -3096,6 +3296,11 @@ export type ExtKamino = {
       "name": "protoKaminoLendingPermInit",
       "type": "u64",
       "value": "1"
+    },
+    {
+      "name": "protoKaminoLendingPermLiquidate",
+      "type": "u64",
+      "value": "32"
     },
     {
       "name": "protoKaminoLendingPermRepay",

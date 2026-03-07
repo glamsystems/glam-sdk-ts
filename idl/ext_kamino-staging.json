@@ -1308,6 +1308,206 @@
       ]
     },
     {
+      "name": "lending_liquidate_obligation_and_redeem_reserve_collateral_v2",
+      "discriminator": [
+        179,
+        45,
+        146,
+        167,
+        246,
+        239,
+        18,
+        242
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "obligation",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "lending_market_authority"
+        },
+        {
+          "name": "repay_reserve",
+          "writable": true
+        },
+        {
+          "name": "repay_reserve_liquidity_mint"
+        },
+        {
+          "name": "repay_reserve_liquidity_supply",
+          "writable": true
+        },
+        {
+          "name": "withdraw_reserve",
+          "writable": true
+        },
+        {
+          "name": "withdraw_reserve_liquidity_mint"
+        },
+        {
+          "name": "withdraw_reserve_collateral_mint",
+          "writable": true
+        },
+        {
+          "name": "withdraw_reserve_collateral_supply",
+          "writable": true
+        },
+        {
+          "name": "withdraw_reserve_liquidity_supply",
+          "writable": true
+        },
+        {
+          "name": "withdraw_reserve_liquidity_fee_receiver",
+          "writable": true
+        },
+        {
+          "name": "user_source_liquidity",
+          "writable": true
+        },
+        {
+          "name": "user_destination_collateral",
+          "writable": true
+        },
+        {
+          "name": "user_destination_liquidity",
+          "writable": true
+        },
+        {
+          "name": "collateral_token_program"
+        },
+        {
+          "name": "repay_liquidity_token_program"
+        },
+        {
+          "name": "withdraw_liquidity_token_program"
+        },
+        {
+          "name": "instruction_sysvar_account"
+        },
+        {
+          "name": "collateral_obligation_farm_user_state",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "collateral_reserve_farm_state",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "debt_obligation_farm_user_state",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "debt_reserve_farm_state",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "farms_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidity_amount",
+          "type": "u64"
+        },
+        {
+          "name": "min_acceptable_received_liquidity_amount",
+          "type": "u64"
+        },
+        {
+          "name": "max_allowed_ltv_override_percent",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "lending_repay_obligation_liquidity_v2",
       "discriminator": [
         79,
@@ -3198,6 +3398,11 @@
       "name": "PROTO_KAMINO_LENDING_PERM_INIT",
       "type": "u64",
       "value": "1"
+    },
+    {
+      "name": "PROTO_KAMINO_LENDING_PERM_LIQUIDATE",
+      "type": "u64",
+      "value": "32"
     },
     {
       "name": "PROTO_KAMINO_LENDING_PERM_REPAY",
