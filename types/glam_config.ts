@@ -678,6 +678,9 @@ export type GlamConfig = {
           },
           {
             "name": "chainlinkRwa"
+          },
+          {
+            "name": "chainlinkX"
           }
         ]
       }

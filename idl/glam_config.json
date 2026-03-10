@@ -672,6 +672,9 @@
           },
           {
             "name": "ChainlinkRWA"
+          },
+          {
+            "name": "ChainlinkX"
           }
         ]
       }
