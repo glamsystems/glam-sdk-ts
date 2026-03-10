@@ -99,7 +99,7 @@ class TxBuilder extends BaseTxBuilder<MarinadeClient> {
     // Create and fund the stake account
     const [stakeAccount, createStakeAccountIx] =
       await this.client.stake.createStakeAccount(glamSigner);
-    const initStakeIx = await this.client.base.protocolProgram.methods
+    const initStakeIx = await (this.client.base.protocolProgram.methods as any)
       .stakeInitialize()
       .accounts({
         glamState: this.client.base.statePda,
@@ -117,7 +117,7 @@ class TxBuilder extends BaseTxBuilder<MarinadeClient> {
       .instruction();
 
     // Then set stake authority to the marinade key
-    const ix = await this.client.base.protocolProgram.methods
+    const ix = await (this.client.base.protocolProgram.methods as any)
       .stakeAuthorize(MARINADE_NATIVE_STAKE_AUTHORITY, 0)
       .accounts({
         glamState: this.client.base.statePda,
@@ -221,7 +221,7 @@ class TxBuilder extends BaseTxBuilder<MarinadeClient> {
 
     const postInstructions = deactivate
       ? [
-          await this.client.base.protocolProgram.methods
+          await (this.client.base.protocolProgram.methods as any)
             .stakeDeactivate()
             .accounts({
               glamSigner,

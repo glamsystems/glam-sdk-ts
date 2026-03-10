@@ -280,12 +280,6 @@
           },
           {
             "name": "OracleConfigs"
-          },
-          {
-            "name": "ReduceOnly"
-          },
-          {
-            "name": "AnyLst"
           }
         ]
       }

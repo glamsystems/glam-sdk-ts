@@ -617,6 +617,9 @@
           },
           {
             "name": "Mint"
+          },
+          {
+            "name": "SingleAssetVault"
           }
         ]
       }
@@ -791,12 +794,6 @@
           },
           {
             "name": "OracleConfigs"
-          },
-          {
-            "name": "ReduceOnly"
-          },
-          {
-            "name": "AnyLst"
           }
         ]
       }

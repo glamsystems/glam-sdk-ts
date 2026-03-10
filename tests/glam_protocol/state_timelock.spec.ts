@@ -89,22 +89,6 @@ describe("state_timelock", () => {
     expect(stateModel.integrationAcls?.length).toEqual(0); // not changed due to timelock
   }, 15_000);
 
-  it("Update reduceOnly & anyLst - changes staged due to timelock", async () => {
-    try {
-      const txSig = await glamClient.state.update(
-        { reduceOnly: true, anyLst: true },
-        txOptions,
-      );
-      console.log("Update reduceOnly & anyLst", txSig);
-    } catch (e) {
-      console.error(e);
-      throw e;
-    }
-    const stateModel = await glamClient.fetchStateModel();
-    expect(stateModel.reduceOnly).toBeNull(); // not changed due to timelock
-    expect(stateModel.anyLst).toBeNull(); // not changed due to timelock
-  }, 15_000);
-
   it("Apply timelock - fail due to timelock still active", async () => {
     try {
       const txSig = await glamClient.timelock.apply();
@@ -125,8 +109,6 @@ describe("state_timelock", () => {
     const stateModel = await glamClient.fetchStateModel();
     expect(stateModel.nameStr).toEqual("New name");
     expect(stateModel.integrationAcls?.length).toEqual(1);
-    expect(stateModel.reduceOnly).toEqual(true);
-    expect(stateModel.anyLst).toEqual(true);
   }, 30_000);
 
   it("Emergency update - delete integration ACL", async () => {

@@ -286,12 +286,6 @@ export type ExtOffchain = {
           },
           {
             "name": "oracleConfigs"
-          },
-          {
-            "name": "reduceOnly"
-          },
-          {
-            "name": "anyLst"
           }
         ]
       }

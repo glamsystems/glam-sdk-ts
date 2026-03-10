@@ -1,37 +1,199 @@
-{
-  "address": "G1NTsQ36mjPe89HtPYqxKsjY5HmYsDR6CbD2gd2U2pta",
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/ext_cctp.json`.
+ */
+export type ExtCctp = {
+  "address": "gstgCPbsq9XgT9DQrwjWtscxkWkL1UGFSyrtQqAbB7V",
   "metadata": {
-    "name": "ext_spl",
+    "name": "extCctp",
     "version": "1.0.0",
     "spec": "0.1.0",
-    "description": "SPL integration for GLAM Protocol"
+    "description": "CCTP integration for GLAM Protocol"
   },
   "instructions": [
     {
-      "name": "set_token_transfer_policy",
+      "name": "depositForBurn",
       "discriminator": [
-        0,
-        144,
-        15,
-        4,
-        149,
-        22,
-        95,
-        50
+        215,
+        60,
+        61,
+        46,
+        114,
+        55,
+        128,
+        176
       ],
       "accounts": [
         {
-          "name": "glam_state",
+          "name": "glamState",
           "writable": true
         },
         {
-          "name": "glam_signer",
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
           "writable": true,
           "signer": true
         },
         {
-          "name": "glam_protocol_program",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "senderAuthorityPda"
+        },
+        {
+          "name": "burnTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "denylistAccount"
+        },
+        {
+          "name": "messageTransmitter",
+          "writable": true
+        },
+        {
+          "name": "tokenMessenger"
+        },
+        {
+          "name": "remoteTokenMessenger"
+        },
+        {
+          "name": "tokenMinter"
+        },
+        {
+          "name": "localToken",
+          "writable": true
+        },
+        {
+          "name": "burnTokenMint",
+          "writable": true
+        },
+        {
+          "name": "messageSentEventData",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "messageTransmitterProgram",
+          "address": "CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC"
+        },
+        {
+          "name": "tokenMessengerMinterProgram",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "depositForBurnParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "setCctpPolicy",
+      "discriminator": [
+        32,
+        88,
+        254,
+        15,
+        2,
+        206,
+        222,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
         }
       ],
       "args": [
@@ -39,230 +201,16 @@
           "name": "policy",
           "type": {
             "defined": {
-              "name": "TransferPolicy"
+              "name": "cctpPolicy"
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "token_close_account",
-      "discriminator": [
-        240,
-        32,
-        179,
-        154,
-        96,
-        110,
-        43,
-        79
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glam_protocol_program"
-            }
-          }
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpi_program"
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "token_account",
-          "writable": true
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "token_transfer_checked",
-      "discriminator": [
-        169,
-        178,
-        117,
-        156,
-        169,
-        191,
-        199,
-        116
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glam_protocol_program"
-            }
-          }
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpi_program"
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "from",
-          "writable": true
-        },
-        {
-          "name": "mint"
-        },
-        {
-          "name": "to",
-          "writable": true
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "decimals",
-          "type": "u8"
         }
       ]
     }
   ],
   "accounts": [
     {
-      "name": "StateAccount",
+      "name": "stateAccount",
       "discriminator": [
         142,
         247,
@@ -277,67 +225,101 @@
   ],
   "types": [
     {
-      "name": "AccountType",
+      "name": "accountType",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Vault"
+            "name": "vault"
           },
           {
-            "name": "TokenizedVault"
+            "name": "tokenizedVault"
           },
           {
-            "name": "Mint"
+            "name": "mint"
           },
           {
-            "name": "SingleAssetVault"
+            "name": "singleAssetVault"
           }
         ]
       }
     },
     {
-      "name": "AccruedFees",
+      "name": "accruedFees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "vault_subscription_fee",
+            "name": "vaultSubscriptionFee",
             "type": "u128"
           },
           {
-            "name": "vault_redemption_fee",
+            "name": "vaultRedemptionFee",
             "type": "u128"
           },
           {
-            "name": "manager_subscription_fee",
+            "name": "managerSubscriptionFee",
             "type": "u128"
           },
           {
-            "name": "manager_redemption_fee",
+            "name": "managerRedemptionFee",
             "type": "u128"
           },
           {
-            "name": "management_fee",
+            "name": "managementFee",
             "type": "u128"
           },
           {
-            "name": "performance_fee",
+            "name": "performanceFee",
             "type": "u128"
           },
           {
-            "name": "protocol_base_fee",
+            "name": "protocolBaseFee",
             "type": "u128"
           },
           {
-            "name": "protocol_flow_fee",
+            "name": "protocolFlowFee",
             "type": "u128"
           }
         ]
       }
     },
     {
-      "name": "CreatedModel",
+      "name": "cctpDestination",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "domain",
+            "type": "u32"
+          },
+          {
+            "name": "address",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "cctpPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "allowedDestinations",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "cctpDestination"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "createdModel",
       "type": {
         "kind": "struct",
         "fields": [
@@ -351,18 +333,18 @@
             }
           },
           {
-            "name": "created_by",
+            "name": "createdBy",
             "type": "pubkey"
           },
           {
-            "name": "created_at",
+            "name": "createdAt",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "DelegateAcl",
+      "name": "delegateAcl",
       "type": {
         "kind": "struct",
         "fields": [
@@ -371,24 +353,56 @@
             "type": "pubkey"
           },
           {
-            "name": "integration_permissions",
+            "name": "integrationPermissions",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "IntegrationPermissions"
+                  "name": "integrationPermissions"
                 }
               }
             }
           },
           {
-            "name": "expires_at",
+            "name": "expiresAt",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "EngineField",
+      "name": "depositForBurnParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destinationDomain",
+            "type": "u32"
+          },
+          {
+            "name": "mintRecipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "destinationCaller",
+            "type": "pubkey"
+          },
+          {
+            "name": "maxFee",
+            "type": "u64"
+          },
+          {
+            "name": "minFinalityThreshold",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "engineField",
       "type": {
         "kind": "struct",
         "fields": [
@@ -396,7 +410,7 @@
             "name": "name",
             "type": {
               "defined": {
-                "name": "EngineFieldName"
+                "name": "engineFieldName"
               }
             }
           },
@@ -404,7 +418,7 @@
             "name": "value",
             "type": {
               "defined": {
-                "name": "EngineFieldValue"
+                "name": "engineFieldValue"
               }
             }
           }
@@ -412,71 +426,71 @@
       }
     },
     {
-      "name": "EngineFieldName",
+      "name": "engineFieldName",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Owner"
+            "name": "owner"
           },
           {
-            "name": "PortfolioManagerName"
+            "name": "portfolioManagerName"
           },
           {
-            "name": "Name"
+            "name": "name"
           },
           {
-            "name": "Uri"
+            "name": "uri"
           },
           {
-            "name": "Assets"
+            "name": "assets"
           },
           {
-            "name": "DelegateAcls"
+            "name": "delegateAcls"
           },
           {
-            "name": "IntegrationAcls"
+            "name": "integrationAcls"
           },
           {
-            "name": "TimelockDuration"
+            "name": "timelockDuration"
           },
           {
-            "name": "Borrowable"
+            "name": "borrowable"
           },
           {
-            "name": "DefaultAccountStateFrozen"
+            "name": "defaultAccountStateFrozen"
           },
           {
-            "name": "PermanentDelegate"
+            "name": "permanentDelegate"
           },
           {
-            "name": "NotifyAndSettle"
+            "name": "notifyAndSettle"
           },
           {
-            "name": "FeeStructure"
+            "name": "feeStructure"
           },
           {
-            "name": "FeeParams"
+            "name": "feeParams"
           },
           {
-            "name": "ClaimableFees"
+            "name": "claimableFees"
           },
           {
-            "name": "ClaimedFees"
+            "name": "claimedFees"
           },
           {
-            "name": "OracleConfigs"
+            "name": "oracleConfigs"
           }
         ]
       }
     },
     {
-      "name": "EngineFieldValue",
+      "name": "engineFieldValue",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Boolean",
+            "name": "boolean",
             "fields": [
               {
                 "name": "val",
@@ -485,7 +499,7 @@
             ]
           },
           {
-            "name": "U8",
+            "name": "u8",
             "fields": [
               {
                 "name": "val",
@@ -494,7 +508,7 @@
             ]
           },
           {
-            "name": "U32",
+            "name": "u32",
             "fields": [
               {
                 "name": "val",
@@ -503,7 +517,7 @@
             ]
           },
           {
-            "name": "U64",
+            "name": "u64",
             "fields": [
               {
                 "name": "val",
@@ -512,7 +526,7 @@
             ]
           },
           {
-            "name": "String",
+            "name": "string",
             "fields": [
               {
                 "name": "val",
@@ -521,7 +535,7 @@
             ]
           },
           {
-            "name": "Pubkey",
+            "name": "pubkey",
             "fields": [
               {
                 "name": "val",
@@ -530,7 +544,7 @@
             ]
           },
           {
-            "name": "VecPubkey",
+            "name": "vecPubkey",
             "fields": [
               {
                 "name": "val",
@@ -541,7 +555,7 @@
             ]
           },
           {
-            "name": "VecU8",
+            "name": "vecU8",
             "fields": [
               {
                 "name": "val",
@@ -550,7 +564,7 @@
             ]
           },
           {
-            "name": "VecU32",
+            "name": "vecU32",
             "fields": [
               {
                 "name": "val",
@@ -561,14 +575,14 @@
             ]
           },
           {
-            "name": "VecDelegateAcl",
+            "name": "vecDelegateAcl",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "DelegateAcl"
+                      "name": "delegateAcl"
                     }
                   }
                 }
@@ -576,14 +590,14 @@
             ]
           },
           {
-            "name": "VecIntegrationAcl",
+            "name": "vecIntegrationAcl",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "IntegrationAcl"
+                      "name": "integrationAcl"
                     }
                   }
                 }
@@ -591,65 +605,65 @@
             ]
           },
           {
-            "name": "FeeStructure",
+            "name": "feeStructure",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "FeeStructure"
+                    "name": "feeStructure"
                   }
                 }
               }
             ]
           },
           {
-            "name": "FeeParams",
+            "name": "feeParams",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "FeeParams"
+                    "name": "feeParams"
                   }
                 }
               }
             ]
           },
           {
-            "name": "AccruedFees",
+            "name": "accruedFees",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "AccruedFees"
+                    "name": "accruedFees"
                   }
                 }
               }
             ]
           },
           {
-            "name": "NotifyAndSettle",
+            "name": "notifyAndSettle",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "NotifyAndSettle"
+                    "name": "notifyAndSettle"
                   }
                 }
               }
             ]
           },
           {
-            "name": "OracleConfigs",
+            "name": "oracleConfigs",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "OracleConfigs"
+                    "name": "oracleConfigs"
                   }
                 }
               }
@@ -659,59 +673,59 @@
       }
     },
     {
-      "name": "EntryExitFees",
+      "name": "entryExitFees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "subscription_fee_bps",
+            "name": "subscriptionFeeBps",
             "type": "u16"
           },
           {
-            "name": "redemption_fee_bps",
+            "name": "redemptionFeeBps",
             "type": "u16"
           }
         ]
       }
     },
     {
-      "name": "FeeParams",
+      "name": "feeParams",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "year_in_seconds",
+            "name": "yearInSeconds",
             "type": "u32"
           },
           {
-            "name": "pa_high_water_mark",
+            "name": "paHighWaterMark",
             "type": "i128"
           },
           {
-            "name": "pa_last_nav",
+            "name": "paLastNav",
             "type": "i128"
           },
           {
-            "name": "last_aum",
+            "name": "lastAum",
             "type": "i128"
           },
           {
-            "name": "last_performance_fee_crystallized",
+            "name": "lastPerformanceFeeCrystallized",
             "type": "i64"
           },
           {
-            "name": "last_management_fee_crystallized",
+            "name": "lastManagementFeeCrystallized",
             "type": "i64"
           },
           {
-            "name": "last_protocol_fee_crystallized",
+            "name": "lastProtocolFeeCrystallized",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "FeeStructure",
+      "name": "feeStructure",
       "type": {
         "kind": "struct",
         "fields": [
@@ -719,7 +733,7 @@
             "name": "vault",
             "type": {
               "defined": {
-                "name": "EntryExitFees"
+                "name": "entryExitFees"
               }
             }
           },
@@ -727,7 +741,7 @@
             "name": "manager",
             "type": {
               "defined": {
-                "name": "EntryExitFees"
+                "name": "entryExitFees"
               }
             }
           },
@@ -735,7 +749,7 @@
             "name": "management",
             "type": {
               "defined": {
-                "name": "ManagementFee"
+                "name": "managementFee"
               }
             }
           },
@@ -743,7 +757,7 @@
             "name": "performance",
             "type": {
               "defined": {
-                "name": "PerformanceFee"
+                "name": "performanceFee"
               }
             }
           },
@@ -751,7 +765,7 @@
             "name": "protocol",
             "type": {
               "defined": {
-                "name": "ProtocolFees"
+                "name": "protocolFees"
               }
             }
           }
@@ -759,21 +773,21 @@
       }
     },
     {
-      "name": "HurdleType",
+      "name": "hurdleType",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Hard"
+            "name": "hard"
           },
           {
-            "name": "Soft"
+            "name": "soft"
           }
         ]
       }
     },
     {
-      "name": "IntegrationAcl",
+      "name": "integrationAcl",
       "docs": [
         "An integration program can have multiple protocols supported.",
         "Enabled protocols are stored in a bitmask, and each protocol can have its own policy."
@@ -782,19 +796,19 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "integration_program",
+            "name": "integrationProgram",
             "type": "pubkey"
           },
           {
-            "name": "protocols_bitmask",
+            "name": "protocolsBitmask",
             "type": "u16"
           },
           {
-            "name": "protocol_policies",
+            "name": "protocolPolicies",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "ProtocolPolicy"
+                  "name": "protocolPolicy"
                 }
               }
             }
@@ -803,7 +817,7 @@
       }
     },
     {
-      "name": "IntegrationPermissions",
+      "name": "integrationPermissions",
       "docs": [
         "Stores delegate permissions for an integration program."
       ],
@@ -811,15 +825,15 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "integration_program",
+            "name": "integrationProgram",
             "type": "pubkey"
           },
           {
-            "name": "protocol_permissions",
+            "name": "protocolPermissions",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "ProtocolPermissions"
+                  "name": "protocolPermissions"
                 }
               }
             }
@@ -828,33 +842,33 @@
       }
     },
     {
-      "name": "ManagementFee",
+      "name": "managementFee",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "fee_bps",
+            "name": "feeBps",
             "type": "u16"
           }
         ]
       }
     },
     {
-      "name": "NoticePeriodType",
+      "name": "noticePeriodType",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Hard"
+            "name": "hard"
           },
           {
-            "name": "Soft"
+            "name": "soft"
           }
         ]
       }
     },
     {
-      "name": "NotifyAndSettle",
+      "name": "notifyAndSettle",
       "type": {
         "kind": "struct",
         "fields": [
@@ -862,64 +876,64 @@
             "name": "model",
             "type": {
               "defined": {
-                "name": "ValuationModel"
+                "name": "valuationModel"
               }
             }
           },
           {
-            "name": "permissionless_fulfillment",
+            "name": "permissionlessFulfillment",
             "type": "bool"
           },
           {
-            "name": "subscribe_notice_period_type",
+            "name": "subscribeNoticePeriodType",
             "type": {
               "defined": {
-                "name": "NoticePeriodType"
+                "name": "noticePeriodType"
               }
             }
           },
           {
-            "name": "subscribe_notice_period",
+            "name": "subscribeNoticePeriod",
             "type": "u64"
           },
           {
-            "name": "subscribe_settlement_period",
+            "name": "subscribeSettlementPeriod",
             "type": "u64"
           },
           {
-            "name": "subscribe_cancellation_window",
+            "name": "subscribeCancellationWindow",
             "type": "u64"
           },
           {
-            "name": "redeem_notice_period_type",
+            "name": "redeemNoticePeriodType",
             "type": {
               "defined": {
-                "name": "NoticePeriodType"
+                "name": "noticePeriodType"
               }
             }
           },
           {
-            "name": "redeem_notice_period",
+            "name": "redeemNoticePeriod",
             "type": "u64"
           },
           {
-            "name": "redeem_settlement_period",
+            "name": "redeemSettlementPeriod",
             "type": "u64"
           },
           {
-            "name": "redeem_cancellation_window",
+            "name": "redeemCancellationWindow",
             "type": "u64"
           },
           {
-            "name": "time_unit",
+            "name": "timeUnit",
             "type": {
               "defined": {
-                "name": "TimeUnit"
+                "name": "timeUnit"
               }
             }
           },
           {
-            "name": "_padding",
+            "name": "padding",
             "type": {
               "array": [
                 "u8",
@@ -931,7 +945,7 @@
       }
     },
     {
-      "name": "OracleConfigs",
+      "name": "oracleConfigs",
       "docs": [
         "Vault-specific oracle configs. If available, these configs are preferred over the global config."
       ],
@@ -939,7 +953,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "max_ages_seconds",
+            "name": "maxAgesSeconds",
             "type": {
               "vec": {
                 "array": [
@@ -962,23 +976,23 @@
       }
     },
     {
-      "name": "PerformanceFee",
+      "name": "performanceFee",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "fee_bps",
+            "name": "feeBps",
             "type": "u16"
           },
           {
-            "name": "hurdle_rate_bps",
+            "name": "hurdleRateBps",
             "type": "u16"
           },
           {
-            "name": "hurdle_type",
+            "name": "hurdleType",
             "type": {
               "defined": {
-                "name": "HurdleType"
+                "name": "hurdleType"
               }
             }
           }
@@ -986,7 +1000,7 @@
       }
     },
     {
-      "name": "PricedProtocol",
+      "name": "pricedProtocol",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1003,15 +1017,15 @@
             "type": "u8"
           },
           {
-            "name": "last_updated_slot",
+            "name": "lastUpdatedSlot",
             "type": "u64"
           },
           {
-            "name": "integration_program",
+            "name": "integrationProgram",
             "type": "pubkey"
           },
           {
-            "name": "protocol_bitflag",
+            "name": "protocolBitflag",
             "type": "u16"
           },
           {
@@ -1024,23 +1038,23 @@
       }
     },
     {
-      "name": "ProtocolFees",
+      "name": "protocolFees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "base_fee_bps",
+            "name": "baseFeeBps",
             "type": "u16"
           },
           {
-            "name": "flow_fee_bps",
+            "name": "flowFeeBps",
             "type": "u16"
           }
         ]
       }
     },
     {
-      "name": "ProtocolPermissions",
+      "name": "protocolPermissions",
       "docs": [
         "Represents a delegate's permissions for a specific protocol"
       ],
@@ -1048,18 +1062,18 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "protocol_bitflag",
+            "name": "protocolBitflag",
             "type": "u16"
           },
           {
-            "name": "permissions_bitmask",
+            "name": "permissionsBitmask",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "ProtocolPolicy",
+      "name": "protocolPolicy",
       "docs": [
         "Stores policy data for an integrated protocol.",
         "Integration programs serialize/deserialize this data."
@@ -1068,7 +1082,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "protocol_bitflag",
+            "name": "protocolBitflag",
             "type": "u16"
           },
           {
@@ -1079,15 +1093,15 @@
       }
     },
     {
-      "name": "StateAccount",
+      "name": "stateAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "account_type",
+            "name": "accountType",
             "type": {
               "defined": {
-                "name": "AccountType"
+                "name": "accountType"
               }
             }
           },
@@ -1104,7 +1118,7 @@
             "type": "pubkey"
           },
           {
-            "name": "portfolio_manager_name",
+            "name": "portfolioManagerName",
             "type": {
               "array": [
                 "u8",
@@ -1116,20 +1130,20 @@
             "name": "created",
             "type": {
               "defined": {
-                "name": "CreatedModel"
+                "name": "createdModel"
               }
             }
           },
           {
-            "name": "base_asset_mint",
+            "name": "baseAssetMint",
             "type": "pubkey"
           },
           {
-            "name": "base_asset_decimals",
+            "name": "baseAssetDecimals",
             "type": "u8"
           },
           {
-            "name": "base_asset_token_program",
+            "name": "baseAssetTokenProgram",
             "type": "u8"
           },
           {
@@ -1142,11 +1156,11 @@
             }
           },
           {
-            "name": "timelock_duration",
+            "name": "timelockDuration",
             "type": "u32"
           },
           {
-            "name": "timelock_expires_at",
+            "name": "timelockExpiresAt",
             "type": "u64"
           },
           {
@@ -1160,37 +1174,37 @@
             }
           },
           {
-            "name": "integration_acls",
+            "name": "integrationAcls",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "IntegrationAcl"
+                  "name": "integrationAcl"
                 }
               }
             }
           },
           {
-            "name": "delegate_acls",
+            "name": "delegateAcls",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "DelegateAcl"
+                  "name": "delegateAcl"
                 }
               }
             }
           },
           {
-            "name": "external_positions",
+            "name": "externalPositions",
             "type": {
               "vec": "pubkey"
             }
           },
           {
-            "name": "priced_protocols",
+            "name": "pricedProtocols",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "PricedProtocol"
+                  "name": "pricedProtocol"
                 }
               }
             }
@@ -1201,7 +1215,7 @@
               "vec": {
                 "vec": {
                   "defined": {
-                    "name": "EngineField"
+                    "name": "engineField"
                   }
                 }
               }
@@ -1211,43 +1225,29 @@
       }
     },
     {
-      "name": "TimeUnit",
+      "name": "timeUnit",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Second"
+            "name": "second"
           },
           {
-            "name": "Slot"
+            "name": "slot"
           }
         ]
       }
     },
     {
-      "name": "TransferPolicy",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "allowlist",
-            "type": {
-              "vec": "pubkey"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "ValuationModel",
+      "name": "valuationModel",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Continuous"
+            "name": "continuous"
           },
           {
-            "name": "Periodic"
+            "name": "periodic"
           }
         ]
       }
@@ -1255,14 +1255,14 @@
   ],
   "constants": [
     {
-      "name": "PROTO_TOKEN",
+      "name": "protoCctp",
       "type": "u16",
       "value": "1"
     },
     {
-      "name": "PROTO_TOKEN_PERM_TRANSFER",
+      "name": "protoCctpPermTransfer",
       "type": "u64",
       "value": "1"
     }
   ]
-}
+};

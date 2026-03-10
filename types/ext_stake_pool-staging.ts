@@ -799,12 +799,6 @@ export type ExtStakePool = {
           },
           {
             "name": "oracleConfigs"
-          },
-          {
-            "name": "reduceOnly"
-          },
-          {
-            "name": "anyLst"
           }
         ]
       }

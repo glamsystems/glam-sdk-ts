@@ -22,7 +22,7 @@ class TxBuilder extends BaseTxBuilder<StakeClient> {
       await this.client.createStakeAccount(glamSigner);
     const glamState = this.client.base.statePda;
 
-    const initStakeIx = await this.client.base.protocolProgram.methods
+    const initStakeIx = await (this.client.base.protocolProgram.methods as any)
       .stakeInitialize()
       .accounts({
         glamState,
@@ -40,7 +40,7 @@ class TxBuilder extends BaseTxBuilder<StakeClient> {
       })
       .instruction();
 
-    const ix = await this.client.base.protocolProgram.methods
+    const ix = await (this.client.base.protocolProgram.methods as any)
       .stakeDelegateStake()
       .accounts({
         glamState,
@@ -77,7 +77,7 @@ class TxBuilder extends BaseTxBuilder<StakeClient> {
       throw new Error("At least one stake account is required");
     }
 
-    return await this.client.base.protocolProgram.methods
+    return await (this.client.base.protocolProgram.methods as any)
       .stakeDeactivate()
       .accounts({
         glamState: this.client.base.statePda,
@@ -122,7 +122,7 @@ class TxBuilder extends BaseTxBuilder<StakeClient> {
       lamports = accontInfo ? new BN(accontInfo.lamports) : new BN(0);
     }
 
-    return await this.client.base.protocolProgram.methods
+    return await (this.client.base.protocolProgram.methods as any)
       .stakeWithdraw(lamports)
       .accounts({
         glamSigner,
@@ -157,7 +157,7 @@ class TxBuilder extends BaseTxBuilder<StakeClient> {
     sourceStake: PublicKey,
     glamSigner: PublicKey,
   ): Promise<TransactionInstruction> {
-    return await this.client.base.protocolProgram.methods
+    return await (this.client.base.protocolProgram.methods as any)
       .stakeMerge()
       .accounts({
         glamSigner,
@@ -190,7 +190,7 @@ class TxBuilder extends BaseTxBuilder<StakeClient> {
     const [newStake, createStakeAccountIx] =
       await this.client.createStakeAccount(glamSigner);
 
-    const ix = await this.client.base.protocolProgram.methods
+    const ix = await (this.client.base.protocolProgram.methods as any)
       .stakeSplit(lamports)
       .accounts({
         glamSigner,
@@ -223,7 +223,7 @@ class TxBuilder extends BaseTxBuilder<StakeClient> {
     amount: BN,
     glamSigner: PublicKey,
   ) {
-    return await this.client.base.protocolProgram.methods
+    return await (this.client.base.protocolProgram.methods as any)
       .stakeMove(true, amount)
       .accounts({
         glamSigner,

@@ -1451,7 +1451,7 @@ export class PriceClient {
     if (stakes.length === 0) {
       return null;
     }
-    const priceStakesIx = await this.base.mintProgram.methods
+    const priceStakesIx = await (this.base.mintProgram.methods as any)
       .priceStakeAccounts()
       .accounts({
         glamState: this.base.statePda,

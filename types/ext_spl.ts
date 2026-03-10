@@ -472,12 +472,6 @@ export type ExtSpl = {
           },
           {
             "name": "oracleConfigs"
-          },
-          {
-            "name": "reduceOnly"
-          },
-          {
-            "name": "anyLst"
           }
         ]
       }

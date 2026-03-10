@@ -201,7 +201,7 @@ class TxBuilder extends BaseTxBuilder<StakePoolClient> {
 
     const postInstructions = deactivate
       ? [
-          await this.client.base.protocolProgram.methods
+          await (this.client.base.protocolProgram.methods as any)
             .stakeDeactivate()
             .accounts({
               glamSigner,

@@ -26,8 +26,6 @@ export type UpdateStateParams = {
   timelockDuration?: number;
   assets?: PublicKey[];
   borrowable?: PublicKey[];
-  reduceOnly?: boolean;
-  anyLst?: boolean;
 };
 
 class TxBuilder extends BaseTxBuilder<StateClient> {

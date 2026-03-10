@@ -12,7 +12,6 @@ import {
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 import { PriceClient } from "./price";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
-import { getGlobalConfigPda } from "../utils/glamPDAs";
 
 class TxBuilder extends BaseTxBuilder<FeesClient> {
   async crystallizeFeesIxs(
@@ -119,61 +118,6 @@ class TxBuilder extends BaseTxBuilder<FeesClient> {
     return await this.buildVersionedTx(ixs, txOptions);
   }
 
-  async chargeProtocolFeeIxs(
-    glamSigner: PublicKey,
-  ): Promise<TransactionInstruction[]> {
-    const stateModel = await this.client.base.fetchStateModel();
-    const { baseAssetMint: baseAsset } = stateModel;
-
-    // TODO: parse from glam config account
-    const protocolFeeAuthority = new PublicKey(
-      "9oWi2MjrAujYNTUXXNBLk1ugioaF1mJHc7EoamX4eQLZ",
-    );
-
-    const { tokenProgram } = await fetchMintAndTokenProgram(
-      this.client.base.connection,
-      baseAsset,
-    );
-
-    const protocolFeeAuthorityAta = this.client.base.getAta(
-      baseAsset,
-      protocolFeeAuthority,
-      tokenProgram,
-    );
-
-    const priceVaultIxs = await this.client.price.priceVaultIxs();
-    const preInstructions = [
-      createAssociatedTokenAccountIdempotentInstruction(
-        glamSigner,
-        protocolFeeAuthorityAta,
-        protocolFeeAuthority,
-        baseAsset,
-        tokenProgram,
-      ),
-      ...priceVaultIxs,
-    ];
-
-    const ix = await this.client.base.protocolProgram.methods
-      .chargeProtocolFee()
-      .accounts({
-        glamState: this.client.base.statePda,
-        protocolFeeAuthority,
-        depositAsset: baseAsset,
-        depositTokenProgram: tokenProgram,
-      })
-      .instruction();
-
-    return [...preInstructions, ix];
-  }
-
-  async chargeProtocolFeeTx(
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const glamSigner = txOptions.signer || this.client.base.signer;
-    const ixs = await this.chargeProtocolFeeIxs(glamSigner);
-    return await this.buildVersionedTx(ixs, txOptions);
-  }
-
   async setProtocolFeesIx(
     baseFeeBps: number,
     flowFeeBps: number,
@@ -264,13 +208,6 @@ export class FeesClient {
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const vTx = await this.txBuilder.claimFeesTx(txOptions);
-    return await this.base.sendAndConfirm(vTx);
-  }
-
-  public async chargeProtocolFee(
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const vTx = await this.txBuilder.chargeProtocolFeeTx(txOptions);
     return await this.base.sendAndConfirm(vTx);
   }
 

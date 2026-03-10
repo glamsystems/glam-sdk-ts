@@ -800,12 +800,6 @@ export type ExtMarinade = {
           },
           {
             "name": "oracleConfigs"
-          },
-          {
-            "name": "reduceOnly"
-          },
-          {
-            "name": "anyLst"
           }
         ]
       }

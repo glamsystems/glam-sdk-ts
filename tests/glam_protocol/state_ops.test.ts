@@ -33,8 +33,6 @@ describe("state_ops", () => {
     expect(stateModel.baseAssetMint).toEqual(WSOL);
     expect(stateModel.baseAssetDecimals).toEqual(9);
     expect(stateModel.baseAssetTokenProgram).toEqual(0);
-    expect(stateModel.reduceOnly).toBeNull();
-    expect(stateModel.anyLst).toBeNull();
   }, 25_000);
 
   it("Extend glam state account size", async () => {
@@ -114,36 +112,6 @@ describe("state_ops", () => {
 
     let stateModel = await glamClient.fetchStateModel();
     expect(stateModel.borrowable).toEqual([WSOL, MSOL]);
-  });
-
-  it("Update readOnly state param", async () => {
-    try {
-      const txSig = await glamClient.state.update({
-        reduceOnly: true,
-      });
-      console.log("Update readOnly", txSig);
-    } catch (e) {
-      console.error(e);
-      throw e;
-    }
-    const stateModel = await glamClient.fetchStateModel();
-    expect(stateModel.reduceOnly).toEqual(true);
-    expect(stateModel.anyLst).toEqual(null);
-  });
-
-  it("Update anyLst state param", async () => {
-    try {
-      const txSig = await glamClient.state.update({
-        anyLst: true,
-      });
-      console.log("Update anyLst", txSig);
-    } catch (e) {
-      console.error(e);
-      throw e;
-    }
-    const stateModel = await glamClient.fetchStateModel();
-    expect(stateModel.reduceOnly).toEqual(true);
-    expect(stateModel.anyLst).toEqual(true);
   });
 
   it("[ownership] Update state unauthorized", async () => {

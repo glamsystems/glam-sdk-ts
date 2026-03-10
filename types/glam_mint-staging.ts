@@ -5008,12 +5008,6 @@ export type GlamMint = {
           },
           {
             "name": "oracleConfigs"
-          },
-          {
-            "name": "reduceOnly"
-          },
-          {
-            "name": "anyLst"
           }
         ]
       }

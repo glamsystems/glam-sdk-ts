@@ -14,7 +14,6 @@ import { BN } from "@coral-xyz/anchor";
 import { charsToString, stringToChars } from "../utils/common";
 import { MintPolicy } from "../deser/integrationPolicies";
 import { MintModel } from "./mint";
-import type { FeeStructure } from "./mint";
 import type { RequestQueue } from "./types";
 import type { IntegrationAcl, DelegateAcl } from "./acl";
 import { PkSet } from "../utils";
@@ -38,12 +37,9 @@ export class StateIdlModel implements StateModelType {
   portfolioManagerName: number[] | null;
 
   borrowable: PublicKey[] | null;
-  reduceOnly: boolean | null;
-  anyLst: boolean | null;
   timelockDuration: number | null;
   integrationAcls: IntegrationAcl[] | null;
   delegateAcls: DelegateAcl[] | null;
-  feeStructure: FeeStructure | null;
 
   constructor(data: Partial<StateModelType>) {
     this.accountType = data.accountType ?? null;
@@ -57,12 +53,9 @@ export class StateIdlModel implements StateModelType {
     this.portfolioManagerName = data.portfolioManagerName ?? null;
 
     this.borrowable = data.borrowable ?? null;
-    this.reduceOnly = data.reduceOnly ?? null;
-    this.anyLst = data.anyLst ?? null;
     this.timelockDuration = data.timelockDuration ?? null;
     this.delegateAcls = data.delegateAcls ?? null;
     this.integrationAcls = data.integrationAcls ?? null;
-    this.feeStructure = data.feeStructure ?? null;
   }
 }
 
@@ -118,8 +111,6 @@ export class StateModel extends StateIdlModel {
     this.externalPositions = data.externalPositions ?? [];
     this.pricedProtocols = data.pricedProtocols ?? [];
     this.borrowable = data.borrowable ?? null;
-    this.reduceOnly = data.reduceOnly ?? null;
-    this.anyLst = data.anyLst ?? null;
   }
 
   get idStr() {

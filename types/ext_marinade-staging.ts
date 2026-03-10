@@ -623,6 +623,9 @@ export type ExtMarinade = {
           },
           {
             "name": "mint"
+          },
+          {
+            "name": "singleAssetVault"
           }
         ]
       }
@@ -797,12 +800,6 @@ export type ExtMarinade = {
           },
           {
             "name": "oracleConfigs"
-          },
-          {
-            "name": "reduceOnly"
-          },
-          {
-            "name": "anyLst"
           }
         ]
       }
