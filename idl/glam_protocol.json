@@ -1220,6 +1220,11 @@
       "msg": "Invalid account data"
     },
     {
+      "code": 51115,
+      "name": "OraclePriceSuspended",
+      "msg": "Oracle price is suspended"
+    },
+    {
       "code": 50100,
       "name": "TransferRateLimitExceeded",
       "msg": "Transfer rate limit exceeded"

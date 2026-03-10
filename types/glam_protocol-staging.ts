@@ -1955,6 +1955,11 @@ export type GlamProtocol = {
       "msg": "Invalid account data"
     },
     {
+      "code": 51115,
+      "name": "oraclePriceSuspended",
+      "msg": "Oracle price is suspended"
+    },
+    {
       "code": 50100,
       "name": "transferRateLimitExceeded",
       "msg": "Transfer rate limit exceeded"
