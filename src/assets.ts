@@ -27,7 +27,11 @@ export const STAKE_POOLS = LstList.filter(
     logoURI: lst.logoUri,
     tokenProgram: new PublicKey(lst.tokenProgram),
     poolState: new PublicKey(poolState),
+    isMarinade: program === "Marinade",
   };
+}).sort((a, b) => {
+  if (a.isMarinade !== b.isMarinade) return a.isMarinade ? -1 : 1;
+  return a.symbol.localeCompare(b.symbol);
 });
 
 export const STAKE_POOLS_MAP = new Map(STAKE_POOLS.map((p) => [p.mint, p]));
@@ -40,6 +44,7 @@ export interface AssetMeta {
   oracle: PublicKey;
   programId?: PublicKey;
   aggIndex?: number;
+  oracleSource?: string;
 }
 
 /**
@@ -54,6 +59,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("3m6i4RFWEDw2Ft4tFHPJtYgmpPe21k56M3FHeWYrgGBz"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -62,6 +68,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 8,
       oracle: new PublicKey("fqPfDa6uQr9ndMvwaFp4mUBeUrHmLop8Jxfb1XJNmVm"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -70,6 +77,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 8,
       oracle: new PublicKey("9jPy6EHpLkXaMdvfkoVnRnSdJoQysQDKKj3bW5Amz4Ci"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -78,6 +86,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 8,
       oracle: new PublicKey("6bEp2MiyoiiiDxcVqE8rUHQWwHirXUXtKfAEATTVqNzT"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -86,6 +95,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("DXqKSHyhTBKEW4qgnL7ycbf3Jca5hCvUgWHFYWsh4KJa"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -94,6 +104,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("5Mb11e5rt1Sp6A286B145E4TmgMzsM2UX9nCF2vas5bs"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -102,6 +113,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("9VCioxmni2gDLv11qufWzT3RDERhQE4iY5Gf7NTfYyAV"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -110,6 +122,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("JDKJSkxjasBGL3ce1pkrN6tqDzuVUZPWzzkGuyX8m9yN"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -118,6 +131,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("9PgHM68FNGDK6nHb29ERDBcFrV6gNMD8LyUqwxbyyeb2"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -127,6 +141,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       decimals: 6,
       oracle: new PublicKey("6JkZmXGgWnzsyTQaqRARzP64iFYnpMNT4siiuUDUaB8s"),
       programId: TOKEN_2022_PROGRAM_ID,
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -136,6 +151,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       decimals: 6,
       oracle: new PublicKey("5QZMnsyndmphvZF4BNgoMHwVZaREXeE2rpBoCPMxgCCd"),
       programId: TOKEN_2022_PROGRAM_ID,
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -144,6 +160,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("5uR6oza6teuMRpjsbMi9fDhCDid2hoYdRBiLW7WzcK54"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -152,6 +169,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("BRuNuzLAPHHGSSVAJPKMcmJMdgDfrekvnSxkxPDGdeqp"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -160,6 +178,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("7pT9mxKXyvfaZKeKy1oe2oV2K1RFtF7tPEJHUY3h2vVV"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -170,6 +189,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
       programId: TOKEN_2022_PROGRAM_ID,
       aggIndex: 342,
+      oracleSource: "ChainlinkRWA",
     },
   ],
   [
@@ -180,6 +200,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
       programId: TOKEN_2022_PROGRAM_ID,
       aggIndex: 343,
+      oracleSource: "ChainlinkRWA",
     },
   ],
   [
@@ -190,6 +211,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
       programId: TOKEN_2022_PROGRAM_ID,
       aggIndex: 335,
+      oracleSource: "ChainlinkRWA",
     },
   ],
   [
@@ -200,6 +222,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
       programId: TOKEN_2022_PROGRAM_ID,
       aggIndex: 341,
+      oracleSource: "ChainlinkRWA",
     },
   ],
   [
@@ -208,6 +231,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("BERaNi6cpEresbq6HC1EQGaB1H1UjvEo4NGnmYSSJof4"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -216,6 +240,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("6VXU2P9BJkuPkfA7FJVonBtAo1c2pGnHoV9rxsdZKZyb"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -224,6 +249,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 8,
       oracle: new PublicKey("AEPgc6qUTCT8AwdckPcGbJXtcM9bj8mGYAyHE4BscJtm"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -232,6 +258,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("6ua3DK1sHoYyNi15dsxy6RYwUcZPDDXfyChzaRMaheQF"),
+      oracleSource: "Pyth",
     },
   ],
 
@@ -241,6 +268,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("EX6r1GdfsgcUsY6cQ6YsToV4RGsb4HKpjrkokK2DrmsS"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -249,6 +277,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("CGCz4mB8NsDddCq6BZToRUDUuktzsAfpKYh6ATgyyCGF"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -257,6 +286,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("5VJou4ufN2vE11zyZUaLsKLTXhyzCTgiq6QDsts2YnnD"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -265,6 +295,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 8,
       oracle: new PublicKey("97EqsAGbTnShB7oYWAFFCVVAx8PWXgDYDhcpm99izNQ4"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -273,6 +304,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("CsFUXiA5dM4eCKjVBBy8tXhXzDkDRNoYjU5rjpHyfNEZ"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -281,6 +313,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("6Sfx8ZAt6xaEgMXTahR6GrT7oYB6nFBMoVyCmMyHmeJV"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -289,6 +322,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("4QXWStoyEErTZFVsvKrvxuNa6QT8zpeA8jddZunSGvYE"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -297,6 +331,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("B7RUYg2zF6UdUSHv2RmpnriPVJccYWojgFydNS1NY5F8"),
+      oracleSource: "Switchboard",
     },
   ],
   [
@@ -305,6 +340,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("BmDWPMsytWmYkh9n6o7m79eVshVYf2B5GVaqQ2EWKnGH"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -313,6 +349,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("C5fiAmQyjdfDR4EGepZqnEL3fJwMBav5yoAk6XyKMF6u"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -321,6 +358,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("9Ennia27iT83kNAk3JtRKxSMzuCzsVtT4MzuxpE7anME"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -329,6 +367,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("8DmXTfhhtb9kTcpTVfb6Ygx8WhZ8wexGqcpxfn23zooe"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -337,6 +376,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("469WQgfJ6AJ3eJ8FUcdhiZawf7yNChA3hseTSyhFatHZ"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -345,6 +385,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("BboTg1yT114FQkqT6MM3P3G3CcCktuM2RePgU8Gr3K4A"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -353,6 +394,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("DwYF1yveo8XTF1oqfsqykj332rjSxAd7bR6Gu6i4iUET"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -361,6 +403,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("4A3KroGPjZxPAeBNF287V3NyRwV2q8iBi1vX7kHxTCh7"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -370,6 +413,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       decimals: 9,
       oracle: new PublicKey("3BGheQVvYtBNpBKSUXSTjpyKQc3dh8iiwT91Aiq7KYCU"),
       programId: TOKEN_2022_PROGRAM_ID,
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -378,6 +422,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("FPQjZYvHRGy51guJ77p7n9u9b8eo1ktKRc2D2g5Vysth"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -386,6 +431,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("3RgNWYYcZCKf5uZfriK8ASUbGQErhH6YbpdvZQ7ZKDCf"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -395,6 +441,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       decimals: 6,
       oracle: new PublicKey("8FZhpiM8n3mpgvENWLcEvHsKB1bBhYBAyL4Ypr4gptLZ"),
       programId: TOKEN_2022_PROGRAM_ID,
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -403,6 +450,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 8,
       oracle: new PublicKey("CN9QvvbGQzMnN8vJaSek2so4vFnTqgJDFrdJB8Y4tQfB"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -411,6 +459,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("2sZomfWMDuQLcFak3nuharXorHrZ3hK8iaML6ZGSHtso"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -419,6 +468,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("8cH72H3vqYPArV9QvkYJkwzTdsdNPPgVPrusz9sMmgNN"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -428,6 +478,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       decimals: 6,
       oracle: new PublicKey("5r8RWTaRiMgr9Lph3FTUE3sGb1vymhpCrm83Bovjfcps"),
       programId: TOKEN_2022_PROGRAM_ID,
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -436,6 +487,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("BkdSPLmw4W6twrJjAePw2bJAwDTBtxJ9t6LvNHfcBKg1"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -444,6 +496,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 9,
       oracle: new PublicKey("EUQQD2fNN7h7su5TbWpUnf22zeGtF3RjEX2hgX2YPfLd"),
+      oracleSource: "Pyth",
     },
   ],
   [
@@ -452,6 +505,7 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("GqqkoqHU5pqgTvL88xSCipH9txbPETyzvAvybQ3zRpzw"),
+      oracleSource: "Pyth",
     },
   ],
 ]);
@@ -459,6 +513,7 @@ STAKE_POOLS.forEach((p) => {
   ASSETS_MAINNET.set(p.mint, {
     decimals: p.decimals,
     oracle: new PublicKey(p.poolState),
+    oracleSource: p.isMarinade ? "MarinadeState" : "LstPoolState",
   });
 });
 
