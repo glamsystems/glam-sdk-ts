@@ -381,4 +381,197 @@ describe("drift_protocol", () => {
     const openOrdersAfter = await getOpenOrders(1);
     expect(openOrdersAfter.length).toEqual(0);
   });
+
+  it("Place perp order using placePerpOrder", async () => {
+    const orderParams = getOrderParams({
+      orderType: OrderType.LIMIT,
+      marketType: MarketType.PERP,
+      direction: PositionDirection.LONG,
+      marketIndex: 0,
+      baseAssetAmount: new BN(10_0000_000),
+      price: new BN(100_000_000),
+      userOrderId: 1,
+    });
+
+    try {
+      const txSig = await glamClient.drift.placePerpOrder(
+        orderParams,
+        1,
+        txOptions,
+      );
+      console.log("placePerpOrder", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+
+    const openOrders = await getOpenOrders(1);
+    expect(openOrders.length).toEqual(1);
+  });
+
+  it("Cancel order by user id", async () => {
+    try {
+      const txSig = await glamClient.drift.cancelOrderByUserId(1, 1, txOptions);
+      console.log("cancelOrderByUserId", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+
+    const openOrders = await getOpenOrders(1);
+    expect(openOrders.length).toEqual(0);
+  });
+
+  it("Place perp order and cancel by order id", async () => {
+    const orderParams = getOrderParams({
+      orderType: OrderType.LIMIT,
+      marketType: MarketType.PERP,
+      direction: PositionDirection.LONG,
+      marketIndex: 0,
+      baseAssetAmount: new BN(10_0000_000),
+      price: new BN(100_000_000),
+    });
+
+    try {
+      const txSig = await glamClient.drift.placePerpOrder(
+        orderParams,
+        1,
+        txOptions,
+      );
+      console.log("placePerpOrder for cancelOrder test", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+
+    const openOrders = await getOpenOrders(1);
+    expect(openOrders.length).toEqual(1);
+
+    try {
+      const txSig = await glamClient.drift.cancelOrder(
+        openOrders[0].orderId,
+        1,
+        txOptions,
+      );
+      console.log("cancelOrder", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+
+    const openOrdersAfter = await getOpenOrders(1);
+    expect(openOrdersAfter.length).toEqual(0);
+  });
+
+  it("Place spot order using placeSpotOrder", async () => {
+    const orderParams = getOrderParams({
+      orderType: OrderType.LIMIT,
+      marketType: MarketType.SPOT,
+      direction: PositionDirection.LONG,
+      marketIndex: 1,
+      baseAssetAmount: new BN(10_0000_000),
+      price: new BN(100_000_000),
+      userOrderId: 2,
+    });
+
+    try {
+      const txSig = await glamClient.drift.placeSpotOrder(
+        orderParams,
+        1,
+        txOptions,
+      );
+      console.log("placeSpotOrder", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+
+    const openOrders = await getOpenOrders(1);
+    expect(openOrders.length).toEqual(1);
+  });
+
+  it("Modify order by user id", async () => {
+    const modifyOrderParams: ModifyOrderParams = {
+      direction: null,
+      baseAssetAmount: null,
+      price: new BN(110_000_000),
+      reduceOnly: null,
+      postOnly: null,
+      bitFlags: null,
+      maxTs: null,
+      triggerPrice: null,
+      triggerCondition: null,
+      oraclePriceOffset: null,
+      auctionDuration: null,
+      auctionStartPrice: null,
+      auctionEndPrice: null,
+      policy: null,
+    };
+
+    try {
+      const txSig = await glamClient.drift.modifyOrderByUserId(
+        2,
+        modifyOrderParams,
+        1,
+        txOptions,
+      );
+      console.log("modifyOrderByUserId", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  });
+
+  it("Cancel remaining spot orders", async () => {
+    try {
+      const txSig = await glamClient.drift.cancelOrders(
+        MarketType.SPOT,
+        1,
+        PositionDirection.LONG,
+        1,
+        txOptions,
+      );
+      console.log("cancelOrders spot", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+
+    const openOrders = await getOpenOrders(1);
+    expect(openOrders.length).toEqual(0);
+  });
+
+  it("Place and take perp order", async () => {
+    const orderParams = getOrderParams({
+      orderType: OrderType.LIMIT,
+      marketType: MarketType.PERP,
+      direction: PositionDirection.LONG,
+      marketIndex: 0,
+      baseAssetAmount: new BN(10_0000_000),
+      price: new BN(100_000_000),
+    });
+
+    try {
+      const txSig = await glamClient.drift.placeAndTakePerpOrder(
+        orderParams,
+        null,
+        1,
+        txOptions,
+      );
+      console.log("placeAndTakePerpOrder", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  });
+
+  it("Revert fill", async () => {
+    try {
+      const txSig = await glamClient.drift.revertFill(1, txOptions);
+      console.log("revertFill", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  });
 });

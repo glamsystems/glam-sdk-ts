@@ -638,6 +638,38 @@ class TxBuilder extends BaseTxBuilder<DriftProtocolClient> {
     return await this.client.base.intoVersionedTransaction(tx, txOptions);
   }
 
+  public async cancelOrderIx(
+    orderId: number | null,
+    subAccountId: number,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const remainingAccounts =
+      await this.client.composeRemainingAccounts(subAccountId);
+
+    const { user } = this.client.getDriftUserPdas(subAccountId);
+    return await this.client.base.extDriftProgram.methods
+      .cancelOrder(orderId)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        user,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async cancelOrderTx(
+    orderId: number | null,
+    subAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.cancelOrderIx(orderId, subAccountId, glamSigner);
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
   public async settlePnlIx(
     marketIndex: number,
     subAccountId: number,
@@ -671,6 +703,518 @@ class TxBuilder extends BaseTxBuilder<DriftProtocolClient> {
   ): Promise<VersionedTransaction> {
     const glamSigner = txOptions.signer || this.client.base.signer;
     const ix = await this.settlePnlIx(marketIndex, subAccountId, glamSigner);
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async placePerpOrderIx(
+    orderParams: OrderParams,
+    subAccountId: number,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const { marketIndex, marketType } = orderParams;
+
+    const { user: referrer, userStats: referrerStats } =
+      this.client.getGlamReferrerPdas();
+
+    const remainingAccounts = (
+      await this.client.composeRemainingAccounts(
+        subAccountId,
+        marketType,
+        marketIndex,
+      )
+    ).concat([
+      { pubkey: referrer, isWritable: true, isSigner: false },
+      { pubkey: referrerStats, isWritable: true, isSigner: false },
+    ]);
+
+    const { user } = this.client.getDriftUserPdas(subAccountId);
+    return await this.client.base.extDriftProgram.methods
+      .placePerpOrder(orderParams)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        user,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async placePerpOrderTx(
+    orderParams: OrderParams,
+    subAccountId: number,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.placePerpOrderIx(
+      orderParams,
+      subAccountId,
+      glamSigner,
+    );
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async placeSpotOrderIx(
+    orderParams: OrderParams,
+    subAccountId: number,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const { marketIndex, marketType } = orderParams;
+
+    const { user: referrer, userStats: referrerStats } =
+      this.client.getGlamReferrerPdas();
+
+    const remainingAccounts = (
+      await this.client.composeRemainingAccounts(
+        subAccountId,
+        marketType,
+        marketIndex,
+      )
+    ).concat([
+      { pubkey: referrer, isWritable: true, isSigner: false },
+      { pubkey: referrerStats, isWritable: true, isSigner: false },
+    ]);
+
+    const { user } = this.client.getDriftUserPdas(subAccountId);
+    return await this.client.base.extDriftProgram.methods
+      .placeSpotOrder(orderParams)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        user,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async placeSpotOrderTx(
+    orderParams: OrderParams,
+    subAccountId: number,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.placeSpotOrderIx(
+      orderParams,
+      subAccountId,
+      glamSigner,
+    );
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async placeAndTakePerpOrderIx(
+    orderParams: OrderParams,
+    successCondition: number | null,
+    subAccountId: number,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const { marketIndex, marketType } = orderParams;
+
+    const remainingAccounts = await this.client.composeRemainingAccounts(
+      subAccountId,
+      marketType,
+      marketIndex,
+    );
+
+    const { user, userStats } = this.client.getDriftUserPdas(subAccountId);
+    return await this.client.base.extDriftProgram.methods
+      .placeAndTakePerpOrder(orderParams, successCondition)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        user,
+        userStats,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async placeAndTakePerpOrderTx(
+    orderParams: OrderParams,
+    successCondition: number | null,
+    subAccountId: number,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.placeAndTakePerpOrderIx(
+      orderParams,
+      successCondition,
+      subAccountId,
+      glamSigner,
+    );
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async cancelOrderByUserIdIx(
+    userOrderId: number,
+    subAccountId: number,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const remainingAccounts =
+      await this.client.composeRemainingAccounts(subAccountId);
+
+    const { user } = this.client.getDriftUserPdas(subAccountId);
+    return await this.client.base.extDriftProgram.methods
+      .cancelOrderByUserId(userOrderId)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        user,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async cancelOrderByUserIdTx(
+    userOrderId: number,
+    subAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.cancelOrderByUserIdIx(
+      userOrderId,
+      subAccountId,
+      glamSigner,
+    );
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async modifyOrderByUserIdIx(
+    userOrderId: number,
+    modifyOrderParams: ModifyOrderParams,
+    subAccountId: number,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const remainingAccounts =
+      await this.client.composeRemainingAccounts(subAccountId);
+
+    const { user } = this.client.getDriftUserPdas(subAccountId);
+    return await this.client.base.extDriftProgram.methods
+      .modifyOrderByUserId(userOrderId, modifyOrderParams)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        user,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async modifyOrderByUserIdTx(
+    userOrderId: number,
+    modifyOrderParams: ModifyOrderParams,
+    subAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.modifyOrderByUserIdIx(
+      userOrderId,
+      modifyOrderParams,
+      subAccountId,
+      glamSigner,
+    );
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async fillPerpOrderIx(
+    orderId: number | null,
+    makerOrderId: number | null,
+    fillerSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const remainingAccounts =
+      await this.client.composeRemainingAccounts(fillerSubAccountId);
+
+    const { user: filler } = this.client.getDriftUserPdas(fillerSubAccountId);
+    const fillerStats = this.client.getDriftUserPdas().userStats;
+
+    return await (this.client.base.extDriftProgram.methods as any)
+      .fillPerpOrder(orderId, makerOrderId)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        filler,
+        fillerStats,
+        user: userKey,
+        userStats: userStatsKey,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async fillPerpOrderTx(
+    orderId: number | null,
+    makerOrderId: number | null,
+    fillerSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.fillPerpOrderIx(
+      orderId,
+      makerOrderId,
+      fillerSubAccountId,
+      userKey,
+      userStatsKey,
+      glamSigner,
+    );
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async fillSpotOrderIx(
+    orderId: number | null,
+    fulfillmentType: any | null,
+    makerOrderId: number | null,
+    fillerSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const remainingAccounts =
+      await this.client.composeRemainingAccounts(fillerSubAccountId);
+
+    const { user: filler } = this.client.getDriftUserPdas(fillerSubAccountId);
+    const fillerStats = this.client.getDriftUserPdas().userStats;
+
+    return await (this.client.base.extDriftProgram.methods as any)
+      .fillSpotOrder(orderId, fulfillmentType, makerOrderId)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        filler,
+        fillerStats,
+        user: userKey,
+        userStats: userStatsKey,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async fillSpotOrderTx(
+    orderId: number | null,
+    fulfillmentType: any | null,
+    makerOrderId: number | null,
+    fillerSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.fillSpotOrderIx(
+      orderId,
+      fulfillmentType,
+      makerOrderId,
+      fillerSubAccountId,
+      userKey,
+      userStatsKey,
+      glamSigner,
+    );
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async forceCancelOrdersIx(
+    fillerSubAccountId: number,
+    userKey: PublicKey,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const remainingAccounts =
+      await this.client.composeRemainingAccounts(fillerSubAccountId);
+
+    const { user: filler } = this.client.getDriftUserPdas(fillerSubAccountId);
+
+    return await (this.client.base.extDriftProgram.methods as any)
+      .forceCancelOrders()
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        filler,
+        user: userKey,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async forceCancelOrdersTx(
+    fillerSubAccountId: number,
+    userKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.forceCancelOrdersIx(
+      fillerSubAccountId,
+      userKey,
+      glamSigner,
+    );
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async revertFillIx(
+    fillerSubAccountId: number,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const { user: filler } = this.client.getDriftUserPdas(fillerSubAccountId);
+    const fillerStats = this.client.getDriftUserPdas().userStats;
+
+    return await (this.client.base.extDriftProgram.methods as any)
+      .revertFill()
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        filler,
+        fillerStats,
+        state: this.client.driftStatePda,
+      })
+      .instruction();
+  }
+
+  public async revertFillTx(
+    fillerSubAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.revertFillIx(fillerSubAccountId, glamSigner);
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async liquidatePerpIx(
+    marketIndex: number,
+    liquidatorMaxBaseAssetAmount: BN,
+    limitPrice: BN | null,
+    liquidatorSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const remainingAccounts = await this.client.composeRemainingAccounts(
+      liquidatorSubAccountId,
+      MarketType.PERP,
+      marketIndex,
+    );
+
+    const { user: liquidator } = this.client.getDriftUserPdas(
+      liquidatorSubAccountId,
+    );
+    const liquidatorStats = this.client.getDriftUserPdas().userStats;
+
+    return await this.client.base.extDriftProgram.methods
+      .liquidatePerp(marketIndex, liquidatorMaxBaseAssetAmount, limitPrice)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        liquidator,
+        liquidatorStats,
+        user: userKey,
+        userStats: userStatsKey,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async liquidatePerpTx(
+    marketIndex: number,
+    liquidatorMaxBaseAssetAmount: BN,
+    limitPrice: BN | null,
+    liquidatorSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.liquidatePerpIx(
+      marketIndex,
+      liquidatorMaxBaseAssetAmount,
+      limitPrice,
+      liquidatorSubAccountId,
+      userKey,
+      userStatsKey,
+      glamSigner,
+    );
+    const tx = this.build([ix], txOptions);
+    return await this.client.base.intoVersionedTransaction(tx, txOptions);
+  }
+
+  public async liquidateSpotIx(
+    assetMarketIndex: number,
+    liabilityMarketIndex: number,
+    liquidatorMaxLiabilityTransfer: BN,
+    limitPrice: BN | null,
+    liquidatorSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const remainingAccounts = await this.client.composeRemainingAccounts(
+      liquidatorSubAccountId,
+      MarketType.SPOT,
+      assetMarketIndex,
+    );
+
+    const { user: liquidator } = this.client.getDriftUserPdas(
+      liquidatorSubAccountId,
+    );
+    const liquidatorStats = this.client.getDriftUserPdas().userStats;
+
+    return await this.client.base.extDriftProgram.methods
+      .liquidateSpot(
+        assetMarketIndex,
+        liabilityMarketIndex,
+        liquidatorMaxLiabilityTransfer,
+        limitPrice,
+      )
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        liquidator,
+        liquidatorStats,
+        user: userKey,
+        userStats: userStatsKey,
+        state: this.client.driftStatePda,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  public async liquidateSpotTx(
+    assetMarketIndex: number,
+    liabilityMarketIndex: number,
+    liquidatorMaxLiabilityTransfer: BN,
+    limitPrice: BN | null,
+    liquidatorSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.liquidateSpotIx(
+      assetMarketIndex,
+      liabilityMarketIndex,
+      liquidatorMaxLiabilityTransfer,
+      limitPrice,
+      liquidatorSubAccountId,
+      userKey,
+      userStatsKey,
+      glamSigner,
+    );
     const tx = this.build([ix], txOptions);
     return await this.client.base.intoVersionedTransaction(tx, txOptions);
   }
@@ -804,6 +1348,19 @@ export class DriftProtocolClient {
     return await this.base.sendAndConfirm(tx);
   }
 
+  public async cancelOrder(
+    orderId: number | null,
+    subAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.cancelOrderTx(
+      orderId,
+      subAccountId,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
   public async cancelOrders(
     marketType: MarketType,
     marketIndex: number,
@@ -842,6 +1399,180 @@ export class DriftProtocolClient {
     const tx = await this.txBuilder.settlePnlTx(
       marketIndex,
       subAccountId,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async placePerpOrder(
+    orderParams: OrderParams,
+    subAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.placePerpOrderTx(
+      orderParams,
+      subAccountId,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async placeSpotOrder(
+    orderParams: OrderParams,
+    subAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.placeSpotOrderTx(
+      orderParams,
+      subAccountId,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async placeAndTakePerpOrder(
+    orderParams: OrderParams,
+    successCondition: number | null = null,
+    subAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.placeAndTakePerpOrderTx(
+      orderParams,
+      successCondition,
+      subAccountId,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async cancelOrderByUserId(
+    userOrderId: number,
+    subAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.cancelOrderByUserIdTx(
+      userOrderId,
+      subAccountId,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async modifyOrderByUserId(
+    userOrderId: number,
+    modifyOrderParams: ModifyOrderParams,
+    subAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.modifyOrderByUserIdTx(
+      userOrderId,
+      modifyOrderParams,
+      subAccountId,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async fillPerpOrder(
+    orderId: number | null,
+    makerOrderId: number | null,
+    fillerSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.fillPerpOrderTx(
+      orderId,
+      makerOrderId,
+      fillerSubAccountId,
+      userKey,
+      userStatsKey,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async fillSpotOrder(
+    orderId: number | null,
+    fulfillmentType: any | null,
+    makerOrderId: number | null,
+    fillerSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.fillSpotOrderTx(
+      orderId,
+      fulfillmentType,
+      makerOrderId,
+      fillerSubAccountId,
+      userKey,
+      userStatsKey,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async forceCancelOrders(
+    fillerSubAccountId: number,
+    userKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.forceCancelOrdersTx(
+      fillerSubAccountId,
+      userKey,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async revertFill(
+    fillerSubAccountId: number = 0,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.revertFillTx(fillerSubAccountId, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async liquidatePerp(
+    marketIndex: number,
+    liquidatorMaxBaseAssetAmount: BN,
+    limitPrice: BN | null,
+    liquidatorSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.liquidatePerpTx(
+      marketIndex,
+      liquidatorMaxBaseAssetAmount,
+      limitPrice,
+      liquidatorSubAccountId,
+      userKey,
+      userStatsKey,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async liquidateSpot(
+    assetMarketIndex: number,
+    liabilityMarketIndex: number,
+    liquidatorMaxLiabilityTransfer: BN,
+    limitPrice: BN | null,
+    liquidatorSubAccountId: number,
+    userKey: PublicKey,
+    userStatsKey: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.liquidateSpotTx(
+      assetMarketIndex,
+      liabilityMarketIndex,
+      liquidatorMaxLiabilityTransfer,
+      limitPrice,
+      liquidatorSubAccountId,
+      userKey,
+      userStatsKey,
       txOptions,
     );
     return await this.base.sendAndConfirm(tx);
