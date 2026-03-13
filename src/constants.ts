@@ -98,6 +98,16 @@ export const MESSAGE_TRANSMITTER_V2 = new PublicKey(
 );
 
 /**
+ * Token ACL (sRFC-37)
+ */
+export const TOKEN_ACL_PROGRAM = new PublicKey(
+  "TACLkU6CiCdkQN2MjoyDkVg2yAH9zkxiHDsiztQ52TP",
+);
+export const TOKEN_ACL_GATE_PROGRAM = new PublicKey(
+  "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz",
+);
+
+/**
  * GLAM programs
  */
 export const TRANSFER_HOOK_PROGRAM = new PublicKey(

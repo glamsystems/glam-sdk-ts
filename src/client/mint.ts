@@ -2,6 +2,7 @@ import { BN, utils as anchorUtils } from "@coral-xyz/anchor";
 
 import {
   PublicKey,
+  SystemProgram,
   TransactionInstruction,
   VersionedTransaction,
 } from "@solana/web3.js";
@@ -25,7 +26,13 @@ import {
   getExtraMetasPda,
   getMintPda,
   getStatePda,
+  getTokenAclMintConfigPda,
+  getTokenAclFlagAccountPda,
+  getTokenAclGateListConfigPda,
+  getTokenAclGateWalletEntryPda,
+  getTokenAclGateExtraMetasPda,
 } from "../utils/glamPDAs";
+import { TOKEN_ACL_GATE_PROGRAM, TOKEN_ACL_PROGRAM } from "../constants";
 import { ClusterNetwork } from "../clientConfig";
 import { charsToString } from "../utils/common";
 import { UpdateStateParams } from "./state";
@@ -532,6 +539,218 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
     const ix = await this.closeMintIx(glamSigner);
     return await this.buildVersionedTx([ix], txOptions);
   }
+
+  public async enableTokenAclIx(
+    tokenAclAuthority: PublicKey,
+    gatingProgram: PublicKey | undefined,
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const glamMint = this.client.base.mintPda;
+    const mintConfigPda = getTokenAclMintConfigPda(glamMint);
+    return await (this.client.base.mintProgram.methods as any)
+      .enableTokenAcl(tokenAclAuthority, gatingProgram ?? null)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        glamMint,
+        mintConfig: mintConfigPda,
+      })
+      .instruction();
+  }
+
+  public async enableTokenAclTx(
+    tokenAclAuthority: PublicKey,
+    gatingProgram: PublicKey | undefined,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.enableTokenAclIx(
+      tokenAclAuthority,
+      gatingProgram,
+      glamSigner,
+    );
+    return this.buildVersionedTx([ix], txOptions);
+  }
+
+  public createTokenAclAllowlistIx(
+    seed: Buffer,
+    mode: number,
+    glamSigner: PublicKey,
+  ): TransactionInstruction {
+    const listConfigPda = getTokenAclGateListConfigPda(glamSigner, seed);
+    const data = Buffer.alloc(34);
+    data.writeUInt8(0x01, 0); // discriminator
+    data.writeUInt8(mode, 1);
+    seed.copy(data, 2);
+
+    return new TransactionInstruction({
+      programId: TOKEN_ACL_GATE_PROGRAM,
+      keys: [
+        { pubkey: glamSigner, isSigner: true, isWritable: false },
+        { pubkey: glamSigner, isSigner: true, isWritable: true },
+        { pubkey: listConfigPda, isSigner: false, isWritable: true },
+        {
+          pubkey: SystemProgram.programId,
+          isSigner: false,
+          isWritable: false,
+        },
+      ],
+      data,
+    });
+  }
+
+  public async createTokenAclAllowlistTx(
+    seed: Buffer,
+    mode: number,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = this.createTokenAclAllowlistIx(seed, mode, glamSigner);
+    return this.buildVersionedTx([ix], txOptions);
+  }
+
+  public addWalletToTokenAclAllowlistIx(
+    seed: Buffer,
+    wallet: PublicKey,
+    glamSigner: PublicKey,
+  ): TransactionInstruction {
+    const listConfigPda = getTokenAclGateListConfigPda(glamSigner, seed);
+    const walletEntryPda = getTokenAclGateWalletEntryPda(listConfigPda, wallet);
+
+    return new TransactionInstruction({
+      programId: TOKEN_ACL_GATE_PROGRAM,
+      keys: [
+        { pubkey: glamSigner, isSigner: true, isWritable: false },
+        { pubkey: glamSigner, isSigner: true, isWritable: true },
+        { pubkey: listConfigPda, isSigner: false, isWritable: true },
+        { pubkey: wallet, isSigner: false, isWritable: false },
+        { pubkey: walletEntryPda, isSigner: false, isWritable: true },
+        {
+          pubkey: SystemProgram.programId,
+          isSigner: false,
+          isWritable: false,
+        },
+      ],
+      data: Buffer.from([0x02]),
+    });
+  }
+
+  public async addWalletToTokenAclAllowlistTx(
+    seed: Buffer,
+    wallet: PublicKey,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = this.addWalletToTokenAclAllowlistIx(seed, wallet, glamSigner);
+    return this.buildVersionedTx([ix], txOptions);
+  }
+
+  public async setupTokenAclGateExtraMetasIx(
+    listConfigs: PublicKey[],
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const glamMint = this.client.base.mintPda;
+    const mintConfigPda = getTokenAclMintConfigPda(glamMint);
+    const extraMetasPda = getTokenAclGateExtraMetasPda(glamMint);
+
+    return await (this.client.base.mintProgram.methods as any)
+      .setupTokenAclGateExtraMetas()
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        glamMint,
+        mintConfig: mintConfigPda,
+        extraMetas: extraMetasPda,
+        tokenAclGateProgram: TOKEN_ACL_GATE_PROGRAM,
+      })
+      .remainingAccounts(
+        listConfigs.map((pubkey) => ({
+          pubkey,
+          isSigner: false,
+          isWritable: false,
+        })),
+      )
+      .instruction();
+  }
+
+  public async setupTokenAclGateExtraMetasTx(
+    listConfigs: PublicKey[],
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.setupTokenAclGateExtraMetasIx(
+      listConfigs,
+      glamSigner,
+    );
+    return this.buildVersionedTx([ix], txOptions);
+  }
+
+  public thawPermissionlessIx(
+    wallet: PublicKey,
+    listAndWalletPairs: { listConfig: PublicKey; walletEntry: PublicKey }[],
+    signer: PublicKey,
+  ): TransactionInstruction {
+    const glamMint = this.client.base.mintPda;
+    const tokenAccount = this.client.base.getMintAta(wallet);
+    const flagAccount = getTokenAclFlagAccountPda(tokenAccount);
+    const mintConfigPda = getTokenAclMintConfigPda(glamMint);
+    const extraMetasPda = getTokenAclGateExtraMetasPda(glamMint);
+
+    const keys = [
+      { pubkey: signer, isSigner: true, isWritable: false },
+      { pubkey: glamMint, isSigner: false, isWritable: false },
+      { pubkey: tokenAccount, isSigner: false, isWritable: true },
+      { pubkey: flagAccount, isSigner: false, isWritable: true },
+      { pubkey: wallet, isSigner: false, isWritable: false },
+      { pubkey: mintConfigPda, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
+      {
+        pubkey: SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+      { pubkey: TOKEN_ACL_GATE_PROGRAM, isSigner: false, isWritable: false },
+      { pubkey: extraMetasPda, isSigner: false, isWritable: false },
+    ];
+
+    for (const pair of listAndWalletPairs) {
+      keys.push({
+        pubkey: pair.listConfig,
+        isSigner: false,
+        isWritable: false,
+      });
+      keys.push({
+        pubkey: pair.walletEntry,
+        isSigner: false,
+        isWritable: false,
+      });
+    }
+
+    return new TransactionInstruction({
+      programId: TOKEN_ACL_PROGRAM,
+      keys,
+      data: Buffer.from([0x06]),
+    });
+  }
+
+  public async thawPermissionlessTx(
+    wallet: PublicKey,
+    listAndWalletPairs: { listConfig: PublicKey; walletEntry: PublicKey }[],
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const signer = txOptions.signer || this.client.base.signer;
+    const glamMint = this.client.base.mintPda;
+    const ata = this.client.base.getMintAta(wallet);
+    const createAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      signer,
+      ata,
+      wallet,
+      glamMint,
+      TOKEN_2022_PROGRAM_ID,
+    );
+    const ix = this.thawPermissionlessIx(wallet, listAndWalletPairs, signer);
+    return this.buildVersionedTx([createAtaIx, ix], txOptions);
+  }
 }
 
 export class MintClient {
@@ -755,6 +974,19 @@ export class MintClient {
     return await this.base.sendAndConfirm(vTx);
   }
 
+  public async enableTokenAcl(
+    tokenAclAuthority: PublicKey,
+    gatingProgram?: PublicKey,
+    txOptions: TxOptions = {},
+  ) {
+    const vTx = await this.txBuilder.enableTokenAclTx(
+      tokenAclAuthority,
+      gatingProgram,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(vTx);
+  }
+
   public async forceTransfer(
     from: PublicKey,
     to: PublicKey,
@@ -767,6 +999,56 @@ export class MintClient {
       to,
       amount,
       unfreeze,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(vTx);
+  }
+
+  public async createTokenAclAllowlist(
+    seed: Buffer,
+    mode: number = 0,
+    txOptions: TxOptions = {},
+  ) {
+    const vTx = await this.txBuilder.createTokenAclAllowlistTx(
+      seed,
+      mode,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(vTx);
+  }
+
+  public async addWalletToTokenAclAllowlist(
+    seed: Buffer,
+    wallet: PublicKey,
+    txOptions: TxOptions = {},
+  ) {
+    const vTx = await this.txBuilder.addWalletToTokenAclAllowlistTx(
+      seed,
+      wallet,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(vTx);
+  }
+
+  public async setupTokenAclGateExtraMetas(
+    listConfigs: PublicKey[],
+    txOptions: TxOptions = {},
+  ) {
+    const vTx = await this.txBuilder.setupTokenAclGateExtraMetasTx(
+      listConfigs,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(vTx);
+  }
+
+  public async thawPermissionless(
+    wallet: PublicKey,
+    listAndWalletPairs: { listConfig: PublicKey; walletEntry: PublicKey }[],
+    txOptions: TxOptions = {},
+  ) {
+    const vTx = await this.txBuilder.thawPermissionlessTx(
+      wallet,
+      listAndWalletPairs,
       txOptions,
     );
     return await this.base.sendAndConfirm(vTx);

@@ -22,6 +22,7 @@ import {
 } from "@solana/spl-token";
 import { PkMap } from "./pkmap";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { getTokenAclMintConfigPda } from "./glamPDAs";
 import { getProgramAccounts } from "./rpc";
 
 export type StakeAccountInfo = {
@@ -266,6 +267,22 @@ export async function fetchMintAndTokenProgram(
     );
   }
   return parseMintAccountInfo(info, mintPubkey);
+}
+
+/**
+ * Checks if Token ACL (sRFC-37) is enabled for the given mint by verifying
+ * the freeze authority is set to the Token ACL program.
+ */
+export async function isTokenAclEnabled(
+  connection: Connection,
+  mintPubkey: PublicKey,
+): Promise<boolean> {
+  const { mint } = await fetchMintAndTokenProgram(connection, mintPubkey);
+  const mintConfigPda = getTokenAclMintConfigPda(mintPubkey);
+  return (
+    mint.freezeAuthority !== null &&
+    mint.freezeAuthority.equals(mintConfigPda)
+  );
 }
 
 /**

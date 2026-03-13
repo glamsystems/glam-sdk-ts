@@ -9,6 +9,8 @@ import {
   SEED_REQUEST_QUEUE,
   SEED_STATE,
   SEED_VAULT,
+  TOKEN_ACL_PROGRAM,
+  TOKEN_ACL_GATE_PROGRAM,
   TRANSFER_HOOK_PROGRAM,
 } from "../constants";
 
@@ -84,6 +86,47 @@ export function getAccountPolicyPda(tokenAccount: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from(SEED_ACCOUNT_POLICY), tokenAccount.toBuffer()],
     TRANSFER_HOOK_PROGRAM,
+  )[0];
+}
+
+export function getTokenAclMintConfigPda(mint: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("MINT_CONFIG"), mint.toBuffer()],
+    TOKEN_ACL_PROGRAM,
+  )[0];
+}
+
+export function getTokenAclFlagAccountPda(tokenAccount: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("FLAG_ACCOUNT"), tokenAccount.toBuffer()],
+    TOKEN_ACL_PROGRAM,
+  )[0];
+}
+
+export function getTokenAclGateListConfigPda(
+  authority: PublicKey,
+  seed: Buffer,
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("list_config"), authority.toBuffer(), seed],
+    TOKEN_ACL_GATE_PROGRAM,
+  )[0];
+}
+
+export function getTokenAclGateWalletEntryPda(
+  listConfig: PublicKey,
+  wallet: PublicKey,
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("wallet_entry"), listConfig.toBuffer(), wallet.toBuffer()],
+    TOKEN_ACL_GATE_PROGRAM,
+  )[0];
+}
+
+export function getTokenAclGateExtraMetasPda(mint: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("thaw_extra_account_metas"), mint.toBuffer()],
+    TOKEN_ACL_GATE_PROGRAM,
   )[0];
 }
 
