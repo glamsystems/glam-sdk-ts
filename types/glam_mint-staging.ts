@@ -1188,6 +1188,66 @@ export type GlamMint = {
       ]
     },
     {
+      "name": "enableTokenAcl",
+      "discriminator": [
+        223,
+        179,
+        117,
+        163,
+        201,
+        185,
+        222,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamMint",
+          "writable": true
+        },
+        {
+          "name": "mintConfig",
+          "writable": true
+        },
+        {
+          "name": "tokenAclProgram",
+          "address": "TACLkU6CiCdkQN2MjoyDkVg2yAH9zkxiHDsiztQ52TP"
+        },
+        {
+          "name": "token2022Program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": [
+        {
+          "name": "tokenAclAuthority",
+          "type": "pubkey"
+        },
+        {
+          "name": "gatingProgram",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
       "name": "forceTransferTokens",
       "discriminator": [
         185,
@@ -4057,6 +4117,53 @@ export type GlamMint = {
       ]
     },
     {
+      "name": "setupTokenAclGateExtraMetas",
+      "discriminator": [
+        171,
+        69,
+        57,
+        197,
+        100,
+        183,
+        88,
+        45
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamMint",
+          "writable": true
+        },
+        {
+          "name": "mintConfig"
+        },
+        {
+          "name": "extraMetas",
+          "writable": true
+        },
+        {
+          "name": "tokenAclGateProgram"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "subscribe",
       "discriminator": [
         254,
@@ -4783,6 +4890,16 @@ export type GlamMint = {
       "code": 6016,
       "name": "amountBelowMinimum",
       "msg": "Amount below minimum threshold"
+    },
+    {
+      "code": 6017,
+      "name": "tokenAclManagesFreezeThaw",
+      "msg": "Token ACL is enabled; freeze/thaw is managed by the Token ACL program"
+    },
+    {
+      "code": 6018,
+      "name": "invalidMintState",
+      "msg": "Invalid mint state"
     }
   ],
   "types": [

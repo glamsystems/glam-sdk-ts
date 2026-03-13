@@ -4560,6 +4560,16 @@ export type GlamMint = {
       "code": 6016,
       "name": "amountBelowMinimum",
       "msg": "Amount below minimum threshold"
+    },
+    {
+      "code": 6017,
+      "name": "tokenAclManagesFreezeThaw",
+      "msg": "Token ACL is enabled; freeze/thaw is managed by the Token ACL program"
+    },
+    {
+      "code": 6018,
+      "name": "invalidMintState",
+      "msg": "Invalid mint state"
     }
   ],
   "types": [

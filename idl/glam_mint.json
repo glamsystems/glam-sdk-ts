@@ -4554,6 +4554,16 @@
       "code": 6016,
       "name": "AmountBelowMinimum",
       "msg": "Amount below minimum threshold"
+    },
+    {
+      "code": 6017,
+      "name": "TokenAclManagesFreezeThaw",
+      "msg": "Token ACL is enabled; freeze/thaw is managed by the Token ACL program"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidMintState",
+      "msg": "Invalid mint state"
     }
   ],
   "types": [

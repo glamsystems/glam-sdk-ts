@@ -1182,6 +1182,66 @@
       ]
     },
     {
+      "name": "enable_token_acl",
+      "discriminator": [
+        223,
+        179,
+        117,
+        163,
+        201,
+        185,
+        222,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_mint",
+          "writable": true
+        },
+        {
+          "name": "mint_config",
+          "writable": true
+        },
+        {
+          "name": "token_acl_program",
+          "address": "TACLkU6CiCdkQN2MjoyDkVg2yAH9zkxiHDsiztQ52TP"
+        },
+        {
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": [
+        {
+          "name": "token_acl_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "gating_program",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
       "name": "force_transfer_tokens",
       "discriminator": [
         185,
@@ -4051,6 +4111,53 @@
       ]
     },
     {
+      "name": "setup_token_acl_gate_extra_metas",
+      "discriminator": [
+        171,
+        69,
+        57,
+        197,
+        100,
+        183,
+        88,
+        45
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_mint",
+          "writable": true
+        },
+        {
+          "name": "mint_config"
+        },
+        {
+          "name": "extra_metas",
+          "writable": true
+        },
+        {
+          "name": "token_acl_gate_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "subscribe",
       "discriminator": [
         254,
@@ -4777,6 +4884,16 @@
       "code": 6016,
       "name": "AmountBelowMinimum",
       "msg": "Amount below minimum threshold"
+    },
+    {
+      "code": 6017,
+      "name": "TokenAclManagesFreezeThaw",
+      "msg": "Token ACL is enabled; freeze/thaw is managed by the Token ACL program"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidMintState",
+      "msg": "Invalid mint state"
     }
   ],
   "types": [
