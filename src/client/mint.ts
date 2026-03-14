@@ -372,6 +372,24 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
     const mintPda = getMintPda(glamState, 0, mintProgram.programId);
     const extraMetasPda = getExtraMetasPda(mintPda);
 
+    if (
+      (this.client.base.staging ||
+        this.client.base.cluster === ClusterNetwork.Localnet) &&
+      initMintParams.defaultAccountStateFrozen
+    ) {
+      const mintConfigPda = getTokenAclMintConfigPda(mintPda);
+      const enableTokenAclIx = await (mintProgram.methods as any)
+        .enableTokenAcl(mintPda, null)
+        .accounts({
+          glamState,
+          glamSigner,
+          glamMint: mintPda,
+          mintConfig: mintConfigPda,
+        })
+        .instruction();
+      postInstructions.push(enableTokenAclIx);
+    }
+
     // Use glam hosted metadata as a fallback if uri is not provided
     if (!initMintParams.uri) {
       initMintParams.uri = `https://static.glam.systems/v0/token/metadata?key=${mintPda}`;

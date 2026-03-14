@@ -1215,7 +1215,68 @@ export type GlamMint = {
         },
         {
           "name": "mintConfig",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  77,
+                  73,
+                  78,
+                  84,
+                  95,
+                  67,
+                  79,
+                  78,
+                  70,
+                  73,
+                  71
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                6,
+                179,
+                127,
+                154,
+                112,
+                244,
+                6,
+                234,
+                54,
+                211,
+                41,
+                245,
+                148,
+                165,
+                22,
+                5,
+                150,
+                15,
+                242,
+                225,
+                55,
+                23,
+                91,
+                46,
+                218,
+                0,
+                102,
+                202,
+                50,
+                58,
+                107,
+                206
+              ]
+            }
+          }
         },
         {
           "name": "tokenAclProgram",
@@ -4143,14 +4204,150 @@ export type GlamMint = {
           "writable": true
         },
         {
-          "name": "mintConfig"
+          "name": "mintConfig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  77,
+                  73,
+                  78,
+                  84,
+                  95,
+                  67,
+                  79,
+                  78,
+                  70,
+                  73,
+                  71
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                6,
+                179,
+                127,
+                154,
+                112,
+                244,
+                6,
+                234,
+                54,
+                211,
+                41,
+                245,
+                148,
+                165,
+                22,
+                5,
+                150,
+                15,
+                242,
+                225,
+                55,
+                23,
+                91,
+                46,
+                218,
+                0,
+                102,
+                202,
+                50,
+                58,
+                107,
+                206
+              ]
+            }
+          }
         },
         {
           "name": "extraMetas",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  104,
+                  97,
+                  119,
+                  95,
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                225,
+                75,
+                51,
+                208,
+                94,
+                242,
+                103,
+                39,
+                36,
+                154,
+                175,
+                185,
+                45,
+                215,
+                178,
+                172,
+                212,
+                90,
+                38,
+                236,
+                241,
+                111,
+                194,
+                147,
+                148,
+                148,
+                49,
+                31,
+                143,
+                249,
+                136,
+                203
+              ]
+            }
+          }
         },
         {
-          "name": "tokenAclGateProgram"
+          "name": "tokenAclGateProgram",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
         },
         {
           "name": "systemProgram",
