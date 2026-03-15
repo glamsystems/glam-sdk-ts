@@ -14,6 +14,521 @@ export type GlamMint = {
   },
   "instructions": [
     {
+      "name": "aclGateAddWallet",
+      "discriminator": [
+        177,
+        209,
+        222,
+        44,
+        139,
+        216,
+        75,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamMint",
+          "writable": true
+        },
+        {
+          "name": "listConfig",
+          "writable": true
+        },
+        {
+          "name": "wallet"
+        },
+        {
+          "name": "walletEntry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116,
+                  95,
+                  101,
+                  110,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "listConfig"
+              },
+              {
+                "kind": "account",
+                "path": "wallet"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                225,
+                75,
+                51,
+                208,
+                94,
+                242,
+                103,
+                39,
+                36,
+                154,
+                175,
+                185,
+                45,
+                215,
+                178,
+                172,
+                212,
+                90,
+                38,
+                236,
+                241,
+                111,
+                194,
+                147,
+                148,
+                148,
+                49,
+                31,
+                143,
+                249,
+                136,
+                203
+              ]
+            }
+          }
+        },
+        {
+          "name": "tokenAclGateProgram",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "aclGateCreateList",
+      "discriminator": [
+        58,
+        42,
+        187,
+        89,
+        245,
+        216,
+        223,
+        82
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamMint",
+          "writable": true
+        },
+        {
+          "name": "listConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  115,
+                  116,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamMint"
+              },
+              {
+                "kind": "arg",
+                "path": "seed"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                225,
+                75,
+                51,
+                208,
+                94,
+                242,
+                103,
+                39,
+                36,
+                154,
+                175,
+                185,
+                45,
+                215,
+                178,
+                172,
+                212,
+                90,
+                38,
+                236,
+                241,
+                111,
+                194,
+                147,
+                148,
+                148,
+                49,
+                31,
+                143,
+                249,
+                136,
+                203
+              ]
+            }
+          }
+        },
+        {
+          "name": "tokenAclGateProgram",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": [
+        {
+          "name": "seed",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "mode",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "aclGateDeleteList",
+      "discriminator": [
+        113,
+        175,
+        235,
+        163,
+        178,
+        217,
+        46,
+        134
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamMint",
+          "writable": true
+        },
+        {
+          "name": "listConfig",
+          "writable": true
+        },
+        {
+          "name": "tokenAclGateProgram",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "aclGateRemoveWallet",
+      "discriminator": [
+        74,
+        153,
+        117,
+        215,
+        253,
+        225,
+        59,
+        63
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamMint",
+          "writable": true
+        },
+        {
+          "name": "listConfig",
+          "writable": true
+        },
+        {
+          "name": "walletEntry",
+          "writable": true
+        },
+        {
+          "name": "tokenAclGateProgram",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "aclGateSetupExtraMetas",
+      "discriminator": [
+        47,
+        15,
+        98,
+        58,
+        82,
+        141,
+        213,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamMint",
+          "writable": true
+        },
+        {
+          "name": "mintConfig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  77,
+                  73,
+                  78,
+                  84,
+                  95,
+                  67,
+                  79,
+                  78,
+                  70,
+                  73,
+                  71
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                6,
+                179,
+                127,
+                154,
+                112,
+                244,
+                6,
+                234,
+                54,
+                211,
+                41,
+                245,
+                148,
+                165,
+                22,
+                5,
+                150,
+                15,
+                242,
+                225,
+                55,
+                23,
+                91,
+                46,
+                218,
+                0,
+                102,
+                202,
+                50,
+                58,
+                107,
+                206
+              ]
+            }
+          }
+        },
+        {
+          "name": "extraMetas",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  104,
+                  97,
+                  119,
+                  95,
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                225,
+                75,
+                51,
+                208,
+                94,
+                242,
+                103,
+                39,
+                36,
+                154,
+                175,
+                185,
+                45,
+                215,
+                178,
+                172,
+                212,
+                90,
+                38,
+                236,
+                241,
+                111,
+                194,
+                147,
+                148,
+                148,
+                49,
+                31,
+                143,
+                249,
+                136,
+                203
+              ]
+            }
+          }
+        },
+        {
+          "name": "tokenAclGateProgram",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "burnTokens",
       "discriminator": [
         76,
@@ -1296,10 +1811,6 @@ export type GlamMint = {
         }
       ],
       "args": [
-        {
-          "name": "tokenAclAuthority",
-          "type": "pubkey"
-        },
         {
           "name": "gatingProgram",
           "type": {
@@ -4176,189 +4687,6 @@ export type GlamMint = {
           "type": "bool"
         }
       ]
-    },
-    {
-      "name": "setupTokenAclGateExtraMetas",
-      "discriminator": [
-        171,
-        69,
-        57,
-        197,
-        100,
-        183,
-        88,
-        45
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "glamMint",
-          "writable": true
-        },
-        {
-          "name": "mintConfig",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  77,
-                  73,
-                  78,
-                  84,
-                  95,
-                  67,
-                  79,
-                  78,
-                  70,
-                  73,
-                  71
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                6,
-                179,
-                127,
-                154,
-                112,
-                244,
-                6,
-                234,
-                54,
-                211,
-                41,
-                245,
-                148,
-                165,
-                22,
-                5,
-                150,
-                15,
-                242,
-                225,
-                55,
-                23,
-                91,
-                46,
-                218,
-                0,
-                102,
-                202,
-                50,
-                58,
-                107,
-                206
-              ]
-            }
-          }
-        },
-        {
-          "name": "extraMetas",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  104,
-                  97,
-                  119,
-                  95,
-                  101,
-                  120,
-                  116,
-                  114,
-                  97,
-                  95,
-                  97,
-                  99,
-                  99,
-                  111,
-                  117,
-                  110,
-                  116,
-                  95,
-                  109,
-                  101,
-                  116,
-                  97,
-                  115
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                225,
-                75,
-                51,
-                208,
-                94,
-                242,
-                103,
-                39,
-                36,
-                154,
-                175,
-                185,
-                45,
-                215,
-                178,
-                172,
-                212,
-                90,
-                38,
-                236,
-                241,
-                111,
-                194,
-                147,
-                148,
-                148,
-                49,
-                31,
-                143,
-                249,
-                136,
-                203
-              ]
-            }
-          }
-        },
-        {
-          "name": "tokenAclGateProgram",
-          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "glamProtocol",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        }
-      ],
-      "args": []
     },
     {
       "name": "subscribe",

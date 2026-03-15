@@ -8,6 +8,521 @@
   },
   "instructions": [
     {
+      "name": "acl_gate_add_wallet",
+      "discriminator": [
+        177,
+        209,
+        222,
+        44,
+        139,
+        216,
+        75,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_mint",
+          "writable": true
+        },
+        {
+          "name": "list_config",
+          "writable": true
+        },
+        {
+          "name": "wallet"
+        },
+        {
+          "name": "wallet_entry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116,
+                  95,
+                  101,
+                  110,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "list_config"
+              },
+              {
+                "kind": "account",
+                "path": "wallet"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                225,
+                75,
+                51,
+                208,
+                94,
+                242,
+                103,
+                39,
+                36,
+                154,
+                175,
+                185,
+                45,
+                215,
+                178,
+                172,
+                212,
+                90,
+                38,
+                236,
+                241,
+                111,
+                194,
+                147,
+                148,
+                148,
+                49,
+                31,
+                143,
+                249,
+                136,
+                203
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_acl_gate_program",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "acl_gate_create_list",
+      "discriminator": [
+        58,
+        42,
+        187,
+        89,
+        245,
+        216,
+        223,
+        82
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_mint",
+          "writable": true
+        },
+        {
+          "name": "list_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  115,
+                  116,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_mint"
+              },
+              {
+                "kind": "arg",
+                "path": "seed"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                225,
+                75,
+                51,
+                208,
+                94,
+                242,
+                103,
+                39,
+                36,
+                154,
+                175,
+                185,
+                45,
+                215,
+                178,
+                172,
+                212,
+                90,
+                38,
+                236,
+                241,
+                111,
+                194,
+                147,
+                148,
+                148,
+                49,
+                31,
+                143,
+                249,
+                136,
+                203
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_acl_gate_program",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": [
+        {
+          "name": "seed",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "mode",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "acl_gate_delete_list",
+      "discriminator": [
+        113,
+        175,
+        235,
+        163,
+        178,
+        217,
+        46,
+        134
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_mint",
+          "writable": true
+        },
+        {
+          "name": "list_config",
+          "writable": true
+        },
+        {
+          "name": "token_acl_gate_program",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "acl_gate_remove_wallet",
+      "discriminator": [
+        74,
+        153,
+        117,
+        215,
+        253,
+        225,
+        59,
+        63
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_mint",
+          "writable": true
+        },
+        {
+          "name": "list_config",
+          "writable": true
+        },
+        {
+          "name": "wallet_entry",
+          "writable": true
+        },
+        {
+          "name": "token_acl_gate_program",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "acl_gate_setup_extra_metas",
+      "discriminator": [
+        47,
+        15,
+        98,
+        58,
+        82,
+        141,
+        213,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_mint",
+          "writable": true
+        },
+        {
+          "name": "mint_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  77,
+                  73,
+                  78,
+                  84,
+                  95,
+                  67,
+                  79,
+                  78,
+                  70,
+                  73,
+                  71
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                6,
+                179,
+                127,
+                154,
+                112,
+                244,
+                6,
+                234,
+                54,
+                211,
+                41,
+                245,
+                148,
+                165,
+                22,
+                5,
+                150,
+                15,
+                242,
+                225,
+                55,
+                23,
+                91,
+                46,
+                218,
+                0,
+                102,
+                202,
+                50,
+                58,
+                107,
+                206
+              ]
+            }
+          }
+        },
+        {
+          "name": "extra_metas",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  104,
+                  97,
+                  119,
+                  95,
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                225,
+                75,
+                51,
+                208,
+                94,
+                242,
+                103,
+                39,
+                36,
+                154,
+                175,
+                185,
+                45,
+                215,
+                178,
+                172,
+                212,
+                90,
+                38,
+                236,
+                241,
+                111,
+                194,
+                147,
+                148,
+                148,
+                49,
+                31,
+                143,
+                249,
+                136,
+                203
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_acl_gate_program",
+          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "burn_tokens",
       "discriminator": [
         76,
@@ -1290,10 +1805,6 @@
         }
       ],
       "args": [
-        {
-          "name": "token_acl_authority",
-          "type": "pubkey"
-        },
         {
           "name": "gating_program",
           "type": {
@@ -4170,189 +4681,6 @@
           "type": "bool"
         }
       ]
-    },
-    {
-      "name": "setup_token_acl_gate_extra_metas",
-      "discriminator": [
-        171,
-        69,
-        57,
-        197,
-        100,
-        183,
-        88,
-        45
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "glam_mint",
-          "writable": true
-        },
-        {
-          "name": "mint_config",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  77,
-                  73,
-                  78,
-                  84,
-                  95,
-                  67,
-                  79,
-                  78,
-                  70,
-                  73,
-                  71
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                6,
-                179,
-                127,
-                154,
-                112,
-                244,
-                6,
-                234,
-                54,
-                211,
-                41,
-                245,
-                148,
-                165,
-                22,
-                5,
-                150,
-                15,
-                242,
-                225,
-                55,
-                23,
-                91,
-                46,
-                218,
-                0,
-                102,
-                202,
-                50,
-                58,
-                107,
-                206
-              ]
-            }
-          }
-        },
-        {
-          "name": "extra_metas",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  104,
-                  97,
-                  119,
-                  95,
-                  101,
-                  120,
-                  116,
-                  114,
-                  97,
-                  95,
-                  97,
-                  99,
-                  99,
-                  111,
-                  117,
-                  110,
-                  116,
-                  95,
-                  109,
-                  101,
-                  116,
-                  97,
-                  115
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                225,
-                75,
-                51,
-                208,
-                94,
-                242,
-                103,
-                39,
-                36,
-                154,
-                175,
-                185,
-                45,
-                215,
-                178,
-                172,
-                212,
-                90,
-                38,
-                236,
-                241,
-                111,
-                194,
-                147,
-                148,
-                148,
-                49,
-                31,
-                143,
-                249,
-                136,
-                203
-              ]
-            }
-          }
-        },
-        {
-          "name": "token_acl_gate_program",
-          "address": "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "glam_protocol",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        }
-      ],
-      "args": []
     },
     {
       "name": "subscribe",

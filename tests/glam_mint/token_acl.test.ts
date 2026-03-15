@@ -53,6 +53,9 @@ describe("token_acl", () => {
   const glamClientAlice = new GlamClient({
     wallet: new Wallet(alice),
   });
+  const glamClientBob = new GlamClient({
+    wallet: new Wallet(bob),
+  });
 
   let glamMint: PublicKey;
   let mintConfigPda: PublicKey;
@@ -109,6 +112,7 @@ describe("token_acl", () => {
 
   it("setTokenAccountsStates should fail when Token ACL is active", async () => {
     glamClientAlice.statePda = glamClient.statePda;
+    glamClientBob.statePda = glamClient.statePda;
 
     await expect(
       glamClient.mint.setTokenAccountsStates(
@@ -159,26 +163,23 @@ describe("token_acl", () => {
     ).toBe("frozen");
   }, 25_000);
 
-  it("Manager creates allowlist and adds alice", async () => {
+  //
+  // ACL Gate list management via GLAM (mint PDA as authority)
+  //
+
+  it("Manager creates allowlist via GLAM (mint PDA as authority)", async () => {
     listSeed = Buffer.alloc(32);
     Buffer.from("glam-acl-test-list-1").copy(listSeed);
 
-    listConfigPda = getTokenAclGateListConfigPda(glamClient.signer, listSeed);
+    // ListConfig PDA is derived with glamMint as authority
+    listConfigPda = getTokenAclGateListConfigPda(glamMint, listSeed);
 
-    // Create an allowlist (mode=0 = Allow) and add alice
-    const txSig1 = await glamClient.mint.createTokenAclAllowlist(
+    const txSig = await glamClient.mint.aclGateCreateList(
       listSeed,
-      0,
+      0, // mode = Allow
       txOptions,
     );
-    console.log("Create allowlist:", txSig1);
-
-    const txSig2 = await glamClient.mint.addWalletToTokenAclAllowlist(
-      listSeed,
-      alice.publicKey,
-      txOptions,
-    );
-    console.log("Add alice to allowlist:", txSig2);
+    console.log("ACL Gate create list:", txSig);
 
     const listConfigInfo =
       await glamClient.connection.getAccountInfo(listConfigPda);
@@ -189,10 +190,18 @@ describe("token_acl", () => {
       listConfigPda,
       listConfigInfo!.data,
     );
-    expect(listConfig.authority.equals(glamClient.signer)).toBe(true);
+    expect(listConfig.authority.equals(glamMint)).toBe(true);
     expect(listConfig.mode).toBe(0);
     expect(listConfig.modeName).toBe("allow");
-    expect(listConfig.seed.toBuffer()).toEqual(listSeed);
+  }, 25_000);
+
+  it("Manager adds alice to allowlist via GLAM", async () => {
+    const txSig = await glamClient.mint.aclGateAddWallet(
+      listConfigPda,
+      alice.publicKey,
+      txOptions,
+    );
+    console.log("ACL Gate add alice:", txSig);
 
     const walletEntryPda = getTokenAclGateWalletEntryPda(
       listConfigPda,
@@ -212,7 +221,7 @@ describe("token_acl", () => {
   }, 25_000);
 
   it("Manager sets up gate extra metas (via GLAM)", async () => {
-    const txSig = await glamClient.mint.setupTokenAclGateExtraMetas(
+    const txSig = await glamClient.mint.aclGateSetupExtraMetas(
       [listConfigPda],
       txOptions,
     );
@@ -225,7 +234,7 @@ describe("token_acl", () => {
     expect(extraMetasInfo!.owner.equals(TOKEN_ACL_GATE_PROGRAM)).toBe(true);
   }, 25_000);
 
-  it("Alice can permissionless thaw her token account", async () => {
+  it("Alice (allowlisted) can permissionless thaw her token account", async () => {
     const walletEntryPda = getTokenAclGateWalletEntryPda(
       listConfigPda,
       alice.publicKey,
@@ -253,11 +262,6 @@ describe("token_acl", () => {
       bob.publicKey,
     );
 
-    const glamClientBob = new GlamClient({
-      wallet: new Wallet(bob),
-    });
-    glamClientBob.statePda = glamClient.statePda;
-
     await expect(
       glamClientBob.mint.thawPermissionless(
         bob.publicKey,
@@ -270,4 +274,69 @@ describe("token_acl", () => {
       await getTokenAccountState(glamClient, bob.publicKey, glamMint),
     ).toBe("frozen");
   }, 25_000);
+
+  //
+  // ACL Gate list management: remove wallet and delete list
+  //
+
+  it("Manager removes alice from allowlist via GLAM", async () => {
+    const walletEntryPda = getTokenAclGateWalletEntryPda(
+      listConfigPda,
+      alice.publicKey,
+    );
+
+    const txSig = await glamClient.mint.aclGateRemoveWallet(
+      listConfigPda,
+      walletEntryPda,
+      txOptions,
+    );
+    console.log("ACL Gate remove alice:", txSig);
+
+    const walletEntryInfo =
+      await glamClient.connection.getAccountInfo(walletEntryPda);
+    expect(walletEntryInfo).toBeNull();
+  }, 25_000);
+
+  it("Manager deletes empty allowlist via GLAM", async () => {
+    const txSig = await glamClient.mint.aclGateDeleteList(
+      listConfigPda,
+      txOptions,
+    );
+    console.log("ACL Gate delete list:", txSig);
+
+    const listConfigInfo =
+      await glamClient.connection.getAccountInfo(listConfigPda);
+    expect(listConfigInfo).toBeNull();
+  }, 25_000);
+
+  it("Cannot delete a non-empty list", async () => {
+    // Recreate list and add a wallet
+    const newSeed = Buffer.alloc(32);
+    Buffer.from("acl-gate-nonempty-del").copy(newSeed);
+    const newListConfigPda = getTokenAclGateListConfigPda(glamMint, newSeed);
+
+    await glamClient.mint.aclGateCreateList(newSeed, 0, txOptions);
+    await glamClient.mint.aclGateAddWallet(
+      newListConfigPda,
+      alice.publicKey,
+      txOptions,
+    );
+
+    // Attempt to delete non-empty list should fail
+    await expect(
+      glamClient.mint.aclGateDeleteList(newListConfigPda, txOptions),
+    ).rejects.toThrow();
+
+    // Clean up: remove wallet then delete list
+    const walletEntryPda = getTokenAclGateWalletEntryPda(
+      newListConfigPda,
+      alice.publicKey,
+    );
+    await glamClient.mint.aclGateRemoveWallet(
+      newListConfigPda,
+      walletEntryPda,
+      txOptions,
+    );
+    await glamClient.mint.aclGateDeleteList(newListConfigPda, txOptions);
+  }, 60_000);
 });
