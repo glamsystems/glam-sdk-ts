@@ -1,4 +1,5 @@
-import { struct, u8, publicKey, array } from "@coral-xyz/borsh";
+import { struct, u8, u64, publicKey } from "@coral-xyz/borsh";
+import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { Decodable } from "./base";
 
@@ -20,14 +21,14 @@ export class TokenAclListConfig extends Decodable {
   authority!: PublicKey;
   seed!: PublicKey;
   mode!: number;
-  walletsCount!: number[];
+  walletsCount!: BN;
 
   static _layout = struct([
     u8("discriminator"),
     publicKey("authority"),
     publicKey("seed"),
     u8("mode"),
-    array(u8(), 8, "walletsCount"),
+    u64("walletsCount"),
   ]);
 
   get modeName(): string {

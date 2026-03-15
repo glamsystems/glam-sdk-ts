@@ -16,6 +16,7 @@ import {
 } from "@solana/spl-token";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import { resolveThawAccounts, buildThawPermissionlessIx } from "./mint";
 import { TRANSFER_HOOK_PROGRAM, WSOL } from "../constants";
 import { getAccountPolicyPda } from "../utils/glamPDAs";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
@@ -56,6 +57,26 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
       );
     }
 
+    // If Token ACL is enabled, prepend create ATA + thaw for the signer
+    const glamMint = this.client.base.mintPda;
+    const thawPairs = await resolveThawAccounts(
+      this.client.base.connection,
+      glamMint,
+      signer,
+    );
+    if (thawPairs.length > 0) {
+      preInstructions.push(
+        createAssociatedTokenAccountIdempotentInstruction(
+          signer,
+          mintTo,
+          signer,
+          glamMint,
+          TOKEN_2022_PROGRAM_ID,
+        ),
+        buildThawPermissionlessIx(glamMint, signer, thawPairs, signer),
+      );
+    }
+
     // Check if lockup is enabled on the fund, if so, add signerPolicy
     let signerPolicy = null;
     if (await this.client.base.isLockupEnabled()) {
@@ -71,7 +92,7 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
       .subscribe(amount)
       .accounts({
         glamState: this.client.base.statePda,
-        glamMint: this.client.base.mintPda,
+        glamMint,
         signer,
         depositAsset,
         signerPolicy,
@@ -312,10 +333,10 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
     return this.buildVersionedTx([ix], txOptions);
   }
 
-  public async claimIx(
+  public async claimIxs(
     user: PublicKey | null,
     signer: PublicKey,
-  ): Promise<TransactionInstruction> {
+  ): Promise<TransactionInstruction[]> {
     const claimUser = user || signer;
 
     const pendingRequest = await this.client.fetchPendingRequest(claimUser);
@@ -329,6 +350,7 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
     let claimTokenMint = null;
     let claimTokenProgram = null;
     let escrowAta = null;
+    const preInstructions: TransactionInstruction[] = [];
     const remainingAccounts: AccountMeta[] = [];
     const postInstructions: TransactionInstruction[] = [];
 
@@ -355,10 +377,32 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
           createCloseAccountInstruction(claimUserAta, claimUser, claimUser),
         );
     } else if (RequestType.equals(requestType, RequestType.SUBSCRIPTION)) {
-      claimTokenMint = this.client.base.mintPda;
+      const glamMint = this.client.base.mintPda;
+      claimTokenMint = glamMint;
       claimTokenProgram = TOKEN_2022_PROGRAM_ID;
       claimUserAta = this.client.base.getMintAta(claimUser);
       escrowAta = this.client.base.getMintAta(this.client.base.escrowPda);
+
+      // If Token ACL is enabled, prepend create ATA + thaw for the claim user
+      const thawPairs = await resolveThawAccounts(
+        this.client.base.connection,
+        glamMint,
+        claimUser,
+      );
+
+      if (thawPairs.length > 0) {
+        preInstructions.push(
+          createAssociatedTokenAccountIdempotentInstruction(
+            signer,
+            claimUserAta,
+            claimUser,
+            glamMint,
+            TOKEN_2022_PROGRAM_ID,
+          ),
+          buildThawPermissionlessIx(glamMint, claimUser, thawPairs, signer),
+        );
+      }
+
       if (await this.client.base.isLockupEnabled()) {
         const extraMetasAccount = this.client.base.extraMetasPda;
         const escrowPolicy = getAccountPolicyPda(escrowAta);
@@ -382,7 +426,7 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
       throw new Error("Missing required accounts.");
     }
 
-    return await this.client.base.mintProgram.methods
+    const ix = await this.client.base.mintProgram.methods
       .claim()
       .accountsPartial({
         glamState: this.client.base.statePda,
@@ -398,6 +442,8 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
       })
       .remainingAccounts(remainingAccounts)
       .instruction();
+
+    return [...preInstructions, ix, ...postInstructions];
   }
 
   public async claimTx(
@@ -405,8 +451,8 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const signer = txOptions.signer || this.client.base.signer;
-    const ix = await this.claimIx(user, signer);
-    return await this.buildVersionedTx([ix], txOptions);
+    const ixs = await this.claimIxs(user, signer);
+    return await this.buildVersionedTx(ixs, txOptions);
   }
 }
 

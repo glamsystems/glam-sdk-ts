@@ -8,6 +8,7 @@ export * from "./client/timelock";
 export * from "./client/cctp";
 export * from "./client/price";
 export * from "./deser/integrationPolicies";
+export * from "./deser/tokenAclLayouts";
 export * from "./client/base";
 export * from "./assets";
 export * from "./constants";

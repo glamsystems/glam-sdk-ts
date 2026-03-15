@@ -1,6 +1,7 @@
 import { BN, utils as anchorUtils } from "@coral-xyz/anchor";
 
 import {
+  Connection,
   PublicKey,
   SystemProgram,
   TransactionInstruction,
@@ -10,6 +11,7 @@ import { BaseClient, BaseTxBuilder, TokenAccount, TxOptions } from "./base";
 import { PriceClient } from "./price";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
+  getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
   unpackAccount,
 } from "@solana/spl-token";
@@ -20,7 +22,11 @@ import {
   StateIdlModel,
 } from "../models";
 import { TRANSFER_HOOK_PROGRAM } from "../constants";
-import { fetchMintAndTokenProgram, getProgramAccounts } from "../utils";
+import {
+  fetchMintAndTokenProgram,
+  getProgramAccounts,
+  isTokenAclEnabled,
+} from "../utils";
 import {
   getAccountPolicyPda,
   getExtraMetasPda,
@@ -56,6 +62,112 @@ export type UpdateMintParams = {
   allowlist?: PublicKey[];
   blocklist?: PublicKey[];
 };
+
+/**
+ * Resolves the list config + wallet entry pairs needed for permissionless thaw.
+ * Returns empty array if Token ACL is not enabled or no matching pairs found.
+ */
+export async function resolveThawAccounts(
+  connection: Connection,
+  mintPda: PublicKey,
+  wallet: PublicKey,
+): Promise<{ listConfig: PublicKey; walletEntry: PublicKey }[]> {
+  if (!(await isTokenAclEnabled(connection, mintPda))) {
+    return [];
+  }
+
+  // Fetch the gate extra metas account to find which list configs are registered
+  const extraMetasPda = getTokenAclGateExtraMetasPda(mintPda);
+  const extraMetasInfo = await connection.getAccountInfo(extraMetasPda);
+  if (!extraMetasInfo) {
+    return [];
+  }
+
+  // Fetch all list config accounts owned by the gate program
+  const listConfigAccounts = await getProgramAccounts(
+    connection,
+    TOKEN_ACL_GATE_PROGRAM,
+    {
+      filters: [{ dataSize: 74 }], // list_config account size
+    },
+  );
+
+  // Filter to list configs whose pubkey appears in the extra metas data
+  const extraMetasData = extraMetasInfo.data;
+  const matchingListConfigs = listConfigAccounts.filter(({ pubkey }) =>
+    extraMetasData.includes(pubkey.toBuffer()),
+  );
+
+  // For each matching list config, derive the wallet entry PDA and check if it exists
+  const pairs = matchingListConfigs.map(({ pubkey }) => ({
+    listConfig: pubkey,
+    walletEntry: getTokenAclGateWalletEntryPda(pubkey, wallet),
+  }));
+
+  const walletEntryInfos = await connection.getMultipleAccountsInfo(
+    pairs.map((p) => p.walletEntry),
+  );
+
+  return pairs.filter((_, i) => walletEntryInfos[i] !== null);
+}
+
+/**
+ * Builds a permissionless thaw instruction for the Token ACL program.
+ * Standalone version of TxBuilder.thawPermissionlessIx for use outside
+ * the MintClient context (e.g., in invest.ts).
+ */
+export function buildThawPermissionlessIx(
+  mintPda: PublicKey,
+  wallet: PublicKey,
+  listAndWalletPairs: { listConfig: PublicKey; walletEntry: PublicKey }[],
+  signer: PublicKey,
+): TransactionInstruction {
+  const tokenAccount = getAssociatedTokenAddressSync(
+    mintPda,
+    wallet,
+    true,
+    TOKEN_2022_PROGRAM_ID,
+  );
+  const flagAccount = getTokenAclFlagAccountPda(tokenAccount);
+  const mintConfigPda = getTokenAclMintConfigPda(mintPda);
+  const extraMetasPda = getTokenAclGateExtraMetasPda(mintPda);
+
+  const keys = [
+    { pubkey: signer, isSigner: true, isWritable: false },
+    { pubkey: mintPda, isSigner: false, isWritable: false },
+    { pubkey: tokenAccount, isSigner: false, isWritable: true },
+    { pubkey: flagAccount, isSigner: false, isWritable: true },
+    { pubkey: wallet, isSigner: false, isWritable: false },
+    { pubkey: mintConfigPda, isSigner: false, isWritable: false },
+    { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
+    {
+      pubkey: SystemProgram.programId,
+      isSigner: false,
+      isWritable: false,
+    },
+    { pubkey: TOKEN_ACL_GATE_PROGRAM, isSigner: false, isWritable: false },
+    { pubkey: extraMetasPda, isSigner: false, isWritable: false },
+  ];
+
+  for (const pair of listAndWalletPairs) {
+    keys.push({
+      pubkey: pair.listConfig,
+      isSigner: false,
+      isWritable: false,
+    });
+    keys.push({
+      pubkey: pair.walletEntry,
+      isSigner: false,
+      isWritable: false,
+    });
+  }
+
+  return new TransactionInstruction({
+    programId: TOKEN_ACL_PROGRAM,
+    keys,
+    data: Buffer.from([0x06]),
+  });
+}
 
 class TxBuilder extends BaseTxBuilder<MintClient> {
   public async setTokenAccountsStatesIx(
@@ -580,11 +692,24 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const glamSigner = txOptions.signer || this.client.base.signer;
-    const ix = await this.enableTokenAclIx(
-      gatingProgram,
+
+    // Pre-create escrow mint ATA before enabling ACL.
+    // Once ACL is enabled, DefaultAccountState::Frozen means new ATAs start
+    // frozen. Creating the escrow ATA now ensures it's thawed without needing
+    // to be on any allowlist.
+    const escrowPda = this.client.base.escrowPda;
+    const glamMint = this.client.base.mintPda;
+    const escrowMintAta = this.client.base.getMintAta(escrowPda);
+    const createEscrowAtaIx = createAssociatedTokenAccountIdempotentInstruction(
       glamSigner,
+      escrowMintAta,
+      escrowPda,
+      glamMint,
+      TOKEN_2022_PROGRAM_ID,
     );
-    return this.buildVersionedTx([ix], txOptions);
+
+    const ix = await this.enableTokenAclIx(gatingProgram, glamSigner);
+    return this.buildVersionedTx([createEscrowAtaIx, ix], txOptions);
   }
 
   public async aclGateCreateListIx(
@@ -743,10 +868,7 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const glamSigner = txOptions.signer || this.client.base.signer;
-    const ix = await this.aclGateSetupExtraMetasIx(
-      listConfigs,
-      glamSigner,
-    );
+    const ix = await this.aclGateSetupExtraMetasIx(listConfigs, glamSigner);
     return this.buildVersionedTx([ix], txOptions);
   }
 
@@ -1043,10 +1165,7 @@ export class MintClient {
     gatingProgram?: PublicKey,
     txOptions: TxOptions = {},
   ) {
-    const vTx = await this.txBuilder.enableTokenAclTx(
-      gatingProgram,
-      txOptions,
-    );
+    const vTx = await this.txBuilder.enableTokenAclTx(gatingProgram, txOptions);
     return await this.base.sendAndConfirm(vTx);
   }
 
