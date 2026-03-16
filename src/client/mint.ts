@@ -872,6 +872,74 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
     return this.buildVersionedTx([ix], txOptions);
   }
 
+  public async tokenAclFreezeIx(
+    tokenAccounts: PublicKey[],
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const glamMint = this.client.base.mintPda;
+    const mintConfigPda = getTokenAclMintConfigPda(glamMint);
+
+    return await (this.client.base.mintProgram.methods as any)
+      .tokenAclFreeze()
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        glamMint,
+        mintConfig: mintConfigPda,
+      })
+      .remainingAccounts(
+        tokenAccounts.map((pubkey) => ({
+          pubkey,
+          isSigner: false,
+          isWritable: true,
+        })),
+      )
+      .instruction();
+  }
+
+  public async tokenAclFreezeTx(
+    tokenAccounts: PublicKey[],
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.tokenAclFreezeIx(tokenAccounts, glamSigner);
+    return this.buildVersionedTx([ix], txOptions);
+  }
+
+  public async tokenAclThawIx(
+    tokenAccounts: PublicKey[],
+    glamSigner: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const glamMint = this.client.base.mintPda;
+    const mintConfigPda = getTokenAclMintConfigPda(glamMint);
+
+    return await (this.client.base.mintProgram.methods as any)
+      .tokenAclThaw()
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+        glamMint,
+        mintConfig: mintConfigPda,
+      })
+      .remainingAccounts(
+        tokenAccounts.map((pubkey) => ({
+          pubkey,
+          isSigner: false,
+          isWritable: true,
+        })),
+      )
+      .instruction();
+  }
+
+  public async tokenAclThawTx(
+    tokenAccounts: PublicKey[],
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.tokenAclThawIx(tokenAccounts, glamSigner);
+    return this.buildVersionedTx([ix], txOptions);
+  }
+
   public thawPermissionlessIx(
     wallet: PublicKey,
     listAndWalletPairs: { listConfig: PublicKey; walletEntry: PublicKey }[],
@@ -1183,6 +1251,19 @@ export class MintClient {
       unfreeze,
       txOptions,
     );
+    return await this.base.sendAndConfirm(vTx);
+  }
+
+  public async tokenAclFreeze(
+    tokenAccounts: PublicKey[],
+    txOptions: TxOptions = {},
+  ) {
+    const vTx = await this.txBuilder.tokenAclFreezeTx(tokenAccounts, txOptions);
+    return await this.base.sendAndConfirm(vTx);
+  }
+
+  public async tokenAclThaw(tokenAccounts: PublicKey[], txOptions: TxOptions = {}) {
+    const vTx = await this.txBuilder.tokenAclThawTx(tokenAccounts, txOptions);
     return await this.base.sendAndConfirm(vTx);
   }
 

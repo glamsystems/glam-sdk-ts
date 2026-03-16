@@ -252,6 +252,115 @@ describe("token_acl", () => {
     ).toBe("initialized");
   }, 25_000);
 
+  //
+  // Authority-based freeze/thaw via Token ACL (token_acl_freeze / token_acl_thaw)
+  //
+
+  it("Manager can freeze alice's thawed account via token_acl_freeze", async () => {
+    // Alice's account was thawed in the previous test
+    expect(
+      await getTokenAccountState(glamClient, alice.publicKey, glamMint),
+    ).toBe("initialized");
+
+    const aliceAta = getAssociatedTokenAddressSync(
+      glamMint,
+      alice.publicKey,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+    );
+
+    const txSig = await glamClient.mint.tokenAclFreeze([aliceAta], txOptions);
+    console.log("ACL freeze alice:", txSig);
+
+    expect(
+      await getTokenAccountState(glamClient, alice.publicKey, glamMint),
+    ).toBe("frozen");
+  }, 25_000);
+
+  it("Manager can thaw alice's frozen account via token_acl_thaw", async () => {
+    expect(
+      await getTokenAccountState(glamClient, alice.publicKey, glamMint),
+    ).toBe("frozen");
+
+    const aliceAta = getAssociatedTokenAddressSync(
+      glamMint,
+      alice.publicKey,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+    );
+
+    const txSig = await glamClient.mint.tokenAclThaw([aliceAta], txOptions);
+    console.log("ACL thaw alice:", txSig);
+
+    expect(
+      await getTokenAccountState(glamClient, alice.publicKey, glamMint),
+    ).toBe("initialized");
+  }, 25_000);
+
+  it("Manager can freeze and thaw bob (frozen) via token_acl_thaw then token_acl_freeze", async () => {
+    const bobAta = getAssociatedTokenAddressSync(
+      glamMint,
+      bob.publicKey,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+    );
+
+    // Bob is still frozen from DefaultAccountState
+    expect(
+      await getTokenAccountState(glamClient, bob.publicKey, glamMint),
+    ).toBe("frozen");
+
+    // Thaw bob via token_acl_thaw
+    const thawTxSig = await glamClient.mint.tokenAclThaw([bobAta], txOptions);
+    console.log("ACL thaw bob:", thawTxSig);
+
+    expect(
+      await getTokenAccountState(glamClient, bob.publicKey, glamMint),
+    ).toBe("initialized");
+
+    // Re-freeze bob via token_acl_freeze
+    const freezeTxSig = await glamClient.mint.tokenAclFreeze([bobAta], txOptions);
+    console.log("ACL freeze bob:", freezeTxSig);
+
+    expect(
+      await getTokenAccountState(glamClient, bob.publicKey, glamMint),
+    ).toBe("frozen");
+  }, 25_000);
+
+  it("Non-manager cannot use token_acl_freeze", async () => {
+    glamClientAlice.statePda = glamClient.statePda;
+    const aliceAta = getAssociatedTokenAddressSync(
+      glamMint,
+      alice.publicKey,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+    );
+
+    await expect(
+      glamClientAlice.mint.tokenAclFreeze([aliceAta], txOptions),
+    ).rejects.toThrow();
+  }, 25_000);
+
+  it("Non-manager cannot use token_acl_thaw", async () => {
+    // Bob is frozen from the previous test
+    glamClientBob.statePda = glamClient.statePda;
+    const bobAta = getAssociatedTokenAddressSync(
+      glamMint,
+      bob.publicKey,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+    );
+
+    await expect(
+      glamClientBob.mint.tokenAclThaw([bobAta], txOptions),
+    ).rejects.toThrow();
+
+    // Verify bob is still frozen
+    expect(
+      await getTokenAccountState(glamClient, bob.publicKey, glamMint),
+    ).toBe("frozen");
+  }, 25_000);
+
   it("Bob (not allowlisted) cannot permissionless thaw", async () => {
     expect(
       await getTokenAccountState(glamClient, bob.publicKey, glamMint),

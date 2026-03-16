@@ -5880,6 +5880,21 @@ export type GlamMint = {
       "name": "protoMintPermSetTokenAccountState",
       "type": "u64",
       "value": "8"
+    },
+    {
+      "name": "protoMintPermTokenAclApplyList",
+      "type": "u64",
+      "value": "2048"
+    },
+    {
+      "name": "protoMintPermTokenAclFreezeThaw",
+      "type": "u64",
+      "value": "512"
+    },
+    {
+      "name": "protoMintPermTokenAclManageList",
+      "type": "u64",
+      "value": "1024"
     }
   ]
 };

@@ -5085,6 +5085,214 @@
       ]
     },
     {
+      "name": "token_acl_freeze",
+      "discriminator": [
+        208,
+        39,
+        70,
+        196,
+        226,
+        118,
+        235,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_mint",
+          "writable": true
+        },
+        {
+          "name": "mint_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  77,
+                  73,
+                  78,
+                  84,
+                  95,
+                  67,
+                  79,
+                  78,
+                  70,
+                  73,
+                  71
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                6,
+                179,
+                127,
+                154,
+                112,
+                244,
+                6,
+                234,
+                54,
+                211,
+                41,
+                245,
+                148,
+                165,
+                22,
+                5,
+                150,
+                15,
+                242,
+                225,
+                55,
+                23,
+                91,
+                46,
+                218,
+                0,
+                102,
+                202,
+                50,
+                58,
+                107,
+                206
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_acl_program",
+          "address": "TACLkU6CiCdkQN2MjoyDkVg2yAH9zkxiHDsiztQ52TP"
+        },
+        {
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "token_acl_thaw",
+      "discriminator": [
+        8,
+        45,
+        41,
+        107,
+        188,
+        132,
+        187,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_mint",
+          "writable": true
+        },
+        {
+          "name": "mint_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  77,
+                  73,
+                  78,
+                  84,
+                  95,
+                  67,
+                  79,
+                  78,
+                  70,
+                  73,
+                  71
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                6,
+                179,
+                127,
+                154,
+                112,
+                244,
+                6,
+                234,
+                54,
+                211,
+                41,
+                245,
+                148,
+                165,
+                22,
+                5,
+                150,
+                15,
+                242,
+                225,
+                55,
+                23,
+                91,
+                46,
+                218,
+                0,
+                102,
+                202,
+                50,
+                58,
+                107,
+                206
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_acl_program",
+          "address": "TACLkU6CiCdkQN2MjoyDkVg2yAH9zkxiHDsiztQ52TP"
+        },
+        {
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "glam_protocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "update_mint",
       "discriminator": [
         212,
@@ -6729,6 +6937,21 @@
       "name": "PROTO_MINT_PERM_SET_TOKEN_ACCOUNT_STATE",
       "type": "u64",
       "value": "8"
+    },
+    {
+      "name": "PROTO_MINT_PERM_TOKEN_ACL_APPLY_LIST",
+      "type": "u64",
+      "value": "2048"
+    },
+    {
+      "name": "PROTO_MINT_PERM_TOKEN_ACL_FREEZE_THAW",
+      "type": "u64",
+      "value": "512"
+    },
+    {
+      "name": "PROTO_MINT_PERM_TOKEN_ACL_MANAGE_LIST",
+      "type": "u64",
+      "value": "1024"
     }
   ]
 }

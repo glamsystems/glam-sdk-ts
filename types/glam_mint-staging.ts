@@ -5091,6 +5091,214 @@ export type GlamMint = {
       ]
     },
     {
+      "name": "tokenAclFreeze",
+      "discriminator": [
+        208,
+        39,
+        70,
+        196,
+        226,
+        118,
+        235,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamMint",
+          "writable": true
+        },
+        {
+          "name": "mintConfig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  77,
+                  73,
+                  78,
+                  84,
+                  95,
+                  67,
+                  79,
+                  78,
+                  70,
+                  73,
+                  71
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                6,
+                179,
+                127,
+                154,
+                112,
+                244,
+                6,
+                234,
+                54,
+                211,
+                41,
+                245,
+                148,
+                165,
+                22,
+                5,
+                150,
+                15,
+                242,
+                225,
+                55,
+                23,
+                91,
+                46,
+                218,
+                0,
+                102,
+                202,
+                50,
+                58,
+                107,
+                206
+              ]
+            }
+          }
+        },
+        {
+          "name": "tokenAclProgram",
+          "address": "TACLkU6CiCdkQN2MjoyDkVg2yAH9zkxiHDsiztQ52TP"
+        },
+        {
+          "name": "token2022Program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "tokenAclThaw",
+      "discriminator": [
+        8,
+        45,
+        41,
+        107,
+        188,
+        132,
+        187,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamMint",
+          "writable": true
+        },
+        {
+          "name": "mintConfig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  77,
+                  73,
+                  78,
+                  84,
+                  95,
+                  67,
+                  79,
+                  78,
+                  70,
+                  73,
+                  71
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                6,
+                179,
+                127,
+                154,
+                112,
+                244,
+                6,
+                234,
+                54,
+                211,
+                41,
+                245,
+                148,
+                165,
+                22,
+                5,
+                150,
+                15,
+                242,
+                225,
+                55,
+                23,
+                91,
+                46,
+                218,
+                0,
+                102,
+                202,
+                50,
+                58,
+                107,
+                206
+              ]
+            }
+          }
+        },
+        {
+          "name": "tokenAclProgram",
+          "address": "TACLkU6CiCdkQN2MjoyDkVg2yAH9zkxiHDsiztQ52TP"
+        },
+        {
+          "name": "token2022Program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "updateMint",
       "discriminator": [
         212,
@@ -6735,6 +6943,21 @@ export type GlamMint = {
       "name": "protoMintPermSetTokenAccountState",
       "type": "u64",
       "value": "8"
+    },
+    {
+      "name": "protoMintPermTokenAclApplyList",
+      "type": "u64",
+      "value": "2048"
+    },
+    {
+      "name": "protoMintPermTokenAclFreezeThaw",
+      "type": "u64",
+      "value": "512"
+    },
+    {
+      "name": "protoMintPermTokenAclManageList",
+      "type": "u64",
+      "value": "1024"
     }
   ]
 };

@@ -5874,6 +5874,21 @@
       "name": "PROTO_MINT_PERM_SET_TOKEN_ACCOUNT_STATE",
       "type": "u64",
       "value": "8"
+    },
+    {
+      "name": "PROTO_MINT_PERM_TOKEN_ACL_APPLY_LIST",
+      "type": "u64",
+      "value": "2048"
+    },
+    {
+      "name": "PROTO_MINT_PERM_TOKEN_ACL_FREEZE_THAW",
+      "type": "u64",
+      "value": "512"
+    },
+    {
+      "name": "PROTO_MINT_PERM_TOKEN_ACL_MANAGE_LIST",
+      "type": "u64",
+      "value": "1024"
     }
   ]
 }
