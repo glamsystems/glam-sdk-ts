@@ -9,30 +9,32 @@ export const STAKE_POOLS = LstList.filter(
     lst.pool.program === "Marinade" ||
     lst.pool.program === "SanctumSpl" ||
     lst.pool.program === "SanctumSplMulti",
-).map((lst) => {
-  const { pool, program } = lst.pool as any;
-  const poolState =
-    program === "Marinade"
-      ? "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
-      : pool;
-  if (!poolState) {
-    throw new Error("Invalid pool state for LST: " + lst.name);
-  }
+)
+  .map((lst) => {
+    const { pool, program } = lst.pool as any;
+    const poolState =
+      program === "Marinade"
+        ? "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
+        : pool;
+    if (!poolState) {
+      throw new Error("Invalid pool state for LST: " + lst.name);
+    }
 
-  return {
-    name: lst.name,
-    symbol: lst.symbol,
-    mint: lst.mint,
-    decimals: lst.decimals,
-    logoURI: lst.logoUri,
-    tokenProgram: new PublicKey(lst.tokenProgram),
-    poolState: new PublicKey(poolState),
-    isMarinade: program === "Marinade",
-  };
-}).sort((a, b) => {
-  if (a.isMarinade !== b.isMarinade) return a.isMarinade ? -1 : 1;
-  return a.symbol.localeCompare(b.symbol);
-});
+    return {
+      name: lst.name,
+      symbol: lst.symbol,
+      mint: lst.mint,
+      decimals: lst.decimals,
+      logoURI: lst.logoUri,
+      tokenProgram: new PublicKey(lst.tokenProgram),
+      poolState: new PublicKey(poolState),
+      isMarinade: program === "Marinade",
+    };
+  })
+  .sort((a, b) => {
+    if (a.isMarinade !== b.isMarinade) return a.isMarinade ? -1 : 1;
+    return a.symbol.localeCompare(b.symbol);
+  });
 
 export const STAKE_POOLS_MAP = new Map(STAKE_POOLS.map((p) => [p.mint, p]));
 
@@ -72,38 +74,11 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     },
   ],
   [
-    // cbBTC
-    "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
-    {
-      decimals: 8,
-      oracle: new PublicKey("9jPy6EHpLkXaMdvfkoVnRnSdJoQysQDKKj3bW5Amz4Ci"),
-      oracleSource: "Pyth",
-    },
-  ],
-  [
-    // wETH
-    "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
-    {
-      decimals: 8,
-      oracle: new PublicKey("6bEp2MiyoiiiDxcVqE8rUHQWwHirXUXtKfAEATTVqNzT"),
-      oracleSource: "Pyth",
-    },
-  ],
-  [
     // JUP
     "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
     {
       decimals: 6,
       oracle: new PublicKey("DXqKSHyhTBKEW4qgnL7ycbf3Jca5hCvUgWHFYWsh4KJa"),
-      oracleSource: "Pyth",
-    },
-  ],
-  [
-    // JLP
-    "27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4",
-    {
-      decimals: 6,
-      oracle: new PublicKey("5Mb11e5rt1Sp6A286B145E4TmgMzsM2UX9nCF2vas5bs"),
       oracleSource: "Pyth",
     },
   ],
@@ -164,68 +139,6 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     },
   ],
   [
-    // sUSDe
-    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",
-    {
-      decimals: 6,
-      oracle: new PublicKey("BRuNuzLAPHHGSSVAJPKMcmJMdgDfrekvnSxkxPDGdeqp"),
-      oracleSource: "Pyth",
-    },
-  ],
-  [
-    // USDS
-    "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA",
-    {
-      decimals: 6,
-      oracle: new PublicKey("7pT9mxKXyvfaZKeKy1oe2oV2K1RFtF7tPEJHUY3h2vVV"),
-      oracleSource: "Pyth",
-    },
-  ],
-  [
-    // GOOGLx
-    "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
-    {
-      decimals: 8,
-      oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
-      programId: TOKEN_2022_PROGRAM_ID,
-      aggIndex: 342,
-      oracleSource: "ChainlinkRWA",
-    },
-  ],
-  [
-    // AAPLx
-    "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
-    {
-      decimals: 8,
-      oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
-      programId: TOKEN_2022_PROGRAM_ID,
-      aggIndex: 343,
-      oracleSource: "ChainlinkRWA",
-    },
-  ],
-  [
-    // TSLAx
-    "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
-    {
-      decimals: 8,
-      oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
-      programId: TOKEN_2022_PROGRAM_ID,
-      aggIndex: 335,
-      oracleSource: "ChainlinkRWA",
-    },
-  ],
-  [
-    // NVDAx
-    "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
-    {
-      decimals: 8,
-      oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
-      programId: TOKEN_2022_PROGRAM_ID,
-      aggIndex: 341,
-      oracleSource: "ChainlinkRWA",
-    },
-  ],
-  [
     // Bonk - Bonk
     "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
     {
@@ -252,16 +165,6 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       oracleSource: "Pyth",
     },
   ],
-  [
-    // Kamino - KMNO
-    "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
-    {
-      decimals: 6,
-      oracle: new PublicKey("6ua3DK1sHoYyNi15dsxy6RYwUcZPDDXfyChzaRMaheQF"),
-      oracleSource: "Pyth",
-    },
-  ],
-
   [
     // Tensor - TNSR
     "TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6",
@@ -323,15 +226,6 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       decimals: 6,
       oracle: new PublicKey("4QXWStoyEErTZFVsvKrvxuNa6QT8zpeA8jddZunSGvYE"),
       oracleSource: "Pyth",
-    },
-  ],
-  [
-    // Infinity - INF
-    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",
-    {
-      decimals: 9,
-      oracle: new PublicKey("B7RUYg2zF6UdUSHv2RmpnriPVJccYWojgFydNS1NY5F8"),
-      oracleSource: "Switchboard",
     },
   ],
   [
@@ -407,16 +301,6 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     },
   ],
   [
-    // ai16z - ai16z
-    "HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC",
-    {
-      decimals: 9,
-      oracle: new PublicKey("3BGheQVvYtBNpBKSUXSTjpyKQc3dh8iiwT91Aiq7KYCU"),
-      programId: TOKEN_2022_PROGRAM_ID,
-      oracleSource: "Pyth",
-    },
-  ],
-  [
     // OFFICIAL TRUMP - TRUMP
     "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN",
     {
@@ -431,25 +315,6 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     {
       decimals: 6,
       oracle: new PublicKey("3RgNWYYcZCKf5uZfriK8ASUbGQErhH6YbpdvZQ7ZKDCf"),
-      oracleSource: "Pyth",
-    },
-  ],
-  [
-    // AUSD - AUSD
-    "AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9",
-    {
-      decimals: 6,
-      oracle: new PublicKey("8FZhpiM8n3mpgvENWLcEvHsKB1bBhYBAyL4Ypr4gptLZ"),
-      programId: TOKEN_2022_PROGRAM_ID,
-      oracleSource: "Pyth",
-    },
-  ],
-  [
-    // zBTC - zBTC
-    "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
-    {
-      decimals: 8,
-      oracle: new PublicKey("CN9QvvbGQzMnN8vJaSek2so4vFnTqgJDFrdJB8Y4tQfB"),
       oracleSource: "Pyth",
     },
   ],
@@ -491,15 +356,6 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
     },
   ],
   [
-    // DeFi Development Corp Staked SOL - dfdvSOL
-    "sctmB7GPi5L2Q5G9tUSzXvhZ4YiDMEGcRov9KfArQpx",
-    {
-      decimals: 9,
-      oracle: new PublicKey("EUQQD2fNN7h7su5TbWpUnf22zeGtF3RjEX2hgX2YPfLd"),
-      oracleSource: "Pyth",
-    },
-  ],
-  [
     // Syrup USDC - syrupUSDC
     "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
     {
@@ -508,7 +364,213 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map([
       oracleSource: "Pyth",
     },
   ],
+  [
+    "27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4",
+    {
+      decimals: 6,
+      oracle: new PublicKey("4VMtKepA6iFwMTJ7bBbdcGxavNRKiDjxxRr1CaB2NnFJ"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",
+    {
+      decimals: 9,
+      oracle: new PublicKey("CX7JCXtUTiC43ZA4uzoH7iQBD15jtVwdBNCnjKHt1BrQ"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA",
+    {
+      decimals: 6,
+      oracle: new PublicKey("5Km85n3s9Zs5wEoXYWuHbpoDzst4EBkS5f1XuQJGG1DL"),
+      oracleSource: "pythLazerStableCoin",
+    },
+  ],
+  [
+    "HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC",
+    {
+      decimals: 9,
+      oracle: new PublicKey("BHqLyA9ov1VPNzt8eb5bt75X2Vk1EVKw1d9Qa78Gk5tR"),
+      oracleSource: "switchboardOnDemand",
+      programId: TOKEN_2022_PROGRAM_ID,
+    },
+  ],
+  [
+    "AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9",
+    {
+      decimals: 6,
+      oracle: new PublicKey("9JYpqJfLXgrW8Wqzfd93GvJF73m2jJFjNqpQv3wQtehZ"),
+      oracleSource: "pythLazerStableCoin",
+      programId: TOKEN_2022_PROGRAM_ID,
+    },
+  ],
+  [
+    "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+    {
+      decimals: 8,
+      oracle: new PublicKey("3xcpvBUVV8ALVV4Wod733Vyic3fe8iJAeXDpRdk19Z3p"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "sctmB7GPi5L2Q5G9tUSzXvhZ4YiDMEGcRov9KfArQpx",
+    {
+      decimals: 9,
+      oracle: new PublicKey("EUQQD2fNN7h7su5TbWpUnf22zeGtF3RjEX2hgX2YPfLd"),
+      oracleSource: "switchboardOnDemand",
+    },
+  ],
+  [
+    "J6pQQ3FAcJQeWPPGppWRb4nM8jU3wLyYbRrLh7feMfvd",
+    {
+      decimals: 8,
+      oracle: new PublicKey("4HTDpcHAwBTHCJLNMwT35w4FGc4nfA4YhT1BkcZQwQ2m"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+    {
+      decimals: 6,
+      oracle: new PublicKey("HN7qfUNM5Q7gQTwyEucmYdCF4CjwUrspj3DbNQ4V8P52"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH",
+    {
+      decimals: 6,
+      oracle: new PublicKey("AK6coxSjfAnuDT4ZUSP3UpeQe2G1tKcALnsdd835eg7T"),
+      oracleSource: "pythLazerStableCoin",
+      programId: TOKEN_2022_PROGRAM_ID,
+    },
+  ],
+  [
+    "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+    {
+      decimals: 6,
+      oracle: new PublicKey("Hk34ANkHfu4LHJhACMNCPNgGbi5ixpom2e3T7oh7EPDG"),
+      oracleSource: "pythLazerStableCoin",
+    },
+  ],
+
+  [
+    "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
+    {
+      decimals: 8,
+      oracle: new PublicKey("93FG52TzNKCnMiasV14Ba34BYcHDb9p4zK4GjZnLwqWR"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",
+    {
+      decimals: 9,
+      oracle: new PublicKey("7SAxf2SCJe5c72rZNo4etpGjz5TaEAqi8QkbfpRbouuT"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "LBTCgU4b3wsFKsPwBn1rRZDx5DoFutM6RPiEt1TPDsY",
+    {
+      decimals: 8,
+      oracle: new PublicKey("BmU3Hp9SZn77dUhWuED3ySuV3HenBgCoPZZP58M2ZMCr"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
+    {
+      decimals: 6,
+      oracle: new PublicKey("ArjngUHXrQPr1wH9Bqrji9hdDQirM6ijbzc1Jj1fXUk7"),
+      oracleSource: "pythPull",
+    },
+  ],
+  [
+    "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+    {
+      decimals: 8,
+      oracle: new PublicKey("D1QgWnMoPzB4wJ79Egrc6MGYYM3HHVNhpff1QQHDSoCq"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey",
+    {
+      decimals: 9,
+      oracle: new PublicKey("GHKcxocPyzSjy7tWApQjKRkDNuVXd4Kk624zhuaR7xhC"),
+      oracleSource: "pythPull",
+    },
+  ],
+  [
+    "A7bdiYdS5GjqGFtxf17ppRHtDKPkkRqbKtR27dxvQXaS",
+    {
+      decimals: 8,
+      oracle: new PublicKey("BXunfRSyiQWJHv88qMvE42mpMpksWEC8Bf13p2msnRms"),
+      oracleSource: "pythLazer",
+    },
+  ],
+  [
+    "CtzPWv73Sn1dMGVU3ZtLv9yWSyUAanBni19YWDaznnkn",
+    {
+      decimals: 8,
+      oracle: new PublicKey("4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo"),
+      oracleSource: "pythPull",
+    },
+  ],
 ]);
+
+const RWA_ASSETS: [string, AssetMeta][] = [
+  [
+    // GOOGLx
+    "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
+    {
+      decimals: 8,
+      oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
+      programId: TOKEN_2022_PROGRAM_ID,
+      aggIndex: 342,
+      oracleSource: "ChainlinkRWA",
+    },
+  ],
+  [
+    // AAPLx
+    "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
+    {
+      decimals: 8,
+      oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
+      programId: TOKEN_2022_PROGRAM_ID,
+      aggIndex: 343,
+      oracleSource: "ChainlinkRWA",
+    },
+  ],
+  [
+    // TSLAx
+    "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+    {
+      decimals: 8,
+      oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
+      programId: TOKEN_2022_PROGRAM_ID,
+      aggIndex: 335,
+      oracleSource: "ChainlinkRWA",
+    },
+  ],
+  [
+    // NVDAx
+    "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+    {
+      decimals: 8,
+      oracle: new PublicKey("3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"), // scope prices
+      programId: TOKEN_2022_PROGRAM_ID,
+      aggIndex: 341,
+      oracleSource: "ChainlinkRWA",
+    },
+  ],
+];
+RWA_ASSETS.forEach(([mint, meta]) => {
+  ASSETS_MAINNET.set(mint, meta);
+});
 STAKE_POOLS.forEach((p) => {
   ASSETS_MAINNET.set(p.mint, {
     decimals: p.decimals,
