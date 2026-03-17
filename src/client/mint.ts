@@ -258,19 +258,29 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
       ),
     ];
     if (forceThaw) {
-      preInstructions.push(
-        await this.client.base.mintProgram.methods
-          .setTokenAccountsStates(false)
-          .accounts({
-            glamState,
-            glamSigner,
-            glamMint,
-          })
-          .remainingAccounts([
-            { pubkey: mintTo, isSigner: false, isWritable: true },
-          ])
-          .instruction(),
+      const tokenAclEnabled = await isTokenAclEnabled(
+        this.client.base.connection,
+        glamMint,
       );
+      if (tokenAclEnabled) {
+        preInstructions.push(
+          await this.tokenAclThawIx([mintTo], glamSigner),
+        );
+      } else {
+        preInstructions.push(
+          await this.client.base.mintProgram.methods
+            .setTokenAccountsStates(false)
+            .accounts({
+              glamState,
+              glamSigner,
+              glamMint,
+            })
+            .remainingAccounts([
+              { pubkey: mintTo, isSigner: false, isWritable: true },
+            ])
+            .instruction(),
+        );
+      }
     }
 
     let policyAccount = (await this.client.base.isLockupEnabled())
@@ -314,19 +324,29 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
 
     const preInstructions = [];
     if (forceThaw) {
-      preInstructions.push(
-        await this.client.base.mintProgram.methods
-          .setTokenAccountsStates(false)
-          .accounts({
-            glamState,
-            glamSigner,
-            glamMint,
-          })
-          .remainingAccounts([
-            { pubkey: fromAta, isSigner: false, isWritable: true },
-          ])
-          .instruction(),
+      const tokenAclEnabled = await isTokenAclEnabled(
+        this.client.base.connection,
+        glamMint,
       );
+      if (tokenAclEnabled) {
+        preInstructions.push(
+          await this.tokenAclThawIx([fromAta], glamSigner),
+        );
+      } else {
+        preInstructions.push(
+          await this.client.base.mintProgram.methods
+            .setTokenAccountsStates(false)
+            .accounts({
+              glamState,
+              glamSigner,
+              glamMint,
+            })
+            .remainingAccounts([
+              { pubkey: fromAta, isSigner: false, isWritable: true },
+            ])
+            .instruction(),
+        );
+      }
     }
 
     const ix = await this.client.base.mintProgram.methods
@@ -377,20 +397,30 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
       ),
     );
     if (forceThaw) {
-      preInstructions.push(
-        await this.client.base.mintProgram.methods
-          .setTokenAccountsStates(false)
-          .accounts({
-            glamState,
-            glamSigner,
-            glamMint,
-          })
-          .remainingAccounts([
-            { pubkey: fromAta, isSigner: false, isWritable: true },
-            { pubkey: toAta, isSigner: false, isWritable: true },
-          ])
-          .instruction(),
+      const tokenAclEnabled = await isTokenAclEnabled(
+        this.client.base.connection,
+        glamMint,
       );
+      if (tokenAclEnabled) {
+        preInstructions.push(
+          await this.tokenAclThawIx([fromAta, toAta], glamSigner),
+        );
+      } else {
+        preInstructions.push(
+          await this.client.base.mintProgram.methods
+            .setTokenAccountsStates(false)
+            .accounts({
+              glamState,
+              glamSigner,
+              glamMint,
+            })
+            .remainingAccounts([
+              { pubkey: fromAta, isSigner: false, isWritable: true },
+              { pubkey: toAta, isSigner: false, isWritable: true },
+            ])
+            .instruction(),
+        );
+      }
     }
 
     const remainingAccounts: PublicKey[] = [];

@@ -239,11 +239,11 @@ describe("setup_and_ops", () => {
     ).find((ta) => ta.mint.equals(glamClient.mintPda));
     expect(tokenAccount?.frozen).toBe(false);
 
-    // Freeze token account
+    // Freeze token account using Token ACL (since defaultAccountStateFrozen enables Token ACL)
     const ata = glamClient.getMintAta(bob.publicKey);
     try {
-      const txSig = await glamClient.mint.setTokenAccountsStates([ata], true);
-      console.log("setTokenAccountsStates txSig", txSig);
+      const txSig = await glamClient.mint.tokenAclFreeze([ata]);
+      console.log("tokenAclFreeze txSig", txSig);
     } catch (e) {
       console.error(e);
       throw e;
