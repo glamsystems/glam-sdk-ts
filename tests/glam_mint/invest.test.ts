@@ -597,4 +597,38 @@ describe("invest", () => {
       await glamClientBob.invest.fetchPendingRequest();
     expect(pendingRequestAfter).toBeNull();
   });
+
+  it("Update notifyAndSettle", async () => {
+    const txSig = await glamClientManager.mint.update(
+      {
+        notifyAndSettle: {
+          model: { continuous: {} },
+          permissionlessFulfillment: true,
+          subscribeNoticePeriodType: { hard: {} },
+          subscribeNoticePeriod: new BN(10),
+          subscribeSettlementPeriod: new BN(30),
+          subscribeCancellationWindow: new BN(10),
+          redeemNoticePeriodType: { hard: {} },
+          redeemNoticePeriod: new BN(10),
+          redeemSettlementPeriod: new BN(30),
+          redeemCancellationWindow: new BN(10),
+          timeUnit: { slot: {} },
+          padding: [0, 0, 0],
+        },
+      },
+      txOptions,
+    );
+    console.log("Update notifyAndSettle txSig", txSig);
+
+    const stateModel = await glamClientManager.fetchStateModel();
+    const ns = stateModel.mintModel?.notifyAndSettle;
+    expect(ns).toBeDefined();
+    expect(ns?.permissionlessFulfillment).toBe(true);
+    expect(ns?.subscribeNoticePeriod.toNumber()).toEqual(10);
+    expect(ns?.subscribeSettlementPeriod.toNumber()).toEqual(30);
+    expect(ns?.subscribeCancellationWindow.toNumber()).toEqual(10);
+    expect(ns?.redeemNoticePeriod.toNumber()).toEqual(10);
+    expect(ns?.redeemSettlementPeriod.toNumber()).toEqual(30);
+    expect(ns?.redeemCancellationWindow.toNumber()).toEqual(10);
+  });
 });
