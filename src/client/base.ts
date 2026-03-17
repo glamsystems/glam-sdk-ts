@@ -54,6 +54,7 @@ import {
   getExtOffchainProgram,
   getExtSplProgram,
   getExtStakePoolProgram,
+  getGlamMintProgramId,
   getGlamMintProgram,
   getGlamProtocolProgram,
   resolveStaging,
@@ -671,10 +672,42 @@ export class BaseClient {
     );
   }
 
+  private getMintProgramIdForStateAccount(stateAccount: StateAccount): PublicKey {
+    const prodMintProgramId = getGlamMintProgramId(false);
+    const stagingMintProgramId = getGlamMintProgramId(true);
+    const mintIntegrationProgram = stateAccount.integrationAcls?.find(
+      (acl) =>
+        acl.integrationProgram.equals(prodMintProgramId) ||
+        acl.integrationProgram.equals(stagingMintProgramId),
+    )?.integrationProgram;
+
+    return mintIntegrationProgram ?? this.mintProgram.programId;
+  }
+
+  private getMintProgramForStateAccount(
+    stateAccount: StateAccount,
+  ): GlamMintProgram {
+    const mintProgramId = this.getMintProgramIdForStateAccount(stateAccount);
+    if (mintProgramId.equals(this.mintProgram.programId)) {
+      return this.mintProgram;
+    }
+
+    if (mintProgramId.equals(getGlamMintProgramId(true))) {
+      return getGlamMintProgram(this.provider, true);
+    }
+
+    if (mintProgramId.equals(getGlamMintProgramId(false))) {
+      return getGlamMintProgram(this.provider, false);
+    }
+
+    return this.mintProgram;
+  }
+
   public async fetchRequestQueue(
     requestQueuePda?: PublicKey,
+    mintProgram: GlamMintProgram = this.mintProgram,
   ): Promise<RequestQueue> {
-    return this.mintProgram.account.requestQueue.fetch(
+    return mintProgram.account.requestQueue.fetch(
       requestQueuePda || this.requestQueuePda,
     );
   }
@@ -689,12 +722,12 @@ export class BaseClient {
     const stateAccount = await this.fetchStateAccount(glamStatePda);
 
     if (!stateAccount.mint.equals(PublicKey.default)) {
-      const mintPubkey = glamStatePda.equals(this.statePda)
-        ? this.mintPda
-        : getMintPda(glamStatePda, 0, this.mintProgram.programId);
-      const requestQueuePda = glamStatePda.equals(this.statePda)
-        ? this.requestQueuePda
-        : getRequestQueuePda(mintPubkey, this.mintProgram.programId);
+      const mintProgram = this.getMintProgramForStateAccount(stateAccount);
+      const mintPubkey = stateAccount.mint;
+      const requestQueuePda = getRequestQueuePda(
+        stateAccount.mint,
+        mintProgram.programId,
+      );
 
       const { mint } = await fetchMintAndTokenProgram(
         this.provider.connection,
@@ -706,7 +739,7 @@ export class BaseClient {
         stateAccount.accountType,
         StateAccountType.TOKENIZED_VAULT,
       )
-        ? await this.fetchRequestQueue(requestQueuePda)
+        ? await this.fetchRequestQueue(requestQueuePda, mintProgram)
         : undefined;
 
       return StateModel.fromOnchainAccounts(

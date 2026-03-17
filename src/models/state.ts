@@ -267,8 +267,14 @@ export class StateModel extends StateIdlModel {
       }
 
       // Parse mint policy
+      const mintProgramIds = [
+        getGlamMintProgramId(staging),
+        getGlamMintProgramId(!staging),
+      ];
       const mintIntegrationPolicy = stateAccount.integrationAcls?.find((acl) =>
-        acl.integrationProgram.equals(getGlamMintProgramId(staging)),
+        mintProgramIds.some((programId) =>
+          acl.integrationProgram.equals(programId),
+        ),
       );
       const mintPolicyData = mintIntegrationPolicy?.protocolPolicies?.find(
         (policy: any) => policy.protocolBitflag === 1,

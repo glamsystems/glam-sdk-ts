@@ -4,6 +4,49 @@ import {
   getProgramAndBitflagByProtocolName,
   getProtocolsAndPermissions,
 } from "../constants";
+import { getGlamMintProgramId, getGlamProtocolProgramId } from "../glamExports";
+
+type IntegrationProtocolMap = ReturnType<typeof getProtocolsAndPermissions>[string];
+
+function getIntegrationProtocolMap(
+  integrationProgram: PublicKey,
+  staging: boolean,
+): IntegrationProtocolMap | undefined {
+  const programId = integrationProgram.toBase58();
+  return (
+    getProtocolsAndPermissions(staging)[programId] ??
+    getProtocolsAndPermissions(!staging)[programId]
+  );
+}
+
+export function resolveStateAclsStaging(
+  integrationAcls: Array<{ integrationProgram: PublicKey }> | null | undefined,
+  fallback: boolean,
+): boolean {
+  const prodProgramIds = [
+    getGlamProtocolProgramId(false),
+    getGlamMintProgramId(false),
+  ];
+  const stagingProgramIds = [
+    getGlamProtocolProgramId(true),
+    getGlamMintProgramId(true),
+  ];
+
+  for (const acl of integrationAcls ?? []) {
+    if (prodProgramIds.some((programId) => acl.integrationProgram.equals(programId))) {
+      return false;
+    }
+    if (
+      stagingProgramIds.some((programId) =>
+        acl.integrationProgram.equals(programId),
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return fallback;
+}
 
 /**
  * Formats a bitmask as a binary string.
@@ -30,8 +73,7 @@ export function parseProtocolsBitmask(
 ): {
   protocols: { bitflag: number | BN; name: string }[];
 } {
-  const integration =
-    getProtocolsAndPermissions(staging)[integrationProgram.toBase58()];
+  const integration = getIntegrationProtocolMap(integrationProgram, staging);
   if (!integration) {
     return {
       protocols: [],
@@ -92,8 +134,7 @@ export function parseProtocolPermissionsBitmask(
     throw new Error("Protocol bitflag must have exactly 1 bit set");
   }
 
-  const integration =
-    getProtocolsAndPermissions(staging)[integrationProgram.toBase58()];
+  const integration = getIntegrationProtocolMap(integrationProgram, staging);
   if (!integration) {
     return {
       protocol: formatBits(protocolBitflag), // Unknown protocol bitflag
