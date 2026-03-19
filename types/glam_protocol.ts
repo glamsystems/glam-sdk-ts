@@ -1101,6 +1101,16 @@ export type GlamProtocol = {
       "msg": "Delegate ACL limit exceeded"
     },
     {
+      "code": 49018,
+      "name": "assetBalanceNotZero",
+      "msg": "Cannot delete asset: vault token account balance is not zero"
+    },
+    {
+      "code": 49019,
+      "name": "cannotDeleteBaseAsset",
+      "msg": "Cannot delete base asset from allowlist"
+    },
+    {
       "code": 50000,
       "name": "withdrawDenied",
       "msg": "Withdraw denied. Only vaults allow withdraws (funds and mints don't)"

@@ -8,6 +8,31 @@
   },
   "instructions": [
     {
+      "name": "add_assets",
+      "discriminator": [
+        221,
+        232,
+        106,
+        164,
+        156,
+        75,
+        127,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "cancel_timelock",
       "discriminator": [
         158,
@@ -236,6 +261,31 @@
           }
         }
       ]
+    },
+    {
+      "name": "delete_assets",
+      "discriminator": [
+        85,
+        141,
+        142,
+        118,
+        39,
+        152,
+        168,
+        188
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
     },
     {
       "name": "emergency_access_update",
@@ -1822,6 +1872,16 @@
       "code": 49017,
       "name": "DelegateAclLimitExceeded",
       "msg": "Delegate ACL limit exceeded"
+    },
+    {
+      "code": 49018,
+      "name": "AssetBalanceNotZero",
+      "msg": "Cannot delete asset: vault token account balance is not zero"
+    },
+    {
+      "code": 49019,
+      "name": "CannotDeleteBaseAsset",
+      "msg": "Cannot delete base asset from allowlist"
     },
     {
       "code": 50000,

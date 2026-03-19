@@ -14,6 +14,31 @@ export type GlamProtocol = {
   },
   "instructions": [
     {
+      "name": "addAssets",
+      "discriminator": [
+        221,
+        232,
+        106,
+        164,
+        156,
+        75,
+        127,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "cancelTimelock",
       "discriminator": [
         158,
@@ -242,6 +267,31 @@ export type GlamProtocol = {
           }
         }
       ]
+    },
+    {
+      "name": "deleteAssets",
+      "discriminator": [
+        85,
+        141,
+        142,
+        118,
+        39,
+        152,
+        168,
+        188
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
     },
     {
       "name": "emergencyAccessUpdate",
@@ -1828,6 +1878,16 @@ export type GlamProtocol = {
       "code": 49017,
       "name": "delegateAclLimitExceeded",
       "msg": "Delegate ACL limit exceeded"
+    },
+    {
+      "code": 49018,
+      "name": "assetBalanceNotZero",
+      "msg": "Cannot delete asset: vault token account balance is not zero"
+    },
+    {
+      "code": 49019,
+      "name": "cannotDeleteBaseAsset",
+      "msg": "Cannot delete base asset from allowlist"
     },
     {
       "code": 50000,

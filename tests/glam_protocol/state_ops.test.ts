@@ -1,7 +1,13 @@
-import { Keypair } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import { Wallet } from "@coral-xyz/anchor";
+import {
+  createMint,
+  getOrCreateAssociatedTokenAccount,
+  TOKEN_2022_PROGRAM_ID,
+} from "@solana/spl-token";
 
 import { airdrop, createGlamStateForTest, str2seed } from "./setup";
+import { expectPublicKeyArrayEqual } from "../test-utils";
 import {
   GlamClient,
   GlamError,
@@ -15,12 +21,25 @@ const key1 = Keypair.fromSeed(str2seed("acl_test_key1"));
 
 describe("state_ops", () => {
   const glamClient = new GlamClient(); // statePda will be set once glam state is created
+  let token2022Mint: PublicKey;
 
   beforeAll(async () => {
     await airdrop(
       glamClient.provider.connection,
       key1.publicKey,
       1_000_000_000,
+    );
+
+    const payer = (glamClient.provider.wallet as any).payer as Keypair;
+    token2022Mint = await createMint(
+      glamClient.provider.connection,
+      payer,
+      payer.publicKey,
+      null,
+      6,
+      undefined,
+      undefined,
+      TOKEN_2022_PROGRAM_ID,
     );
   });
 
@@ -99,6 +118,92 @@ describe("state_ops", () => {
     expect(stateModel.assets).toEqual([WSOL, MSOL]);
   });
 
+  it("Add assets", async () => {
+    // State starts with [WSOL, MSOL], add USDC
+    try {
+      const txSig = await glamClient.access.addAssets([USDC]);
+      console.log("Add USDC asset", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+    const stateModel = await glamClient.fetchStateModel();
+    expectPublicKeyArrayEqual(stateModel.assets, [WSOL, MSOL, USDC]);
+  });
+
+  it("Delete assets", async () => {
+    // State has [WSOL, MSOL, USDC], delete MSOL and USDC
+    try {
+      const txSig = await glamClient.access.deleteAssets([MSOL, USDC]);
+      console.log("Delete MSOL and USDC assets", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+    const stateModel = await glamClient.fetchStateModel();
+    expectPublicKeyArrayEqual(stateModel.assets, [WSOL]);
+  });
+
+  it("Delete base asset should fail", async () => {
+    try {
+      await glamClient.access.deleteAssets([WSOL]);
+      throw new Error("Should have failed");
+    } catch (e) {
+      expect((e as GlamError).message).toContain(
+        "Cannot delete base asset from allowlist",
+      );
+    }
+  });
+
+  it("Restore assets for remaining tests", async () => {
+    // Add MSOL back for subsequent tests
+    try {
+      const txSig = await glamClient.access.addAssets([MSOL]);
+      console.log("Restore MSOL asset", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+    const stateModel = await glamClient.fetchStateModel();
+    expectPublicKeyArrayEqual(stateModel.assets, [WSOL, MSOL]);
+  });
+
+  it("Add Token-2022 asset", async () => {
+    try {
+      const txSig = await glamClient.access.addAssets([token2022Mint]);
+      console.log("Add Token-2022 asset", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+    const stateModel = await glamClient.fetchStateModel();
+    expectPublicKeyArrayEqual(stateModel.assets, [WSOL, MSOL, token2022Mint]);
+  });
+
+  it("Delete Token-2022 asset with zero-balance ATA", async () => {
+    const payer = (glamClient.provider.wallet as any).payer as Keypair;
+    await getOrCreateAssociatedTokenAccount(
+      glamClient.provider.connection,
+      payer,
+      token2022Mint,
+      glamClient.vaultPda,
+      true,
+      undefined,
+      undefined,
+      TOKEN_2022_PROGRAM_ID,
+    );
+
+    try {
+      const txSig = await glamClient.access.deleteAssets([token2022Mint]);
+      console.log("Delete Token-2022 asset", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+    const stateModel = await glamClient.fetchStateModel();
+    expectPublicKeyArrayEqual(stateModel.assets, [WSOL, MSOL]);
+  });
+
   it("Update borrowable assets", async () => {
     try {
       const txSig = await glamClient.state.update({
@@ -161,7 +266,7 @@ describe("state_ops", () => {
       });
       expect(txSig).toBeUndefined();
     } catch (e) {
-      expect((e as GlamError).message).toEqual("Signer is not authorized.");
+      expect((e as GlamError).message).toEqual("Signer is not authorized");
     }
 
     // new manager CAN update back
@@ -185,7 +290,7 @@ describe("state_ops", () => {
       expect(txSig).toBeUndefined();
     } catch (e) {
       expect((e as GlamError).message).toEqual(
-        "Glam state cannot be closed: mint must be closed and state must be disabled.",
+        "Glam state cannot be closed: mint must be closed and state must be disabled",
       );
     }
   });

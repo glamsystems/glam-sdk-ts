@@ -4,9 +4,14 @@ import {
   TransactionSignature,
   TransactionInstruction,
 } from "@solana/web3.js";
+import {
+  getAssociatedTokenAddressSync,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import { BN } from "@coral-xyz/anchor";
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 import { EmergencyAccessUpdateArgs } from "../models";
+import { fetchMintAndTokenProgram } from "../utils/accounts";
 
 class TxBuilder extends BaseTxBuilder<AccessClient> {
   async emergencyAccessUpdateIx(
@@ -105,6 +110,91 @@ class TxBuilder extends BaseTxBuilder<AccessClient> {
     return await this.buildVersionedTx([ix], txOptions);
   }
 
+  async addAssetsIx(
+    assets: PublicKey[],
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const glamSigner = signer || this.client.base.signer;
+    return await (this.client.base.protocolProgram.methods as any)
+      .addAssets()
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+      })
+      .remainingAccounts(
+        assets.map((mint) => ({
+          pubkey: mint,
+          isSigner: false,
+          isWritable: false,
+        })),
+      )
+      .instruction();
+  }
+
+  async addAssetsTx(
+    assets: PublicKey[],
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.addAssetsIx(assets, glamSigner);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async deleteAssetsIx(
+    assets: PublicKey[],
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const glamSigner = signer || this.client.base.signer;
+    const vault = this.client.base.vaultPda;
+    const connection = this.client.base.provider.connection;
+
+    const mintAccounts = assets.map((mint) => ({
+      pubkey: mint,
+      isSigner: false,
+      isWritable: false,
+    }));
+
+    const ataAccounts = await Promise.all(
+      assets.map(async (mint) => {
+        let tokenProgram: PublicKey;
+        try {
+          ({ tokenProgram } = await fetchMintAndTokenProgram(connection, mint));
+        } catch {
+          tokenProgram = TOKEN_PROGRAM_ID;
+        }
+        const ata = getAssociatedTokenAddressSync(
+          mint,
+          vault,
+          true,
+          tokenProgram,
+        );
+        return {
+          pubkey: ata,
+          isSigner: false,
+          isWritable: false,
+        };
+      }),
+    );
+
+    return await (this.client.base.protocolProgram.methods as any)
+      .deleteAssets()
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner,
+      })
+      .remainingAccounts([...mintAccounts, ...ataAccounts])
+      .instruction();
+  }
+
+  async deleteAssetsTx(
+    assets: PublicKey[],
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const glamSigner = txOptions.signer || this.client.base.signer;
+    const ix = await this.deleteAssetsIx(assets, glamSigner);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
   async setProtocolPolicyIx(
     integrationProgram: PublicKey,
     protocolBitflag: number,
@@ -143,6 +233,29 @@ export class AccessClient {
 
   public constructor(readonly base: BaseClient) {
     this.txBuilder = new TxBuilder(this);
+  }
+
+  /**
+   * Add assets to the vault allowlist
+   */
+  public async addAssets(
+    assets: PublicKey[],
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const vTx = await this.txBuilder.addAssetsTx(assets, txOptions);
+    return await this.base.sendAndConfirm(vTx);
+  }
+
+  /**
+   * Delete assets from the vault allowlist.
+   * Assets must have zero vault balance (ATA empty or non-existent).
+   */
+  public async deleteAssets(
+    assets: PublicKey[],
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const vTx = await this.txBuilder.deleteAssetsTx(assets, txOptions);
+    return await this.base.sendAndConfirm(vTx);
   }
 
   /**
