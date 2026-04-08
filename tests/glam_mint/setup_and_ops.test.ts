@@ -2,11 +2,11 @@ import { BN } from "@coral-xyz/anchor";
 import { Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import {
   GlamClient,
-  stringToChars,
+  nameToChars,
   StateAccountType,
   WSOL,
   getTokenAccountsByOwner,
-  charsToString,
+  charsToName,
   fetchMintAndTokenProgram,
 } from "../../src";
 import { expectPublicKeyArrayEqual, sleep, str2seed } from "../test-utils";
@@ -14,6 +14,7 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
+import { InitMintParams } from "../../src/client/mint";
 
 const txOptions = {
   simulate: true,
@@ -27,7 +28,7 @@ describe("setup_and_ops", () => {
 
   it("Initialize mint (no permanent delegate, no lockup, default_account_state_frozen=false)", async () => {
     const params = {
-      name: stringToChars("GLAM Mint Test #0 No PD"),
+      name: nameToChars("GLAM Mint Test #0 No PD"),
       symbol: "GMT",
       uri: "https://glam.systems",
       defaultAccountStateFrozen: false,
@@ -45,9 +46,9 @@ describe("setup_and_ops", () => {
     }
 
     const stateModel = await glamClient.fetchStateModel();
-    expect(stateModel.nameStr).toEqual(charsToString(params.name));
+    expect(stateModel.nameStr).toEqual(charsToName(params.name));
     expect(stateModel.integrationAcls?.length).toEqual(1); // mint program is an integration
-    expect(stateModel.mintModel?.nameStr).toEqual(charsToString(params.name));
+    expect(stateModel.mintModel?.nameStr).toEqual(charsToName(params.name));
     expect(stateModel.mintModel?.symbol).toEqual(params.symbol);
     expect(stateModel.mintModel?.baseAssetMint).toEqual(WSOL);
     expect(stateModel.mintModel?.defaultAccountStateFrozen).toEqual(false);
@@ -72,7 +73,7 @@ describe("setup_and_ops", () => {
 
     const params = {
       accountType: StateAccountType.MINT,
-      name: stringToChars(name),
+      name: nameToChars(name),
       symbol: "GMT",
       uri: "https://glam.systems",
       defaultAccountStateFrozen: true,
@@ -123,7 +124,7 @@ describe("setup_and_ops", () => {
     const name = "GLAM Mint Test #2";
     const params = {
       accountType: StateAccountType.MINT,
-      name: stringToChars(name),
+      name: nameToChars(name),
       symbol: "GMT",
       uri: "https://glam.systems",
       defaultAccountStateFrozen: true,

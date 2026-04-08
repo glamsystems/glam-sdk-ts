@@ -8,7 +8,7 @@ export type GlamPolicies = {
   "address": "po1iCYakK3gHCLbuju4wGzFowTMpAJxkqK1iwUqMonY",
   "metadata": {
     "name": "glamPolicies",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "spec": "0.1.0",
     "description": "GLAM policies program"
   },
@@ -390,12 +390,7 @@ export type GlamPolicies = {
     {
       "code": 6002,
       "name": "notAuthorized",
-      "msg": "Signer is not mint authority or permanent delegate"
-    },
-    {
-      "code": 6003,
-      "name": "missingPermanentDelegate",
-      "msg": "Mint has no permanent delegate extension"
+      "msg": "Not authorized"
     }
   ],
   "types": [

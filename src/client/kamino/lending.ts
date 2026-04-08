@@ -722,7 +722,6 @@ class TxBuilder extends BaseTxBuilder<KaminoLendingClient> {
     });
 
     const ix = await this.client.base.extKaminoProgram.methods
-      // @ts-expect-error staging only
       .lendingRequestElevationGroup(elevationGroup)
       .accounts({
         glamState: this.client.base.statePda,

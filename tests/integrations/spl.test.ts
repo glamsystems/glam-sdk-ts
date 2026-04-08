@@ -3,10 +3,10 @@ import { BN, Wallet } from "@coral-xyz/anchor";
 import {
   airdrop,
   createGlamStateForTest,
-  defaultInitStateParams,
+  stateModelForTest,
   str2seed,
 } from "../glam_protocol/setup";
-import { GlamClient, MSOL, stringToChars, WSOL } from "../../src";
+import { GlamClient, MSOL, nameToChars, WSOL } from "../../src";
 import { createAssociatedTokenAccountIdempotentInstruction } from "@solana/spl-token";
 import { Keypair, Transaction } from "@solana/web3.js";
 import { TransferPolicy } from "../../src/deser/integrationPolicies";
@@ -30,8 +30,8 @@ describe("spl", () => {
 
   it("Create vault", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
-      ...defaultInitStateParams,
-      name: stringToChars("Spl Tests"),
+      ...stateModelForTest,
+      name: nameToChars("Spl Tests"),
       integrationAcls: [
         {
           integrationProgram: glamClient.protocolProgram.programId,
@@ -227,7 +227,7 @@ describe("spl", () => {
         txOptions,
       );
       expect(txSig).toBeUndefined();
-    } catch (error: any) {
+    } catch (error) {
       expect(error.message).toBe("Signer is not authorized");
     }
 
@@ -238,7 +238,7 @@ describe("spl", () => {
         txOptions,
       );
       expect(txSig).toBeUndefined();
-    } catch (error: any) {
+    } catch (error) {
       expect(error.message).toBe("Signer is not authorized");
     }
   });

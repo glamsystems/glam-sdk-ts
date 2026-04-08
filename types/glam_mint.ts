@@ -8,7 +8,7 @@ export type GlamMint = {
   "address": "GM1NtvvnSXUptTrMCqbogAdZJydZSNv98DoU5AZVLmGh",
   "metadata": {
     "name": "glamMint",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "spec": "0.1.0",
     "description": "GLAM mint program"
   },
@@ -4421,6 +4421,19 @@ export type GlamMint = {
   ],
   "accounts": [
     {
+      "name": "globalConfig",
+      "discriminator": [
+        149,
+        8,
+        156,
+        202,
+        160,
+        252,
+        176,
+        217
+      ]
+    },
+    {
       "name": "requestQueue",
       "discriminator": [
         172,
@@ -4494,7 +4507,7 @@ export type GlamMint = {
     {
       "code": 6003,
       "name": "invalidAsset",
-      "msg": "Invalid asset"
+      "msg": "Asset not allowed to subscribe"
     },
     {
       "code": 6004,
@@ -4548,26 +4561,31 @@ export type GlamMint = {
     },
     {
       "code": 6014,
+      "name": "amountBelowMinimum",
+      "msg": "Amount is below the minimum required"
+    },
+    {
+      "code": 6015,
       "name": "managerFeesNotCrystallized",
       "msg": "Manager fees should be crystallized before updating"
     },
     {
-      "code": 6015,
+      "code": 6016,
+      "name": "amountAboveMaximum",
+      "msg": "Amount exceeds maximum threshold"
+    },
+    {
+      "code": 6017,
       "name": "insufficientEscrowBalance",
       "msg": "Insufficient escrow balance for fee burn"
     },
     {
-      "code": 6016,
-      "name": "amountBelowMinimum",
-      "msg": "Amount below minimum threshold"
-    },
-    {
-      "code": 6017,
+      "code": 6018,
       "name": "tokenAclManagesFreezeThaw",
       "msg": "Token ACL is enabled; freeze/thaw is managed by the Token ACL program"
     },
     {
-      "code": 6018,
+      "code": 6019,
       "name": "invalidMintState",
       "msg": "Invalid mint state"
     }
@@ -4629,6 +4647,51 @@ export type GlamMint = {
           {
             "name": "protocolFlowFee",
             "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "assetMeta",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "oracleSource",
+            "type": {
+              "defined": {
+                "name": "oracleSource"
+              }
+            }
+          },
+          {
+            "name": "maxAgeSeconds",
+            "type": "u16"
+          },
+          {
+            "name": "priority",
+            "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
           }
         ]
       }
@@ -5088,6 +5151,50 @@ export type GlamMint = {
       }
     },
     {
+      "name": "globalConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "The authority that can modify the config"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "feeAuthority",
+            "docs": [
+              "The authority that can modify fee structure of individual glam state and claim protocol fees"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "referrer",
+            "type": "pubkey"
+          },
+          {
+            "name": "baseFeeBps",
+            "type": "u16"
+          },
+          {
+            "name": "flowFeeBps",
+            "type": "u16"
+          },
+          {
+            "name": "assetMetas",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "assetMeta"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "hurdleType",
       "type": {
         "kind": "enum",
@@ -5439,6 +5546,83 @@ export type GlamMint = {
                 12
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracleSource",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "pyth"
+          },
+          {
+            "name": "switchboard"
+          },
+          {
+            "name": "quoteAsset"
+          },
+          {
+            "name": "pyth1K"
+          },
+          {
+            "name": "pyth1M"
+          },
+          {
+            "name": "pythStableCoin"
+          },
+          {
+            "name": "prelaunch"
+          },
+          {
+            "name": "pythPull"
+          },
+          {
+            "name": "pyth1KPull"
+          },
+          {
+            "name": "pyth1MPull"
+          },
+          {
+            "name": "pythStableCoinPull"
+          },
+          {
+            "name": "switchboardOnDemand"
+          },
+          {
+            "name": "pythLazer"
+          },
+          {
+            "name": "pythLazer1K"
+          },
+          {
+            "name": "pythLazer1M"
+          },
+          {
+            "name": "pythLazerStableCoin"
+          },
+          {
+            "name": "notSet"
+          },
+          {
+            "name": "lstPoolState"
+          },
+          {
+            "name": "marinadeState"
+          },
+          {
+            "name": "baseAsset"
+          },
+          {
+            "name": "chainlinkRwa"
+          },
+          {
+            "name": "chainlinkX"
+          },
+          {
+            "name": "kaminoReserve"
           }
         ]
       }

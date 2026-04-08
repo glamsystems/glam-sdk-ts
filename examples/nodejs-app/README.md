@@ -47,8 +47,6 @@ pnpm run dev create <name> [options]
 pnpm run dev create "My Trading Vault"
 ```
 
-Vault address and vault state can be found in the output.
-
 ### Deposit SOL
 
 Deposit SOL into a GLAM vault:
@@ -91,11 +89,6 @@ pnpm run dev transfer-token <vault> <dest_wallet> <token_mint> <amount>
 pnpm run dev transfer-token AavyjyHQJfvVyePzfeBq6nhNgjZhXEDPWXvnsgVsuaxf gLJHKPrZLGBiBZ33hFgZh6YnsEhTVxuRT17UCqNp6ff CXk2AMBfi3TwaEL2468s6zP8xq9NxTXjp9gjMgzeUynM 1
 ```
 
-Note that by default transfer vault tokens out is disallowed. To enable it:
-
-1. Enable SPL token integration for the vault
-2. Add desired destination wallets to transfer allowlist
-
 ### Enable Integration
 
 Enable protocol integrations for a GLAM vault:
@@ -104,22 +97,10 @@ Enable protocol integrations for a GLAM vault:
 pnpm run dev enable-integration <vault> <integration_program> <protocols...>
 ```
 
-**Example (enable SPL token integration):**
-
-```bash
-pnpm run dev enable-integration AavyjyHQJfvVyePzfeBq6nhNgjZhXEDPWXvnsgVsuaxf G1NTsQ36mjPe89HtPYqxKsjY5HmYsDR6CbD2gd2U2pta 1
-```
-
-### Allowlist Destination Wallet
-
-```bash
-pnpm run dev allowlist-destination <vault> <dest_wallet>
-```
-
 **Example:**
 
 ```bash
-pnpm run dev allowlist-destination AavyjyHQJfvVyePzfeBq6nhNgjZhXEDPWXvnsgVsuaxf gLJHKPrZLGBiBZ33hFgZh6YnsEhTVxuRT17UCqNp6ff
+pnpm run dev enable-integration AavyjyHQJfvVyePzfeBq6nhNgjZhXEDPWXvnsgVsuaxf G1NTsQ36mjPe89HtPYqxKsjY5HmYsDR6CbD2gd2U2pta 1
 ```
 
 ## Notes

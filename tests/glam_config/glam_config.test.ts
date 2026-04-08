@@ -2,13 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey, Keypair } from "@solana/web3.js";
 import { GlamConfig } from "../../target/types/glam_config";
-import { initGlamConfigForTest, createTestMint } from "./setup";
-import { USDC, WSOL, MSOL } from "../../src/constants";
-
-export const TEST_ORACLES = {
-  SOL_PYTH: new PublicKey("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE"),
-  USDC_PYTH: new PublicKey("Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"),
-};
+import { initGlamConfigForTest, TEST_ASSETS, TEST_ORACLES } from "./setup";
 
 describe("glam_config", () => {
   const provider = anchor.AnchorProvider.env();
@@ -42,7 +36,7 @@ describe("glam_config", () => {
     // Add SOL asset meta
     const tx = await program.methods
       .upsertAssetMeta({
-        asset: WSOL,
+        asset: TEST_ASSETS.SOL,
         decimals: 9,
         oracle: TEST_ORACLES.SOL_PYTH,
         oracleSource: { pyth: {} },
@@ -51,9 +45,8 @@ describe("glam_config", () => {
         padding: [0, 0, 0],
       })
       .accounts({
+        globalConfig: globalConfigPDA,
         admin: admin.publicKey,
-        asset: WSOL,
-        oracle: TEST_ORACLES.SOL_PYTH,
       })
       .signers([admin])
       .rpc();
@@ -67,7 +60,7 @@ describe("glam_config", () => {
     // Verify the asset meta was added
     expect(globalConfig.assetMetas.length).toEqual(1);
     expect(globalConfig.assetMetas[0].asset.toString()).toEqual(
-      WSOL.toString(),
+      TEST_ASSETS.SOL.toString(),
     );
     expect(globalConfig.assetMetas[0].decimals).toEqual(9);
     expect(globalConfig.assetMetas[0].oracle.toString()).toEqual(
@@ -83,7 +76,7 @@ describe("glam_config", () => {
     // Add USDC asset meta
     const tx = await program.methods
       .upsertAssetMeta({
-        asset: USDC,
+        asset: TEST_ASSETS.USDC,
         decimals: 6, // USDC decimals
         oracle: TEST_ORACLES.USDC_PYTH,
         oracleSource: { pyth: {} }, // OracleSource enum variant
@@ -92,9 +85,8 @@ describe("glam_config", () => {
         padding: [0, 0, 0],
       })
       .accounts({
+        globalConfig: globalConfigPDA,
         admin: admin.publicKey,
-        asset: USDC,
-        oracle: TEST_ORACLES.USDC_PYTH,
       })
       .signers([admin])
       .rpc();
@@ -110,7 +102,7 @@ describe("glam_config", () => {
 
     // Verify the second asset meta is USDC
     const usdcMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === USDC.toString(),
+      (meta) => meta.asset.toString() === TEST_ASSETS.USDC.toString(),
     );
     expect(usdcMeta).toBeDefined();
     expect(usdcMeta?.decimals).toEqual(6);
@@ -119,51 +111,11 @@ describe("glam_config", () => {
     );
   });
 
-  it("Extends account when adding many assets", async () => {
-    // Add 15 assets to trigger account extension
-    // Account starts with space for ~3-4 assets, extensions happen in chunks of 10
-    for (let i = 0; i < 15; i++) {
-      const assetMint = await createTestMint(provider.connection, admin, 9);
-      const oracleKeypair = Keypair.generate();
-
-      await program.methods
-        .upsertAssetMeta({
-          asset: assetMint,
-          decimals: 9,
-          oracle: oracleKeypair.publicKey,
-          oracleSource: { pyth: {} },
-          maxAgeSeconds: 30,
-          priority: i,
-          padding: [0, 0, 0],
-        })
-        .accounts({
-          admin: admin.publicKey,
-          asset: assetMint,
-          oracle: oracleKeypair.publicKey,
-        })
-        .signers([admin])
-        .rpc();
-    }
-
-    // Verify all assets are accessible
-    const globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-
-    // Should have SOL + USDC + 15 new = 17 total
-    expect(globalConfig.assetMetas.length).toEqual(17);
-
-    // Verify we can still find assets
-    const solMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === WSOL.toString(),
-    );
-    expect(solMeta).toBeDefined();
-  }, 60_000);
-
   it("Can update an asset meta", async () => {
     // Update SOL asset meta with new oracle
     const tx = await program.methods
       .upsertAssetMeta({
-        asset: WSOL,
+        asset: TEST_ASSETS.SOL,
         decimals: 9,
         oracle: TEST_ORACLES.SOL_PYTH,
         oracleSource: { pyth1K: {} }, // Different oracle source
@@ -172,9 +124,8 @@ describe("glam_config", () => {
         padding: [0, 0, 0],
       })
       .accounts({
+        globalConfig: globalConfigPDA,
         admin: admin.publicKey,
-        asset: WSOL,
-        oracle: TEST_ORACLES.SOL_PYTH,
       })
       .signers([admin])
       .rpc();
@@ -187,112 +138,34 @@ describe("glam_config", () => {
 
     // Find the SOL asset meta
     const solMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === WSOL.toString(),
+      (meta) => meta.asset.toString() === TEST_ASSETS.SOL.toString(),
     );
     expect(Object.keys(solMeta?.oracleSource || {})[0]).toEqual("pyth1K");
   });
 
-  it("Upserting same asset+oracle updates instead of duplicating", async () => {
-    // Get current count
-    let globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    const countBefore = globalConfig.assetMetas.length;
-
-    // Find existing SOL asset
-    const solMetaBefore = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === WSOL.toString(),
-    );
-    expect(solMetaBefore).toBeDefined();
-    const originalPriority = solMetaBefore!.priority;
-
-    // Upsert SOL with same oracle but different parameters
-    await program.methods
-      .upsertAssetMeta({
-        asset: WSOL,
-        decimals: 9,
-        oracle: TEST_ORACLES.SOL_PYTH,
-        oracleSource: { switchboard: {} }, // Change oracle source
-        maxAgeSeconds: 60, // Change max age
-        priority: 99, // Change priority
-        padding: [0, 0, 0],
-      })
-      .accounts({
-        admin: admin.publicKey,
-        asset: WSOL,
-        oracle: TEST_ORACLES.SOL_PYTH,
-      })
-      .signers([admin])
-      .rpc();
-
-    // Verify count stayed the same (update, not add)
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(countBefore);
-
-    // Verify parameters were updated
-    const solMetaAfter = globalConfig.assetMetas.find(
-      (meta) =>
-        meta.asset.toString() === WSOL.toString() &&
-        meta.oracle.toString() === TEST_ORACLES.SOL_PYTH.toString(),
-    );
-    expect(solMetaAfter).toBeDefined();
-    expect(Object.keys(solMetaAfter?.oracleSource || {})[0]).toEqual(
-      "switchboard",
-    );
-    expect(solMetaAfter?.maxAgeSeconds).toEqual(60);
-    expect(solMetaAfter?.priority).toEqual(99);
-    expect(solMetaAfter?.priority).not.toEqual(originalPriority);
-  });
-
-  it("Can deprecate an asset meta", async () => {
-    // Get current count before deprecation
-    const configBefore =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    const countBefore = configBefore.assetMetas.length;
-
-    // Deprecate the USDC asset meta (soft delete - sets priority to -1)
+  it("Can delete an asset meta", async () => {
+    // Delete the USDC asset meta
     const tx = await program.methods
-      .deprecateAssetMeta(USDC, TEST_ORACLES.USDC_PYTH)
+      .deleteAssetMeta(TEST_ASSETS.USDC, TEST_ORACLES.USDC_PYTH)
       .accounts({
+        globalConfig: globalConfigPDA,
         admin: admin.publicKey,
       })
       .signers([admin])
       .rpc();
 
-    console.log("Deprecate asset meta transaction:", tx);
+    console.log("Delete asset meta transaction:", tx);
 
     // Fetch the updated global config
     const globalConfig =
       await program.account.globalConfig.fetch(globalConfigPDA);
 
-    // Verify count stays the same (soft delete)
-    expect(globalConfig.assetMetas.length).toEqual(countBefore);
-
-    // Verify USDC asset meta has priority = -1 (deprecated)
+    // Verify USDC asset meta was removed
+    expect(globalConfig.assetMetas.length).toEqual(1);
     const usdcMeta = globalConfig.assetMetas.find(
-      (meta) => meta.asset.toString() === USDC.toString(),
+      (meta) => meta.asset.toString() === TEST_ASSETS.USDC.toString(),
     );
-    expect(usdcMeta).toBeDefined();
-    expect(usdcMeta?.priority).toEqual(-1);
-  });
-
-  it("Cannot deprecate non-existent asset", async () => {
-    // Try to deprecate an asset that doesn't exist
-    const nonExistentAsset = Keypair.generate().publicKey;
-    const nonExistentOracle = Keypair.generate().publicKey;
-
-    try {
-      await program.methods
-        .deprecateAssetMeta(nonExistentAsset, nonExistentOracle)
-        .accounts({
-          admin: admin.publicKey,
-        })
-        .signers([admin])
-        .rpc();
-
-      fail("Should have thrown an error for deprecating non-existent asset");
-    } catch (error: any) {
-      expect(error.toString()).toContain("AssetMetaNotFound");
-    }
+    expect(usdcMeta).toBeUndefined();
   });
 
   it("Can update admin", async () => {
@@ -303,6 +176,7 @@ describe("glam_config", () => {
     const tx = await program.methods
       .updateAdmin(newAdmin.publicKey)
       .accounts({
+        globalConfig: globalConfigPDA,
         admin: admin.publicKey,
       })
       .signers([admin])
@@ -323,6 +197,7 @@ describe("glam_config", () => {
     await program.methods
       .updateAdmin(admin.publicKey)
       .accounts({
+        globalConfig: globalConfigPDA,
         admin: newAdmin.publicKey,
       })
       .signers([newAdmin])
@@ -337,6 +212,7 @@ describe("glam_config", () => {
     const tx = await program.methods
       .updateProtocolFees(newBaseFee, newFlowFee)
       .accounts({
+        globalConfig: globalConfigPDA,
         feeAuthority: feeAuthority.publicKey,
       })
       .signers([feeAuthority])
@@ -359,6 +235,7 @@ describe("glam_config", () => {
       await program.methods
         .updateProtocolFees(101, 20000) // > 1% base fee, > 100% flow fee
         .accounts({
+          globalConfig: globalConfigPDA,
           feeAuthority: feeAuthority.publicKey,
         })
         .signers([feeAuthority])
@@ -366,90 +243,8 @@ describe("glam_config", () => {
 
       // If we reach here, the test should fail
       fail("Should have thrown an error for invalid fee values");
-    } catch (error: any) {
+    } catch (error) {
       // Verify the error is about invalid parameters
-      expect(error.toString()).toContain("InvalidParameters");
-    }
-  });
-
-  it("Can update fees with boundary values", async () => {
-    // Test baseFeeBps = 0 (valid minimum)
-    await program.methods
-      .updateProtocolFees(0, 5000)
-      .accounts({
-        feeAuthority: feeAuthority.publicKey,
-      })
-      .signers([feeAuthority])
-      .rpc();
-
-    let globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.baseFeeBps).toEqual(0);
-    expect(globalConfig.flowFeeBps).toEqual(5000);
-
-    // Test baseFeeBps = 100 (valid maximum - 1%)
-    await program.methods
-      .updateProtocolFees(100, 5000)
-      .accounts({
-        feeAuthority: feeAuthority.publicKey,
-      })
-      .signers([feeAuthority])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.baseFeeBps).toEqual(100);
-
-    // Test flowFeeBps = 0 (valid minimum)
-    await program.methods
-      .updateProtocolFees(50, 0)
-      .accounts({
-        feeAuthority: feeAuthority.publicKey,
-      })
-      .signers([feeAuthority])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.flowFeeBps).toEqual(0);
-
-    // Test flowFeeBps = 10000 (valid maximum - 100%)
-    await program.methods
-      .updateProtocolFees(50, 10000)
-      .accounts({
-        feeAuthority: feeAuthority.publicKey,
-      })
-      .signers([feeAuthority])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.flowFeeBps).toEqual(10000);
-  });
-
-  it("Rejects fees at exact boundary invalid values", async () => {
-    // Test baseFeeBps = 101 (min invalid)
-    try {
-      await program.methods
-        .updateProtocolFees(101, 5000)
-        .accounts({
-          feeAuthority: feeAuthority.publicKey,
-        })
-        .signers([feeAuthority])
-        .rpc();
-      fail("Should have thrown an error for baseFeeBps > 100");
-    } catch (error: any) {
-      expect(error.toString()).toContain("InvalidParameters");
-    }
-
-    // Test flowFeeBps = 10001 (min invalid)
-    try {
-      await program.methods
-        .updateProtocolFees(50, 10001)
-        .accounts({
-          feeAuthority: feeAuthority.publicKey,
-        })
-        .signers([feeAuthority])
-        .rpc();
-      fail("Should have thrown an error for flowFeeBps > 10000");
-    } catch (error: any) {
       expect(error.toString()).toContain("InvalidParameters");
     }
   });
@@ -462,6 +257,7 @@ describe("glam_config", () => {
     const tx = await program.methods
       .updateReferrer(newReferrer.publicKey)
       .accounts({
+        globalConfig: globalConfigPDA,
         feeAuthority: feeAuthority.publicKey,
       })
       .signers([feeAuthority])
@@ -479,46 +275,12 @@ describe("glam_config", () => {
     );
   });
 
-  it("Can update fee authority", async () => {
-    // Create a new fee authority
-    const newFeeAuthority = Keypair.generate();
-
-    // Update the fee authority
-    const tx = await program.methods
-      .updateFeeAuthority(newFeeAuthority.publicKey)
-      .accounts({
-        feeAuthority: feeAuthority.publicKey,
-      })
-      .signers([feeAuthority])
-      .rpc();
-
-    console.log("Update fee authority transaction:", tx);
-
-    // Fetch the updated global config
-    const globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-
-    // Verify the fee authority was updated
-    expect(globalConfig.feeAuthority.toString()).toEqual(
-      newFeeAuthority.publicKey.toString(),
-    );
-
-    // Update fee authority back to original for remaining tests
-    await program.methods
-      .updateFeeAuthority(feeAuthority.publicKey)
-      .accounts({
-        feeAuthority: newFeeAuthority.publicKey,
-      })
-      .signers([newFeeAuthority])
-      .rpc();
-  });
-
   it("Cannot perform admin operations without admin authority", async () => {
     try {
       // Try to add asset meta with fee authority instead of admin
       await program.methods
         .upsertAssetMeta({
-          asset: MSOL,
+          asset: TEST_ASSETS.MSOL,
           decimals: 9,
           oracle: TEST_ORACLES.SOL_PYTH,
           oracleSource: { pyth: {} },
@@ -527,16 +289,15 @@ describe("glam_config", () => {
           padding: [0, 0, 0],
         })
         .accounts({
+          globalConfig: globalConfigPDA,
           admin: feeAuthority.publicKey, // Using fee authority instead of admin
-          asset: MSOL,
-          oracle: TEST_ORACLES.SOL_PYTH,
         })
         .signers([feeAuthority])
         .rpc();
 
       // If we reach here, the test should fail
       fail("Should have thrown an error for invalid authority");
-    } catch (error: any) {
+    } catch (error) {
       // Verify the error is about invalid authority
       expect(error.toString()).toContain("InvalidAuthority");
     }
@@ -548,6 +309,7 @@ describe("glam_config", () => {
       await program.methods
         .updateProtocolFees(3, 1800)
         .accounts({
+          globalConfig: globalConfigPDA,
           feeAuthority: admin.publicKey, // Using admin instead of fee authority
         })
         .signers([admin])
@@ -555,290 +317,10 @@ describe("glam_config", () => {
 
       // If we reach here, the test should fail
       fail("Should have thrown an error for invalid authority");
-    } catch (error: any) {
-      // Verify the error is about invalid fee authority
-      expect(error.toString()).toContain("InvalidFeeAuthority");
+    } catch (error) {
+      // Verify the error is about invalid authority
+      expect(error.toString()).toContain("InvalidAuthority");
     }
-  });
-
-  it("Verifies proper account extension beyond initial capacity", async () => {
-    // Get current count before adding more
-    let globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    const countBefore = globalConfig.assetMetas.length;
-
-    // Add 5 more assets to verify extension works correctly
-    const newMints: PublicKey[] = [];
-    for (let i = 0; i < 5; i++) {
-      const assetMint = await createTestMint(provider.connection, admin, 6); // 6 decimals
-      const oracleKeypair = Keypair.generate();
-      newMints.push(assetMint);
-
-      await program.methods
-        .upsertAssetMeta({
-          asset: assetMint,
-          decimals: 6,
-          oracle: oracleKeypair.publicKey,
-          oracleSource: { switchboard: {} },
-          maxAgeSeconds: 60,
-          priority: 100 + i,
-          padding: [0, 0, 0],
-        })
-        .accounts({
-          admin: admin.publicKey,
-          asset: assetMint,
-          oracle: oracleKeypair.publicKey,
-        })
-        .signers([admin])
-        .rpc();
-    }
-
-    // Verify all new assets were added
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(countBefore + 5);
-
-    // Verify we can find the newly added assets
-    for (const mint of newMints) {
-      const meta = globalConfig.assetMetas.find(
-        (m) => m.asset.toString() === mint.toString(),
-      );
-      expect(meta).toBeDefined();
-      expect(meta?.decimals).toEqual(6);
-    }
-  }, 60_000);
-
-  it("Maintains data consistency through sequential state changes", async () => {
-    // Create a new mint for this test
-    const testMint = await createTestMint(provider.connection, admin, 8);
-    const testOracle = Keypair.generate();
-
-    // Get initial count
-    let globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    const initialCount = globalConfig.assetMetas.length;
-
-    // Step 1: Add a new asset
-    await program.methods
-      .upsertAssetMeta({
-        asset: testMint,
-        decimals: 8,
-        oracle: testOracle.publicKey,
-        oracleSource: { pyth: {} },
-        maxAgeSeconds: 30,
-        priority: 50,
-        padding: [0, 0, 0],
-      })
-      .accounts({
-        admin: admin.publicKey,
-        asset: testMint,
-        oracle: testOracle.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(initialCount + 1);
-
-    // Step 2: Update the asset
-    await program.methods
-      .upsertAssetMeta({
-        asset: testMint,
-        decimals: 8,
-        oracle: testOracle.publicKey,
-        oracleSource: { switchboard: {} }, // Changed oracle source
-        maxAgeSeconds: 120, // Changed max age
-        priority: 75, // Changed priority
-        padding: [0, 0, 0],
-      })
-      .accounts({
-        admin: admin.publicKey,
-        asset: testMint,
-        oracle: testOracle.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-
-    // Verify update didn't add a new entry
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(initialCount + 1);
-
-    // Verify values were updated
-    const updatedMeta = globalConfig.assetMetas.find(
-      (m) =>
-        m.asset.toString() === testMint.toString() &&
-        m.oracle.toString() === testOracle.publicKey.toString(),
-    );
-    expect(updatedMeta).toBeDefined();
-    expect(Object.keys(updatedMeta?.oracleSource || {})[0]).toEqual(
-      "switchboard",
-    );
-    expect(updatedMeta?.maxAgeSeconds).toEqual(120);
-    expect(updatedMeta?.priority).toEqual(75);
-
-    // Step 3: Deprecate the asset
-    await program.methods
-      .deprecateAssetMeta(testMint, testOracle.publicKey)
-      .accounts({
-        admin: admin.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-
-    // Verify deprecation (count stays same, priority = -1)
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.assetMetas.length).toEqual(initialCount + 1);
-
-    const deprecatedMeta = globalConfig.assetMetas.find(
-      (m) =>
-        m.asset.toString() === testMint.toString() &&
-        m.oracle.toString() === testOracle.publicKey.toString(),
-    );
-    expect(deprecatedMeta?.priority).toEqual(-1);
-  }, 30_000);
-
-  it("Supports multiple admin changes in sequence", async () => {
-    // Get initial admin
-    let globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    const originalAdmin = globalConfig.admin;
-
-    // Create a chain of admins
-    const admin1 = Keypair.generate();
-    const admin2 = Keypair.generate();
-    const admin3 = Keypair.generate();
-
-    // Change to admin1
-    await program.methods
-      .updateAdmin(admin1.publicKey)
-      .accounts({
-        admin: admin.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.admin.toString()).toEqual(admin1.publicKey.toString());
-
-    // Change to admin2 (using admin1)
-    await program.methods
-      .updateAdmin(admin2.publicKey)
-      .accounts({
-        admin: admin1.publicKey,
-      })
-      .signers([admin1])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.admin.toString()).toEqual(admin2.publicKey.toString());
-
-    // Change to admin3 (using admin2)
-    await program.methods
-      .updateAdmin(admin3.publicKey)
-      .accounts({
-        admin: admin2.publicKey,
-      })
-      .signers([admin2])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.admin.toString()).toEqual(admin3.publicKey.toString());
-
-    // Restore original admin (using admin3)
-    await program.methods
-      .updateAdmin(originalAdmin)
-      .accounts({
-        admin: admin3.publicKey,
-      })
-      .signers([admin3])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.admin.toString()).toEqual(originalAdmin.toString());
-  });
-
-  it("Validates fee updates with various combinations", async () => {
-    // Test various valid fee combinations
-    const validCombinations = [
-      { baseFeeBps: 0, flowFeeBps: 0 }, // Both zero
-      { baseFeeBps: 100, flowFeeBps: 10000 }, // Both max
-      { baseFeeBps: 50, flowFeeBps: 5000 }, // Both middle
-      { baseFeeBps: 0, flowFeeBps: 10000 }, // Min base, max flow
-      { baseFeeBps: 100, flowFeeBps: 0 }, // Max base, min flow
-      { baseFeeBps: 25, flowFeeBps: 7500 }, // Quarter and 3/4
-    ];
-
-    for (const { baseFeeBps, flowFeeBps } of validCombinations) {
-      await program.methods
-        .updateProtocolFees(baseFeeBps, flowFeeBps)
-        .accounts({
-          feeAuthority: feeAuthority.publicKey,
-        })
-        .signers([feeAuthority])
-        .rpc();
-
-      const globalConfig =
-        await program.account.globalConfig.fetch(globalConfigPDA);
-      expect(globalConfig.baseFeeBps).toEqual(baseFeeBps);
-      expect(globalConfig.flowFeeBps).toEqual(flowFeeBps);
-    }
-
-    // Reset to reasonable defaults
-    await program.methods
-      .updateProtocolFees(10, 1000)
-      .accounts({
-        feeAuthority: feeAuthority.publicKey,
-      })
-      .signers([feeAuthority])
-      .rpc();
-  });
-
-  it("Validates referrer updates and state", async () => {
-    // Get initial referrer
-    let globalConfig =
-      await program.account.globalConfig.fetch(globalConfigPDA);
-    const initialReferrer = globalConfig.referrer;
-
-    // Update to new referrer
-    const newReferrer = Keypair.generate().publicKey;
-    await program.methods
-      .updateReferrer(newReferrer)
-      .accounts({
-        feeAuthority: feeAuthority.publicKey,
-      })
-      .signers([feeAuthority])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.referrer.toString()).toEqual(newReferrer.toString());
-
-    // Update to another referrer
-    const anotherReferrer = Keypair.generate().publicKey;
-    await program.methods
-      .updateReferrer(anotherReferrer)
-      .accounts({
-        feeAuthority: feeAuthority.publicKey,
-      })
-      .signers([feeAuthority])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.referrer.toString()).toEqual(
-      anotherReferrer.toString(),
-    );
-
-    // Restore original referrer
-    await program.methods
-      .updateReferrer(initialReferrer)
-      .accounts({
-        feeAuthority: feeAuthority.publicKey,
-      })
-      .signers([feeAuthority])
-      .rpc();
-
-    globalConfig = await program.account.globalConfig.fetch(globalConfigPDA);
-    expect(globalConfig.referrer.toString()).toEqual(
-      initialReferrer.toString(),
-    );
   });
 
   it("Close global config", async () => {

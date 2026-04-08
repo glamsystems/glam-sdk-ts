@@ -8,7 +8,7 @@ export type GlamProtocol = {
   "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz",
   "metadata": {
     "name": "glamProtocol",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "spec": "0.1.0",
     "description": "Glam Protocol"
   },
@@ -62,324 +62,6 @@ export type GlamProtocol = {
         }
       ],
       "args": []
-    },
-    {
-      "name": "chargeProtocolFee",
-      "discriminator": [
-        48,
-        225,
-        89,
-        103,
-        48,
-        65,
-        183,
-        238
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ]
-          }
-        },
-        {
-          "name": "signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "depositAsset"
-        },
-        {
-          "name": "vaultDepositAta",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "glamVault"
-              },
-              {
-                "kind": "account",
-                "path": "depositTokenProgram"
-              },
-              {
-                "kind": "account",
-                "path": "depositAsset"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "protocolFeeAuthority"
-        },
-        {
-          "name": "protocolFeeAuthorityAta",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "protocolFeeAuthority"
-              },
-              {
-                "kind": "account",
-                "path": "depositTokenProgram"
-              },
-              {
-                "kind": "account",
-                "path": "depositAsset"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "glamConfig",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  108,
-                  111,
-                  98,
-                  97,
-                  108,
-                  45,
-                  99,
-                  111,
-                  110,
-                  102,
-                  105,
-                  103
-                ]
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                10,
-                11,
-                0,
-                83,
-                72,
-                16,
-                46,
-                144,
-                46,
-                42,
-                79,
-                22,
-                157,
-                123,
-                21,
-                242,
-                192,
-                146,
-                1,
-                78,
-                88,
-                59,
-                102,
-                9,
-                190,
-                226,
-                92,
-                189,
-                187,
-                232,
-                83,
-                220
-              ]
-            }
-          }
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "associatedTokenProgram",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-        },
-        {
-          "name": "depositTokenProgram"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "checkAndUpdateTransferTracker",
-      "discriminator": [
-        180,
-        225,
-        201,
-        123,
-        192,
-        30,
-        178,
-        195
-      ],
-      "accounts": [
-        {
-          "name": "glamState"
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "transferTracker",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  110,
-                  115,
-                  102,
-                  101,
-                  114,
-                  45,
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              },
-              {
-                "kind": "account",
-                "path": "glamSigner"
-              },
-              {
-                "kind": "arg",
-                "path": "mint"
-              }
-            ]
-          }
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "mint",
-          "type": "pubkey"
-        },
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
     },
     {
       "name": "closeState",
@@ -809,6 +491,70 @@ export type GlamProtocol = {
         {
           "name": "outputStakePool",
           "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "jupiterSwapV2",
+      "discriminator": [
+        28,
+        155,
+        14,
+        63,
+        87,
+        96,
+        62,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "cpiProgram",
+          "address": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+        },
+        {
+          "name": "inputStakePool",
+          "optional": true
+        },
+        {
+          "name": "outputStakePool",
+          "optional": true
         },
         {
           "name": "glamConfig",
@@ -887,6 +633,10 @@ export type GlamProtocol = {
         }
       ],
       "args": [
+        {
+          "name": "skipQuotePriceCheck",
+          "type": "bool"
+        },
         {
           "name": "data",
           "type": "bytes"
@@ -1059,40 +809,6 @@ export type GlamProtocol = {
           "type": {
             "defined": {
               "name": "transferPolicy"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "setTransferRateLimitPolicy",
-      "discriminator": [
-        27,
-        40,
-        234,
-        194,
-        151,
-        218,
-        55,
-        203
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "policy",
-          "type": {
-            "defined": {
-              "name": "transferRateLimitPolicy"
             }
           }
         }
@@ -1953,19 +1669,6 @@ export type GlamProtocol = {
         249,
         103
       ]
-    },
-    {
-      "name": "transferTracker",
-      "discriminator": [
-        153,
-        136,
-        2,
-        106,
-        24,
-        146,
-        147,
-        60
-      ]
     }
   ],
   "errors": [
@@ -2021,8 +1724,8 @@ export type GlamProtocol = {
     },
     {
       "code": 48010,
-      "name": "invalidAccountOwner",
-      "msg": "Account owner does not match expected program"
+      "name": "unexpectedProgramOwner",
+      "msg": "Account is owned by an unexpected program"
     },
     {
       "code": 48011,
@@ -2051,8 +1754,8 @@ export type GlamProtocol = {
     },
     {
       "code": 49004,
-      "name": "invalidIndex",
-      "msg": "Invalid index"
+      "name": "invalidAssetsLen",
+      "msg": "Too many assets: max 100"
     },
     {
       "code": 49005,
@@ -2111,13 +1814,8 @@ export type GlamProtocol = {
     },
     {
       "code": 49016,
-      "name": "integrationAclLimitExceeded",
-      "msg": "Integration ACL limit exceeded"
-    },
-    {
-      "code": 49017,
-      "name": "delegateAclLimitExceeded",
-      "msg": "Delegate ACL limit exceeded"
+      "name": "staleDriftInterest",
+      "msg": "Drift spot market cumulative interest is stale"
     },
     {
       "code": 49018,
@@ -2170,6 +1868,11 @@ export type GlamProtocol = {
       "msg": "Multiple stake accounts disallowed"
     },
     {
+      "code": 50008,
+      "name": "maxDeviationExceeded",
+      "msg": "Max deviation exceeded"
+    },
+    {
       "code": 51000,
       "name": "invalidAssetPrice",
       "msg": "Invalid asset price"
@@ -2207,7 +1910,7 @@ export type GlamProtocol = {
     {
       "code": 51105,
       "name": "priceDivergenceTooLarge",
-      "msg": "Price confidence interval too wide"
+      "msg": "No priced assets found"
     },
     {
       "code": 51106,
@@ -2216,18 +1919,18 @@ export type GlamProtocol = {
     },
     {
       "code": 51107,
-      "name": "invalidSharesRebase",
-      "msg": "Invalid shares rebase: new base must be greater than current"
+      "name": "mathError",
+      "msg": "Math error"
     },
     {
       "code": 51108,
-      "name": "duplicatePosition",
-      "msg": "Duplicate position already priced"
+      "name": "typeCastingError",
+      "msg": "Type casting error"
     },
     {
       "code": 51109,
-      "name": "unsupportedVaultState",
-      "msg": "Vault protocol or pending fee update not supported for pricing"
+      "name": "baseAssetNotSupported",
+      "msg": "Base asset must have 6 decimals."
     },
     {
       "code": 51110,
@@ -2246,8 +1949,8 @@ export type GlamProtocol = {
     },
     {
       "code": 51113,
-      "name": "invalidDiscriminator",
-      "msg": "Account discriminator does not match expected value"
+      "name": "unexpectedDiscriminator",
+      "msg": "Invalid account: discriminator mismatch"
     },
     {
       "code": 51114,
@@ -2258,6 +1961,11 @@ export type GlamProtocol = {
       "code": 51115,
       "name": "oraclePriceSuspended",
       "msg": "Oracle price is suspended"
+    },
+    {
+      "code": 51116,
+      "name": "assetNotInPricingSet",
+      "msg": "Asset not in pricing set"
     },
     {
       "code": 50100,
@@ -2288,6 +1996,16 @@ export type GlamProtocol = {
       "code": 52003,
       "name": "lockUp",
       "msg": "Policy violation: lock-up has not expired"
+    },
+    {
+      "code": 52004,
+      "name": "policyNotSet",
+      "msg": "Protocol policy not set"
+    },
+    {
+      "code": 52005,
+      "name": "unsupportedOracleSource",
+      "msg": "Oracle source not supported in this context"
     }
   ],
   "types": [
@@ -2378,30 +2096,6 @@ export type GlamProtocol = {
       }
     },
     {
-      "name": "assetRateLimit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "periodType",
-            "type": {
-              "defined": {
-                "name": "periodType"
-              }
-            }
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "createdModel",
       "type": {
         "kind": "struct",
@@ -2448,28 +2142,6 @@ export type GlamProtocol = {
           {
             "name": "expiresAt",
             "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "delegateRateLimit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "delegate",
-            "type": "pubkey"
-          },
-          {
-            "name": "limits",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "assetRateLimit"
-                }
-              }
-            }
           }
         ]
       }
@@ -2982,6 +2654,10 @@ export type GlamProtocol = {
                 "vec": "pubkey"
               }
             }
+          },
+          {
+            "name": "maxDeviationBps",
+            "type": "i16"
           }
         ]
       }
@@ -3140,26 +2816,6 @@ export type GlamProtocol = {
                 "name": "hurdleType"
               }
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "periodType",
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "day"
-          },
-          {
-            "name": "week"
-          },
-          {
-            "name": "month"
           }
         ]
       }
@@ -3532,66 +3188,6 @@ export type GlamProtocol = {
       }
     },
     {
-      "name": "transferRateLimitPolicy",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vaultDefaults",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "assetRateLimit"
-                }
-              }
-            }
-          },
-          {
-            "name": "delegateOverrides",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "delegateRateLimit"
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "transferTracker",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "signer",
-            "type": "pubkey"
-          },
-          {
-            "name": "mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "periodStart",
-            "type": "i64"
-          },
-          {
-            "name": "amountTransferred",
-            "type": "u64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
       "name": "valuationModel",
       "type": {
         "kind": "enum",
@@ -3611,6 +3207,16 @@ export type GlamProtocol = {
       "name": "protoJupiterSwap",
       "type": "u16",
       "value": "4"
+    },
+    {
+      "name": "protoJupiterSwapPermSkipQuotePriceCheck",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "protoJupiterSwapPermSkipQuotePriceCheckLimited",
+      "type": "u64",
+      "value": "16"
     },
     {
       "name": "protoJupiterSwapPermSwapAllowlisted",
@@ -3653,11 +3259,6 @@ export type GlamProtocol = {
       "value": "1"
     },
     {
-      "name": "protoSystemPermEmergencyUpdate",
-      "type": "u64",
-      "value": "4"
-    },
-    {
       "name": "protoSystemPermTransfer",
       "type": "u64",
       "value": "2"
@@ -3666,11 +3267,6 @@ export type GlamProtocol = {
       "name": "protoSystemPermWsol",
       "type": "u64",
       "value": "1"
-    },
-    {
-      "name": "protoTransferLimit",
-      "type": "u16",
-      "value": "8"
     }
   ]
 };

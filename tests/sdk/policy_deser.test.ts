@@ -43,7 +43,7 @@ describe("policy_deser", () => {
         new BN(2000000), // maxCap
         new BN(200), // minSubscription
         new BN(100), // minRedemption
-        new BN(0), // reserved
+        new BN(42), // reserved
         allowlist, // allowlist
         null, // blocklist
       );
@@ -55,7 +55,7 @@ describe("policy_deser", () => {
       expect(decoded.maxCap.toString()).toEqual("2000000");
       expect(decoded.minSubscription.toString()).toEqual("200");
       expect(decoded.minRedemption.toString()).toEqual("100");
-      expect(decoded.reserved.toString()).toEqual("0");
+      expect(decoded.reserved.toString()).toEqual("42");
       expect(decoded.allowlist).toEqual(allowlist);
       expect(decoded.blocklist).toBeNull();
     });
@@ -72,7 +72,7 @@ describe("policy_deser", () => {
         new BN(5000000), // maxCap
         new BN(500), // minSubscription
         new BN(250), // minRedemption
-        new BN(0), // reserved
+        new BN(123), // reserved
         null, // allowlist
         blocklist, // blocklist
       );
@@ -84,7 +84,7 @@ describe("policy_deser", () => {
       expect(decoded.maxCap.toString()).toEqual("5000000");
       expect(decoded.minSubscription.toString()).toEqual("500");
       expect(decoded.minRedemption.toString()).toEqual("250");
-      expect(decoded.reserved.toString()).toEqual("0");
+      expect(decoded.reserved.toString()).toEqual("123");
       expect(decoded.allowlist).toBeNull();
       expect(decoded.blocklist).toEqual(blocklist);
     });
@@ -101,7 +101,7 @@ describe("policy_deser", () => {
         new BN(10000000), // maxCap
         new BN(1000), // minSubscription
         new BN(500), // minRedemption
-        new BN(0), // reserved
+        new BN(999), // reserved
         allowlist, // allowlist
         blocklist, // blocklist
       );
@@ -113,7 +113,7 @@ describe("policy_deser", () => {
       expect(decoded.maxCap.toString()).toEqual("10000000");
       expect(decoded.minSubscription.toString()).toEqual("1000");
       expect(decoded.minRedemption.toString()).toEqual("500");
-      expect(decoded.reserved.toString()).toEqual("0");
+      expect(decoded.reserved.toString()).toEqual("999");
       expect(decoded.allowlist).toEqual(allowlist);
       expect(decoded.blocklist).toEqual(blocklist);
     });
@@ -423,44 +423,6 @@ describe("policy_deser", () => {
 
       expect(encoded1.equals(encoded2)).toBeTruthy();
     });
-
-    it("should encode and decode with orderPriceToleranceBps when staging=true", () => {
-      const policy = new DriftProtocolPolicy([0, 1], [10], [], 500);
-
-      const encoded = policy.encode(true);
-      const decoded = DriftProtocolPolicy.decode(encoded, true);
-
-      expect(decoded.spotMarketsAllowlist).toEqual([0, 1]);
-      expect(decoded.perpMarketsAllowlist).toEqual([10]);
-      expect(decoded.borrowAllowlist).toEqual([]);
-      expect(decoded.orderPriceToleranceBps).toEqual(500);
-    });
-
-    it("should exclude orderPriceToleranceBps when staging=false", () => {
-      const policy = new DriftProtocolPolicy([0], [], [], 500);
-
-      const encodedStaging = policy.encode(true);
-      const encodedProd = policy.encode(false);
-
-      // Staging buffer should be 2 bytes larger (u16 for orderPriceToleranceBps)
-      expect(encodedStaging.length).toEqual(encodedProd.length + 2);
-
-      // Decoding production buffer should default orderPriceToleranceBps to 0
-      const decoded = DriftProtocolPolicy.decode(encodedProd, false);
-      expect(decoded.orderPriceToleranceBps).toEqual(0);
-    });
-
-    it("should decode old staging data without orderPriceToleranceBps when staging=true", () => {
-      // Encode without orderPriceToleranceBps (production format)
-      const policy = new DriftProtocolPolicy([0, 1], [10], []);
-      const encodedProd = policy.encode(false);
-
-      // Staging decode should handle missing field gracefully
-      const decoded = DriftProtocolPolicy.decode(encodedProd, true);
-      expect(decoded.spotMarketsAllowlist).toEqual([0, 1]);
-      expect(decoded.perpMarketsAllowlist).toEqual([10]);
-      expect(decoded.orderPriceToleranceBps).toEqual(0);
-    });
   });
 
   describe("Cross-compatibility", () => {
@@ -476,7 +438,7 @@ describe("policy_deser", () => {
         new BN("999999999999999999"), // maxCap (large number)
         new BN("1000000000000"), // minSubscription
         new BN("500000000000"), // minRedemption
-        new BN(0), // reserved
+        new BN("42424242424242"), // reserved
         largeAllowlist.slice(0, 50), // first 50 for allowlist
         largeAllowlist.slice(50, 100), // last 50 for blocklist
       );

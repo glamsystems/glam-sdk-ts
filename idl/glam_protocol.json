@@ -2,7 +2,7 @@
   "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz",
   "metadata": {
     "name": "glam_protocol",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "spec": "0.1.0",
     "description": "Glam Protocol"
   },
@@ -438,6 +438,149 @@
         }
       ],
       "args": [
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "jupiter_swap_v2",
+      "discriminator": [
+        28,
+        155,
+        14,
+        63,
+        87,
+        96,
+        62,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "cpi_program",
+          "address": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+        },
+        {
+          "name": "input_stake_pool",
+          "optional": true
+        },
+        {
+          "name": "output_stake_pool",
+          "optional": true
+        },
+        {
+          "name": "glam_config",
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                10,
+                11,
+                0,
+                83,
+                72,
+                16,
+                46,
+                144,
+                46,
+                42,
+                79,
+                22,
+                157,
+                123,
+                21,
+                242,
+                192,
+                146,
+                1,
+                78,
+                88,
+                59,
+                102,
+                9,
+                190,
+                226,
+                92,
+                189,
+                187,
+                232,
+                83,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "sol_usd_oracle",
+          "optional": true
+        },
+        {
+          "name": "input_token_oracle",
+          "optional": true
+        },
+        {
+          "name": "output_token_oracle",
+          "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "skip_quote_price_check",
+          "type": "bool"
+        },
         {
           "name": "data",
           "type": "bytes"
@@ -996,8 +1139,8 @@
     },
     {
       "code": 48010,
-      "name": "InvalidAccountOwner",
-      "msg": "Account owner does not match expected program"
+      "name": "UnexpectedProgramOwner",
+      "msg": "Account is owned by an unexpected program"
     },
     {
       "code": 48011,
@@ -1026,8 +1169,8 @@
     },
     {
       "code": 49004,
-      "name": "InvalidIndex",
-      "msg": "Invalid index"
+      "name": "InvalidAssetsLen",
+      "msg": "Too many assets: max 100"
     },
     {
       "code": 49005,
@@ -1086,23 +1229,28 @@
     },
     {
       "code": 49016,
-      "name": "IntegrationAclLimitExceeded",
-      "msg": "Integration ACL limit exceeded"
+      "name": "StaleDriftInterest",
+      "msg": "Drift spot market cumulative interest is stale"
     },
     {
       "code": 49017,
-      "name": "DelegateAclLimitExceeded",
-      "msg": "Delegate ACL limit exceeded"
-    },
-    {
-      "code": 49018,
       "name": "AssetBalanceNotZero",
       "msg": "Cannot delete asset: vault token account balance is not zero"
     },
     {
-      "code": 49019,
+      "code": 49018,
       "name": "CannotDeleteBaseAsset",
       "msg": "Cannot delete base asset from allowlist"
+    },
+    {
+      "code": 49019,
+      "name": "IntegrationAclLimitExceeded",
+      "msg": "Integration ACL limit exceeded"
+    },
+    {
+      "code": 49020,
+      "name": "DelegateAclLimitExceeded",
+      "msg": "Delegate ACL limit exceeded"
     },
     {
       "code": 50000,
@@ -1145,6 +1293,11 @@
       "msg": "Multiple stake accounts disallowed"
     },
     {
+      "code": 50008,
+      "name": "MaxDeviationExceeded",
+      "msg": "Max deviation exceeded"
+    },
+    {
       "code": 51000,
       "name": "InvalidAssetPrice",
       "msg": "Invalid asset price"
@@ -1182,7 +1335,7 @@
     {
       "code": 51105,
       "name": "PriceDivergenceTooLarge",
-      "msg": "Price confidence interval too wide"
+      "msg": "No priced assets found"
     },
     {
       "code": 51106,
@@ -1191,18 +1344,18 @@
     },
     {
       "code": 51107,
-      "name": "InvalidSharesRebase",
-      "msg": "Invalid shares rebase: new base must be greater than current"
+      "name": "MathError",
+      "msg": "Math error"
     },
     {
       "code": 51108,
-      "name": "DuplicatePosition",
-      "msg": "Duplicate position already priced"
+      "name": "TypeCastingError",
+      "msg": "Type casting error"
     },
     {
       "code": 51109,
-      "name": "UnsupportedVaultState",
-      "msg": "Vault protocol or pending fee update not supported for pricing"
+      "name": "BaseAssetNotSupported",
+      "msg": "Base asset must have 6 decimals."
     },
     {
       "code": 51110,
@@ -1221,8 +1374,8 @@
     },
     {
       "code": 51113,
-      "name": "InvalidDiscriminator",
-      "msg": "Account discriminator does not match expected value"
+      "name": "UnexpectedDiscriminator",
+      "msg": "Invalid account: discriminator mismatch"
     },
     {
       "code": 51114,
@@ -1233,6 +1386,11 @@
       "code": 51115,
       "name": "OraclePriceSuspended",
       "msg": "Oracle price is suspended"
+    },
+    {
+      "code": 51116,
+      "name": "AssetNotInPricingSet",
+      "msg": "Asset not in pricing set"
     },
     {
       "code": 50100,
@@ -1263,6 +1421,16 @@
       "code": 52003,
       "name": "LockUp",
       "msg": "Policy violation: lock-up has not expired"
+    },
+    {
+      "code": 52004,
+      "name": "PolicyNotSet",
+      "msg": "Protocol policy not set"
+    },
+    {
+      "code": 52005,
+      "name": "UnsupportedOracleSource",
+      "msg": "Oracle source not supported in this context"
     }
   ],
   "types": [
@@ -1353,30 +1521,6 @@
       }
     },
     {
-      "name": "AssetRateLimit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "period_type",
-            "type": {
-              "defined": {
-                "name": "PeriodType"
-              }
-            }
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "CreatedModel",
       "type": {
         "kind": "struct",
@@ -1423,28 +1567,6 @@
           {
             "name": "expires_at",
             "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "DelegateRateLimit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "delegate",
-            "type": "pubkey"
-          },
-          {
-            "name": "limits",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "AssetRateLimit"
-                }
-              }
-            }
           }
         ]
       }
@@ -1957,6 +2079,10 @@
                 "vec": "pubkey"
               }
             }
+          },
+          {
+            "name": "max_deviation_bps",
+            "type": "i16"
           }
         ]
       }
@@ -2115,26 +2241,6 @@
                 "name": "HurdleType"
               }
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "PeriodType",
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Day"
-          },
-          {
-            "name": "Week"
-          },
-          {
-            "name": "Month"
           }
         ]
       }
@@ -2507,34 +2613,6 @@
       }
     },
     {
-      "name": "TransferRateLimitPolicy",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault_defaults",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "AssetRateLimit"
-                }
-              }
-            }
-          },
-          {
-            "name": "delegate_overrides",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "DelegateRateLimit"
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "ValuationModel",
       "type": {
         "kind": "enum",
@@ -2554,6 +2632,16 @@
       "name": "PROTO_JUPITER_SWAP",
       "type": "u16",
       "value": "4"
+    },
+    {
+      "name": "PROTO_JUPITER_SWAP_PERM_SKIP_QUOTE_PRICE_CHECK",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "PROTO_JUPITER_SWAP_PERM_SKIP_QUOTE_PRICE_CHECK_LIMITED",
+      "type": "u64",
+      "value": "16"
     },
     {
       "name": "PROTO_JUPITER_SWAP_PERM_SWAP_ALLOWLISTED",
@@ -2609,11 +2697,6 @@
       "name": "PROTO_SYSTEM_PERM_WSOL",
       "type": "u64",
       "value": "1"
-    },
-    {
-      "name": "PROTO_TRANSFER_LIMIT",
-      "type": "u16",
-      "value": "8"
     }
   ]
 }

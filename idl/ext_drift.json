@@ -3515,6 +3515,28 @@
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "UnsupportedOrderType",
+      "msg": "Unsupported order type"
+    },
+    {
+      "code": 6001,
+      "name": "OrderPriceExceedsTolerance",
+      "msg": "Order price exceeds tolerance from oracle price"
+    },
+    {
+      "code": 6002,
+      "name": "MarketNotAllowed",
+      "msg": "Market not allowed by policy"
+    },
+    {
+      "code": 6003,
+      "name": "OrderNotFound",
+      "msg": "Order not found"
+    }
+  ],
   "types": [
     {
       "name": "AccountType",
@@ -3652,7 +3674,7 @@
           },
           {
             "name": "order_price_tolerance_bps",
-            "type": "u16"
+            "type": "i16"
           }
         ]
       }

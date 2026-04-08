@@ -2,7 +2,7 @@
   "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz",
   "metadata": {
     "name": "glam_protocol",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "spec": "0.1.0",
     "description": "Glam Protocol"
   },
@@ -56,324 +56,6 @@
         }
       ],
       "args": []
-    },
-    {
-      "name": "charge_protocol_fee",
-      "discriminator": [
-        48,
-        225,
-        89,
-        103,
-        48,
-        65,
-        183,
-        238
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
-              }
-            ]
-          }
-        },
-        {
-          "name": "signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "deposit_asset"
-        },
-        {
-          "name": "vault_deposit_ata",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "glam_vault"
-              },
-              {
-                "kind": "account",
-                "path": "deposit_token_program"
-              },
-              {
-                "kind": "account",
-                "path": "deposit_asset"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "protocol_fee_authority"
-        },
-        {
-          "name": "protocol_fee_authority_ata",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "protocol_fee_authority"
-              },
-              {
-                "kind": "account",
-                "path": "deposit_token_program"
-              },
-              {
-                "kind": "account",
-                "path": "deposit_asset"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "glam_config",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  108,
-                  111,
-                  98,
-                  97,
-                  108,
-                  45,
-                  99,
-                  111,
-                  110,
-                  102,
-                  105,
-                  103
-                ]
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                10,
-                11,
-                0,
-                83,
-                72,
-                16,
-                46,
-                144,
-                46,
-                42,
-                79,
-                22,
-                157,
-                123,
-                21,
-                242,
-                192,
-                146,
-                1,
-                78,
-                88,
-                59,
-                102,
-                9,
-                190,
-                226,
-                92,
-                189,
-                187,
-                232,
-                83,
-                220
-              ]
-            }
-          }
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "associated_token_program",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-        },
-        {
-          "name": "deposit_token_program"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "check_and_update_transfer_tracker",
-      "discriminator": [
-        180,
-        225,
-        201,
-        123,
-        192,
-        30,
-        178,
-        195
-      ],
-      "accounts": [
-        {
-          "name": "glam_state"
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "transfer_tracker",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  110,
-                  115,
-                  102,
-                  101,
-                  114,
-                  45,
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
-              },
-              {
-                "kind": "account",
-                "path": "glam_signer"
-              },
-              {
-                "kind": "arg",
-                "path": "mint"
-              }
-            ]
-          }
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "mint",
-          "type": "pubkey"
-        },
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
     },
     {
       "name": "close_state",
@@ -803,6 +485,70 @@
         {
           "name": "output_stake_pool",
           "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "jupiter_swap_v2",
+      "discriminator": [
+        28,
+        155,
+        14,
+        63,
+        87,
+        96,
+        62,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "cpi_program",
+          "address": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+        },
+        {
+          "name": "input_stake_pool",
+          "optional": true
+        },
+        {
+          "name": "output_stake_pool",
+          "optional": true
         },
         {
           "name": "glam_config",
@@ -881,6 +627,10 @@
         }
       ],
       "args": [
+        {
+          "name": "skip_quote_price_check",
+          "type": "bool"
+        },
         {
           "name": "data",
           "type": "bytes"
@@ -1053,40 +803,6 @@
           "type": {
             "defined": {
               "name": "TransferPolicy"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "set_transfer_rate_limit_policy",
-      "discriminator": [
-        27,
-        40,
-        234,
-        194,
-        151,
-        218,
-        55,
-        203
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "policy",
-          "type": {
-            "defined": {
-              "name": "TransferRateLimitPolicy"
             }
           }
         }
@@ -1947,19 +1663,6 @@
         249,
         103
       ]
-    },
-    {
-      "name": "TransferTracker",
-      "discriminator": [
-        153,
-        136,
-        2,
-        106,
-        24,
-        146,
-        147,
-        60
-      ]
     }
   ],
   "errors": [
@@ -2015,8 +1718,8 @@
     },
     {
       "code": 48010,
-      "name": "InvalidAccountOwner",
-      "msg": "Account owner does not match expected program"
+      "name": "UnexpectedProgramOwner",
+      "msg": "Account is owned by an unexpected program"
     },
     {
       "code": 48011,
@@ -2045,8 +1748,8 @@
     },
     {
       "code": 49004,
-      "name": "InvalidIndex",
-      "msg": "Invalid index"
+      "name": "InvalidAssetsLen",
+      "msg": "Too many assets: max 100"
     },
     {
       "code": 49005,
@@ -2105,13 +1808,8 @@
     },
     {
       "code": 49016,
-      "name": "IntegrationAclLimitExceeded",
-      "msg": "Integration ACL limit exceeded"
-    },
-    {
-      "code": 49017,
-      "name": "DelegateAclLimitExceeded",
-      "msg": "Delegate ACL limit exceeded"
+      "name": "StaleDriftInterest",
+      "msg": "Drift spot market cumulative interest is stale"
     },
     {
       "code": 49018,
@@ -2164,6 +1862,11 @@
       "msg": "Multiple stake accounts disallowed"
     },
     {
+      "code": 50008,
+      "name": "MaxDeviationExceeded",
+      "msg": "Max deviation exceeded"
+    },
+    {
       "code": 51000,
       "name": "InvalidAssetPrice",
       "msg": "Invalid asset price"
@@ -2201,7 +1904,7 @@
     {
       "code": 51105,
       "name": "PriceDivergenceTooLarge",
-      "msg": "Price confidence interval too wide"
+      "msg": "No priced assets found"
     },
     {
       "code": 51106,
@@ -2210,18 +1913,18 @@
     },
     {
       "code": 51107,
-      "name": "InvalidSharesRebase",
-      "msg": "Invalid shares rebase: new base must be greater than current"
+      "name": "MathError",
+      "msg": "Math error"
     },
     {
       "code": 51108,
-      "name": "DuplicatePosition",
-      "msg": "Duplicate position already priced"
+      "name": "TypeCastingError",
+      "msg": "Type casting error"
     },
     {
       "code": 51109,
-      "name": "UnsupportedVaultState",
-      "msg": "Vault protocol or pending fee update not supported for pricing"
+      "name": "BaseAssetNotSupported",
+      "msg": "Base asset must have 6 decimals."
     },
     {
       "code": 51110,
@@ -2240,8 +1943,8 @@
     },
     {
       "code": 51113,
-      "name": "InvalidDiscriminator",
-      "msg": "Account discriminator does not match expected value"
+      "name": "UnexpectedDiscriminator",
+      "msg": "Invalid account: discriminator mismatch"
     },
     {
       "code": 51114,
@@ -2252,6 +1955,11 @@
       "code": 51115,
       "name": "OraclePriceSuspended",
       "msg": "Oracle price is suspended"
+    },
+    {
+      "code": 51116,
+      "name": "AssetNotInPricingSet",
+      "msg": "Asset not in pricing set"
     },
     {
       "code": 50100,
@@ -2282,6 +1990,16 @@
       "code": 52003,
       "name": "LockUp",
       "msg": "Policy violation: lock-up has not expired"
+    },
+    {
+      "code": 52004,
+      "name": "PolicyNotSet",
+      "msg": "Protocol policy not set"
+    },
+    {
+      "code": 52005,
+      "name": "UnsupportedOracleSource",
+      "msg": "Oracle source not supported in this context"
     }
   ],
   "types": [
@@ -2372,30 +2090,6 @@
       }
     },
     {
-      "name": "AssetRateLimit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "period_type",
-            "type": {
-              "defined": {
-                "name": "PeriodType"
-              }
-            }
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "CreatedModel",
       "type": {
         "kind": "struct",
@@ -2442,28 +2136,6 @@
           {
             "name": "expires_at",
             "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "DelegateRateLimit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "delegate",
-            "type": "pubkey"
-          },
-          {
-            "name": "limits",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "AssetRateLimit"
-                }
-              }
-            }
           }
         ]
       }
@@ -2976,6 +2648,10 @@
                 "vec": "pubkey"
               }
             }
+          },
+          {
+            "name": "max_deviation_bps",
+            "type": "i16"
           }
         ]
       }
@@ -3134,26 +2810,6 @@
                 "name": "HurdleType"
               }
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "PeriodType",
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Day"
-          },
-          {
-            "name": "Week"
-          },
-          {
-            "name": "Month"
           }
         ]
       }
@@ -3526,66 +3182,6 @@
       }
     },
     {
-      "name": "TransferRateLimitPolicy",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault_defaults",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "AssetRateLimit"
-                }
-              }
-            }
-          },
-          {
-            "name": "delegate_overrides",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "DelegateRateLimit"
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "TransferTracker",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "signer",
-            "type": "pubkey"
-          },
-          {
-            "name": "mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "period_start",
-            "type": "i64"
-          },
-          {
-            "name": "amount_transferred",
-            "type": "u64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
       "name": "ValuationModel",
       "type": {
         "kind": "enum",
@@ -3605,6 +3201,16 @@
       "name": "PROTO_JUPITER_SWAP",
       "type": "u16",
       "value": "4"
+    },
+    {
+      "name": "PROTO_JUPITER_SWAP_PERM_SKIP_QUOTE_PRICE_CHECK",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "PROTO_JUPITER_SWAP_PERM_SKIP_QUOTE_PRICE_CHECK_LIMITED",
+      "type": "u64",
+      "value": "16"
     },
     {
       "name": "PROTO_JUPITER_SWAP_PERM_SWAP_ALLOWLISTED",
@@ -3647,11 +3253,6 @@
       "value": "1"
     },
     {
-      "name": "PROTO_SYSTEM_PERM_EMERGENCY_UPDATE",
-      "type": "u64",
-      "value": "4"
-    },
-    {
       "name": "PROTO_SYSTEM_PERM_TRANSFER",
       "type": "u64",
       "value": "2"
@@ -3660,11 +3261,6 @@
       "name": "PROTO_SYSTEM_PERM_WSOL",
       "type": "u64",
       "value": "1"
-    },
-    {
-      "name": "PROTO_TRANSFER_LIMIT",
-      "type": "u16",
-      "value": "8"
     }
   ]
 }

@@ -8,7 +8,7 @@ export type GlamProtocol = {
   "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz",
   "metadata": {
     "name": "glamProtocol",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "spec": "0.1.0",
     "description": "Glam Protocol"
   },
@@ -444,6 +444,149 @@ export type GlamProtocol = {
         }
       ],
       "args": [
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "jupiterSwapV2",
+      "discriminator": [
+        28,
+        155,
+        14,
+        63,
+        87,
+        96,
+        62,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "cpiProgram",
+          "address": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+        },
+        {
+          "name": "inputStakePool",
+          "optional": true
+        },
+        {
+          "name": "outputStakePool",
+          "optional": true
+        },
+        {
+          "name": "glamConfig",
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                10,
+                11,
+                0,
+                83,
+                72,
+                16,
+                46,
+                144,
+                46,
+                42,
+                79,
+                22,
+                157,
+                123,
+                21,
+                242,
+                192,
+                146,
+                1,
+                78,
+                88,
+                59,
+                102,
+                9,
+                190,
+                226,
+                92,
+                189,
+                187,
+                232,
+                83,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "solUsdOracle",
+          "optional": true
+        },
+        {
+          "name": "inputTokenOracle",
+          "optional": true
+        },
+        {
+          "name": "outputTokenOracle",
+          "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "skipQuotePriceCheck",
+          "type": "bool"
+        },
         {
           "name": "data",
           "type": "bytes"
@@ -1002,8 +1145,8 @@ export type GlamProtocol = {
     },
     {
       "code": 48010,
-      "name": "invalidAccountOwner",
-      "msg": "Account owner does not match expected program"
+      "name": "unexpectedProgramOwner",
+      "msg": "Account is owned by an unexpected program"
     },
     {
       "code": 48011,
@@ -1032,8 +1175,8 @@ export type GlamProtocol = {
     },
     {
       "code": 49004,
-      "name": "invalidIndex",
-      "msg": "Invalid index"
+      "name": "invalidAssetsLen",
+      "msg": "Too many assets: max 100"
     },
     {
       "code": 49005,
@@ -1092,23 +1235,28 @@ export type GlamProtocol = {
     },
     {
       "code": 49016,
-      "name": "integrationAclLimitExceeded",
-      "msg": "Integration ACL limit exceeded"
+      "name": "staleDriftInterest",
+      "msg": "Drift spot market cumulative interest is stale"
     },
     {
       "code": 49017,
-      "name": "delegateAclLimitExceeded",
-      "msg": "Delegate ACL limit exceeded"
-    },
-    {
-      "code": 49018,
       "name": "assetBalanceNotZero",
       "msg": "Cannot delete asset: vault token account balance is not zero"
     },
     {
-      "code": 49019,
+      "code": 49018,
       "name": "cannotDeleteBaseAsset",
       "msg": "Cannot delete base asset from allowlist"
+    },
+    {
+      "code": 49019,
+      "name": "integrationAclLimitExceeded",
+      "msg": "Integration ACL limit exceeded"
+    },
+    {
+      "code": 49020,
+      "name": "delegateAclLimitExceeded",
+      "msg": "Delegate ACL limit exceeded"
     },
     {
       "code": 50000,
@@ -1151,6 +1299,11 @@ export type GlamProtocol = {
       "msg": "Multiple stake accounts disallowed"
     },
     {
+      "code": 50008,
+      "name": "maxDeviationExceeded",
+      "msg": "Max deviation exceeded"
+    },
+    {
       "code": 51000,
       "name": "invalidAssetPrice",
       "msg": "Invalid asset price"
@@ -1188,7 +1341,7 @@ export type GlamProtocol = {
     {
       "code": 51105,
       "name": "priceDivergenceTooLarge",
-      "msg": "Price confidence interval too wide"
+      "msg": "No priced assets found"
     },
     {
       "code": 51106,
@@ -1197,18 +1350,18 @@ export type GlamProtocol = {
     },
     {
       "code": 51107,
-      "name": "invalidSharesRebase",
-      "msg": "Invalid shares rebase: new base must be greater than current"
+      "name": "mathError",
+      "msg": "Math error"
     },
     {
       "code": 51108,
-      "name": "duplicatePosition",
-      "msg": "Duplicate position already priced"
+      "name": "typeCastingError",
+      "msg": "Type casting error"
     },
     {
       "code": 51109,
-      "name": "unsupportedVaultState",
-      "msg": "Vault protocol or pending fee update not supported for pricing"
+      "name": "baseAssetNotSupported",
+      "msg": "Base asset must have 6 decimals."
     },
     {
       "code": 51110,
@@ -1227,8 +1380,8 @@ export type GlamProtocol = {
     },
     {
       "code": 51113,
-      "name": "invalidDiscriminator",
-      "msg": "Account discriminator does not match expected value"
+      "name": "unexpectedDiscriminator",
+      "msg": "Invalid account: discriminator mismatch"
     },
     {
       "code": 51114,
@@ -1239,6 +1392,11 @@ export type GlamProtocol = {
       "code": 51115,
       "name": "oraclePriceSuspended",
       "msg": "Oracle price is suspended"
+    },
+    {
+      "code": 51116,
+      "name": "assetNotInPricingSet",
+      "msg": "Asset not in pricing set"
     },
     {
       "code": 50100,
@@ -1269,6 +1427,16 @@ export type GlamProtocol = {
       "code": 52003,
       "name": "lockUp",
       "msg": "Policy violation: lock-up has not expired"
+    },
+    {
+      "code": 52004,
+      "name": "policyNotSet",
+      "msg": "Protocol policy not set"
+    },
+    {
+      "code": 52005,
+      "name": "unsupportedOracleSource",
+      "msg": "Oracle source not supported in this context"
     }
   ],
   "types": [
@@ -1359,30 +1527,6 @@ export type GlamProtocol = {
       }
     },
     {
-      "name": "assetRateLimit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "periodType",
-            "type": {
-              "defined": {
-                "name": "periodType"
-              }
-            }
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "createdModel",
       "type": {
         "kind": "struct",
@@ -1429,28 +1573,6 @@ export type GlamProtocol = {
           {
             "name": "expiresAt",
             "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "delegateRateLimit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "delegate",
-            "type": "pubkey"
-          },
-          {
-            "name": "limits",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "assetRateLimit"
-                }
-              }
-            }
           }
         ]
       }
@@ -1963,6 +2085,10 @@ export type GlamProtocol = {
                 "vec": "pubkey"
               }
             }
+          },
+          {
+            "name": "maxDeviationBps",
+            "type": "i16"
           }
         ]
       }
@@ -2121,26 +2247,6 @@ export type GlamProtocol = {
                 "name": "hurdleType"
               }
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "periodType",
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "day"
-          },
-          {
-            "name": "week"
-          },
-          {
-            "name": "month"
           }
         ]
       }
@@ -2513,34 +2619,6 @@ export type GlamProtocol = {
       }
     },
     {
-      "name": "transferRateLimitPolicy",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vaultDefaults",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "assetRateLimit"
-                }
-              }
-            }
-          },
-          {
-            "name": "delegateOverrides",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "delegateRateLimit"
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "valuationModel",
       "type": {
         "kind": "enum",
@@ -2560,6 +2638,16 @@ export type GlamProtocol = {
       "name": "protoJupiterSwap",
       "type": "u16",
       "value": "4"
+    },
+    {
+      "name": "protoJupiterSwapPermSkipQuotePriceCheck",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "protoJupiterSwapPermSkipQuotePriceCheckLimited",
+      "type": "u64",
+      "value": "16"
     },
     {
       "name": "protoJupiterSwapPermSwapAllowlisted",
@@ -2615,11 +2703,6 @@ export type GlamProtocol = {
       "name": "protoSystemPermWsol",
       "type": "u64",
       "value": "1"
-    },
-    {
-      "name": "protoTransferLimit",
-      "type": "u16",
-      "value": "8"
     }
   ]
 };

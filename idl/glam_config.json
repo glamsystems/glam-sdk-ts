@@ -2,7 +2,7 @@
   "address": "gConFzxKL9USmwTdJoeQJvfKmqhJ2CyUaXTyQ8v9TGX",
   "metadata": {
     "name": "glam_config",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "spec": "0.1.0",
     "description": "GLAM config program"
   },
@@ -37,19 +37,16 @@
       "args": []
     },
     {
-      "name": "deprecate_asset_meta",
-      "docs": [
-        "Marks an asset meta as deprecated"
-      ],
+      "name": "delete_asset_meta",
       "discriminator": [
-        138,
-        242,
-        230,
-        22,
-        21,
-        151,
+        108,
+        173,
         149,
-        19
+        99,
+        144,
+        203,
+        21,
+        115
       ],
       "accounts": [
         {
@@ -81,7 +78,10 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "global_config"
+          ]
         },
         {
           "name": "system_program",
@@ -213,7 +213,10 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "global_config"
+          ]
         },
         {
           "name": "system_program",
@@ -223,57 +226,6 @@
       "args": [
         {
           "name": "new_admin",
-          "type": "pubkey"
-        }
-      ]
-    },
-    {
-      "name": "update_fee_authority",
-      "discriminator": [
-        31,
-        223,
-        200,
-        21,
-        114,
-        158,
-        65,
-        61
-      ],
-      "accounts": [
-        {
-          "name": "global_config",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  108,
-                  111,
-                  98,
-                  97,
-                  108,
-                  45,
-                  99,
-                  111,
-                  110,
-                  102,
-                  105,
-                  103
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "fee_authority",
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "fee_authority",
           "type": "pubkey"
         }
       ]
@@ -319,7 +271,10 @@
         },
         {
           "name": "fee_authority",
-          "signer": true
+          "signer": true,
+          "relations": [
+            "global_config"
+          ]
         }
       ],
       "args": [
@@ -374,7 +329,10 @@
         },
         {
           "name": "fee_authority",
-          "signer": true
+          "signer": true,
+          "relations": [
+            "global_config"
+          ]
         }
       ],
       "args": [
@@ -426,13 +384,10 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true
-        },
-        {
-          "name": "asset"
-        },
-        {
-          "name": "oracle"
+          "signer": true,
+          "relations": [
+            "global_config"
+          ]
         },
         {
           "name": "system_program",
@@ -479,28 +434,23 @@
     },
     {
       "code": 6002,
-      "name": "InvalidParameters",
-      "msg": "Invalid fee parameters or insufficient account space"
+      "name": "AssetMetaAlreadyExists",
+      "msg": "Asset meta already exists"
     },
     {
       "code": 6003,
+      "name": "InvalidParameters",
+      "msg": "Invalid parameters"
+    },
+    {
+      "code": 6004,
       "name": "InvalidOracleSource",
       "msg": "Invalid oracle source"
     },
     {
-      "code": 6004,
-      "name": "InvalidGlobalConfig",
-      "msg": "Invalid or corrupted global config account"
-    },
-    {
       "code": 6005,
-      "name": "InvalidFeeAuthority",
-      "msg": "Invalid fee authority"
-    },
-    {
-      "code": 6006,
-      "name": "AssetMetaNotFound",
-      "msg": "Asset meta not found"
+      "name": "InvalidGlobalConfig",
+      "msg": "Invalid global config"
     }
   ],
   "types": [
@@ -535,7 +485,7 @@
           },
           {
             "name": "priority",
-            "type": "i8"
+            "type": "u8"
           },
           {
             "name": "padding",
@@ -570,30 +520,18 @@
           },
           {
             "name": "referrer",
-            "docs": [
-              "Default GLAM referrer"
-            ],
             "type": "pubkey"
           },
           {
             "name": "base_fee_bps",
-            "docs": [
-              "Default protocol base fee applied to all vaults"
-            ],
             "type": "u16"
           },
           {
             "name": "flow_fee_bps",
-            "docs": [
-              "Default protocol flow fee applied to all vaults"
-            ],
             "type": "u16"
           },
           {
             "name": "asset_metas",
-            "docs": [
-              "List of assets and their oracle configs supported by the protocol"
-            ],
             "type": {
               "vec": {
                 "defined": {
@@ -675,6 +613,9 @@
           },
           {
             "name": "ChainlinkX"
+          },
+          {
+            "name": "KaminoReserve"
           }
         ]
       }

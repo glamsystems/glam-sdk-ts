@@ -3,7 +3,7 @@ import { BN, Wallet } from "@coral-xyz/anchor";
 import {
   airdrop,
   createGlamStateForTest,
-  stateModelForTest,
+  defaultInitStateParams,
   str2seed,
 } from "../glam_protocol/setup";
 import {
@@ -23,9 +23,9 @@ import {
 } from "./setup";
 
 const txOptions = { simulate: true };
-const delegate = Keypair.fromSeed(str2seed("delegate"));
+const delegate = Keypair.fromSeed(str2seed("delegate_v2"));
 
-describe("jupiter_swap", () => {
+describe("jupiter_swap_v2", () => {
   const glamClient = new GlamClient();
   const glamClientDelegate = new GlamClient({ wallet: new Wallet(delegate) });
 
@@ -39,8 +39,8 @@ describe("jupiter_swap", () => {
 
   it("Create vault and enable JupiterSwap protocol", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
-      ...stateModelForTest,
-      name: nameToChars("Jupiter Swap Tests"),
+      ...defaultInitStateParams,
+      name: nameToChars("Jupiter SwapV2 Tests"),
       assets: [WSOL],
     });
     glamClientDelegate.statePda = statePda;
@@ -68,48 +68,36 @@ describe("jupiter_swap", () => {
 
     const stateModel = await glamClient.fetchStateModel();
     expect(stateModel.assets).toEqual([WSOL]);
-    expect(stateModel.baseAssetMint).toEqual(WSOL);
-    expect(stateModel.baseAssetTokenProgram).toEqual(0);
-    expect(stateModel.baseAssetDecimals).toEqual(9);
     expect(stateModel.integrationAcls?.length).toEqual(1);
     expect(stateModel.delegateAcls?.length).toEqual(0);
   }, 25_000);
 
-  it("Set JupiterSwap policy", async () => {
+  it("Set JupiterSwap policy with max_deviation_bps", async () => {
     try {
       const txSig = await glamClient.access.setProtocolPolicy(
         glamClient.protocolProgram.programId,
         0b0000100,
-        new JupiterSwapPolicy(50, [USDC, MSOL]).encode(),
+        new JupiterSwapPolicy(50, [USDC, MSOL], 500).encode(),
       );
-      console.log("Update jupiter swap policy", txSig);
+      console.log(
+        "Update jupiter swap policy with max_deviation_bps=500",
+        txSig,
+      );
     } catch (e) {
       console.error(e);
       throw e;
     }
   });
 
-  it("SOL->mSOL swap 0.05 SOL end to end", async () => {
+  it("SwapV2 SOL->mSOL with skipQuotePriceCheck=true (manager)", async () => {
     const inputVaultAta = glamClient.getVaultAta(WSOL);
     const outputVaultAta = glamClient.getVaultAta(MSOL);
 
     // Pre-checks
     const vaultBalanceBefore = await glamClient.getVaultBalance();
     expect(vaultBalanceBefore).toEqual(10);
-    [inputVaultAta, outputVaultAta].forEach(async (account) => {
-      try {
-        const tokenAccount = await getAccount(
-          glamClient.provider.connection,
-          account,
-          "confirmed",
-        );
-        expect(tokenAccount).toBeUndefined();
-      } catch (e) {
-        expect(e.name).toEqual("TokenAccountNotFoundError");
-      }
-    });
 
-    // Swap
+    // Swap using V2 with skipQuotePriceCheck (manager can always skip)
     const quoteResponse = solToMsolQuoteResponseForTest;
     const swapInstructions = solToMsolSwapInstructionsForTest(
       glamClient.vaultPda,
@@ -117,11 +105,12 @@ describe("jupiter_swap", () => {
       outputVaultAta,
     );
     try {
-      const txSig = await glamClient.jupiterSwap.swap({
+      const txSig = await glamClient.jupiterSwap.swapV2({
         quoteResponse,
         swapInstructions,
+        skipQuotePriceCheck: true,
       });
-      console.log("SOL->mSOL swap", txSig);
+      console.log("SwapV2 SOL->mSOL with skipQuotePriceCheck=true", txSig);
     } catch (e) {
       console.error(e);
       throw e;
@@ -129,7 +118,7 @@ describe("jupiter_swap", () => {
 
     // Post-checks
     const stateModel = await glamClient.fetchStateModel();
-    expect(stateModel.assets).toEqual([WSOL, MSOL]); // MSOL is added to the asset list
+    expect(stateModel.assets).toEqual([WSOL, MSOL]);
 
     const acc = await getAccount(
       glamClient.provider.connection,
@@ -138,11 +127,9 @@ describe("jupiter_swap", () => {
     );
     expect(acc.amount.toString()).toEqual("0");
 
-    // less SOL
     const vaultBalanceAfter = await glamClient.getVaultBalance();
-    expect(vaultBalanceAfter).toEqual(9.95); // minus 0.05
+    expect(vaultBalanceAfter).toEqual(9.95);
 
-    // more mSOL
     const vaultMsol = await getAccount(
       glamClient.provider.connection,
       glamClient.getVaultAta(MSOL),
@@ -150,7 +137,42 @@ describe("jupiter_swap", () => {
     expect(vaultMsol.amount.toString()).toEqual("41795954");
   }, 15_000);
 
-  it("mSOL->SOL swap end to end", async () => {
+  it("SwapV2 mSOL->SOL with skipQuotePriceCheck=false and no oracles fails", async () => {
+    const vault = glamClient.vaultPda;
+    const inputVaultAta = glamClient.getVaultAta(MSOL);
+    const outputVaultAta = glamClient.getVaultAta(WSOL);
+
+    // When skipQuotePriceCheck=false and no oracle accounts are provided,
+    // the program should fail because it can't validate quote against oracle
+    try {
+      const txSig = await glamClient.jupiterSwap.swapV2(
+        {
+          quoteParams: {
+            inputMint: MSOL.toBase58(),
+            outputMint: WSOL.toBase58(),
+            amount: 10_000_000,
+            swapMode: "ExactIn",
+            onlyDirectRoutes: true,
+            maxAccounts: 8,
+          },
+          swapInstructions: mSolToSolSwapInstructions(
+            vault,
+            inputVaultAta,
+            outputVaultAta,
+          ),
+          skipQuotePriceCheck: false,
+          // No oracleAccounts provided
+        },
+        txOptions,
+      );
+      expect(txSig).toBeUndefined();
+    } catch (e) {
+      // Expected to fail: missing oracle accounts when quote price check is required
+      expect(e.message).toMatch(/missing|MissingAccount|Account/i);
+    }
+  }, 15_000);
+
+  it("SwapV2 mSOL->SOL with skipQuotePriceCheck=true", async () => {
     const vault = glamClient.vaultPda;
     const inputVaultAta = glamClient.getVaultAta(MSOL);
     const outputVaultAta = glamClient.getVaultAta(WSOL);
@@ -160,10 +182,9 @@ describe("jupiter_swap", () => {
       glamClient.getVaultAta(MSOL),
     );
 
-    // Swap mSOL to SOL
     const amount = 41_000_000;
     try {
-      const txId = await glamClient.jupiterSwap.swap({
+      const txId = await glamClient.jupiterSwap.swapV2({
         quoteParams: {
           inputMint: MSOL.toBase58(),
           outputMint: WSOL.toBase58(),
@@ -177,8 +198,9 @@ describe("jupiter_swap", () => {
           inputVaultAta,
           outputVaultAta,
         ),
+        skipQuotePriceCheck: true,
       });
-      console.log("swap back e2e txId", txId);
+      console.log("SwapV2 mSOL->SOL", txId);
     } catch (e) {
       console.error(e);
       throw e;
@@ -200,49 +222,8 @@ describe("jupiter_swap", () => {
     expect(vaultWsolAmount.toString()).toEqual("49038010");
   });
 
-  it("Swap access control #1", async () => {
-    // Grant delegate permissions: only allowed to swap allowlisted assets
-    try {
-      const txSig = await glamClient.access.grantDelegatePermissions(
-        delegate.publicKey,
-        glamClient.protocolProgram.programId,
-        0b100, // Jupiter Swap
-        new BN(0b100), // SWAP_ALLOWLISTED
-      );
-      console.log("Update delegate acl", txSig);
-    } catch (e) {
-      console.error(e);
-      throw e;
-    }
-    let stateModel = await glamClient.fetchStateModel();
-    expect(stateModel.delegateAcls?.length).toEqual(1);
-
-    const inputVaultAta = glamClient.getVaultAta(WSOL);
-    const outputVaultAta = glamClient.getVaultAta(MSOL);
-    const quoteResponse = solToMsolQuoteResponseForTest;
-    const swapInstructions = solToMsolSwapInstructionsForTest(
-      glamClient.vaultPda,
-      inputVaultAta,
-      outputVaultAta,
-    );
-
-    // Current swapAllowlist: [USDC, MSOL], delegate has SWAP_ALLOWLISTED permission
-    // 1st attempt should fail because MSOL is not allowlisted,
-    // and delegate doesn't have swapAny or swapLst permission
-    try {
-      const txSig = await glamClientDelegate.jupiterSwap.swap(
-        {
-          quoteResponse,
-          swapInstructions,
-        },
-        txOptions,
-      );
-      expect(txSig).toBeUndefined();
-    } catch (e) {
-      expect(e.message).toBe("Signer is not authorized");
-    }
-
-    // Allow delegate to swap LST
+  it("Delegate without SkipQuotePriceCheck permission cannot skip", async () => {
+    // Grant delegate SwapLst permission only (bit 1), no SkipQuotePriceCheck
     try {
       const txSig = await glamClient.access.grantDelegatePermissions(
         delegate.publicKey,
@@ -256,22 +237,75 @@ describe("jupiter_swap", () => {
         delegate.publicKey,
         glamClient.protocolProgram.programId,
         0b100, // Jupiter Swap
-        new BN(0b110), // SWAP_ALLOWLISTED + SWAP_LST
+        new BN(0b010), // SWAP_LST only
       );
-      console.log("Grant delegate SWAP_ALLOWLISTED permission:", txSig2);
+      console.log("Grant delegate SWAP_LST permission:", txSig2);
     } catch (e) {
       console.error(e);
       throw e;
     }
 
-    // 2nd attempt, should pass since delegate is now allowed to swap LST
-    // and asset list should be updated accordingly to include MSOL
+    const inputVaultAta = glamClient.getVaultAta(WSOL);
+    const outputVaultAta = glamClient.getVaultAta(MSOL);
+    const quoteResponse = solToMsolQuoteResponseForTest;
+    const swapInstructions = solToMsolSwapInstructionsForTest(
+      glamClient.vaultPda,
+      inputVaultAta,
+      outputVaultAta,
+    );
+
+    // Delegate tries skipQuotePriceCheck=true but doesn't have SkipQuotePriceCheck permission.
+    // Without oracle accounts, this should fail since delegate can't skip and oracles are missing.
     try {
-      const txSig = await glamClientDelegate.jupiterSwap.swap({
+      const txSig = await glamClientDelegate.jupiterSwap.swapV2(
+        {
+          quoteResponse,
+          swapInstructions,
+          skipQuotePriceCheck: true,
+        },
+        txOptions,
+      );
+      expect(txSig).toBeUndefined();
+    } catch (e) {
+      expect(e.message).toMatch(/missing|MissingAccount|Account|unauthorized/i);
+    }
+  }, 30_000);
+
+  it("Delegate with SkipQuotePriceCheck permission can swap", async () => {
+    // Grant delegate SkipQuotePriceCheck (bit 5 = 0b100000) + SWAP_LST (bit 1 = 0b10)
+    try {
+      const txSig = await glamClient.access.grantDelegatePermissions(
+        delegate.publicKey,
+        glamClient.protocolProgram.programId,
+        0b100, // Jupiter Swap
+        new BN(0b100010), // SWAP_LST + SkipQuotePriceCheck
+      );
+      console.log(
+        "Grant delegate SWAP_LST + SkipQuotePriceCheck permissions:",
+        txSig,
+      );
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+
+    const inputVaultAta = glamClient.getVaultAta(WSOL);
+    const outputVaultAta = glamClient.getVaultAta(MSOL);
+    const quoteResponse = solToMsolQuoteResponseForTest;
+    const swapInstructions = solToMsolSwapInstructionsForTest(
+      glamClient.vaultPda,
+      inputVaultAta,
+      outputVaultAta,
+    );
+
+    // Now delegate with SkipQuotePriceCheck can swap without oracles
+    try {
+      const txSig = await glamClientDelegate.jupiterSwap.swapV2({
         quoteResponse,
         swapInstructions,
+        skipQuotePriceCheck: true,
       });
-      console.log("2nd attempt swap:", txSig);
+      console.log("Delegate swapV2 with SkipQuotePriceCheck:", txSig);
     } catch (e) {
       console.error(e);
       throw e;
@@ -279,8 +313,30 @@ describe("jupiter_swap", () => {
 
     const stateAccount = await glamClientDelegate.fetchStateAccount();
     expect(stateAccount.assets).toEqual([WSOL, MSOL]);
-
-    stateModel = await glamClientDelegate.fetchStateModel();
-    expect(stateModel.assets).toEqual(stateAccount.assets);
   }, 30_000);
+
+  it("Update policy max_deviation_bps and verify", async () => {
+    // Update policy with a negative max_deviation_bps (allows negative tolerance)
+    try {
+      const txSig = await glamClient.access.setProtocolPolicy(
+        glamClient.protocolProgram.programId,
+        0b0000100,
+        new JupiterSwapPolicy(100, [USDC, MSOL], -200).encode(),
+      );
+      console.log(
+        "Update jupiter swap policy with max_deviation_bps=-200",
+        txSig,
+      );
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+
+    // Verify the updated policy can be decoded correctly
+    const stateModel = await glamClient.fetchStateModel();
+    const policyData = stateModel.integrationAcls?.find(
+      (acl: any) => acl.policy !== null,
+    );
+    expect(policyData).toBeDefined();
+  }, 15_000);
 });

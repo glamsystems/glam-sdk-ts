@@ -7,7 +7,7 @@ import {
   MarketType,
   OracleSource,
 } from "../../src";
-import { DriftPerpMarket, DriftSpotMarket } from "../../src/deser";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 const glamClient = new GlamClient({
   provider: new AnchorProvider(
@@ -48,10 +48,7 @@ describe("drift_client", () => {
     const perpMarketData = Buffer.from(solPerpMarket.account.data[0], "base64");
 
     const { name, marketPda, marketIndex, oracle, oracleSource } =
-      DriftPerpMarket.decode(
-        new PublicKey("8UJgxaiQx5nTrdDgph5FiahMmzduuLTLf5WmsPegYA6W"),
-        perpMarketData,
-      );
+      glamClient.drift.parsePerpMarket(perpMarketData);
     expect(name).toEqual("SOL-PERP");
     expect(marketPda).toEqual(
       new PublicKey("8UJgxaiQx5nTrdDgph5FiahMmzduuLTLf5WmsPegYA6W"),
@@ -75,10 +72,7 @@ describe("drift_client", () => {
       mint,
       decimals,
       tokenProgram,
-    } = DriftSpotMarket.decode(
-      new PublicKey("6gMq3mRCKf8aP3ttTyYhuijVZ2LGi14oDsBbkgubfLB3"),
-      spotMarketData,
-    );
+    } = glamClient.drift.parseSpotMarket(spotMarketData);
 
     expect(name).toEqual("SOL");
     expect(marketPda).toEqual(
@@ -93,6 +87,6 @@ describe("drift_client", () => {
       new PublicKey("So11111111111111111111111111111111111111112"),
     );
     expect(decimals).toEqual(9);
-    expect(tokenProgram).toEqual(0);
+    expect(tokenProgram).toEqual(TOKEN_PROGRAM_ID);
   });
 });

@@ -3,18 +3,15 @@ import { BN } from "@coral-xyz/anchor";
 import {
   airdrop,
   createGlamStateForTest,
-  defaultInitStateParams,
+  stateModelForTest,
 } from "../glam_protocol/setup";
-import { getStakeAccountsWithStates, GlamClient, stringToChars } from "../../src";
+import { GlamClient, nameToChars } from "../../src";
 import { PublicKey } from "@solana/web3.js";
 
 describe("marinade", () => {
   const glamClient = new GlamClient();
 
-  let statePda: PublicKey;
-  let vaultPda: PublicKey;
-
-  beforeAll(async () => {
+  it("Create fund with 100 SOL in vault", async () => {
     const integrationAcls = [
       {
         integrationProgram: glamClient.extMarinadeProgram.programId,
@@ -28,13 +25,11 @@ describe("marinade", () => {
       },
     ];
 
-    const created = await createGlamStateForTest(glamClient, {
-      ...defaultInitStateParams,
-      name: stringToChars("Marinade Tests"),
+    const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
+      ...stateModelForTest,
+      name: nameToChars("Marinade Tests"),
       integrationAcls,
     });
-    statePda = created.statePda;
-    vaultPda = created.vaultPda;
 
     console.log("State PDA:", statePda.toBase58());
     console.log("Vault PDA:", vaultPda.toBase58());
@@ -42,7 +37,7 @@ describe("marinade", () => {
     const stateModel = await glamClient.fetchStateModel();
     expect(stateModel.integrationAcls).toEqual(integrationAcls);
 
-    await airdrop(glamClient.connection, vaultPda, 100_000_000_000);
+    await airdrop(glamClient.provider.connection, vaultPda, 100_000_000_000);
   }, 30_000);
 
   it("Marinade desposit: stake 20 SOL", async () => {
@@ -57,7 +52,7 @@ describe("marinade", () => {
 
   it("Stake 10 SOL to a validator", async () => {
     try {
-      const txSig = await glamClient.stake.initializeAndDelegateStake(
+      const txSig = await glamClient.staking.initializeAndDelegateStake(
         new PublicKey("GJQjnyhSG9jN1AdMHTSyTxUR44hJHEGCmNzkidw9z3y8"),
         new BN(10_000_000_000),
       );
@@ -72,10 +67,7 @@ describe("marinade", () => {
   });
 
   it("Desposit stake account", async () => {
-    const stakeAccounts = await getStakeAccountsWithStates(
-      glamClient.connection,
-      glamClient.vaultPda,
-    );
+    const stakeAccounts = await glamClient.staking.getStakeAccountsWithStates();
     expect(stakeAccounts.length).toEqual(1);
 
     try {
@@ -85,12 +77,7 @@ describe("marinade", () => {
       throw error;
     }
 
-    expect(
-      await getStakeAccountsWithStates(
-        glamClient.connection,
-        glamClient.vaultPda,
-      ),
-    ).toEqual([]);
+    expect(await glamClient.staking.getStakeAccountsWithStates()).toEqual([]);
     const stateModel = await glamClient.fetchStateModel();
     expect(stateModel.externalPositions?.length).toBe(0);
   });
@@ -104,20 +91,14 @@ describe("marinade", () => {
       throw error;
     }
 
-    const stakeAccounts = await getStakeAccountsWithStates(
-      glamClient.connection,
-      glamClient.vaultPda,
-    );
+    const stakeAccounts = await glamClient.staking.getStakeAccountsWithStates();
     expect(stakeAccounts.length).toEqual(1);
     const stateModel = await glamClient.fetchStateModel();
     expect(stateModel.externalPositions?.length).toBe(1);
   }, 15_000);
 
   it("Marinade native deposit", async () => {
-    let stakeAccounts = await getStakeAccountsWithStates(
-      glamClient.connection,
-      glamClient.vaultPda,
-    );
+    let stakeAccounts = await glamClient.staking.getStakeAccountsWithStates();
     expect(stakeAccounts.length).toEqual(1);
 
     try {
@@ -130,10 +111,7 @@ describe("marinade", () => {
       throw e;
     }
 
-    stakeAccounts = await getStakeAccountsWithStates(
-      glamClient.connection,
-      glamClient.vaultPda,
-    );
+    stakeAccounts = await glamClient.staking.getStakeAccountsWithStates();
     expect(stakeAccounts.length).toEqual(2);
   });
 });

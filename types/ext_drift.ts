@@ -3521,6 +3521,28 @@ export type ExtDrift = {
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "unsupportedOrderType",
+      "msg": "Unsupported order type"
+    },
+    {
+      "code": 6001,
+      "name": "orderPriceExceedsTolerance",
+      "msg": "Order price exceeds tolerance from oracle price"
+    },
+    {
+      "code": 6002,
+      "name": "marketNotAllowed",
+      "msg": "Market not allowed by policy"
+    },
+    {
+      "code": 6003,
+      "name": "orderNotFound",
+      "msg": "Order not found"
+    }
+  ],
   "types": [
     {
       "name": "accountType",
@@ -3658,7 +3680,7 @@ export type ExtDrift = {
           },
           {
             "name": "orderPriceToleranceBps",
-            "type": "u16"
+            "type": "i16"
           }
         ]
       }

@@ -14,7 +14,7 @@ import {
   MSOL,
   USDC,
   WSOL,
-  stringToChars,
+  nameToChars,
 } from "../../src";
 
 const key1 = Keypair.fromSeed(str2seed("acl_test_key1"));
@@ -55,9 +55,8 @@ describe("state_ops", () => {
   }, 25_000);
 
   it("Extend glam state account size", async () => {
-    const accountInfoBefore = await glamClient.connection.getAccountInfo(
-      glamClient.statePda,
-    );
+    const accountInfoBefore =
+      await glamClient.provider.connection.getAccountInfo(glamClient.statePda);
     const dataLenBefore = accountInfoBefore?.data.length!;
     const newBytes = 10000;
 
@@ -79,7 +78,7 @@ describe("state_ops", () => {
     const newName = "Updated name";
     try {
       const txSig = await glamClient.state.update({
-        name: stringToChars(newName),
+        name: nameToChars(newName),
       });
       console.log("Update name", txSig);
     } catch (e) {
@@ -227,7 +226,7 @@ describe("state_ops", () => {
     try {
       const txSig = await glamClientCustomWallet.state.update(
         {
-          name: stringToChars("Updated state name"),
+          name: nameToChars("Updated state name"),
         },
         { simulate: true },
       );
@@ -247,7 +246,7 @@ describe("state_ops", () => {
       const txSig = await glamClient.state.update(
         {
           owner: key1.publicKey,
-          portfolioManagerName: stringToChars("New Owner"),
+          portfolioManagerName: nameToChars("New Owner"),
         },
         { simulate: true },
       );
@@ -262,7 +261,7 @@ describe("state_ops", () => {
     // previous owner CANNOT update
     try {
       const txSig = await glamClient.state.update({
-        name: stringToChars("Updated state name"),
+        name: nameToChars("Updated state name"),
       });
       expect(txSig).toBeUndefined();
     } catch (e) {
@@ -273,7 +272,7 @@ describe("state_ops", () => {
     try {
       const txId = await glamClientCustomWallet.state.update({
         owner: glamClient.signer,
-        portfolioManagerName: stringToChars("Default Owner"),
+        portfolioManagerName: nameToChars("Default Owner"),
       });
       console.log("Owner updated from new to default", txId);
     } catch (e) {

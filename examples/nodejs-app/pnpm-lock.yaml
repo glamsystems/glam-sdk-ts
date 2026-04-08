@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@glamsystems/glam-sdk':
-        specifier: 1.0.4
-        version: 1.0.4(bn.js@5.2.2)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(jsbi@4.3.2)(typescript@5.9.2)(utf-8-validate@5.0.10)
+        specifier: 1.0.0
+        version: 1.0.0(bn.js@5.2.2)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(jsbi@4.3.2)(typescript@5.9.2)(utf-8-validate@5.0.10)
       '@solana/web3.js':
         specifier: 1.98.4
         version: 1.98.4(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)
@@ -31,7 +31,7 @@ importers:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@20.19.18)(typescript@5.9.2)
       typescript:
-        specifier: ^5.5.3
+        specifier: ^5.3.3
         version: 5.9.2
 
 packages:
@@ -88,8 +88,8 @@ packages:
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
 
-  '@glamsystems/glam-sdk@1.0.4':
-    resolution: {integrity: sha512-0rCZzxIAOl007qjT+mLWEpsZeto2JhGEQta9yC2vJ5F6sHF8IXWFS6IjLv41RE4FhNo7abHjQdSiFDvWb91Aog==}
+  '@glamsystems/glam-sdk@1.0.0':
+    resolution: {integrity: sha512-3D80YCoX7j6CD6ZYNh24U/IiGvfheekVu1uJv/FbMJmXHZbdutlu4LcngwunkZEsTG+Fl/YS6VsoQl6VEc4DVA==}
     engines: {node: '>=20.18.0'}
 
   '@glamsystems/sanctum-lst-list@0.2.54':
@@ -978,7 +978,7 @@ snapshots:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  '@glamsystems/glam-sdk@1.0.4(bn.js@5.2.2)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(jsbi@4.3.2)(typescript@5.9.2)(utf-8-validate@5.0.10)':
+  '@glamsystems/glam-sdk@1.0.0(bn.js@5.2.2)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(jsbi@4.3.2)(typescript@5.9.2)(utf-8-validate@5.0.10)':
     dependencies:
       '@coral-xyz/anchor': 0.31.1(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)
       '@coral-xyz/borsh': 0.31.1(@solana/web3.js@1.98.4(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10))
@@ -991,7 +991,6 @@ snapshots:
       '@solana/web3.js': 1.98.4(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)
       bs58: 5.0.0
       buffer: 6.0.3
-      decimal.js: 10.6.0
     transitivePeerDependencies:
       - bn.js
       - bufferutil

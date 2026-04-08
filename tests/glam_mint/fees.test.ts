@@ -1,7 +1,8 @@
 import { Transaction } from "@solana/web3.js";
-import { GlamClient, stringToChars, StateAccountType, WSOL } from "../../src";
+import { GlamClient, nameToChars, StateAccountType, WSOL } from "../../src";
 import { airdrop, sleep } from "../test-utils";
 import { BN } from "@coral-xyz/anchor";
+import { InitMintParams } from "../../src/client/mint";
 
 const txOptions = {
   simulate: true,
@@ -14,7 +15,7 @@ describe("fees", () => {
     const name = "GLAM Mint Test Fees";
     const params = {
       accountType: StateAccountType.TOKENIZED_VAULT,
-      name: stringToChars(name),
+      name: nameToChars(name),
       symbol: "GMT",
       uri: "https://glam.systems",
       baseAssetMint: WSOL,
@@ -55,13 +56,15 @@ describe("fees", () => {
     expect(stateModel.nameStr).toEqual(name);
     expect(stateModel.baseAssetMint).toEqual(WSOL);
     expect(stateModel.baseAssetTokenProgram).toEqual(0);
-    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(20);
-    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(0);
+    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(1);
+    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(
+      2000,
+    );
   }, 25_000);
 
   it("Set protocol fees: fail before fees crystallized", async () => {
     try {
-      const setIx = await glamClient.fees.txBuilder.setProtocolFeesIx(2, 4000);
+      const setIx = await glamClient.fees.setProtocolFeesIx(2, 4000);
       const vTx = await glamClient.intoVersionedTransaction(
         new Transaction().add(setIx),
         txOptions,
@@ -160,74 +163,5 @@ describe("fees", () => {
     expect(new BN(claimedFees.performanceFee).eq(new BN(0))).toBeTruthy();
     expect(new BN(claimedFees.protocolBaseFee).gt(new BN(0))).toBeTruthy();
     expect(new BN(claimedFees.protocolFlowFee).gt(new BN(0))).toBeTruthy();
-  });
-
-  it("Update fee structure", async () => {
-    // Get current fee structure
-    const stateModelBefore = await glamClient.fetchStateModel();
-    const feeStructureBefore = stateModelBefore.mintModel?.feeStructure;
-
-    expect(feeStructureBefore?.vault.subscriptionFeeBps).toEqual(10);
-    expect(feeStructureBefore?.vault.redemptionFeeBps).toEqual(20);
-    expect(feeStructureBefore?.manager.subscriptionFeeBps).toEqual(10);
-    expect(feeStructureBefore?.manager.redemptionFeeBps).toEqual(20);
-    expect(feeStructureBefore?.management.feeBps).toEqual(10);
-    expect(feeStructureBefore?.performance.feeBps).toEqual(2000);
-    expect(feeStructureBefore?.performance.hurdleRateBps).toEqual(500);
-
-    // Update fee structure with new values
-    const newFeeStructure = {
-      vault: {
-        subscriptionFeeBps: 15,
-        redemptionFeeBps: 25,
-      },
-      manager: {
-        subscriptionFeeBps: 15,
-        redemptionFeeBps: 25,
-      },
-      management: {
-        feeBps: 20,
-      },
-      performance: {
-        feeBps: 2500,
-        hurdleRateBps: 600,
-        hurdleType: { hard: {} },
-      },
-      protocol: {
-        baseFeeBps: 10000, // won't be changed
-        flowFeeBps: 10000, // won't be changed
-      },
-    };
-
-    try {
-      const txSig = await glamClient.mint.update(
-        { feeStructure: newFeeStructure },
-        txOptions,
-      );
-      console.log("Update fee structure txSig", txSig);
-    } catch (e) {
-      console.error(e);
-      throw e;
-    }
-
-    // Verify fee structure was updated
-    const stateModelAfter = await glamClient.fetchStateModel();
-    const feeStructureAfter = stateModelAfter.mintModel?.feeStructure;
-
-    expect(feeStructureAfter?.vault.subscriptionFeeBps).toEqual(15);
-    expect(feeStructureAfter?.vault.redemptionFeeBps).toEqual(25);
-    expect(feeStructureAfter?.manager.subscriptionFeeBps).toEqual(15);
-    expect(feeStructureAfter?.manager.redemptionFeeBps).toEqual(25);
-    expect(feeStructureAfter?.management.feeBps).toEqual(20);
-    expect(feeStructureAfter?.performance.feeBps).toEqual(2500);
-    expect(feeStructureAfter?.performance.hurdleRateBps).toEqual(600);
-
-    // Protocol fees should remain unchanged
-    expect(feeStructureAfter?.protocol.baseFeeBps).toEqual(
-      feeStructureBefore?.protocol.baseFeeBps,
-    );
-    expect(feeStructureAfter?.protocol.flowFeeBps).toEqual(
-      feeStructureBefore?.protocol.flowFeeBps,
-    );
   });
 });

@@ -1,5 +1,5 @@
 import { createGlamStateForTest, sleep, defaultInitStateParams } from "./setup";
-import { charsToString, GlamClient, stringToChars } from "../../src";
+import { charsToName, GlamClient, nameToChars } from "../../src";
 import { PublicKey } from "@solana/web3.js";
 
 const txOptions = {
@@ -57,7 +57,7 @@ describe("state_timelock", () => {
   it("Update name - changes staged due to timelock", async () => {
     try {
       const txSig = await glamClient.state.update(
-        { name: stringToChars("New name") },
+        { name: nameToChars("New name") },
         txOptions,
       );
       console.log("Update name", txSig);
@@ -69,7 +69,7 @@ describe("state_timelock", () => {
     // Name change has not take effect yet due to timelock
     const stateModel = await glamClient.fetchStateModel();
     expect(stateModel.nameStr).toEqual(
-      charsToString(defaultInitStateParams.name!),
+      charsToName(defaultInitStateParams.name!),
     );
   }, 15_000);
 
@@ -94,7 +94,7 @@ describe("state_timelock", () => {
       const txSig = await glamClient.timelock.apply();
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toEqual("Timelock still active");
+      expect(e.message).toEqual("Timelock still active.");
     }
   }, 15_000);
 

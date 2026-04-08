@@ -9,7 +9,7 @@ import {
   OrderStatus,
   Order,
   WSOL,
-  stringToChars,
+  nameToChars,
 } from "../../src";
 import {
   airdrop,
@@ -25,8 +25,7 @@ describe("drift_protocol", () => {
   const glamClient = new GlamClient();
 
   const getOpenOrders = async (subAccountId: number = 0): Promise<Order[]> => {
-    const driftUser =
-      await glamClient.drift.fetchAndParseDriftUser(subAccountId);
+    const driftUser = await glamClient.drift.fetchDriftUser(subAccountId);
     return (driftUser?.orders || []).filter(
       (o) => o.status === OrderStatus.OPEN,
     );
@@ -48,12 +47,18 @@ describe("drift_protocol", () => {
 
   const setPolicy = async (policy: DriftProtocolPolicy) => {
     try {
-      const txSig = await glamClient.access.setProtocolPolicy(
-        glamClient.extDriftProgram.programId,
-        0b01, // drift protocol
-        policy.encode(),
-        txOptions,
-      );
+      const txSig = await glamClient.extDriftProgram.methods
+        .setDriftProtocolPolicy({
+          spotMarketsAllowlist: policy.spotMarketsAllowlist,
+          perpMarketsAllowlist: policy.perpMarketsAllowlist,
+          borrowAllowlist: policy.borrowAllowlist,
+          orderPriceToleranceBps: policy.orderPriceToleranceBps,
+        })
+        .accounts({
+          glamState: glamClient.statePda,
+          glamSigner: glamClient.signer,
+        })
+        .rpc();
       console.log("setProtocolPolicy", txSig);
     } catch (e) {
       console.error(e);
@@ -64,7 +69,7 @@ describe("drift_protocol", () => {
   it("Create and initialize glam state", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: stringToChars("Drift Protocol Tests"),
+      name: nameToChars("Drift Protocol Tests"),
       integrationAcls: [
         {
           integrationProgram: glamClient.extDriftProgram.programId,
@@ -566,12 +571,97 @@ describe("drift_protocol", () => {
   });
 
   it("Revert fill", async () => {
+    // revertFill is expected to fail with "RevertFill" when there is no fill to revert
+    // (placeAndTakePerpOrder in localnet doesn't actually execute a fill due to no counterparty)
     try {
       const txSig = await glamClient.drift.revertFill(1, txOptions);
       console.log("revertFill", txSig);
+    } catch (e: any) {
+      expect(e.message).toContain("RevertFill");
+    }
+  });
+
+  //
+  // Price tolerance tests
+  //
+
+  it("Set positive order price tolerance and place limit order within tolerance", async () => {
+    // Set 5% tolerance (500 bps)
+    const policy = new DriftProtocolPolicy([0, 1], [0], [WSOL], 500);
+    await setPolicy(policy);
+
+    // Place a limit buy order at a very low price (well within 5% tolerance)
+    const orderParams = getOrderParams({
+      orderType: OrderType.LIMIT,
+      marketType: MarketType.PERP,
+      direction: PositionDirection.LONG,
+      marketIndex: 0,
+      baseAssetAmount: new BN(10_0000_000),
+      price: new BN(100_000_000), // very low price, within tolerance
+    });
+
+    try {
+      const txSig = await glamClient.drift.placePerpOrder(
+        orderParams,
+        1,
+        txOptions,
+      );
+      console.log("placePerpOrder within tolerance", txSig);
     } catch (e) {
       console.error(e);
       throw e;
+    }
+
+    // Clean up
+    const openOrders = await getOpenOrders(1);
+    if (openOrders.length > 0) {
+      await glamClient.drift.cancelOrders(
+        MarketType.PERP,
+        0,
+        PositionDirection.LONG,
+        1,
+        txOptions,
+      );
+    }
+  });
+
+  it("Set negative order price tolerance", async () => {
+    // Set -1% tolerance (-100 bps): buy must be <= 99% of oracle
+    const policy = new DriftProtocolPolicy([0, 1], [0], [WSOL], -100);
+    await setPolicy(policy);
+
+    // Place a limit buy order at a very low price (well below oracle * 0.99)
+    const orderParams = getOrderParams({
+      orderType: OrderType.LIMIT,
+      marketType: MarketType.PERP,
+      direction: PositionDirection.LONG,
+      marketIndex: 0,
+      baseAssetAmount: new BN(10_0000_000),
+      price: new BN(100_000_000), // very low price, within negative tolerance
+    });
+
+    try {
+      const txSig = await glamClient.drift.placePerpOrder(
+        orderParams,
+        1,
+        txOptions,
+      );
+      console.log("placePerpOrder within negative tolerance", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+
+    // Clean up
+    const openOrders = await getOpenOrders(1);
+    if (openOrders.length > 0) {
+      await glamClient.drift.cancelOrders(
+        MarketType.PERP,
+        0,
+        PositionDirection.LONG,
+        1,
+        txOptions,
+      );
     }
   });
 });

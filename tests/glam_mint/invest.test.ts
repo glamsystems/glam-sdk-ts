@@ -1,10 +1,11 @@
 import {
   GlamClient,
-  stringToChars,
+  nameToChars,
   StateAccountType,
   WSOL,
   fetchMintAndTokenProgram,
 } from "../../src";
+import { InitMintParams } from "../../src/client/mint";
 import { airdrop, str2seed } from "../test-utils";
 import { BN, Wallet } from "@coral-xyz/anchor";
 import { Keypair } from "@solana/web3.js";
@@ -26,18 +27,10 @@ describe("invest", () => {
   const bob = userKeypairs[1];
   const eve = userKeypairs[2];
   const rich = userKeypairs[3];
-  const glamClientAlice = new GlamClient({
-    wallet: new Wallet(alice),
-  });
-  const glamClientBob = new GlamClient({
-    wallet: new Wallet(bob),
-  });
-  const glamClientEve = new GlamClient({
-    wallet: new Wallet(eve),
-  });
-  const glamClientRich = new GlamClient({
-    wallet: new Wallet(rich),
-  });
+  const glamClientAlice = new GlamClient({ wallet: new Wallet(alice) });
+  const glamClientBob = new GlamClient({ wallet: new Wallet(bob) });
+  const glamClientEve = new GlamClient({ wallet: new Wallet(eve) });
+  const glamClientRich = new GlamClient({ wallet: new Wallet(rich) });
 
   const fetchGlamMintSupply = async () => {
     const { mint } = await fetchMintAndTokenProgram(
@@ -62,7 +55,7 @@ describe("invest", () => {
     const name = "GLAM Mint Test Investor Flows";
     const params = {
       accountType: StateAccountType.TOKENIZED_VAULT,
-      name: stringToChars(name),
+      name: nameToChars(name),
       symbol: "GMT",
       uri: "https://glam.systems",
       baseAssetMint: WSOL,
@@ -122,8 +115,10 @@ describe("invest", () => {
 
     const stateModel = await glamClientManager.fetchStateModel();
     expect(stateModel.nameStr).toEqual(name);
-    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(20);
-    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(0);
+    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(1);
+    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(
+      2000,
+    );
     expect(stateModel.mintModel?.minSubscription.toNumber()).toEqual(
       1_000_000_000,
     );
@@ -135,20 +130,6 @@ describe("invest", () => {
     glamClientEve.statePda = glamClientManager.statePda;
     glamClientRich.statePda = glamClientManager.statePda;
   }, 25_000);
-
-  it("Update protocol fees", async () => {
-    try {
-      const txSig = await glamClientManager.fees.setProtocolFees(
-        1,
-        2000,
-        txOptions,
-      );
-      console.log("Update protocol fees:", txSig);
-    } catch (e) {
-      console.error(e);
-      throw e;
-    }
-  });
 
   it("Pause subscription", async () => {
     try {
@@ -170,7 +151,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("Requested action is paused");
+      expect(e.message).toBe("Requested action is paused.");
     }
   });
 
@@ -194,7 +175,9 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toContain("Amount below minimum threshold");
+      expect(e.message).toContain(
+        "Invalid amount for subscription or redemption",
+      );
     }
   });
 
@@ -339,7 +322,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("Requested action is paused");
+      expect(e.message).toBe("Requested action is paused.");
     }
   });
 
@@ -381,7 +364,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("New request is not allowed");
+      expect(e.message).toBe("New request is not allowed.");
     }
 
     const glamMintSupplyAfter = await fetchGlamMintSupply();
