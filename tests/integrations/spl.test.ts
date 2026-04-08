@@ -3,7 +3,7 @@ import { BN, Wallet } from "@coral-xyz/anchor";
 import {
   airdrop,
   createGlamStateForTest,
-  stateModelForTest,
+  defaultInitStateParams,
   str2seed,
 } from "../glam_protocol/setup";
 import { GlamClient, MSOL, nameToChars, WSOL } from "../../src";
@@ -30,7 +30,7 @@ describe("spl", () => {
 
   it("Create vault", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
-      ...stateModelForTest,
+      ...defaultInitStateParams,
       name: nameToChars("Spl Tests"),
       integrationAcls: [
         {

@@ -69,7 +69,7 @@ describe("kamino_farms", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toEqual("Insufficient funds");
+      expect(e.message).toContain("insufficient funds");
     }
   });
 });

@@ -279,6 +279,18 @@ export class FeesClient {
     return await this.base.sendAndConfirm(vTx);
   }
 
+  public async setProtocolFeesIx(
+    baseFeeBps: number,
+    flowFeeBps: number,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.txBuilder.setProtocolFeesIx(
+      baseFeeBps,
+      flowFeeBps,
+      signer,
+    );
+  }
+
   public async setProtocolFees(
     baseFeeBps: number,
     flowFeeBps: number,

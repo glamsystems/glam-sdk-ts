@@ -9,11 +9,21 @@ export function charsToString(chars: number[] | Buffer): string {
     .trim();
 }
 
+// Backward-compatible alias kept for existing tests/examples and SDK consumers.
+export function charsToName(chars: number[] | Buffer): string {
+  return charsToString(chars);
+}
+
 /**
  * Converts a string to an array of character codes
  */
 export function stringToChars(name: string, length: number = 32): number[] {
   return Array.from(Buffer.from(name).subarray(0, length));
+}
+
+// Backward-compatible alias kept for existing tests/examples and SDK consumers.
+export function nameToChars(name: string, length: number = 32): number[] {
+  return stringToChars(name, length);
 }
 
 /**

@@ -31,6 +31,7 @@ import {
   getAccountPolicyPda,
   getExtraMetasPda,
   getMintPda,
+  getRequestQueuePda,
   getStatePda,
   getTokenAclMintConfigPda,
   getTokenAclFlagAccountPda,
@@ -263,9 +264,7 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
         glamMint,
       );
       if (tokenAclEnabled) {
-        preInstructions.push(
-          await this.tokenAclThawIx([mintTo], glamSigner),
-        );
+        preInstructions.push(await this.tokenAclThawIx([mintTo], glamSigner));
       } else {
         preInstructions.push(
           await this.client.base.mintProgram.methods
@@ -329,9 +328,7 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
         glamMint,
       );
       if (tokenAclEnabled) {
-        preInstructions.push(
-          await this.tokenAclThawIx([fromAta], glamSigner),
-        );
+        preInstructions.push(await this.tokenAclThawIx([fromAta], glamSigner));
       } else {
         preInstructions.push(
           await this.client.base.mintProgram.methods
@@ -512,7 +509,17 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
 
     const mintProgram = this.client.base.mintProgram;
     const mintPda = getMintPda(glamState, 0, mintProgram.programId);
+    const requestQueuePda = getRequestQueuePda(mintPda, mintProgram.programId);
     const extraMetasPda = getExtraMetasPda(mintPda);
+    const isTokenizedVault =
+      StateAccountType.equals(
+        initMintParams.accountType,
+        StateAccountType.TOKENIZED_VAULT,
+      ) ||
+      StateAccountType.equals(
+        initMintParams.accountType,
+        StateAccountType.SINGLE_ASSET_VAULT,
+      );
 
     if (
       (this.client.base.staging ||
@@ -548,6 +555,7 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
         glamState,
         signer: glamSigner,
         newMint: mintPda,
+        ...(isTokenizedVault ? { requestQueue: requestQueuePda } : {}),
         extraMetasAccount: extraMetasPda,
         baseAssetMint: initMintParams.baseAssetMint,
       })
@@ -1292,7 +1300,10 @@ export class MintClient {
     return await this.base.sendAndConfirm(vTx);
   }
 
-  public async tokenAclThaw(tokenAccounts: PublicKey[], txOptions: TxOptions = {}) {
+  public async tokenAclThaw(
+    tokenAccounts: PublicKey[],
+    txOptions: TxOptions = {},
+  ) {
     const vTx = await this.txBuilder.tokenAclThawTx(tokenAccounts, txOptions);
     return await this.base.sendAndConfirm(vTx);
   }

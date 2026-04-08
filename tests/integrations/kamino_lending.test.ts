@@ -3,7 +3,7 @@ import { BN } from "@coral-xyz/anchor";
 import {
   airdrop,
   createGlamStateForTest,
-  stateModelForTest,
+  defaultInitStateParams,
 } from "../glam_protocol/setup";
 import { GlamClient, nameToChars } from "../../src";
 
@@ -12,7 +12,7 @@ describe("kamino_lending", () => {
 
   it("Initialize glam state", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
-      ...stateModelForTest,
+      ...defaultInitStateParams,
       name: nameToChars("Kamino Lending Tests"),
       integrationAcls: [
         {

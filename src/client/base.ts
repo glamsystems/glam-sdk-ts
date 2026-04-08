@@ -42,7 +42,6 @@ import {
   ExtDriftProgram,
   ExtKaminoProgram,
   ExtMarinadeProgram,
-  ExtOffchainProgram,
   ExtSplProgram,
   ExtStakePoolProgram,
   GlamMintProgram,
@@ -51,7 +50,6 @@ import {
   getExtDriftProgram,
   getExtKaminoProgram,
   getExtMarinadeProgram,
-  getExtOffchainProgram,
   getExtSplProgram,
   getExtStakePoolProgram,
   getGlamMintProgramId,
@@ -124,7 +122,6 @@ export class BaseClient {
   private _extMarinadeProgram?: ExtMarinadeProgram;
   private _extStakePoolProgram?: ExtStakePoolProgram;
   private _extCctpProgram?: ExtCctpProgram;
-  private _extOffchainProgram?: ExtOffchainProgram;
 
   private _statePda?: PublicKey;
 
@@ -223,16 +220,6 @@ export class BaseClient {
       this._extCctpProgram = getExtCctpProgram(this.provider, this.staging);
     }
     return this._extCctpProgram;
-  }
-
-  get extOffchainProgram(): ExtOffchainProgram {
-    if (!this._extOffchainProgram) {
-      this._extOffchainProgram = getExtOffchainProgram(
-        this.provider,
-        this.staging,
-      );
-    }
-    return this._extOffchainProgram;
   }
 
   get isVaultConnected(): boolean {

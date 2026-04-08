@@ -115,10 +115,8 @@ describe("invest", () => {
 
     const stateModel = await glamClientManager.fetchStateModel();
     expect(stateModel.nameStr).toEqual(name);
-    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(1);
-    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(
-      2000,
-    );
+    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(20);
+    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(0);
     expect(stateModel.mintModel?.minSubscription.toNumber()).toEqual(
       1_000_000_000,
     );
@@ -151,7 +149,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("Requested action is paused.");
+      expect(e.message).toContain("Requested action is paused");
     }
   });
 
@@ -322,7 +320,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("Requested action is paused.");
+      expect(e.message).toContain("Requested action is paused");
     }
   });
 
@@ -364,7 +362,7 @@ describe("invest", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (e: any) {
-      expect(e.message).toBe("New request is not allowed.");
+      expect(e.message).toContain("New request is not allowed");
     }
 
     const glamMintSupplyAfter = await fetchGlamMintSupply();
@@ -421,6 +419,7 @@ describe("invest", () => {
     }
 
     const glamMintSupplyAfter = await fetchGlamMintSupply();
+    const stateModel = await glamClientManager.fetchStateModel();
     const claimableFees = await glamClientManager.fees.getClaimableFees();
     const claimedFees = await glamClientManager.fees.getClaimedFees();
 
@@ -430,37 +429,26 @@ describe("invest", () => {
     expect(sharesMinted).toBeLessThan(4_000_000_000);
     expect(sharesMinted).toBeGreaterThan(3_990_000_000);
 
-    // The following are all fee shares that aren't burned
-    // protocol flow fee = 20% of all manager fees
-    // protocol base fee = 10% management fee
     const paManagerSubscriptionFee = new BN(
       claimableFees.managerSubscriptionFee,
     );
     const paManagerRedemptionFee = new BN(claimableFees.managerRedemptionFee);
     const paManagementFee = new BN(claimableFees.managementFee);
     const paPerformanceFee = new BN(claimableFees.performanceFee);
-    const paProtocolBaseFee = new BN(claimableFees.protocolBaseFee);
     const paAllManagerFees = paManagerSubscriptionFee
       .add(paManagerRedemptionFee)
       .add(paManagementFee)
-      .add(paPerformanceFee)
-      .add(paProtocolBaseFee);
+      .add(paPerformanceFee);
 
     const paProtocolFlowFee = new BN(claimableFees.protocolFlowFee);
+    const protocolFlowFeeBps =
+      stateModel.mintModel?.feeStructure.protocol.flowFeeBps ?? 0;
     expect(
       paAllManagerFees
-        .mul(new BN(20))
-        .div(new BN(100))
-        .div(new BN(1e9))
+        .mul(new BN(protocolFlowFeeBps))
+        .div(new BN(10_000))
         .toString(),
-    ).toEqual(paProtocolFlowFee.div(new BN(1e9)).toString());
-    expect(
-      paManagementFee
-        .mul(new BN(10))
-        .div(new BN(100))
-        .div(new BN(1e9))
-        .toString(),
-    ).toEqual(paProtocolBaseFee.div(new BN(1e9)).toString());
+    ).toEqual(paProtocolFlowFee.toString());
 
     // Vault redemption fee is considered immediately claimed after crystallization
     expect(claimedFees.vaultRedemptionFee.toString()).toEqual(

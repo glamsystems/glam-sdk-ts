@@ -129,10 +129,8 @@ describe("request_queue_load", () => {
 
     const stateModel = await glamClientManager.fetchStateModel();
     expect(stateModel.nameStr).toEqual(name);
-    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(1);
-    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(
-      2000,
-    );
+    expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(20);
+    expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(0);
   }, 25_000);
 
   it("250 users enqueue subscription requests #1", async () => {

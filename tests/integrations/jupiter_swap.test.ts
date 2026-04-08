@@ -3,12 +3,13 @@ import { BN, Wallet } from "@coral-xyz/anchor";
 import {
   airdrop,
   createGlamStateForTest,
-  stateModelForTest,
+  defaultInitStateParams,
   str2seed,
 } from "../glam_protocol/setup";
 import {
   GlamClient,
   JupiterSwapPolicy,
+  JupiterApiClient,
   MSOL,
   nameToChars,
   USDC,
@@ -24,10 +25,16 @@ import {
 
 const txOptions = { simulate: true };
 const delegate = Keypair.fromSeed(str2seed("delegate"));
+const jupiterApiClient = new JupiterApiClient({
+  swapApiBaseUrl: "http://127.0.0.1/mock-jupiter",
+});
 
 describe("jupiter_swap", () => {
-  const glamClient = new GlamClient();
-  const glamClientDelegate = new GlamClient({ wallet: new Wallet(delegate) });
+  const glamClient = new GlamClient({ jupiterApiClient });
+  const glamClientDelegate = new GlamClient({
+    wallet: new Wallet(delegate),
+    jupiterApiClient,
+  });
 
   beforeAll(async () => {
     await airdrop(
@@ -39,7 +46,7 @@ describe("jupiter_swap", () => {
 
   it("Create vault and enable JupiterSwap protocol", async () => {
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
-      ...stateModelForTest,
+      ...defaultInitStateParams,
       name: nameToChars("Jupiter Swap Tests"),
       assets: [WSOL],
     });
