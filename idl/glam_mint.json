@@ -1880,7 +1880,12 @@
         "Extra accounts for pricing N drift users under the same user stats:",
         "- user_stats x 1",
         "- drift_user x N",
-        "- markets and oracles used by all drift users (no specific order)"
+        "- markets and oracles used by all drift users (no specific order)",
+        "",
+        "Clients must pre-refresh any stale Drift spot market cumulative interest by",
+        "prepending Drift `update_spot_market_cumulative_interest` instructions for the",
+        "referenced spot markets. Calls will fail with `StaleDriftInterest` if a required",
+        "spot market's cumulative interest is too old."
       ],
       "discriminator": [
         12,
@@ -2115,7 +2120,12 @@
         "- (vault_depositor, drift_vault, drift_user) x N",
         "- spot_market used by drift users of vaults (no specific order)",
         "- perp markets used by drift users of vaults (no specific order)",
-        "- oracles of spot markets and perp markets (no specific order)"
+        "- oracles of spot markets and perp markets (no specific order)",
+        "",
+        "Clients must pre-refresh any stale Drift spot market cumulative interest by",
+        "prepending Drift `update_spot_market_cumulative_interest` instructions for the",
+        "referenced spot markets. Calls will fail with `StaleDriftInterest` if a required",
+        "spot market's cumulative interest is too old."
       ],
       "discriminator": [
         234,

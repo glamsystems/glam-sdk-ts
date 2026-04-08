@@ -8,7 +8,7 @@ export type ExtKamino = {
   "address": "gstgKa2Gq9wf5hM3DFWx1TvUrGYzDYszyFGq3XBY9Uq",
   "metadata": {
     "name": "extKamino",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "spec": "0.1.0",
     "description": "Kamino integration for GLAM Protocol"
   },

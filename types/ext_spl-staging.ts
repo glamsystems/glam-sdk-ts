@@ -8,7 +8,7 @@ export type ExtSpl = {
   "address": "gstgs9nJgX8PmRHWAAEP9H7xT3ZkaPWSGPYbj3mXdTa",
   "metadata": {
     "name": "extSpl",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "spec": "0.1.0",
     "description": "SPL integration for GLAM Protocol"
   },

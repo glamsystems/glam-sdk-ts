@@ -8,7 +8,7 @@ export type ExtCctp = {
   "address": "G1NTcMDYgNLpDwgnrpSZvoSKQuR9NXG7S3DmtNQCDmrK",
   "metadata": {
     "name": "extCctp",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "spec": "0.1.0",
     "description": "CCTP integration for GLAM Protocol"
   },
