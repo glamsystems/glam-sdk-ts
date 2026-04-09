@@ -1,14 +1,5 @@
 import { BN } from "@coral-xyz/anchor";
-import {
-  struct,
-  u8,
-  u32,
-  u64,
-  vec,
-  publicKey,
-  option,
-  u16,
-} from "@coral-xyz/borsh";
+import { struct, u8, u32, u64, vec, publicKey, option } from "@coral-xyz/borsh";
 import { PublicKey } from "@solana/web3.js";
 
 export class MintPolicy {
@@ -82,28 +73,88 @@ export class MintPolicy {
 export class JupiterSwapPolicy {
   maxSlippageBps: number;
   swapAllowlist: PublicKey[] | null;
+  maxDeviationBps: number;
 
-  static _layout = struct([
-    u16("maxSlippageBps"),
-    option(vec(publicKey()), "swapAllowlist"),
-  ]);
-
-  constructor(maxSlippageBps: number, swapAllowlist: PublicKey[] | null) {
+  constructor(
+    maxSlippageBps: number,
+    swapAllowlist: PublicKey[] | null,
+    maxDeviationBps: number = 0,
+  ) {
     this.maxSlippageBps = maxSlippageBps;
     this.swapAllowlist = swapAllowlist;
+    this.maxDeviationBps = maxDeviationBps;
   }
 
   public static decode(buffer: Buffer<ArrayBufferLike>): JupiterSwapPolicy {
-    const policy = JupiterSwapPolicy._layout.decode(
-      buffer,
-    ) as JupiterSwapPolicy;
-    return new JupiterSwapPolicy(policy.maxSlippageBps, policy.swapAllowlist);
+    if (buffer.length < 3) {
+      throw new Error("Invalid Jupiter swap policy");
+    }
+
+    let offset = 0;
+    const maxSlippageBps = buffer.readUInt16LE(offset);
+    offset += 2;
+
+    const hasAllowlist = buffer.readUInt8(offset) === 1;
+    offset += 1;
+
+    let swapAllowlist: PublicKey[] | null = null;
+    if (hasAllowlist) {
+      if (buffer.length < offset + 4) {
+        throw new Error("Invalid Jupiter swap allowlist");
+      }
+
+      const allowlistLen = buffer.readUInt32LE(offset);
+      offset += 4;
+
+      swapAllowlist = [];
+      for (let i = 0; i < allowlistLen; i++) {
+        const nextOffset = offset + 32;
+        if (buffer.length < nextOffset) {
+          throw new Error("Invalid Jupiter swap allowlist entry");
+        }
+
+        swapAllowlist.push(new PublicKey(buffer.subarray(offset, nextOffset)));
+        offset = nextOffset;
+      }
+    }
+
+    const maxDeviationBps =
+      buffer.length >= offset + 2 ? buffer.readInt16LE(offset) : 0;
+
+    return new JupiterSwapPolicy(
+      maxSlippageBps,
+      swapAllowlist,
+      maxDeviationBps,
+    );
   }
 
   public encode(): Buffer {
-    const buf = Buffer.alloc(1000);
-    const written = JupiterSwapPolicy._layout.encode(this, buf);
-    return buf.subarray(0, written);
+    const maxSlippageBps = Buffer.alloc(2);
+    maxSlippageBps.writeUInt16LE(this.maxSlippageBps, 0);
+
+    const hasAllowlist = this.swapAllowlist !== null;
+    const allowlistFlag = Buffer.from([hasAllowlist ? 1 : 0]);
+    let allowlist: Buffer;
+    if (this.swapAllowlist === null) {
+      allowlist = Buffer.alloc(0);
+    } else {
+      const lenBuf = Buffer.alloc(4);
+      lenBuf.writeUInt32LE(this.swapAllowlist.length, 0);
+      allowlist = Buffer.concat([
+        lenBuf,
+        ...this.swapAllowlist.map((pubkey) => pubkey.toBuffer()),
+      ]);
+    }
+
+    const maxDeviationBps = Buffer.alloc(2);
+    maxDeviationBps.writeInt16LE(this.maxDeviationBps, 0);
+
+    return Buffer.concat([
+      maxSlippageBps,
+      allowlistFlag,
+      allowlist,
+      maxDeviationBps,
+    ]);
   }
 }
 

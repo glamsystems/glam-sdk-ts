@@ -87,7 +87,7 @@ describe("jupiter_swap", () => {
       const txSig = await glamClient.access.setProtocolPolicy(
         glamClient.protocolProgram.programId,
         0b0000100,
-        new JupiterSwapPolicy(50, [USDC, MSOL]).encode(),
+        new JupiterSwapPolicy(50, [USDC, MSOL], 0).encode(),
       );
       console.log("Update jupiter swap policy", txSig);
     } catch (e) {

@@ -127,23 +127,25 @@ export class JupiterApiClient {
       JUPITER_API_DEFAULT + "/swap/v1";
 
     // Custom swap API services (e.g., metis) don't require a Jupiter API key
-    // Jupiter's official API requires a key (via constructor arg or environment variable)
     this.isCustomSwapApi = !this.swapApiBaseUrl.startsWith(JUPITER_API_DEFAULT);
+
+    // Warn once at construction when the official Jupiter API is used without
+    // an API key: requests will likely be rate-limited or rejected.
     if (!this.isCustomSwapApi && !this.apiKey) {
-      throw new Error(
-        "Jupiter API key is required for official Jupiter API. Set JUPITER_API_KEY or NEXT_PUBLIC_JUPITER_API_KEY environment variable, or pass apiKey in constructor options.",
+      console.warn(
+        "JupiterApiClient: no API key set for the official Jupiter API. " +
+          "Requests may be rate-limited or rejected. Set JUPITER_API_KEY / " +
+          "NEXT_PUBLIC_JUPITER_API_KEY, or pass apiKey in constructor options.",
       );
     }
   }
 
   async fetchTokenPrices(mints: string[]): Promise<TokenPrice[]> {
-    if (!this.apiKey) {
-      throw new Error("Jupiter API key is required for the /price endpoint");
-    }
-
     const response = await fetch(
       `${JUPITER_API_DEFAULT}/price/v3?ids=${mints.join(",")}`,
-      { headers: { "x-api-key": this.apiKey } },
+      {
+        headers: this.apiKey ? { "x-api-key": this.apiKey } : {},
+      },
     );
 
     if (!response.ok) {
@@ -175,13 +177,11 @@ export class JupiterApiClient {
       return this.tokenListCache.data;
     }
 
-    if (!this.apiKey) {
-      throw new Error("Jupiter API key is required for the /tokens endpoint");
-    }
-
     const response = await fetch(
       `${JUPITER_API_DEFAULT}/tokens/v2/tag?query=verified`,
-      { headers: { "x-api-key": this.apiKey } },
+      {
+        headers: this.apiKey ? { "x-api-key": this.apiKey } : {},
+      },
     );
 
     if (!response.ok) {
@@ -210,13 +210,8 @@ export class JupiterApiClient {
   }
 
   async fetchProgramLabels(): Promise<{ [key: string]: string }> {
-    if (!this.apiKey) {
-      throw new Error(
-        "Jupiter API key is required for the /swap/v1/program-id-to-label endpoint",
-      );
-    }
     const response = await fetch(`${this.swapApiBaseUrl}/program-id-to-label`, {
-      headers: { "x-api-key": this.apiKey },
+      headers: this.apiKey ? { "x-api-key": this.apiKey } : {},
     });
 
     if (!response.ok) {
@@ -230,16 +225,14 @@ export class JupiterApiClient {
   }
 
   async getQuoteResponse(quoteParams: QuoteParams): Promise<any> {
-    if (!this.isCustomSwapApi && !this.apiKey) {
-      throw new Error("Jupiter API key must be set");
-    }
-
     const queryParams = new URLSearchParams(
       Object.entries(quoteParams).map(([key, val]) => [key, String(val)]),
     );
     const headers: HeadersInit = this.isCustomSwapApi
       ? {}
-      : { "x-api-key": this.apiKey! };
+      : this.apiKey
+        ? { "x-api-key": this.apiKey }
+        : {};
     const response = await fetch(
       `${this.swapApiBaseUrl}/quote?${queryParams}`,
       { headers },
@@ -260,14 +253,14 @@ export class JupiterApiClient {
     from: PublicKey,
     trackingAccount?: PublicKey,
   ): Promise<SwapInstructions> {
-    if (!this.isCustomSwapApi && !this.apiKey) {
-      throw new Error("Jupiter API key must be set");
-    }
-
     const headers: HeadersInit = {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(this.isCustomSwapApi ? {} : { "x-api-key": this.apiKey! }),
+      ...(this.isCustomSwapApi
+        ? {}
+        : this.apiKey
+          ? { "x-api-key": this.apiKey }
+          : {}),
     };
 
     const response = await fetch(`${this.swapApiBaseUrl}/swap-instructions`, {

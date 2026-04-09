@@ -153,6 +153,7 @@ describe("jupiter_swap_v2", () => {
             amount: 10_000_000,
             swapMode: "ExactIn",
             onlyDirectRoutes: true,
+            instructionVersion: "V2",
             maxAccounts: 8,
           },
           swapInstructions: mSolToSolSwapInstructions(
@@ -191,6 +192,7 @@ describe("jupiter_swap_v2", () => {
           amount,
           swapMode: "ExactIn",
           onlyDirectRoutes: true,
+          instructionVersion: "V2",
           maxAccounts: 8,
         },
         swapInstructions: mSolToSolSwapInstructions(

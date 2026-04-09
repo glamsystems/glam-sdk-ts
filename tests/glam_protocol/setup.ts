@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import {
   Keypair,
   PublicKey,
@@ -57,9 +59,7 @@ export const buildAndSendTx = async (
 
 export const loadWalletFromDisk = (path: string) => {
   let payer = Keypair.fromSecretKey(
-    Buffer.from(
-      JSON.parse(require("fs").readFileSync(path, { encoding: "utf-8" })),
-    ),
+    Buffer.from(JSON.parse(readFileSync(path, { encoding: "utf-8" }))),
   );
   return new NodeWallet(payer);
 };
@@ -73,7 +73,7 @@ export const mintUSDC = async (
   const mintAuthority = Keypair.fromSecretKey(
     Buffer.from(
       JSON.parse(
-        require("fs").readFileSync("./tests/test-keypair.json", {
+        readFileSync(resolve(__dirname, "../test-keypair.json"), {
           encoding: "utf-8",
         }),
       ),

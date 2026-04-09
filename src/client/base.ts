@@ -264,14 +264,24 @@ export class BaseClient {
       lookupTableAccounts.push(...accounts);
     }
 
-    // Fetch GLAM specific lookup tables only if vault state has been set
+    // Fetch GLAM specific lookup tables only if vault state has been set.
+    // If ALT discovery fails (e.g., RPC deprioritization) we fall back to an
+    // empty list so tx building continues; the resulting transaction may be
+    // larger and could exceed size limits, which fails visibly downstream.
     if (this.isVaultConnected) {
-      const glamLookupTableAccounts = await findGlamLookupTables(
-        this.statePda,
-        this.vaultPda,
-        this.connection,
-      );
-      lookupTableAccounts.push(...glamLookupTableAccounts);
+      try {
+        const glamLookupTableAccounts = await findGlamLookupTables(
+          this.statePda,
+          this.vaultPda,
+          this.connection,
+        );
+        lookupTableAccounts.push(...glamLookupTableAccounts);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `Failed to discover GLAM address lookup tables for ${this.statePda.toBase58()}. Continuing without them: ${message}`,
+        );
+      }
     }
 
     if (process.env.NODE_ENV === "development") {

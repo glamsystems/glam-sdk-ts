@@ -280,8 +280,7 @@ export async function isTokenAclEnabled(
   const { mint } = await fetchMintAndTokenProgram(connection, mintPubkey);
   const mintConfigPda = getTokenAclMintConfigPda(mintPubkey);
   return (
-    mint.freezeAuthority !== null &&
-    mint.freezeAuthority.equals(mintConfigPda)
+    mint.freezeAuthority !== null && mint.freezeAuthority.equals(mintConfigPda)
   );
 }
 
@@ -293,15 +292,18 @@ export async function isTokenAclEnabled(
  * with filters.
  *
  * @returns Array of AddressLookupTableAccount objects for the vault
- * @throws May throw RPC errors
+ * @throws RPC errors from `getProgramAccounts`. Callers that only use the
+ * result to optimize transaction size may want to catch and fall back to an
+ * empty list; callers that rely on the result for correctness (e.g. ALT
+ * management commands) should let the error propagate.
  */
 export async function findGlamLookupTables(
   statePda: PublicKey,
   vaultPda: PublicKey,
   connection: Connection,
 ): Promise<AddressLookupTableAccount[]> {
-  // Fetch lookup table accounts owned by the ALT program with filters
-  // This is very likely to hit the RPC error "Request deprioritized due to number of accounts requested. Slow down requests or add filters to narrow down results"
+  // Fetch lookup table accounts owned by the ALT program with filters.
+  // Some RPC providers still overload or deprioritize this indexed scan.
   const accounts = await getProgramAccounts(connection, ALT_PROGRAM_ID, {
     filters: [
       {
