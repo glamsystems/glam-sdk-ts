@@ -7,7 +7,7 @@
   "homepage": "https://www.glam.systems",
   "repository": {
     "type": "git",
-    "url": "git@github.com:glamsystems/glam-sdk.git"
+    "url": "git@github.com:glamsystems/glam-sdk-ts.git"
   },
   "keywords": [
     "glam",
