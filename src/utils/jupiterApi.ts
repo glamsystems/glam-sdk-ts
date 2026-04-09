@@ -53,7 +53,9 @@ export class JupTokenList {
   }
 
   getBySymbol(symbol: string): TokenListItem | undefined {
-    return this.tokens.find((token) => token.symbol === symbol);
+    return this.tokens.find(
+      (token) => token.symbol.toLowerCase() === symbol.toLowerCase(),
+    );
   }
 }
 
