@@ -44,6 +44,9 @@ export type GlamConfig = {
     },
     {
       "name": "deleteAssetMeta",
+      "docs": [
+        "Deletes an asset meta"
+      ],
       "discriminator": [
         108,
         173,
@@ -84,10 +87,70 @@ export type GlamConfig = {
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "asset",
+          "type": "pubkey"
+        },
+        {
+          "name": "oracle",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "deprecateAssetMeta",
+      "docs": [
+        "Marks an asset meta as deprecated"
+      ],
+      "discriminator": [
+        138,
+        242,
+        230,
+        22,
+        21,
+        151,
+        149,
+        19
+      ],
+      "accounts": [
+        {
+          "name": "globalConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
         },
         {
           "name": "systemProgram",
@@ -219,10 +282,7 @@ export type GlamConfig = {
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
         },
         {
           "name": "systemProgram",
@@ -232,6 +292,57 @@ export type GlamConfig = {
       "args": [
         {
           "name": "newAdmin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "updateFeeAuthority",
+      "discriminator": [
+        31,
+        223,
+        200,
+        21,
+        114,
+        158,
+        65,
+        61
+      ],
+      "accounts": [
+        {
+          "name": "globalConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "feeAuthority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "feeAuthority",
           "type": "pubkey"
         }
       ]
@@ -277,10 +388,7 @@ export type GlamConfig = {
         },
         {
           "name": "feeAuthority",
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
         }
       ],
       "args": [
@@ -335,10 +443,7 @@ export type GlamConfig = {
         },
         {
           "name": "feeAuthority",
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
         }
       ],
       "args": [
@@ -390,10 +495,13 @@ export type GlamConfig = {
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "globalConfig"
-          ]
+          "signer": true
+        },
+        {
+          "name": "asset"
+        },
+        {
+          "name": "oracle"
         },
         {
           "name": "systemProgram",
@@ -440,13 +548,13 @@ export type GlamConfig = {
     },
     {
       "code": 6002,
-      "name": "assetMetaAlreadyExists",
-      "msg": "Asset meta already exists"
+      "name": "assetMetaNotFound",
+      "msg": "Asset meta not found"
     },
     {
       "code": 6003,
       "name": "invalidParameters",
-      "msg": "Invalid parameters"
+      "msg": "Invalid fee parameters or insufficient account space"
     },
     {
       "code": 6004,
@@ -456,7 +564,12 @@ export type GlamConfig = {
     {
       "code": 6005,
       "name": "invalidGlobalConfig",
-      "msg": "Invalid global config"
+      "msg": "Invalid or corrupted global config account"
+    },
+    {
+      "code": 6006,
+      "name": "invalidFeeAuthority",
+      "msg": "Invalid fee authority"
     }
   ],
   "types": [
@@ -491,7 +604,7 @@ export type GlamConfig = {
           },
           {
             "name": "priority",
-            "type": "u8"
+            "type": "i8"
           },
           {
             "name": "padding",
@@ -526,18 +639,30 @@ export type GlamConfig = {
           },
           {
             "name": "referrer",
+            "docs": [
+              "Default GLAM referrer"
+            ],
             "type": "pubkey"
           },
           {
             "name": "baseFeeBps",
+            "docs": [
+              "Default protocol base fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "flowFeeBps",
+            "docs": [
+              "Default protocol flow fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "assetMetas",
+            "docs": [
+              "List of assets and their oracle configs supported by the protocol"
+            ],
             "type": {
               "vec": {
                 "defined": {

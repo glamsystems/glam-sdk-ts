@@ -38,6 +38,9 @@
     },
     {
       "name": "delete_asset_meta",
+      "docs": [
+        "Deletes an asset meta"
+      ],
       "discriminator": [
         108,
         173,
@@ -78,10 +81,70 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "asset",
+          "type": "pubkey"
+        },
+        {
+          "name": "oracle",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "deprecate_asset_meta",
+      "docs": [
+        "Marks an asset meta as deprecated"
+      ],
+      "discriminator": [
+        138,
+        242,
+        230,
+        22,
+        21,
+        151,
+        149,
+        19
+      ],
+      "accounts": [
+        {
+          "name": "global_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
         },
         {
           "name": "system_program",
@@ -213,10 +276,7 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
         },
         {
           "name": "system_program",
@@ -226,6 +286,57 @@
       "args": [
         {
           "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "update_fee_authority",
+      "discriminator": [
+        31,
+        223,
+        200,
+        21,
+        114,
+        158,
+        65,
+        61
+      ],
+      "accounts": [
+        {
+          "name": "global_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "fee_authority",
           "type": "pubkey"
         }
       ]
@@ -271,10 +382,7 @@
         },
         {
           "name": "fee_authority",
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
         }
       ],
       "args": [
@@ -329,10 +437,7 @@
         },
         {
           "name": "fee_authority",
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
         }
       ],
       "args": [
@@ -384,10 +489,13 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "global_config"
-          ]
+          "signer": true
+        },
+        {
+          "name": "asset"
+        },
+        {
+          "name": "oracle"
         },
         {
           "name": "system_program",
@@ -434,13 +542,13 @@
     },
     {
       "code": 6002,
-      "name": "AssetMetaAlreadyExists",
-      "msg": "Asset meta already exists"
+      "name": "AssetMetaNotFound",
+      "msg": "Asset meta not found"
     },
     {
       "code": 6003,
       "name": "InvalidParameters",
-      "msg": "Invalid parameters"
+      "msg": "Invalid fee parameters or insufficient account space"
     },
     {
       "code": 6004,
@@ -450,7 +558,12 @@
     {
       "code": 6005,
       "name": "InvalidGlobalConfig",
-      "msg": "Invalid global config"
+      "msg": "Invalid or corrupted global config account"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidFeeAuthority",
+      "msg": "Invalid fee authority"
     }
   ],
   "types": [
@@ -485,7 +598,7 @@
           },
           {
             "name": "priority",
-            "type": "u8"
+            "type": "i8"
           },
           {
             "name": "padding",
@@ -520,18 +633,30 @@
           },
           {
             "name": "referrer",
+            "docs": [
+              "Default GLAM referrer"
+            ],
             "type": "pubkey"
           },
           {
             "name": "base_fee_bps",
+            "docs": [
+              "Default protocol base fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "flow_fee_bps",
+            "docs": [
+              "Default protocol flow fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "asset_metas",
+            "docs": [
+              "List of assets and their oracle configs supported by the protocol"
+            ],
             "type": {
               "vec": {
                 "defined": {

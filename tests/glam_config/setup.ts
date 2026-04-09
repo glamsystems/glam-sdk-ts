@@ -1,30 +1,22 @@
-import { PublicKey, Keypair } from "@solana/web3.js";
-import { Connection } from "@solana/web3.js";
+import { PublicKey, Keypair, Connection } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
+import { createMint } from "@solana/spl-token";
 import { SEED_GLOBAL_CONFIG } from "../../src/constants";
 import { getGlamConfigProgram } from "../../src/glamExports";
+import { airdrop } from "../test-utils";
 
-export const airdrop = async (
+export const createTestMint = async (
   connection: Connection,
-  pubkey: PublicKey,
-  lamports: number = 1 * anchor.web3.LAMPORTS_PER_SOL,
-) => {
-  try {
-    const airdropTx = await connection.requestAirdrop(pubkey, lamports);
-    await connection.confirmTransaction(
-      {
-        ...(await connection.getLatestBlockhash()),
-        signature: airdropTx,
-      },
-      "confirmed",
-    );
-    console.log(
-      `Airdropped ${lamports / anchor.web3.LAMPORTS_PER_SOL} SOL to ${pubkey.toBase58()}:`,
-      airdropTx,
-    );
-  } catch (error) {
-    console.error("Airdrop failed:", error);
-  }
+  payer: Keypair,
+  decimals: number = 9,
+): Promise<PublicKey> => {
+  return await createMint(
+    connection,
+    payer,
+    payer.publicKey, // mint authority
+    null, // freeze authority
+    decimals,
+  );
 };
 
 export const getGlobalConfigPDA = (programId: PublicKey) => {
@@ -33,18 +25,6 @@ export const getGlobalConfigPDA = (programId: PublicKey) => {
     programId,
   );
   return globalConfigPDA;
-};
-
-export const TEST_ASSETS = {
-  SOL: new PublicKey("So11111111111111111111111111111111111111112"),
-  USDC: new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
-  WSOL: new PublicKey("So11111111111111111111111111111111111111112"),
-  MSOL: new PublicKey("mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"),
-};
-
-export const TEST_ORACLES = {
-  SOL_PYTH: new PublicKey("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE"),
-  USDC_PYTH: new PublicKey("Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"),
 };
 
 export const initGlamConfigForTest = async (
