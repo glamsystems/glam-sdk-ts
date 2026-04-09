@@ -1,7 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import {
   getExtCctpProgramId,
-  getExtDriftProgramId,
   getExtKaminoProgramId,
   getExtMarinadeProgramId,
   getExtSplProgramId,
@@ -26,7 +25,6 @@ export const METEORA_POSITION_SIZE = 8120;
 export const KAMINO_OBTRIGATION_SIZE = 3344;
 export const KAMINO_RESERVE_SIZE = 8624;
 export const KAMINO_VAULT_STATE_SIZE = 62552;
-export const DRIFT_VAULT_DEPOSITOR_SIZE = 272;
 
 export const JITO_TIP_DEFAULT = new PublicKey(
   "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
@@ -61,12 +59,6 @@ export const JUP = new PublicKey("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN");
  */
 export const MARINADE_PROGRAM_ID = new PublicKey(
   "MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD",
-);
-export const DRIFT_PROGRAM_ID = new PublicKey(
-  "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH",
-);
-export const DRIFT_VAULTS_PROGRAM_ID = new PublicKey(
-  "vAuLTsyrvSfZRuRB3XgvkPwNGgYSs9YRYymVebLKoxR",
 );
 export const JUPITER_PROGRAM_ID = new PublicKey(
   "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
@@ -145,16 +137,6 @@ export const CCTP_DOMAIN_MAPPING: Record<number, string> = {
   19: "HyperEVM",
   21: "Ink",
   22: "Plume",
-};
-
-/**
- * Pool ID to lending pool name mapping for Drift Protocol policies
- */
-export const DRIFT_POOL_MAPPING: Record<number, string> = {
-  0: "Main Market",
-  1: "JLP Market",
-  2: "LST Market",
-  3: "Exponent Market",
 };
 
 /**
@@ -255,35 +237,6 @@ export const getProtocolsAndPermissions = (
         [1 << 0]: "Stake",
         [1 << 1]: "Unstake",
         [1 << 2]: "HarvestReward",
-      },
-    },
-  },
-  // Drift integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_drift/src/state/acl.rs
-  [getExtDriftProgramId(staging).toBase58()]: {
-    "0000000000000001": {
-      name: "DriftProtocol",
-      staging: false,
-      permissions: {
-        [1 << 0]: "InitUser",
-        [1 << 1]: "UpdateUser",
-        [1 << 2]: "DeleteUser",
-        [1 << 3]: "Deposit",
-        [1 << 4]: "Withdraw",
-        [1 << 5]: "Borrow",
-        [1 << 6]: "Repay",
-        [1 << 7]: "CreateModifyOrders",
-        [1 << 8]: "CancelOrders",
-        [1 << 9]: "PerpMarkets",
-        [1 << 10]: "SpotMarkets",
-      },
-    },
-    "0000000000000010": {
-      name: "DriftVaults",
-      staging: false,
-      permissions: {
-        [1 << 0]: "Deposit",
-        [1 << 1]: "Withdraw",
       },
     },
   },

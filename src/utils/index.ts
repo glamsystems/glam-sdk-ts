@@ -9,7 +9,6 @@ export * from "./lookupTables";
 export * from "./rpc";
 export * from "./timelock";
 export * from "./transaction";
-export * from "./drift";
 export * from "./pkmap";
 export * from "./pkset";
 export * from "./fraction";

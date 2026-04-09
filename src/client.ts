@@ -1,6 +1,5 @@
 import { GlamClientConfig } from "./clientConfig";
 import { BaseClient } from "./client/base";
-import { DriftProtocolClient, DriftVaultsClient } from "./client/drift";
 import { JupiterSwapClient } from "./client/jupiter";
 import { MarinadeClient } from "./client/marinade";
 import { VaultClient } from "./client/vault";
@@ -26,8 +25,6 @@ import { CctpClient } from "./client/cctp";
  * Lazy loads each client/module at first use
  */
 export class GlamClient extends BaseClient {
-  private _drift?: DriftProtocolClient;
-  private _driftVaults?: DriftVaultsClient;
   private _invest?: InvestClient;
   private _jupiterSwap?: JupiterSwapClient;
   private _marinade?: MarinadeClient;
@@ -47,20 +44,6 @@ export class GlamClient extends BaseClient {
 
   public constructor(config?: GlamClientConfig) {
     super(config);
-  }
-
-  get drift(): DriftProtocolClient {
-    if (!this._drift) {
-      this._drift = new DriftProtocolClient(this, this.vault);
-    }
-    return this._drift;
-  }
-
-  get driftVaults(): DriftVaultsClient {
-    if (!this._driftVaults) {
-      this._driftVaults = new DriftVaultsClient(this, this.drift);
-    }
-    return this._driftVaults;
   }
 
   get invest(): InvestClient {
@@ -118,8 +101,6 @@ export class GlamClient extends BaseClient {
         this,
         this.kaminoLending,
         this.kaminoVaults,
-        this.drift,
-        this.driftVaults,
         () => this.jupiterSwap.jupApi,
       );
     }

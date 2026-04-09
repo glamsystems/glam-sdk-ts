@@ -9,8 +9,6 @@ export const queryKeys = {
       ["vault", pk, cluster, "acls"] as const,
     config: (pk: string, cluster: string) =>
       ["vault", pk, cluster, "config"] as const,
-    driftUsers: (pk: string, cluster: string) =>
-      ["vault", pk, cluster, "drift-users"] as const,
     stakes: (pk: string, cluster: string) =>
       ["vault", pk, cluster, "stakes"] as const,
     holders: (mint: string, cluster: string) =>
@@ -22,11 +20,8 @@ export const queryKeys = {
   },
   global: {
     allStates: (cluster: string) => ["global", "all-states", cluster] as const,
-    jupTokens: (cluster: string) =>
-      ["global", "jup-tokens", cluster] as const,
+    jupTokens: (cluster: string) => ["global", "jup-tokens", cluster] as const,
     jupDexes: (cluster: string) => ["global", "jup-dexes", cluster] as const,
-    driftMarkets: (cluster: string) =>
-      ["global", "drift-markets", cluster] as const,
     kaminoMarkets: (cluster: string) =>
       ["global", "kamino-markets", cluster] as const,
     kaminoVaults: (cluster: string) =>
@@ -49,7 +44,6 @@ export const queryKeys = {
 
 export type InvalidationScope =
   | "balance" // vault token/SOL balances + priced holdings
-  | "drift" // drift user accounts
   | "acls" // delegate + integration ACLs + global state list
   | "wallet" // connected wallet balances
   | "graph" // vault graph visualization
@@ -83,9 +77,6 @@ export function getInvalidationKeys(
       case "balance":
         add(queryKeys.vault.balances(ctx.vaultPk, ctx.cluster));
         add(queryKeys.vault.holdings(ctx.vaultPk, ctx.cluster));
-        break;
-      case "drift":
-        add(queryKeys.vault.driftUsers(ctx.vaultPk, ctx.cluster));
         break;
       case "acls":
         add(queryKeys.vault.acls(ctx.vaultPk, ctx.cluster));

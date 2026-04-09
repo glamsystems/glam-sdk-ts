@@ -3,7 +3,6 @@ export * from "./models";
 export * from "./clientConfig";
 export * from "./client";
 export * from "./client/jupiter";
-export * from "./client/drift";
 export * from "./client/timelock";
 export * from "./client/cctp";
 export * from "./client/price";

@@ -39,7 +39,6 @@ import {
 
 import {
   ExtCctpProgram,
-  ExtDriftProgram,
   ExtKaminoProgram,
   ExtMarinadeProgram,
   ExtSplProgram,
@@ -47,7 +46,6 @@ import {
   GlamMintProgram,
   GlamProtocolProgram,
   getExtCctpProgram,
-  getExtDriftProgram,
   getExtKaminoProgram,
   getExtMarinadeProgram,
   getExtSplProgram,
@@ -78,8 +76,6 @@ import { JupiterApiClient, PkMap } from "../utils";
 
 const LOOKUP_TABLES = [
   new PublicKey("284iwGtA9X9aLy3KsyV8uT2pXLARhYbiSi5SiM2g47M2"), // kamino lending
-  new PublicKey("D9cnvzswDikQDf53k4HpQ3KJ9y1Fv3HGGDFYMXnK5T6c"), // drift
-  new PublicKey("EiWSskK5HXnBTptiS5DH6gpAJRVNQ3cAhTKBGaiaysAb"), // drift
 ];
 
 export type TxOptions = {
@@ -117,7 +113,6 @@ export class BaseClient {
   private _protocolProgram?: GlamProtocolProgram;
   private _mintProgram?: GlamMintProgram;
   private _extSplProgram?: ExtSplProgram;
-  private _extDriftProgram?: ExtDriftProgram;
   private _extKaminoProgram?: ExtKaminoProgram;
   private _extMarinadeProgram?: ExtMarinadeProgram;
   private _extStakePoolProgram?: ExtStakePoolProgram;
@@ -179,13 +174,6 @@ export class BaseClient {
       this._extSplProgram = getExtSplProgram(this.provider, this.staging);
     }
     return this._extSplProgram;
-  }
-
-  get extDriftProgram(): ExtDriftProgram {
-    if (!this._extDriftProgram) {
-      this._extDriftProgram = getExtDriftProgram(this.provider, this.staging);
-    }
-    return this._extDriftProgram;
   }
 
   get extKaminoProgram(): ExtKaminoProgram {
@@ -659,7 +647,9 @@ export class BaseClient {
     );
   }
 
-  private getMintProgramIdForStateAccount(stateAccount: StateAccount): PublicKey {
+  private getMintProgramIdForStateAccount(
+    stateAccount: StateAccount,
+  ): PublicKey {
     const prodMintProgramId = getGlamMintProgramId(false);
     const stagingMintProgramId = getGlamMintProgramId(true);
     const mintIntegrationProgram = stateAccount.integrationAcls?.find(

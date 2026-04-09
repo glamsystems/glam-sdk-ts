@@ -22,13 +22,11 @@ import type { DelegateAcl, StateModel, IntegrationAcl } from "../models";
 import { GlamClient } from "../client";
 import { useAtomValue, useSetAtom } from "jotai";
 import { PublicKey } from "@solana/web3.js";
-import { DriftMarketConfigs } from "../client/drift";
 import { TokenAccount } from "../client/base";
 import { useCluster } from "./cluster-provider";
 import { JupiterApiClient, JupTokenList } from "../utils/jupiterApi";
 import { ClusterNetwork } from "../clientConfig";
 import { VaultHoldings } from "../client/price";
-import { DriftUser } from "../deser";
 import { queryKeys } from "./query-keys";
 import { useVaultBalanceSubscription } from "./useVaultBalanceSubscription";
 
@@ -50,7 +48,6 @@ interface GlamProviderContext {
   integrationAcls: IntegrationAcl[];
   allGlamStates: StateModel[];
   jupTokenList?: JupTokenList;
-  driftMarketConfigs?: DriftMarketConfigs;
   wsConnected: boolean;
   setActiveGlamState: (f: GlamStateCache) => void;
   refresh: () => Promise<void>; // refresh active glam vault from onchain data
@@ -62,7 +59,6 @@ export interface Vault {
   balanceLamports: number; // TODO: this should be a BN or string, it works until ~9M SOL
   uiAmount: number;
   tokenAccounts: TokenAccount[];
-  driftUsers?: DriftUser[];
 }
 
 interface GlamStateCache {
@@ -191,7 +187,6 @@ export function GlamProvider({
     } else {
       setActiveGlamState({} as GlamStateCache);
     }
-
   }, [glamStateModels, wallet?.publicKey, cluster]);
 
   //
@@ -260,36 +255,15 @@ export function GlamProvider({
     staleTime: 1000 * 30, // 30 seconds
   });
 
-  //
-  // Fetch drift market configs
-  //
-  const { data: driftMarketConfigs } = useQuery({
-    queryKey: queryKeys.global.driftMarkets(clusterKey),
-    enabled: cluster.network === ClusterNetwork.Mainnet,
-    queryFn: () => glamClient.drift.fetchMarketConfigs(),
-    staleTime: 1000 * 60, // 60 seconds
-  });
-
-  //
-  // Fetch drift users
-  //
-  const { data: driftUsersData } = useQuery({
-    queryKey: queryKeys.vault.driftUsers(pk, clusterKey),
-    enabled:
-      !!activeGlamState?.pubkey && cluster.network === ClusterNetwork.Mainnet,
-    queryFn: () => glamClient.drift.fetchAndParseDriftUsers(),
-    refetchInterval: 30 * 1000, // 30 seconds
-  });
-
-  // Compose vault object from query data (preserves vault.driftUsers access for consumers)
+  // Compose vault object from query data.
   // Guard glamClient.vaultPda — the getter throws if statePda is not set
   const vault = useMemo<Vault>(
-    () => ({
-      ...(vaultBalancesData ?? ({} as Vault)),
-      ...(activeGlamState?.pubkey ? { pubkey: glamClient.vaultPda } : {}),
-      driftUsers: driftUsersData,
-    }) as Vault,
-    [vaultBalancesData, activeGlamState?.pubkey, glamClient, driftUsersData],
+    () =>
+      ({
+        ...(vaultBalancesData ?? ({} as Vault)),
+        ...(activeGlamState?.pubkey ? { pubkey: glamClient.vaultPda } : {}),
+      }) as Vault,
+    [vaultBalancesData, activeGlamState?.pubkey, glamClient],
   );
 
   const delegateAcls = vaultAclsData?.delegateAcls ?? [];
@@ -299,7 +273,7 @@ export function GlamProvider({
   const glamStatesList = useAtomValue(glamStatesListAtom);
 
   // Invalidates all vault-scoped queries (["vault", pk, ...] prefix match),
-  // triggering background refetches for balances, holdings, ACLs, and drift users.
+  // triggering background refetches for balances, holdings, and ACLs.
   const refresh = useCallback(async () => {
     if (!pk) return;
 
@@ -340,7 +314,6 @@ export function GlamProvider({
       integrationAcls,
       allGlamStates,
       jupTokenList,
-      driftMarketConfigs,
       wsConnected,
       setActiveGlamState,
       refresh,
@@ -356,7 +329,6 @@ export function GlamProvider({
       integrationAcls,
       allGlamStates,
       jupTokenList,
-      driftMarketConfigs,
       wsConnected,
       setActiveGlamState,
       refresh,

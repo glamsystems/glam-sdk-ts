@@ -43,14 +43,14 @@ describe("access_control", () => {
     let stateModel = await glamClient.fetchStateModel();
     expect(stateModel.integrationAcls?.length).toEqual(0);
 
-    // drift integration, 3 protocols
+    // kamino integration, 3 protocols
     try {
       const txSig = await glamClient.access.enableProtocols(
-        glamClient.extDriftProgram.programId,
+        glamClient.extKaminoProgram.programId,
         0b111,
         txOptions,
       );
-      console.log("Enable drift integration and protocols", txSig);
+      console.log("Enable kamino integration and protocols", txSig);
     } catch (e) {
       console.error(e);
       throw e;
@@ -58,14 +58,14 @@ describe("access_control", () => {
     stateModel = await glamClient.fetchStateModel();
     expect(stateModel.integrationAcls?.length).toEqual(1);
 
-    // kamino integration, 1 protocol
+    // token integration, 1 protocol
     try {
       const txSig = await glamClient.access.enableProtocols(
-        glamClient.extKaminoProgram.programId,
+        glamClient.extSplProgram.programId,
         0b001,
         txOptions,
       );
-      console.log("Enable kamino integration and protocols", txSig);
+      console.log("Enable token integration and protocols", txSig);
     } catch (e) {
       console.error(e);
       throw e;
@@ -78,27 +78,27 @@ describe("access_control", () => {
     let stateModel = await glamClient.fetchStateModel();
     expect(stateModel.integrationAcls?.length).toEqual(2);
 
-    // delete drift integration protocols
+    // delete kamino integration protocols
     try {
       const txSig = await glamClient.access.disableProtocols(
-        glamClient.extDriftProgram.programId,
+        glamClient.extKaminoProgram.programId,
         0b111,
         txOptions,
       );
-      console.log("Enable drift integration and protocols", txSig);
+      console.log("Disable kamino integration and protocols", txSig);
     } catch (e) {
       console.error(e);
       throw e;
     }
 
-    // delete kamino integration protocols
+    // delete token integration protocols
     try {
       const txSig = await glamClient.access.disableProtocols(
-        glamClient.extKaminoProgram.programId,
+        glamClient.extSplProgram.programId,
         0b001,
         txOptions,
       );
-      console.log("Enable kamino integration and protocols", txSig);
+      console.log("Disable token integration and protocols", txSig);
     } catch (e) {
       console.error(e);
       throw e;
@@ -111,22 +111,22 @@ describe("access_control", () => {
     let stateModel = await glamClient.fetchStateModel();
     expect(stateModel.delegateAcls?.length).toEqual(0);
 
-    // grant key1 drift protocol permissions
+    // grant key1 kamino permissions
     try {
       const txSig = await glamClient.access.grantDelegatePermissions(
         key1.publicKey,
-        glamClient.extDriftProgram.programId,
+        glamClient.extKaminoProgram.programId,
         0b001,
         new BN(0b1111),
         txOptions,
       );
-      console.log("Granted key1 drift protocol permissions", txSig);
+      console.log("Granted key1 kamino permissions", txSig);
     } catch (e) {
       console.error(e);
       throw e;
     }
 
-    // grant key2 drift token permissions
+    // grant key2 token permissions
     try {
       const txSig = await glamClient.access.grantDelegatePermissions(
         key2.publicKey,
@@ -149,22 +149,22 @@ describe("access_control", () => {
     let stateModel = await glamClient.fetchStateModel();
     expect(stateModel.delegateAcls?.length).toEqual(2);
 
-    // revoke key1 drift protocol permissions
+    // revoke key1 kamino permissions
     try {
       const txSig = await glamClient.access.revokeDelegatePermissions(
         key1.publicKey,
-        glamClient.extDriftProgram.programId,
+        glamClient.extKaminoProgram.programId,
         0b001,
         new BN(0b1111),
         txOptions,
       );
-      console.log("Revoked key1 drift protocol permissions", txSig);
+      console.log("Revoked key1 kamino permissions", txSig);
     } catch (e) {
       console.error(e);
       throw e;
     }
 
-    // grant key2 drift token permissions
+    // revoke key2 token permissions
     try {
       const txSig = await glamClient.access.revokeDelegatePermissions(
         key2.publicKey,

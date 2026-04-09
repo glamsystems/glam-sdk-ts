@@ -12,12 +12,10 @@ import { BaseClient } from "./base";
 
 import { ASSETS_MAINNET, SOL_ORACLE } from "../assets";
 import { StateAccountType, StateModel } from "../models";
-import { DriftProtocolClient, DriftVaultsClient } from "./drift";
 import {
   bfToDecimal,
   findStakeAccounts,
   Fraction,
-  MarketType,
   PkMap,
   PkSet,
   PositionCategorizer,
@@ -29,17 +27,7 @@ import {
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { USDC } from "../constants";
-import {
-  DriftSpotMarket,
-  DriftPerpMarket,
-  DriftUser,
-  DriftVault,
-  KVaultState,
-  Obligation,
-  Reserve,
-  DriftVaultDepositor,
-} from "../deser";
+import { KVaultState, Obligation, Reserve } from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
 
 /**
@@ -71,7 +59,7 @@ export class Holding {
 
 /**
  * Aggregates all holdings for a GLAM vault.
- * Includes token balances, DeFi positions (Drift, Kamino).
+ * Includes token balances and supported DeFi positions.
  *
  * @param vaultState - The vault's state account address (stores vault configuration)
  * @param vaultPda - The vault's PDA that holds tokens and positions
@@ -112,8 +100,6 @@ export class PriceClient {
     readonly base: BaseClient,
     readonly klend: KaminoLendingClient,
     readonly kvaults: KaminoVaultsClient,
-    readonly drift: DriftProtocolClient,
-    readonly dvaults: DriftVaultsClient,
     private readonly getJupiterApi: () => JupiterApiClient,
   ) {}
 
@@ -146,8 +132,6 @@ export class PriceClient {
    *
    * The source of truth for external positions is the `externalPositions` array
    * from the state account, which tracks:
-   * - Drift user PDAs (direct trading positions)
-   * - Drift vault depositor accounts (shares in drift vaults)
    * - Kamino obligation accounts (lending positions)
    * - Kamino vault share ATAs (shares in kamino vaults)
    *
@@ -164,57 +148,14 @@ export class PriceClient {
     const externalPositionsSet = new PkSet(externalPositions);
 
     // Categorize external positions by protocol type
-    const categorizer = new PositionCategorizer(
-      this.base.connection,
-      this.base.vaultPda,
-    );
-    const {
-      driftUsers,
-      driftVaultDepositors,
-      kaminoObligations,
-      kaminoVaultShareAtas,
-    } = await categorizer.categorizePositions(externalPositions, commitment);
+    const categorizer = new PositionCategorizer(this.base.connection);
+    const { kaminoObligations, kaminoVaultShareAtas } =
+      await categorizer.categorizePositions(externalPositions, commitment);
 
     // Initialize maps for holdings data
-    let glamDriftUserSpotMarketsMap = new PkMap<PkSet>();
-    let glamDriftUserPerpMarketsMap = new PkMap<PkSet>();
-    let dvaultDepositorsAndVaultsMap = new PkMap<DriftVault>();
-    let dvaultUserSpotMarketsMap = new PkMap<PkSet>();
-    let dvaultUserPerpMarketsMap = new PkMap<PkSet>();
     let obligationReservesMap = new PkMap<PkSet>();
     let kvaultAtasAndStatesMap = new PkMap<KVaultState>();
     let kvaultReserves = new PkSet();
-
-    // Process drift users from categorized positions
-    if (driftUsers.length > 0) {
-      glamDriftUserSpotMarketsMap = await this.getPubkeysForSpotHoldings(
-        driftUsers,
-        commitment,
-      );
-      glamDriftUserPerpMarketsMap = await this.getPubkeysForPerpHoldings(
-        driftUsers,
-        commitment,
-      );
-    }
-
-    // Process drift vault depositors from categorized positions
-    if (driftVaultDepositors.length > 0) {
-      dvaultDepositorsAndVaultsMap = await this.getDepositorsAndDriftVaults(
-        driftVaultDepositors,
-        commitment,
-      );
-      const userPdas = Array.from(dvaultDepositorsAndVaultsMap.values()).map(
-        ({ user }) => user,
-      );
-      dvaultUserSpotMarketsMap = await this.getPubkeysForSpotHoldings(
-        userPdas,
-        commitment,
-      );
-      dvaultUserPerpMarketsMap = await this.getPubkeysForPerpHoldings(
-        userPdas,
-        commitment,
-      );
-    }
 
     // Process kamino obligations from categorized positions
     if (kaminoObligations.length > 0) {
@@ -242,25 +183,6 @@ export class PriceClient {
       commitment,
     );
 
-    const glamDriftUsers = Array.from(glamDriftUserSpotMarketsMap.pkKeys());
-    const glamDriftSpotMarkets = [...glamDriftUserSpotMarketsMap.values()]
-      .map((s) => Array.from(s.pkValues()))
-      .flat();
-    const glamDriftPerpMarkets = [...glamDriftUserPerpMarketsMap.values()]
-      .map((s) => Array.from(s.pkValues()))
-      .flat();
-
-    const dvaultDepositors = Array.from(dvaultDepositorsAndVaultsMap.pkKeys());
-    const dvaultUsers = [...dvaultDepositorsAndVaultsMap.values()].map(
-      (v) => v.user,
-    );
-    const dvaultUserSpotMarkets = [...dvaultUserSpotMarketsMap.values()]
-      .map((s) => Array.from(s.pkValues()))
-      .flat();
-    const dvaultUserPerpMarkets = [...dvaultUserPerpMarketsMap.values()]
-      .map((s) => Array.from(s.pkValues()))
-      .flat();
-
     const kaminoReserves = [...obligationReservesMap.values()]
       .map((v) => Array.from(v.pkValues()))
       .flat()
@@ -271,13 +193,6 @@ export class PriceClient {
     const pubkeys = Array.from(
       new PkSet([
         ...tokenPubkeys,
-        ...glamDriftUsers,
-        ...glamDriftSpotMarkets,
-        ...glamDriftPerpMarkets,
-        ...dvaultDepositors,
-        ...dvaultUsers,
-        ...dvaultUserSpotMarkets,
-        ...dvaultUserPerpMarkets,
         ...kaminoObligations,
         ...kaminoReserves,
         ...kvaultAtas,
@@ -308,50 +223,6 @@ export class PriceClient {
       }
     }
 
-    // Build a map of parsed drift spot markets
-    const driftSpotMarketsMap = new PkMap<DriftSpotMarket>();
-    for (const marketPda of glamDriftSpotMarkets) {
-      const data = accountsDataMap.get(marketPda);
-      if (data) {
-        const market = DriftSpotMarket.decode(marketPda, data);
-        driftSpotMarketsMap.set(marketPda, market);
-      }
-    }
-    for (const marketPda of dvaultUserSpotMarkets) {
-      const data = accountsDataMap.get(marketPda);
-      if (data) {
-        const market = DriftSpotMarket.decode(marketPda, data);
-        driftSpotMarketsMap.set(marketPda, market);
-      }
-    }
-
-    // Build a map of parsed drift perp markets
-    const driftPerpMarketsMap = new PkMap<DriftPerpMarket>();
-    for (const marketPda of glamDriftPerpMarkets) {
-      const data = accountsDataMap.get(marketPda);
-      if (data) {
-        const market = DriftPerpMarket.decode(marketPda, data);
-        driftPerpMarketsMap.set(marketPda, market);
-      }
-    }
-    for (const marketPda of dvaultUserPerpMarkets) {
-      const data = accountsDataMap.get(marketPda);
-      if (data) {
-        const market = DriftPerpMarket.decode(marketPda, data);
-        driftPerpMarketsMap.set(marketPda, market);
-      }
-    }
-
-    // Build a map of parsed dvault deposits
-    const dvaultDepositorsMap = new PkMap<DriftVaultDepositor>();
-    for (const pubkey of dvaultDepositors) {
-      const data = accountsDataMap.get(pubkey);
-      if (data) {
-        const depositor = DriftVaultDepositor.decode(pubkey, data);
-        dvaultDepositorsMap.set(pubkey, depositor);
-      }
-    }
-
     // Build a map of parsed kamino reserves
     const kaminoReservesMap = new PkMap<Reserve>();
     for (let i = 0; i < kaminoReserves.length; i++) {
@@ -370,51 +241,29 @@ export class PriceClient {
       tokenPricesMap.set(tokenMint, item);
     });
 
-    const [
-      tokenHoldings,
-      driftHoldings,
-      dvaultHoldings,
-      kaminoLendHoldings,
-      kaminoVaultsHoldings,
-    ] = await Promise.all([
-      this.getTokenHoldings(
-        tokenPubkeys,
-        accountsDataMap,
-        tokenPricesMap,
-        "Jupiter",
-      ),
-      this.getDriftHoldings(
-        glamDriftUserSpotMarketsMap.pkKeys(), // all drift users controlled by glam vault
-        driftSpotMarketsMap,
-        driftPerpMarketsMap,
-        accountsDataMap,
-        tokenPricesMap,
-        "Jupiter",
-      ),
-      this.getDriftVaultsHoldings(
-        dvaultDepositorsAndVaultsMap,
-        dvaultDepositorsMap,
-        driftSpotMarketsMap,
-        driftPerpMarketsMap,
-        accountsDataMap,
-        tokenPricesMap,
-        "Jupiter",
-      ),
-      this.getKaminoLendHoldings(
-        obligationReservesMap.pkKeys(),
-        kaminoReservesMap,
-        accountsDataMap,
-        tokenPricesMap,
-        "Jupiter",
-      ),
-      this.getKaminoVaultsHoldings(
-        kvaultAtasAndStatesMap,
-        kaminoReservesMap,
-        accountsDataMap,
-        tokenPricesMap,
-        "Jupiter",
-      ),
-    ]);
+    const [tokenHoldings, kaminoLendHoldings, kaminoVaultsHoldings] =
+      await Promise.all([
+        this.getTokenHoldings(
+          tokenPubkeys,
+          accountsDataMap,
+          tokenPricesMap,
+          "Jupiter",
+        ),
+        this.getKaminoLendHoldings(
+          obligationReservesMap.pkKeys(),
+          kaminoReservesMap,
+          accountsDataMap,
+          tokenPricesMap,
+          "Jupiter",
+        ),
+        this.getKaminoVaultsHoldings(
+          kvaultAtasAndStatesMap,
+          kaminoReservesMap,
+          accountsDataMap,
+          tokenPricesMap,
+          "Jupiter",
+        ),
+      ]);
 
     const clockData = accountsDataMap.get(SYSVAR_CLOCK_PUBKEY);
     const timestamp = clockData ? clockData.readUInt32LE(32) : 0;
@@ -430,8 +279,6 @@ export class PriceClient {
     // Collect all holdings
     const allHoldings = [
       ...tokenHoldings,
-      ...driftHoldings,
-      ...dvaultHoldings,
       ...kaminoLendHoldings,
       ...kaminoVaultsHoldings,
     ];
@@ -492,107 +339,6 @@ export class PriceClient {
     // Filter out token accounts tracked as external positions
     // They are NOT considered as token holdings
     return pubkeys.filter((p) => !externalPositionsSet.has(p));
-  }
-
-  async getPubkeysForSpotHoldings(
-    driftUserPdas: PublicKey[],
-    commitment?: Commitment,
-  ): Promise<PkMap<PkSet>> {
-    const accountsInfo = await this.base.connection.getMultipleAccountsInfo(
-      driftUserPdas,
-      commitment,
-    );
-    const userMarketsMap = new PkMap<PkSet>();
-    for (let i = 0; i < accountsInfo.length; i++) {
-      const accountInfo = accountsInfo[i];
-      if (accountInfo) {
-        // get spot markets user has a position in
-        const { spotPositions } = DriftUser.decode(
-          driftUserPdas[i],
-          accountInfo.data,
-        );
-        const spotMarketIndexes = spotPositions.map((p) => p.marketIndex);
-        const spotMarketPdas = spotMarketIndexes.map((index) =>
-          this.drift.getMarketPda(MarketType.SPOT, index),
-        );
-        userMarketsMap.set(driftUserPdas[i], new PkSet(spotMarketPdas));
-      }
-    }
-
-    return userMarketsMap;
-  }
-
-  async getPubkeysForPerpHoldings(
-    driftUserPdas: PublicKey[],
-    commitment?: Commitment,
-  ): Promise<PkMap<PkSet>> {
-    const accountsInfo = await this.base.connection.getMultipleAccountsInfo(
-      driftUserPdas,
-      commitment,
-    );
-    const userMarketsMap = new PkMap<PkSet>();
-    for (let i = 0; i < accountsInfo.length; i++) {
-      const accountInfo = accountsInfo[i];
-      if (accountInfo) {
-        // get perp markets user has a position in
-        const { perpPositions } = DriftUser.decode(
-          driftUserPdas[i],
-          accountInfo.data,
-        );
-        const perpMarketIndexes = perpPositions.map((p) => p.marketIndex);
-        const perpMarketPdas = perpMarketIndexes.map((index) =>
-          this.drift.getMarketPda(MarketType.PERP, index),
-        );
-        userMarketsMap.set(driftUserPdas[i], new PkSet(perpMarketPdas));
-      }
-    }
-
-    return userMarketsMap;
-  }
-
-  /**
-   * Parses drift vault depositors from known pubkeys.
-   */
-  async getDepositorsAndDriftVaults(
-    depositorPubkeys: PublicKey[],
-    commitment?: Commitment,
-  ): Promise<PkMap<DriftVault>> {
-    const depositorVaultMap = new PkMap<DriftVault>();
-
-    if (depositorPubkeys.length === 0) {
-      return depositorVaultMap;
-    }
-
-    const accountsInfo = await this.base.connection.getMultipleAccountsInfo(
-      depositorPubkeys,
-      commitment,
-    );
-
-    const driftVaultPubkeys: PublicKey[] = [];
-    const validDepositors: PublicKey[] = [];
-
-    for (let i = 0; i < accountsInfo.length; i++) {
-      const info = accountsInfo[i];
-      if (info) {
-        // Parse drift vault pubkey from depositor account data (offset 8-40)
-        const driftVault = new PublicKey(info.data.subarray(8, 40));
-        driftVaultPubkeys.push(driftVault);
-        validDepositors.push(depositorPubkeys[i]);
-      }
-    }
-
-    if (validDepositors.length === 0) {
-      return depositorVaultMap;
-    }
-
-    const parsedDriftVaults =
-      await this.dvaults.parseDriftVaults(driftVaultPubkeys);
-
-    for (let i = 0; i < validDepositors.length; i++) {
-      depositorVaultMap.set(validDepositors[i], parsedDriftVaults[i]);
-    }
-
-    return depositorVaultMap;
   }
 
   /**
@@ -740,199 +486,6 @@ export class PriceClient {
     return holdings;
   }
 
-  async getDriftHoldings(
-    userPubkeys: Iterable<PublicKey>,
-    spotMarketsMap: PkMap<DriftSpotMarket>,
-    perpMarketsMap: PkMap<DriftPerpMarket>,
-    accountsDataMap: PkMap<Buffer>,
-    tokenPricesMap: PkMap<TokenListItem>,
-    priceSource: string,
-  ): Promise<Holding[]> {
-    const holdings: Holding[] = [];
-
-    for (const userPda of userPubkeys) {
-      const userData = accountsDataMap.get(userPda)!;
-
-      const { spotPositions, perpPositions } = DriftUser.decode(
-        userPda,
-        userData,
-      );
-
-      for (const spotPosition of spotPositions) {
-        const {
-          marketIndex,
-          mint,
-          decimals,
-          cumulativeDepositInterest,
-          cumulativeBorrowInterest,
-        } = spotMarketsMap.get(spotPosition.marketPda)!;
-
-        const amount = spotPosition
-          .calcBalanceBn(
-            decimals,
-            cumulativeDepositInterest,
-            cumulativeBorrowInterest,
-          )
-          .abs();
-        const { usdPrice, slot } = await this.getTokenPrice(
-          mint,
-          tokenPricesMap,
-        );
-
-        const holding = new Holding(
-          mint,
-          decimals,
-          amount,
-          usdPrice,
-          { slot, source: priceSource },
-          "DriftProtocol",
-          {
-            user: userPda,
-            marketIndex,
-            direction: spotPosition.direction,
-            marketType: "spot",
-          },
-        );
-        holdings.push(holding);
-      }
-
-      for (const perpPosition of perpPositions) {
-        const { marketIndex, marketPda } = perpPosition;
-        const {
-          lastOraclePrice,
-          cumulativeFundingRateLong,
-          cumulativeFundingRateShort,
-        } = perpMarketsMap.get(marketPda)!;
-
-        const amount = perpPosition.getUsdValueScaled(
-          lastOraclePrice,
-          cumulativeFundingRateLong,
-          cumulativeFundingRateShort,
-        );
-        const baseAssetAmountUi = toUiAmount(perpPosition.baseAssetAmount, 9);
-        const { usdPrice, slot } = await this.getTokenPrice(
-          USDC,
-          tokenPricesMap,
-        );
-
-        const holding = new Holding(
-          USDC,
-          6,
-          amount,
-          usdPrice,
-          { slot, source: priceSource },
-          "DriftProtocol",
-          {
-            user: userPda,
-            marketIndex,
-            marketType: "perp",
-            // Preserve both USD value and signed base size for downstream UIs.
-            usdValueUi: toUiAmount(amount, 6),
-            baseAssetAmount: perpPosition.baseAssetAmount.toString(),
-            baseAssetAmountUi,
-          },
-        );
-        holdings.push(holding);
-      }
-    }
-
-    return holdings;
-  }
-
-  async getDriftVaultsHoldings(
-    dvaultDepositorsAndVaults: PkMap<DriftVault>,
-    dvaultDepositorsMap: PkMap<DriftVaultDepositor>,
-    spotMarketsMap: PkMap<DriftSpotMarket>,
-    perpMarketsMap: PkMap<DriftPerpMarket>,
-    accountsDataMap: PkMap<Buffer>,
-    tokenPricesMap: PkMap<TokenListItem>,
-    priceSource: string,
-  ): Promise<Holding[]> {
-    const holdings: Holding[] = [];
-    for (const [pubkey, dvault] of dvaultDepositorsAndVaults.pkEntries()) {
-      const depositor = dvaultDepositorsMap.get(pubkey)!;
-      const dvaultUserData = accountsDataMap.get(dvault.user)!;
-
-      const { spotPositions, perpPositions } = DriftUser.decode(
-        dvault.user,
-        dvaultUserData,
-      );
-      const aum = dvault.aumInBaseAsset(
-        spotPositions,
-        perpPositions,
-        spotMarketsMap,
-        perpMarketsMap,
-      );
-
-      // Deduct accrued management fee from AUM (matches Rust logic)
-      const clockData = accountsDataMap.get(SYSVAR_CLOCK_PUBKEY);
-      const nowTs = new BN(clockData ? clockData.readUInt32LE(32) : 0);
-      let aumPostMgmt = aum;
-      if (dvault.managementFee.gtn(0) && aum.gtn(0)) {
-        const sinceLast = nowTs.sub(dvault.lastFeeUpdateTs);
-        const depositorsAum = aum
-          .mul(dvault.userShares)
-          .div(dvault.totalShares);
-        const mgmtFee = depositorsAum
-          .mul(dvault.managementFee)
-          .div(new BN(1_000_000))
-          .mul(sinceLast)
-          .div(new BN(31_536_000));
-        aumPostMgmt = aum.sub(mgmtFee);
-      }
-
-      // Compute depositor position WITHOUT pending withdrawal (matches Rust logic)
-      const depositorNetShares = depositor.netSharesRebased(dvault.sharesBase);
-      const sharesPosition = depositorNetShares
-        .mul(aumPostMgmt)
-        .div(dvault.totalShares);
-      const pendingWithdrawalValue = depositor.lastWithdrawRequest.value;
-
-      // PnL & fee breakdown (perf fee is computed on shares position only)
-      const costBasis = depositor.netDeposits.add(
-        depositor.cumulativeProfitShareAmount,
-      );
-      const pnlBeforeFees = sharesPosition.sub(costBasis);
-
-      let pendingPerfFee = new BN(0);
-      if (dvault.profitShare > 0) {
-        const hurdleBaseline = costBasis
-          .mul(new BN(dvault.hurdleRate))
-          .div(new BN(1_000_000));
-        if (pnlBeforeFees.gt(hurdleBaseline)) {
-          pendingPerfFee = pnlBeforeFees
-            .mul(new BN(dvault.profitShare))
-            .div(new BN(1_000_000));
-        }
-      }
-
-      // final = shares_position - perf_fee + pending_withdrawal
-      const amount = sharesPosition
-        .sub(pendingPerfFee)
-        .add(pendingWithdrawalValue);
-      const { mint, decimals } = dvault.getBaseAsset(spotMarketsMap);
-      const { usdPrice, slot } = await this.getTokenPrice(mint, tokenPricesMap);
-
-      const holding = new Holding(
-        mint,
-        decimals,
-        amount,
-        usdPrice,
-        { slot, source: priceSource },
-        "DriftVaults",
-        {
-          vault: dvault.getAddress(),
-          depositor: depositor.getAddress(),
-          pnlBeforeFees,
-          pendingPerfFee,
-          profitSharePct: dvault.profitShare / 10_000,
-        },
-      );
-      holdings.push(holding);
-    }
-    return holdings;
-  }
-
   async getKaminoLendHoldings(
     obligationPubkeys: Iterable<PublicKey>,
     reservesMap: PkMap<Reserve>,
@@ -1055,7 +608,9 @@ export class PriceClient {
       });
 
       // Deduct pending fees from AUM (matches Rust: aum = available + allocated - pending_fees)
-      const pendingFees = new Decimal(kvaultState.pendingFeesSf.toString()).div(FRACTION_SCALE);
+      const pendingFees = new Decimal(kvaultState.pendingFeesSf.toString()).div(
+        FRACTION_SCALE,
+      );
       let vaultAum = aumAndFees.sub(pendingFees);
 
       const sharesIssued = new Decimal(kvaultState.sharesIssued.toString());
@@ -1064,12 +619,19 @@ export class PriceClient {
       }
 
       // Management fee: prev_aum * from_bps(mgmt_fee_bps) * since_last / SECONDS_PER_YEAR
-      const prevAum = new Decimal(kvaultState.prevAumSf.toString()).div(FRACTION_SCALE);
-      const sinceLast = Math.max(0, nowTs - kvaultState.lastFeeChargeTimestamp.toNumber());
+      const prevAum = new Decimal(kvaultState.prevAumSf.toString()).div(
+        FRACTION_SCALE,
+      );
+      const sinceLast = Math.max(
+        0,
+        nowTs - kvaultState.lastFeeChargeTimestamp.toNumber(),
+      );
 
       let mgmtCharge = new Decimal(0);
       if (sinceLast > 0) {
-        const mgmtFeeRate = new Decimal(kvaultState.managementFeeBps.toString()).div(10_000);
+        const mgmtFeeRate = new Decimal(
+          kvaultState.managementFeeBps.toString(),
+        ).div(10_000);
         mgmtCharge = prevAum
           .mul(mgmtFeeRate)
           .mul(sinceLast)
@@ -1303,108 +865,6 @@ export class PriceClient {
   }
 
   /**
-   * Returns an instruction that prices all Drift users (aka sub-accounts) controlled by the GLAM vault.
-   */
-  public async priceDriftUsersIx(): Promise<TransactionInstruction | null> {
-    // 1st remaining account is user_stats, all sub accounts share the same user_stats
-    const { userStats } = this.drift.getDriftUserPdas();
-    const remainingAccounts = [
-      { pubkey: userStats, isSigner: false, isWritable: false },
-    ];
-
-    const driftUsers = await this.drift.fetchAndParseDriftUsers();
-    driftUsers.forEach((user) => {
-      remainingAccounts.push({
-        pubkey: user.getAddress(),
-        isSigner: false,
-        isWritable: false,
-      });
-    });
-
-    if (driftUsers.length === 0) {
-      return null;
-    }
-
-    // Build a set of markets and oracles that are used by all sub accounts
-    const marketsAndOracles = new PkSet();
-    const spotMarketIndexes = new Set<number>(
-      driftUsers.map((u) => u.spotPositions.map((p) => p.marketIndex)).flat(),
-    );
-    const perpMarketIndexes = new Set<number>(
-      driftUsers.map((u) => u.perpPositions.map((p) => p.marketIndex)).flat(),
-    );
-    const spotMarkets = await this.drift.fetchAndParseSpotMarkets(
-      Array.from(spotMarketIndexes),
-    );
-    const perpMarkets = await this.drift.fetchAndParsePerpMarkets(
-      Array.from(perpMarketIndexes),
-    );
-    spotMarkets.forEach((m) => {
-      marketsAndOracles.add(m.oracle);
-      marketsAndOracles.add(m.marketPda);
-    });
-    perpMarkets.forEach((m) => {
-      marketsAndOracles.add(m.oracle);
-      marketsAndOracles.add(m.marketPda);
-    });
-
-    // Add markets and oracles to remaining accounts
-    Array.from(marketsAndOracles).map((pubkey) =>
-      remainingAccounts.push({
-        pubkey,
-        isSigner: false,
-        isWritable: false,
-      }),
-    );
-
-    const priceDriftUsersIx = await this.base.mintProgram.methods
-      .priceDriftUsers(driftUsers.length)
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle: SOL_ORACLE,
-        baseAssetOracle: await this.getbaseAssetOracle(),
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
-
-    return priceDriftUsersIx;
-  }
-
-  /**
-   * Returns an instruction that prices a drift vault depositor.
-   * If there are no vault depositor accounts, returns null.
-   */
-  public async priceDriftVaultDepositorsIx(): Promise<TransactionInstruction | null> {
-    const parsedVaultDepositors =
-      await this.dvaults.findAndParseVaultDepositors();
-
-    if (parsedVaultDepositors.length === 0) {
-      return null;
-    }
-
-    const { remainingAccounts, numSpotMarkets, numPerpMarkets } =
-      await this.remainingAccountsForPricingDriftVaultDepositors(
-        parsedVaultDepositors,
-      );
-
-    const priceIx = await this.base.mintProgram.methods
-      .priceDriftVaultDepositors(
-        parsedVaultDepositors.length,
-        numSpotMarkets,
-        numPerpMarkets,
-      )
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle: SOL_ORACLE,
-        baseAssetOracle: await this.getbaseAssetOracle(),
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
-
-    return priceIx;
-  }
-
-  /**
    * Returns an instruction that prices vault balance and tokens
    */
   async priceVaultTokensIx(): Promise<TransactionInstruction> {
@@ -1503,22 +963,6 @@ export class PriceClient {
     const pricingIxs = [priceVaultIx];
     const integrationAcls = this.cachedStateModel.integrationAcls || [];
 
-    const driftIntegrationAcl = integrationAcls.find((acl) =>
-      acl.integrationProgram.equals(this.base.extDriftProgram.programId),
-    );
-    if (driftIntegrationAcl) {
-      // drift protocol
-      if (driftIntegrationAcl.protocolsBitmask & 0b01) {
-        const ix = await this.priceDriftUsersIx();
-        if (ix) pricingIxs.push(ix);
-      }
-      // drift vaults
-      if (driftIntegrationAcl.protocolsBitmask & 0b10) {
-        const ix = await this.priceDriftVaultDepositorsIx();
-        if (ix) pricingIxs.push(ix);
-      }
-    }
-
     const kaminoIntegrationAcl = integrationAcls.find((acl) =>
       acl.integrationProgram.equals(this.base.extKaminoProgram.programId),
     );
@@ -1566,76 +1010,6 @@ export class PriceClient {
       throw new Error(`Unsupported base asset: ${baseAssetMint}`);
     }
     return assetMeta.oracle;
-  }
-
-  async remainingAccountsForPricingDriftVaultDepositors(
-    parsedVaultDepositors: {
-      address: PublicKey;
-      driftVault: PublicKey;
-      shares: any;
-    }[],
-  ): Promise<{
-    remainingAccounts: AccountMeta[];
-    numSpotMarkets: number;
-    numPerpMarkets: number;
-  }> {
-    // Extra accounts for pricing N vault depositors:
-    // - (vault_depositor, drift_vault, drift_user) x N
-    // - spot_market used by drift users of vaults (no specific order)
-    // - perp markets used by drift users of vaults (no specific order)
-    // - oracles of spot markets and perp markets (no specific order)
-    const remainingAccounts: AccountMeta[] = [];
-    const spotMarketsSet = new PkSet();
-    const perpMarketsSet = new PkSet();
-    const oraclesSet = new PkSet();
-    for (const { address: depositor, driftVault } of parsedVaultDepositors) {
-      const { user } = await this.dvaults.parseDriftVault(driftVault); // get drift user used by the vault
-      [depositor, driftVault, user].forEach((k) =>
-        remainingAccounts.push({
-          pubkey: k,
-          isSigner: false,
-          isWritable: false,
-        }),
-      );
-
-      const { spotPositions, perpPositions } =
-        await this.dvaults.fetchUserPositions(user);
-      const spotMarketIndexes = spotPositions.map((p) => p.marketIndex);
-      const perpMarketIndexes = perpPositions.map((p) => p.marketIndex);
-
-      // If there are perp positions, add spot market 0 as it's used as quote market for perp
-      if (perpMarketIndexes.length > 0 && !spotMarketIndexes.includes(0)) {
-        spotMarketIndexes.push(0);
-      }
-
-      const spotMarkets =
-        await this.drift.fetchAndParseSpotMarkets(spotMarketIndexes);
-      const perpMarkets =
-        await this.drift.fetchAndParsePerpMarkets(perpMarketIndexes);
-
-      spotMarkets.forEach((m) => {
-        oraclesSet.add(m.oracle);
-        spotMarketsSet.add(m.marketPda);
-      });
-      perpMarkets.forEach((m) => {
-        oraclesSet.add(m.oracle);
-        perpMarketsSet.add(m.marketPda);
-      });
-    }
-
-    [...spotMarketsSet, ...perpMarketsSet, ...oraclesSet].forEach((pubkey) =>
-      remainingAccounts.push({
-        pubkey,
-        isSigner: false,
-        isWritable: false,
-      }),
-    );
-
-    return {
-      remainingAccounts,
-      numSpotMarkets: spotMarketsSet.size,
-      numPerpMarkets: perpMarketsSet.size,
-    };
   }
 
   async remainingAccountsForPricingVaultAssets(): Promise<AccountMeta[]> {
