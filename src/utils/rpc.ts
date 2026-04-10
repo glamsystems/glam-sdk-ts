@@ -73,7 +73,7 @@ function decodeAccountData(accountData: string, encoding: string): Buffer {
   throw new Error(`Unsupported encoding: ${encoding}`);
 }
 
-async function getProgramAccountsV2Helius(
+async function _getProgramAccountsV2Helius(
   rpcUrl: string,
   programId: PublicKey,
   config: GetProgramAccountsConfig & HeliusGetProgramAccountsV2Config,

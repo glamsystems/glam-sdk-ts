@@ -5,7 +5,6 @@ import {
   WSOL,
   fetchMintAndTokenProgram,
 } from "../../src";
-import { InitMintParams } from "../../src/client/mint";
 import { airdrop, str2seed } from "../test-utils";
 import { BN, Wallet } from "@coral-xyz/anchor";
 import { Keypair } from "@solana/web3.js";

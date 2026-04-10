@@ -1,7 +1,6 @@
 import { GlamClient, nameToChars, StateAccountType, WSOL } from "../../src";
 import { BN, Wallet } from "@coral-xyz/anchor";
 import { Keypair, SystemProgram, Transaction } from "@solana/web3.js";
-import { InitMintParams } from "../../src/client/mint";
 
 const txOptions = {
   simulate: true,

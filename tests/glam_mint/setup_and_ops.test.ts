@@ -14,7 +14,6 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
-import { InitMintParams } from "../../src/client/mint";
 
 const txOptions = {
   simulate: true,
