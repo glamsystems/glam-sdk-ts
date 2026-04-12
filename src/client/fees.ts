@@ -54,11 +54,8 @@ class TxBuilder extends BaseTxBuilder<FeesClient> {
   async claimFeesIxs(glamSigner: PublicKey): Promise<TransactionInstruction[]> {
     const stateModel = await this.client.base.fetchStateModel();
     const { baseAssetMint: baseAsset } = stateModel;
-
-    // TODO: parse from glam config account
-    const protocolFeeAuthority = new PublicKey(
-      "9oWi2MjrAujYNTUXXNBLk1ugioaF1mJHc7EoamX4eQLZ",
-    );
+    const { feeAuthority: protocolFeeAuthority } =
+      await this.client.base.fetchGlobalConfig();
     const managerFeeAuthority = stateModel.owner;
     if (!managerFeeAuthority) {
       throw new Error("Manager fee authority not found");

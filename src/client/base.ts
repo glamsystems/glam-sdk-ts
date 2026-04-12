@@ -56,6 +56,8 @@ import {
   resolveStaging,
 } from "../glamExports";
 import { ClusterNetwork, GlamClientConfig } from "../clientConfig";
+import { fetchGlobalConfig as fetchGlobalConfigAccount } from "../globalConfig";
+import type { GlobalConfigAccount } from "../globalConfig";
 import {
   RequestQueue,
   StateAccount,
@@ -73,6 +75,8 @@ import {
 } from "../utils/glamPDAs";
 import { TokenMetadata, unpack } from "@solana/spl-token-metadata";
 import { JupiterApiClient, PkMap } from "../utils";
+import { WSOL } from "../constants";
+import { AssetMeta, ASSETS_MAINNET } from "../assets";
 
 const LOOKUP_TABLES = [
   new PublicKey("284iwGtA9X9aLy3KsyV8uT2pXLARhYbiSi5SiM2g47M2"), // kamino lending
@@ -119,6 +123,10 @@ export class BaseClient {
   private _extCctpProgram?: ExtCctpProgram;
 
   private _statePda?: PublicKey;
+  private _globalConfig?: GlobalConfigAccount;
+  private _globalConfigPromise?: Promise<GlobalConfigAccount>;
+  private _assetMetas?: Map<string, AssetMeta>;
+  private _assetMetasPromise?: Promise<Map<string, AssetMeta>>;
 
   public constructor(config?: GlamClientConfig) {
     if (config?.provider) {
@@ -649,6 +657,134 @@ export class BaseClient {
       }
     }
     return false;
+  }
+
+  public async fetchGlobalConfig(options?: {
+    refresh?: boolean;
+  }): Promise<GlobalConfigAccount> {
+    const useCache = !options?.refresh;
+
+    if (options?.refresh) {
+      this._globalConfig = undefined;
+      this._globalConfigPromise = undefined;
+      this._assetMetas = undefined;
+      this._assetMetasPromise = undefined;
+    }
+
+    if (useCache) {
+      if (this._globalConfig) {
+        return this._globalConfig;
+      }
+      if (this._globalConfigPromise) {
+        return this._globalConfigPromise;
+      }
+    }
+
+    const fetchPromise = fetchGlobalConfigAccount(this.connection)
+      .then((globalConfig) => {
+        if (useCache) {
+          this._globalConfig = globalConfig;
+        }
+        return globalConfig;
+      })
+      .finally(() => {
+        if (useCache) {
+          this._globalConfigPromise = undefined;
+        }
+      });
+
+    if (useCache) {
+      this._globalConfigPromise = fetchPromise;
+    }
+
+    return await fetchPromise;
+  }
+
+  public async fetchAssetMetas(options?: {
+    refresh?: boolean;
+  }): Promise<Map<string, AssetMeta>> {
+    const useCache = !options?.refresh;
+
+    if (useCache) {
+      if (this._assetMetas) {
+        return this._assetMetas;
+      }
+      if (this._assetMetasPromise) {
+        return this._assetMetasPromise;
+      }
+    } else {
+      this._assetMetas = undefined;
+      this._assetMetasPromise = undefined;
+    }
+
+    const fetchPromise = this.fetchGlobalConfig(options)
+      .then(async (globalConfig) => {
+        // FIX: this could be perf bottleneck if there are many assets
+        const mintInfos = await fetchMintsAndTokenPrograms(
+          this.connection,
+          globalConfig.assetMetas.map((am) => am.asset),
+        );
+
+        // Transforms onchain asset meta to client asset meta
+        const assetMetaMap = new Map<string, AssetMeta>(
+          globalConfig.assetMetas.map(
+            ({ asset, decimals, oracle, oracleSource }, i) => [
+              asset.toBase58(),
+              {
+                asset,
+                decimals,
+                oracle,
+                oracleSource,
+                programId: mintInfos[i].tokenProgram,
+              },
+            ],
+          ),
+        );
+
+        if (useCache) {
+          this._assetMetas = assetMetaMap;
+        }
+
+        return assetMetaMap;
+      })
+      .finally(() => {
+        if (useCache) {
+          this._assetMetasPromise = undefined;
+        }
+      });
+
+    return await fetchPromise;
+  }
+
+  public async refreshAssetMetaCache(): Promise<Map<string, AssetMeta>> {
+    this._globalConfig = undefined;
+    this._globalConfigPromise = undefined;
+    this._assetMetas = undefined;
+    this._assetMetasPromise = undefined;
+
+    return await this.fetchAssetMetas({ refresh: true });
+  }
+
+  public async getAssetMeta(
+    assetMint: string | PublicKey,
+    options?: { refresh?: boolean },
+  ): Promise<AssetMeta> {
+    const mint =
+      assetMint instanceof PublicKey ? assetMint.toBase58() : assetMint;
+    const assetMetas = await this.fetchAssetMetas(options);
+    const assetMeta = assetMetas.get(mint) || ASSETS_MAINNET.get(mint);
+
+    if (!assetMeta) {
+      throw new Error(`Asset not supported: ${assetMint.toString()}`);
+    }
+
+    return assetMeta;
+  }
+
+  public async getSolOracle(options?: {
+    refresh?: boolean;
+  }): Promise<PublicKey> {
+    return (await this.getAssetMeta(WSOL, options)).oracle;
   }
 
   public async fetchStateAccount(statePda?: PublicKey): Promise<StateAccount> {

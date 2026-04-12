@@ -10,6 +10,7 @@ export * from "./deser/integrationPolicies";
 export * from "./deser/tokenAclLayouts";
 export * from "./client/base";
 export * from "./assets";
+export * from "./globalConfig";
 export * from "./constants";
 export * from "./error";
 export * from "./utils";

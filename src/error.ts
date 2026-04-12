@@ -34,7 +34,8 @@ const JUPITER_SWAP_ERRORS: Record<number, string> = {
 
 /**
  * Extract the program ID that failed from transaction logs.
- * Looks for "Program <ID> failed:" log lines.
+ * Looks for "Program <ID> failed:" log lines and returns the first match,
+ * which corresponds to the innermost CPI that produced the root cause.
  */
 export function extractFailedProgramId(
   logs?: string[] | null,
@@ -78,11 +79,11 @@ export function resolveErrorCode(
     // Match against the specific program that failed
     if (programId === glamProtocolId) {
       const err = getGlamProtocolIdl(s).errors.find((e) => e.code === decimal);
-      return err?.msg;
+      if (err?.msg) return err.msg;
     }
     if (programId === glamMintId) {
       const err = getGlamMintIdl(s).errors.find((e) => e.code === decimal);
-      return err?.msg;
+      if (err?.msg) return err.msg;
     }
     // Not a GLAM program — check third-party errors
     const jupiterMsg = JUPITER_SWAP_ERRORS[decimal];
