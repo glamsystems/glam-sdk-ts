@@ -1,5 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import {
+  getExtBridgeProgramId,
   getExtCctpProgramId,
   getExtKaminoProgramId,
   getExtMarinadeProgramId,
@@ -19,6 +20,9 @@ export const SEED_ACCOUNT_POLICY = "account-policy"; // policies program
 export const SEED_EXTRA_ACCOUNT_METAS = "extra-account-metas"; // policies program
 export const SEED_GLOBAL_CONFIG = "global-config";
 export const SEED_INTEGRATION_AUTHORITY = "integration-authority";
+export const SEED_BRIDGE_REGISTRY = "bridge-registry";
+export const SEED_BRIDGE_SESSION = "bridge-session";
+export const SEED_BRIDGE_TRANSFER_RECORD = "bridge-transfer-record";
 
 export const STAKE_ACCOUNT_SIZE = 200;
 export const METEORA_POSITION_SIZE = 8120;
@@ -50,6 +54,10 @@ export const USDC = new PublicKey(
 );
 export const USDC_DEVNET = new PublicKey(
   "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+);
+// USDT, 6 decimals
+export const USDT = new PublicKey(
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
 );
 // JUP, 6 decimals
 export const JUP = new PublicKey("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN");
@@ -259,6 +267,18 @@ export const getProtocolsAndPermissions = (
       staging: false,
       permissions: {
         [1 << 0]: "Transfer",
+      },
+    },
+  },
+  // Bridge integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_bridge/src/state/access.rs
+  [getExtBridgeProgramId(staging).toBase58()]: {
+    "0000000000000100": {
+      name: "LayerZeroOft",
+      staging: true,
+      permissions: {
+        [1 << 0]: "Send",
+        [1 << 1]: "Reconcile",
       },
     },
   },

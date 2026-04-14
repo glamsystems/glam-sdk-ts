@@ -281,6 +281,58 @@ export class CctpPolicy {
   }
 }
 
+export enum RouteManagementMode {
+  UnmanagedOnly = 0,
+  ManagedOnly = 1,
+  Either = 2,
+}
+
+export type LayerzeroOftRoute = {
+  sourceMint: PublicKey;
+  destinationChain: number;
+  destinationRecipient: PublicKey;
+  providerProgram: PublicKey;
+  managementMode: RouteManagementMode;
+  minAmount: BN;
+  maxAmount: BN;
+};
+
+const layerzeroOftRouteLayout = struct<LayerzeroOftRoute>([
+  publicKey("sourceMint"),
+  u32("destinationChain"),
+  publicKey("destinationRecipient"),
+  publicKey("providerProgram"),
+  u8("managementMode"),
+  u64("minAmount"),
+  u64("maxAmount"),
+]);
+
+export class LayerzeroOftPolicy {
+  routes: LayerzeroOftRoute[];
+
+  static _layout = struct([vec(layerzeroOftRouteLayout, "routes")]);
+
+  constructor(routes: LayerzeroOftRoute[]) {
+    this.routes = routes;
+  }
+
+  public static decode(
+    buffer: Buffer<ArrayBufferLike>,
+    _staging?: boolean,
+  ): LayerzeroOftPolicy {
+    const data = LayerzeroOftPolicy._layout.decode(
+      buffer,
+    ) as LayerzeroOftPolicy;
+    return new LayerzeroOftPolicy(data.routes);
+  }
+
+  public encode(): Buffer {
+    const buf = Buffer.alloc(4096);
+    const written = LayerzeroOftPolicy._layout.encode(this, buf);
+    return buf.subarray(0, written);
+  }
+}
+
 // PeriodType enum: 0=Day, 1=Week, 2=Month
 export enum PeriodType {
   Day = 0,

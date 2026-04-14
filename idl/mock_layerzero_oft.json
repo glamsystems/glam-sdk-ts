@@ -1,0 +1,155 @@
+{
+  "address": "G6cLMyeKew7B7RR1eAsYhKViYNcknwfwJ4ZbSDwWSS4z",
+  "metadata": {
+    "name": "mock_layerzero_oft",
+    "version": "1.0.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "send",
+      "discriminator": [
+        102,
+        251,
+        20,
+        187,
+        65,
+        75,
+        12,
+        69
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "placeholder_0"
+        },
+        {
+          "name": "oft_store"
+        },
+        {
+          "name": "placeholder_1"
+        },
+        {
+          "name": "from",
+          "writable": true
+        },
+        {
+          "name": "custody",
+          "writable": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "placeholder_2"
+        },
+        {
+          "name": "placeholder_3"
+        },
+        {
+          "name": "mock_layerzero_endpoint_program",
+          "address": "7VCSNNGUmS4f1qDE73PmkSWbV3kBhRPJko1g7t9YTSbM"
+        },
+        {
+          "name": "oft_store_duplicate"
+        },
+        {
+          "name": "placeholder_4"
+        },
+        {
+          "name": "placeholder_5"
+        },
+        {
+          "name": "placeholder_6"
+        },
+        {
+          "name": "placeholder_7"
+        },
+        {
+          "name": "placeholder_8"
+        },
+        {
+          "name": "nonce",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "SendArgs"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidStoreDuplicate",
+      "msg": "The duplicated store account does not match"
+    }
+  ],
+  "types": [
+    {
+      "name": "SendArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dst_eid",
+            "type": "u32"
+          },
+          {
+            "name": "to",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount_ld",
+            "type": "u64"
+          },
+          {
+            "name": "min_amount_ld",
+            "type": "u64"
+          },
+          {
+            "name": "options",
+            "type": "bytes"
+          },
+          {
+            "name": "compose_msg",
+            "type": {
+              "option": "bytes"
+            }
+          },
+          {
+            "name": "native_fee",
+            "type": "u64"
+          },
+          {
+            "name": "lz_token_fee",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

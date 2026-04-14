@@ -18,6 +18,7 @@ import { TimelockClient } from "./client/timelock";
 import { StakeClient } from "./client/stake";
 import { StakePoolClient } from "./client/stake-pool";
 import { CctpClient } from "./client/cctp";
+import { BridgeClient } from "./client/bridge";
 
 /**
  * Main entrypoint for the GLAM SDK
@@ -41,6 +42,7 @@ export class GlamClient extends BaseClient {
   private _fees?: FeesClient;
   private _timelock?: TimelockClient;
   private _cctp?: CctpClient;
+  private _bridge?: BridgeClient;
 
   public constructor(config?: GlamClientConfig) {
     super(config);
@@ -161,5 +163,12 @@ export class GlamClient extends BaseClient {
       this._cctp = new CctpClient(this);
     }
     return this._cctp;
+  }
+
+  get bridge(): BridgeClient {
+    if (!this._bridge) {
+      this._bridge = new BridgeClient(this);
+    }
+    return this._bridge;
   }
 }

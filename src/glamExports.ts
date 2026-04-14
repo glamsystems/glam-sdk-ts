@@ -9,6 +9,7 @@ import type { ExtKamino } from "../target/types/ext_kamino";
 import type { ExtMarinade } from "../target/types/ext_marinade";
 import type { ExtStakePool } from "../target/types/ext_stake_pool";
 import type { ExtCctp } from "../target/types/ext_cctp";
+import type { ExtBridge } from "../target/types/ext_bridge";
 
 import GlamProtocolIdlJson from "../target/idl/glam_protocol.json";
 import GlamConfigIdlJson from "../target/idl/glam_config.json";
@@ -18,6 +19,7 @@ import ExtKaminoIdlJson from "../target/idl/ext_kamino.json";
 import ExtMarinadeIdlJson from "../target/idl/ext_marinade.json";
 import ExtStakePoolIdlJson from "../target/idl/ext_stake_pool.json";
 import ExtCctpIdlJson from "../target/idl/ext_cctp.json";
+import ExtBridgeIdlJson from "../target/idl/ext_bridge.json";
 
 import GlamProtocolIdlJsonStaging from "../target/idl/glam_protocol-staging.json";
 import GlamMintIdlJsonStaging from "../target/idl/glam_mint-staging.json";
@@ -25,6 +27,7 @@ import ExtSplIdlJsonStaging from "../target/idl/ext_spl-staging.json";
 import ExtKaminoIdlJsonStaging from "../target/idl/ext_kamino-staging.json";
 import ExtStakePoolIdlJsonStaging from "../target/idl/ext_stake_pool-staging.json";
 import ExtMarinadeIdlJsonStaging from "../target/idl/ext_marinade-staging.json";
+import ExtBridgeIdlJsonStaging from "../target/idl/ext_bridge-staging.json";
 
 export { GlamProtocol, GlamMint, GlamConfig };
 
@@ -36,6 +39,7 @@ export type ExtKaminoProgram = Program<ExtKamino>;
 export type ExtMarinadeProgram = Program<ExtMarinade>;
 export type ExtStakePoolProgram = Program<ExtStakePool>;
 export type ExtCctpProgram = Program<ExtCctp>;
+export type ExtBridgeProgram = Program<ExtBridge>;
 
 const isStaging = () => {
   const s = process.env.NEXT_PUBLIC_GLAM_STAGING || process.env.GLAM_STAGING;
@@ -74,6 +78,17 @@ export function getExtCctpIdl(staging: boolean) {
   return staging ? ExtCctpIdlJson : ExtCctpIdlJson;
 }
 
+export function getExtBridgeIdl(staging: boolean) {
+  if (!staging) {
+    return ExtBridgeIdlJson;
+  }
+
+  return {
+    ...ExtBridgeIdlJson,
+    address: ExtBridgeIdlJsonStaging.address,
+  };
+}
+
 export function getExtMarinadeIdl(staging: boolean) {
   return staging ? ExtMarinadeIdlJsonStaging : ExtMarinadeIdlJson;
 }
@@ -100,6 +115,10 @@ export function getExtStakePoolProgramId(staging: boolean) {
 
 export function getExtCctpProgramId(staging: boolean) {
   return new PublicKey(getExtCctpIdl(staging).address);
+}
+
+export function getExtBridgeProgramId(staging: boolean) {
+  return new PublicKey(getExtBridgeIdl(staging).address);
 }
 
 export function getExtMarinadeProgramId(staging: boolean) {
@@ -157,4 +176,11 @@ export function getExtCctpProgram(
   staging: boolean,
 ): ExtCctpProgram {
   return new Program<ExtCctp>(getExtCctpIdl(staging), provider);
+}
+
+export function getExtBridgeProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtBridgeProgram {
+  return new Program<ExtBridge>(getExtBridgeIdl(staging), provider);
 }

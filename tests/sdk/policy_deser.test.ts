@@ -1,7 +1,9 @@
 import { BN } from "@coral-xyz/anchor";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import {
+  LayerzeroOftPolicy,
   MintPolicy,
+  RouteManagementMode,
   TransferPolicy,
 } from "../../src/deser/integrationPolicies";
 
@@ -191,6 +193,45 @@ describe("policy_deser", () => {
         expect(key.equals(originalKeys[index])).toBeTruthy();
         expect(key.toBase58()).toEqual(originalKeys[index].toBase58());
       });
+    });
+  });
+
+  describe("LayerzeroOftPolicy", () => {
+    it("should encode and decode OFT routes", () => {
+      const route = {
+        sourceMint: new PublicKey(
+          "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+        ),
+        destinationChain: 30168,
+        destinationRecipient: Keypair.generate().publicKey,
+        providerProgram: Keypair.generate().publicKey,
+        managementMode: RouteManagementMode.Either,
+        minAmount: new BN(1_000_000),
+        maxAmount: new BN(50_000_000),
+      };
+
+      const policy = new LayerzeroOftPolicy([route]);
+      const encoded = policy.encode();
+      const decoded = LayerzeroOftPolicy.decode(encoded);
+
+      expect(decoded.routes).toHaveLength(1);
+      expect(decoded.routes[0].sourceMint.equals(route.sourceMint)).toBe(true);
+      expect(decoded.routes[0].destinationChain).toBe(route.destinationChain);
+      expect(
+        decoded.routes[0].destinationRecipient.equals(
+          route.destinationRecipient,
+        ),
+      ).toBe(true);
+      expect(
+        decoded.routes[0].providerProgram.equals(route.providerProgram),
+      ).toBe(true);
+      expect(decoded.routes[0].managementMode).toBe(route.managementMode);
+      expect(decoded.routes[0].minAmount.toString()).toBe(
+        route.minAmount.toString(),
+      );
+      expect(decoded.routes[0].maxAmount.toString()).toBe(
+        route.maxAmount.toString(),
+      );
     });
   });
 

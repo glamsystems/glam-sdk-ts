@@ -38,6 +38,7 @@ import {
 } from "@solana/spl-token";
 
 import {
+  ExtBridgeProgram,
   ExtCctpProgram,
   ExtKaminoProgram,
   ExtMarinadeProgram,
@@ -45,6 +46,7 @@ import {
   ExtStakePoolProgram,
   GlamMintProgram,
   GlamProtocolProgram,
+  getExtBridgeProgram,
   getExtCctpProgram,
   getExtKaminoProgram,
   getExtMarinadeProgram,
@@ -121,6 +123,7 @@ export class BaseClient {
   private _extMarinadeProgram?: ExtMarinadeProgram;
   private _extStakePoolProgram?: ExtStakePoolProgram;
   private _extCctpProgram?: ExtCctpProgram;
+  private _extBridgeProgram?: ExtBridgeProgram;
 
   private _statePda?: PublicKey;
   private _globalConfig?: GlobalConfigAccount;
@@ -216,6 +219,13 @@ export class BaseClient {
       this._extCctpProgram = getExtCctpProgram(this.provider, this.staging);
     }
     return this._extCctpProgram;
+  }
+
+  get extBridgeProgram(): ExtBridgeProgram {
+    if (!this._extBridgeProgram) {
+      this._extBridgeProgram = getExtBridgeProgram(this.provider, this.staging);
+    }
+    return this._extBridgeProgram;
   }
 
   get isVaultConnected(): boolean {
