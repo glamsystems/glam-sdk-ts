@@ -1,0 +1,2394 @@
+{
+  "address": "gstgxS9yTioViNKdsM4DC33k1TU9un2VCYDQK8fAeSA",
+  "metadata": {
+    "name": "ext_bridge",
+    "version": "1.0.0",
+    "spec": "0.1.0",
+    "description": "Bridge integration for GLAM Protocol"
+  },
+  "instructions": [
+    {
+      "name": "add_layerzero_oft_route",
+      "discriminator": [
+        53,
+        181,
+        204,
+        38,
+        240,
+        57,
+        218,
+        148
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": [
+        {
+          "name": "route",
+          "type": {
+            "defined": {
+              "name": "LayerzeroOftRoute"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "cleanup_transfer_record",
+      "docs": [
+        "Closes a finalized transfer record and returns its rent."
+      ],
+      "discriminator": [
+        65,
+        224,
+        219,
+        143,
+        99,
+        204,
+        215,
+        6
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "transfer_record",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "commit_oft_transfer",
+      "docs": [
+        "Verifies the OFT send completed and records the resulting transfer."
+      ],
+      "discriminator": [
+        246,
+        116,
+        17,
+        13,
+        64,
+        227,
+        248,
+        78
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "instructions",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "bridge_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bridge_session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "args.transfer_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  116,
+                  114,
+                  97,
+                  110,
+                  115,
+                  102,
+                  101,
+                  114,
+                  45,
+                  114,
+                  101,
+                  99,
+                  111,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "args.transfer_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "source_token_account",
+          "writable": true
+        },
+        {
+          "name": "source_mint"
+        },
+        {
+          "name": "auxiliary_token_account",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CommitOftTransferArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "delete_layerzero_oft_route",
+      "discriminator": [
+        122,
+        191,
+        90,
+        182,
+        160,
+        67,
+        86,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": [
+        {
+          "name": "route",
+          "type": {
+            "defined": {
+              "name": "LayerzeroOftRoute"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "fail_or_cancel_managed_transfer",
+      "docs": [
+        "Marks a managed inflight transfer as failed or cancelled."
+      ],
+      "discriminator": [
+        39,
+        37,
+        213,
+        118,
+        191,
+        18,
+        194,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bridge_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_record",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "failure_reason",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "prepare_oft_transfer",
+      "docs": [
+        "Prepares the auxiliary token account used by the OFT transfer flow."
+      ],
+      "discriminator": [
+        192,
+        75,
+        97,
+        92,
+        178,
+        246,
+        220,
+        8
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "bridge_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bridge_session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "args.transfer_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "source_token_account",
+          "writable": true
+        },
+        {
+          "name": "source_mint"
+        },
+        {
+          "name": "auxiliary_token_account",
+          "writable": true
+        },
+        {
+          "name": "cpi_program"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "instructions",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "PrepareOftTransferArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "reconcile_managed_transfer",
+      "docs": [
+        "Reconciles a managed inflight transfer back into normal pricing state."
+      ],
+      "discriminator": [
+        137,
+        31,
+        188,
+        80,
+        28,
+        252,
+        192,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bridge_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_record",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "settle_managed_transfer",
+      "docs": [
+        "Marks a managed inflight transfer as settled on the destination side."
+      ],
+      "discriminator": [
+        197,
+        87,
+        37,
+        239,
+        24,
+        244,
+        152,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "signer": true
+        },
+        {
+          "name": "transfer_record",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_layerzero_oft_route",
+      "discriminator": [
+        77,
+        162,
+        99,
+        1,
+        182,
+        142,
+        66,
+        172
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": [
+        {
+          "name": "route",
+          "type": {
+            "defined": {
+              "name": "LayerzeroOftRoute"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BridgeRegistry",
+      "discriminator": [
+        178,
+        207,
+        65,
+        53,
+        51,
+        157,
+        148,
+        202
+      ]
+    },
+    {
+      "name": "BridgeSession",
+      "discriminator": [
+        235,
+        118,
+        90,
+        227,
+        230,
+        173,
+        141,
+        184
+      ]
+    },
+    {
+      "name": "BridgeTransferRecord",
+      "discriminator": [
+        46,
+        131,
+        253,
+        32,
+        218,
+        137,
+        45,
+        96
+      ]
+    },
+    {
+      "name": "StateAccount",
+      "discriminator": [
+        142,
+        247,
+        54,
+        95,
+        85,
+        133,
+        249,
+        103
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "UnsupportedProtocol",
+      "msg": "Unsupported bridge protocol"
+    },
+    {
+      "code": 6001,
+      "name": "PolicyNotFound",
+      "msg": "A matching bridge policy was not found"
+    },
+    {
+      "code": 6002,
+      "name": "AmountTooSmall",
+      "msg": "Bridge amount is below the policy minimum"
+    },
+    {
+      "code": 6003,
+      "name": "AmountTooLarge",
+      "msg": "Bridge amount exceeds the policy maximum"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidProviderProgram",
+      "msg": "The provider program does not match the approved policy"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidSourceTokenAccount",
+      "msg": "The source token account is invalid"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidSourceBalance",
+      "msg": "The source token balance did not change as expected"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidProviderReceipt",
+      "msg": "The bridge receipt metadata is invalid"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidTransferStatus",
+      "msg": "The bridge transfer status does not allow this action"
+    },
+    {
+      "code": 6009,
+      "name": "TransferNotManaged",
+      "msg": "Only managed transfers can use this instruction"
+    },
+    {
+      "code": 6010,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidTransferRecord",
+      "msg": "The transfer record does not belong to this vault"
+    },
+    {
+      "code": 6012,
+      "name": "TooManyProviderInstructions",
+      "msg": "Too many provider instructions were supplied"
+    },
+    {
+      "code": 6013,
+      "name": "DuplicateBridgeRoute",
+      "msg": "Bridge policy contains overlapping duplicate routes"
+    },
+    {
+      "code": 6014,
+      "name": "BridgeRouteNotFound",
+      "msg": "The bridge route was not found in the existing policy"
+    },
+    {
+      "code": 6015,
+      "name": "AmbiguousBridgeRoute",
+      "msg": "Multiple bridge routes matched; disambiguate the provider identity"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidOftAuxiliaryTokenAccount",
+      "msg": "The OFT auxiliary token account is invalid"
+    },
+    {
+      "code": 6017,
+      "name": "OftAuxiliaryTokenAccountAlreadyExists",
+      "msg": "The OFT auxiliary token account already exists"
+    },
+    {
+      "code": 6018,
+      "name": "MissingEndOftInstruction",
+      "msg": "Transaction must include a matching commit_oft_transfer instruction"
+    },
+    {
+      "code": 6019,
+      "name": "InvalidOftInstructionSet",
+      "msg": "The OFT middle instruction set is invalid"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidOftAuxiliaryBalance",
+      "msg": "The OFT auxiliary token balance did not change as expected"
+    }
+  ],
+  "types": [
+    {
+      "name": "AccountType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Vault"
+          },
+          {
+            "name": "TokenizedVault"
+          },
+          {
+            "name": "Mint"
+          },
+          {
+            "name": "SingleAssetVault"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccruedFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "vault_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "management_fee",
+            "type": "u128"
+          },
+          {
+            "name": "performance_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_base_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_flow_fee",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeRegistry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glam_state",
+            "type": "pubkey"
+          },
+          {
+            "name": "managed_transfer_count",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeSession",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glam_state",
+            "type": "pubkey"
+          },
+          {
+            "name": "signer",
+            "type": "pubkey"
+          },
+          {
+            "name": "transfer_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "protocol",
+            "type": "u16"
+          },
+          {
+            "name": "managed",
+            "type": "bool"
+          },
+          {
+            "name": "source_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "source_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_config",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_sender",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_receipt",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_instruction_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "provider_instruction_count",
+            "type": "u16"
+          },
+          {
+            "name": "source_amount",
+            "type": "u64"
+          },
+          {
+            "name": "quoted_out_amount",
+            "type": "u64"
+          },
+          {
+            "name": "initial_source_balance",
+            "type": "u64"
+          },
+          {
+            "name": "initial_provider_sequence",
+            "type": "u64"
+          },
+          {
+            "name": "destination_chain",
+            "type": "u16"
+          },
+          {
+            "name": "destination_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "prepared_slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeTransferRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glam_state",
+            "type": "pubkey"
+          },
+          {
+            "name": "transfer_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "protocol",
+            "type": "u16"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "BridgeTransferStatus"
+              }
+            }
+          },
+          {
+            "name": "managed",
+            "type": "bool"
+          },
+          {
+            "name": "receipt_verified",
+            "type": "bool"
+          },
+          {
+            "name": "source_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "source_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_config",
+            "type": "pubkey"
+          },
+          {
+            "name": "source_amount",
+            "type": "u64"
+          },
+          {
+            "name": "quoted_out_amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination_chain",
+            "type": "u16"
+          },
+          {
+            "name": "destination_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_transfer_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "provider_emitter",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_sequence",
+            "type": "u64"
+          },
+          {
+            "name": "committed_slot",
+            "type": "u64"
+          },
+          {
+            "name": "settled_slot",
+            "type": "u64"
+          },
+          {
+            "name": "reconciled_slot",
+            "type": "u64"
+          },
+          {
+            "name": "failure_reason",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeTransferStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Committed"
+          },
+          {
+            "name": "Settled"
+          },
+          {
+            "name": "Reconciled"
+          },
+          {
+            "name": "Failed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CommitOftTransferArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transfer_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatedModel",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "created_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateAcl",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "integration_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationPermissions"
+                }
+              }
+            }
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineField",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": {
+              "defined": {
+                "name": "EngineFieldName"
+              }
+            }
+          },
+          {
+            "name": "value",
+            "type": {
+              "defined": {
+                "name": "EngineFieldValue"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldName",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Owner"
+          },
+          {
+            "name": "PortfolioManagerName"
+          },
+          {
+            "name": "Name"
+          },
+          {
+            "name": "Uri"
+          },
+          {
+            "name": "Assets"
+          },
+          {
+            "name": "DelegateAcls"
+          },
+          {
+            "name": "IntegrationAcls"
+          },
+          {
+            "name": "TimelockDuration"
+          },
+          {
+            "name": "Borrowable"
+          },
+          {
+            "name": "DefaultAccountStateFrozen"
+          },
+          {
+            "name": "PermanentDelegate"
+          },
+          {
+            "name": "NotifyAndSettle"
+          },
+          {
+            "name": "FeeStructure"
+          },
+          {
+            "name": "FeeParams"
+          },
+          {
+            "name": "ClaimableFees"
+          },
+          {
+            "name": "ClaimedFees"
+          },
+          {
+            "name": "OracleConfigs"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldValue",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Boolean",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "U8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u8"
+              }
+            ]
+          },
+          {
+            "name": "U32",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u32"
+              }
+            ]
+          },
+          {
+            "name": "U64",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "String",
+            "fields": [
+              {
+                "name": "val",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "Pubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "VecPubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "pubkey"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecU8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "VecU32",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "u32"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecDelegateAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "DelegateAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecIntegrationAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "IntegrationAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeStructure",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeStructure"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeParams",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeParams"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "AccruedFees",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "AccruedFees"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "NotifyAndSettle",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "NotifyAndSettle"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "OracleConfigs",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "OracleConfigs"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "EntryExitFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subscription_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "redemption_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "year_in_seconds",
+            "type": "u32"
+          },
+          {
+            "name": "pa_high_water_mark",
+            "type": "i128"
+          },
+          {
+            "name": "pa_last_nav",
+            "type": "i128"
+          },
+          {
+            "name": "last_aum",
+            "type": "i128"
+          },
+          {
+            "name": "last_performance_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_management_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_protocol_fee_crystallized",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeStructure",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "manager",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "management",
+            "type": {
+              "defined": {
+                "name": "ManagementFee"
+              }
+            }
+          },
+          {
+            "name": "performance",
+            "type": {
+              "defined": {
+                "name": "PerformanceFee"
+              }
+            }
+          },
+          {
+            "name": "protocol",
+            "type": {
+              "defined": {
+                "name": "ProtocolFees"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "HurdleType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationAcl",
+      "docs": [
+        "An integration program can have multiple protocols supported.",
+        "Enabled protocols are stored in a bitmask, and each protocol can have its own policy."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocols_bitmask",
+            "type": "u16"
+          },
+          {
+            "name": "protocol_policies",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPolicy"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationPermissions",
+      "docs": [
+        "Stores delegate permissions for an integration program."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPermissions"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LayerzeroOftRoute",
+      "docs": [
+        "source_mint, destination_chain, destination_recipient, provider_program uniquely identify a route"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "source_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination_chain",
+            "type": "u32"
+          },
+          {
+            "name": "destination_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "management_mode",
+            "type": {
+              "defined": {
+                "name": "RouteManagementMode"
+              }
+            }
+          },
+          {
+            "name": "min_amount",
+            "type": "u64"
+          },
+          {
+            "name": "max_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ManagementFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NoticePeriodType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NotifyAndSettle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "model",
+            "type": {
+              "defined": {
+                "name": "ValuationModel"
+              }
+            }
+          },
+          {
+            "name": "permissionless_fulfillment",
+            "type": "bool"
+          },
+          {
+            "name": "subscribe_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "subscribe_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "redeem_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "time_unit",
+            "type": {
+              "defined": {
+                "name": "TimeUnit"
+              }
+            }
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleConfigs",
+      "docs": [
+        "Vault-specific oracle configs. If available, these configs are preferred over the global config."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_ages_seconds",
+            "type": {
+              "vec": {
+                "array": [
+                  "u16",
+                  2
+                ]
+              }
+            }
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                12
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PerformanceFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_rate_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_type",
+            "type": {
+              "defined": {
+                "name": "HurdleType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PrepareOftTransferArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transfer_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "middle_instruction_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "middle_instruction_count",
+            "type": "u16"
+          },
+          {
+            "name": "source_amount",
+            "type": "u64"
+          },
+          {
+            "name": "managed",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PricedProtocol",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "rent",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "i128"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "last_updated_slot",
+            "type": "u64"
+          },
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "base_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "flow_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPermissions",
+      "docs": [
+        "Represents a delegate's permissions for a specific protocol"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "permissions_bitmask",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPolicy",
+      "docs": [
+        "Stores policy data for an integrated protocol.",
+        "Integration programs serialize/deserialize this data."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "data",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RouteManagementMode",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "UnmanagedOnly"
+          },
+          {
+            "name": "ManagedOnly"
+          },
+          {
+            "name": "Either"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StateAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "account_type",
+            "type": {
+              "defined": {
+                "name": "AccountType"
+              }
+            }
+          },
+          {
+            "name": "enabled",
+            "type": "bool"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "portfolio_manager_name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "created",
+            "type": {
+              "defined": {
+                "name": "CreatedModel"
+              }
+            }
+          },
+          {
+            "name": "base_asset_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_asset_decimals",
+            "type": "u8"
+          },
+          {
+            "name": "base_asset_token_program",
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timelock_duration",
+            "type": "u32"
+          },
+          {
+            "name": "timelock_expires_at",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "assets",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "integration_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "delegate_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "DelegateAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "external_positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "priced_protocols",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "PricedProtocol"
+                }
+              }
+            }
+          },
+          {
+            "name": "params",
+            "type": {
+              "vec": {
+                "vec": {
+                  "defined": {
+                    "name": "EngineField"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TimeUnit",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Second"
+          },
+          {
+            "name": "Slot"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ValuationModel",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Continuous"
+          },
+          {
+            "name": "Periodic"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "PROTO_BRIDGE_PERM_RECONCILE",
+      "type": "u64",
+      "value": "2"
+    },
+    {
+      "name": "PROTO_BRIDGE_PERM_SEND",
+      "type": "u64",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_LAYERZERO_OFT",
+      "type": "u16",
+      "value": "4"
+    },
+    {
+      "name": "PROTO_MANAGED_INFLIGHT",
+      "type": "u16",
+      "value": "4"
+    }
+  ]
+}
