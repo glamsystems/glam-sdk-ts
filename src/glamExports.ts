@@ -10,6 +10,7 @@ import type { ExtMarinade } from "../target/types/ext_marinade";
 import type { ExtStakePool } from "../target/types/ext_stake_pool";
 import type { ExtCctp } from "../target/types/ext_cctp";
 import type { ExtBridge } from "../target/types/ext_bridge";
+import type { ExtEpi } from "../target/types/ext_epi";
 
 import GlamProtocolIdlJson from "../target/idl/glam_protocol.json";
 import GlamConfigIdlJson from "../target/idl/glam_config.json";
@@ -20,6 +21,7 @@ import ExtMarinadeIdlJson from "../target/idl/ext_marinade.json";
 import ExtStakePoolIdlJson from "../target/idl/ext_stake_pool.json";
 import ExtCctpIdlJson from "../target/idl/ext_cctp.json";
 import ExtBridgeIdlJson from "../target/idl/ext_bridge.json";
+import ExtEpiIdlJson from "../target/idl/ext_epi.json";
 
 import GlamProtocolIdlJsonStaging from "../target/idl/glam_protocol-staging.json";
 import GlamMintIdlJsonStaging from "../target/idl/glam_mint-staging.json";
@@ -28,6 +30,7 @@ import ExtKaminoIdlJsonStaging from "../target/idl/ext_kamino-staging.json";
 import ExtStakePoolIdlJsonStaging from "../target/idl/ext_stake_pool-staging.json";
 import ExtMarinadeIdlJsonStaging from "../target/idl/ext_marinade-staging.json";
 import ExtBridgeIdlJsonStaging from "../target/idl/ext_bridge-staging.json";
+import ExtEpiIdlJsonStaging from "../target/idl/ext_epi-staging.json";
 
 export { GlamProtocol, GlamMint, GlamConfig };
 
@@ -40,6 +43,7 @@ export type ExtMarinadeProgram = Program<ExtMarinade>;
 export type ExtStakePoolProgram = Program<ExtStakePool>;
 export type ExtCctpProgram = Program<ExtCctp>;
 export type ExtBridgeProgram = Program<ExtBridge>;
+export type ExtEpiProgram = Program<ExtEpi>;
 
 const isStaging = () => {
   const s = process.env.NEXT_PUBLIC_GLAM_STAGING || process.env.GLAM_STAGING;
@@ -89,6 +93,10 @@ export function getExtBridgeIdl(staging: boolean) {
   };
 }
 
+export function getExtEpiIdl(staging: boolean) {
+  return staging ? ExtEpiIdlJsonStaging : ExtEpiIdlJson;
+}
+
 export function getExtMarinadeIdl(staging: boolean) {
   return staging ? ExtMarinadeIdlJsonStaging : ExtMarinadeIdlJson;
 }
@@ -119,6 +127,10 @@ export function getExtCctpProgramId(staging: boolean) {
 
 export function getExtBridgeProgramId(staging: boolean) {
   return new PublicKey(getExtBridgeIdl(staging).address);
+}
+
+export function getExtEpiProgramId(staging: boolean) {
+  return new PublicKey(getExtEpiIdl(staging).address);
 }
 
 export function getExtMarinadeProgramId(staging: boolean) {
@@ -183,4 +195,11 @@ export function getExtBridgeProgram(
   staging: boolean,
 ): ExtBridgeProgram {
   return new Program<ExtBridge>(getExtBridgeIdl(staging), provider);
+}
+
+export function getExtEpiProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtEpiProgram {
+  return new Program<ExtEpi>(getExtEpiIdl(staging), provider);
 }

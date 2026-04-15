@@ -2,6 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import {
   getExtBridgeProgramId,
   getExtCctpProgramId,
+  getExtEpiProgramId,
   getExtKaminoProgramId,
   getExtMarinadeProgramId,
   getExtSplProgramId,
@@ -20,6 +21,7 @@ export const SEED_ACCOUNT_POLICY = "account-policy"; // policies program
 export const SEED_EXTRA_ACCOUNT_METAS = "extra-account-metas"; // policies program
 export const SEED_GLOBAL_CONFIG = "global-config";
 export const SEED_INTEGRATION_AUTHORITY = "integration-authority";
+export const SEED_OBSERVATION_STATE = "observation-state";
 export const SEED_BRIDGE_REGISTRY = "bridge-registry";
 export const SEED_BRIDGE_SESSION = "bridge-session";
 export const SEED_BRIDGE_TRANSFER_RECORD = "bridge-transfer-record";
@@ -279,6 +281,19 @@ export const getProtocolsAndPermissions = (
       permissions: {
         [1 << 0]: "Send",
         [1 << 1]: "Reconcile",
+      },
+    },
+  },
+  // EPI integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_epi/src/state/access.rs
+  [getExtEpiProgramId(staging).toBase58()]: {
+    "0000000000000001": {
+      name: "Epi",
+      staging: true,
+      permissions: {
+        [1 << 0]: "Configure",
+        [1 << 1]: "SubmitObservation",
+        [1 << 2]: "ValidateObservation",
       },
     },
   },

@@ -28,6 +28,7 @@ import {
 } from "@solana/spl-token";
 import { KVaultState, Obligation, Reserve } from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
+import { SEED_OBSERVATION_STATE } from "../constants";
 
 /**
  * Represents a single asset holding within a vault.
@@ -891,8 +892,13 @@ export class PriceClient {
       this.getBaseAssetOracle(),
     ]);
 
+    const aggIndexes: number[][] = [];
+    for (let i = 0; i < remainingAccounts.length; i += 3) {
+      aggIndexes.push([-1, -1, -1, -1]);
+    }
+
     const priceVaultIx = await this.base.mintProgram.methods
-      .priceVaultTokens([])
+      .priceVaultTokens(aggIndexes)
       .accounts({
         glamState: this.base.statePda,
         solUsdOracle,
@@ -943,13 +949,58 @@ export class PriceClient {
   }
 
   public async priceVaultIxs(): Promise<TransactionInstruction[]> {
+    return this.enqueuePriceVaultIxs(() => this._priceVaultIxsImpl());
+  }
+
+  private enqueuePriceVaultIxs(
+    buildIxs: () => Promise<TransactionInstruction[]>,
+  ): Promise<TransactionInstruction[]> {
     // Serialize concurrent callers so cache writes in _priceVaultIxsImpl
     // don't interleave. Errors don't poison the queue.
-    const next = this._priceVaultIxsQueue
-      .catch(() => undefined)
-      .then(() => this._priceVaultIxsImpl());
+    const next = this._priceVaultIxsQueue.catch(() => undefined).then(buildIxs);
     this._priceVaultIxsQueue = next;
     return next;
+  }
+
+  private async priceEpiValidatedPositionsIx(): Promise<TransactionInstruction | null> {
+    const stateModel =
+      this.cachedStateModel ?? (await this.base.fetchStateModel());
+    const epiIntegrationAcl = stateModel.integrationAcls.find(
+      (acl) =>
+        acl.integrationProgram.equals(this.base.extEpiProgram.programId) &&
+        (acl.protocolsBitmask & 0b01) !== 0,
+    );
+    if (!epiIntegrationAcl) {
+      return null;
+    }
+
+    const observationState =
+      await this.base.extEpiProgram.account.observationState.fetchNullable(
+        PublicKey.findProgramAddressSync(
+          [Buffer.from(SEED_OBSERVATION_STATE), this.base.statePda.toBuffer()],
+          this.base.extEpiProgram.programId,
+        )[0],
+      );
+    if (!observationState) {
+      return null;
+    }
+
+    const activePositions = observationState.positions.slice(
+      0,
+      observationState.positionsLen,
+    );
+    if (!activePositions.some((position) => position.hasValidated)) {
+      return null;
+    }
+
+    return await this.base.extEpiProgram.methods
+      .refreshPricedProtocol()
+      .accountsPartial({
+        glamState: this.base.statePda,
+        glamSigner: this.base.signer,
+        glamProtocolProgram: this.base.protocolProgram.programId,
+      })
+      .instruction();
   }
 
   private async _priceVaultIxsImpl(): Promise<TransactionInstruction[]> {
@@ -1019,6 +1070,9 @@ export class PriceClient {
         if (ix) pricingIxs.push(ix);
       }
     }
+
+    const epiRefreshIx = await this.priceEpiValidatedPositionsIx();
+    if (epiRefreshIx) pricingIxs.push(epiRefreshIx);
 
     return pricingIxs.filter(Boolean);
   }

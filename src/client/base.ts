@@ -25,6 +25,7 @@ import {
   fetchMintsAndTokenPrograms,
   findGlamLookupTables,
   getTokenAccountsByOwner,
+  parseMintAccountInfo,
 } from "../utils/accounts";
 import {
   TOKEN_2022_PROGRAM_ID,
@@ -39,6 +40,7 @@ import {
 
 import {
   ExtBridgeProgram,
+  ExtEpiProgram,
   ExtCctpProgram,
   ExtKaminoProgram,
   ExtMarinadeProgram,
@@ -47,6 +49,7 @@ import {
   GlamMintProgram,
   GlamProtocolProgram,
   getExtBridgeProgram,
+  getExtEpiProgram,
   getExtCctpProgram,
   getExtKaminoProgram,
   getExtMarinadeProgram,
@@ -124,6 +127,7 @@ export class BaseClient {
   private _extStakePoolProgram?: ExtStakePoolProgram;
   private _extCctpProgram?: ExtCctpProgram;
   private _extBridgeProgram?: ExtBridgeProgram;
+  private _extEpiProgram?: ExtEpiProgram;
 
   private _statePda?: PublicKey;
   private _globalConfig?: GlobalConfigAccount;
@@ -226,6 +230,13 @@ export class BaseClient {
       this._extBridgeProgram = getExtBridgeProgram(this.provider, this.staging);
     }
     return this._extBridgeProgram;
+  }
+
+  get extEpiProgram(): ExtEpiProgram {
+    if (!this._extEpiProgram) {
+      this._extEpiProgram = getExtEpiProgram(this.provider, this.staging);
+    }
+    return this._extEpiProgram;
   }
 
   get isVaultConnected(): boolean {
@@ -729,25 +740,69 @@ export class BaseClient {
 
     const fetchPromise = this.fetchGlobalConfig(options)
       .then(async (globalConfig) => {
-        // FIX: this could be perf bottleneck if there are many assets
-        const mintInfos = await fetchMintsAndTokenPrograms(
-          this.connection,
-          globalConfig.assetMetas.map((am) => am.asset),
-        );
+        const assets = globalConfig.assetMetas.map((am) => am.asset);
+        const tokenProgramsByAsset = new Map<string, PublicKey>();
+
+        try {
+          // Fast path when every global-config mint account is available.
+          const mintInfos = await fetchMintsAndTokenPrograms(
+            this.connection,
+            assets,
+          );
+          assets.forEach((asset, i) => {
+            tokenProgramsByAsset.set(
+              asset.toBase58(),
+              mintInfos[i].tokenProgram,
+            );
+          });
+        } catch {
+          // Local validators may clone a newer global config than the set of
+          // mint accounts they have available. Resolve what we can and let
+          // downstream callers request only the assets they actually use.
+          const accountsInfo = await this.connection.getMultipleAccountsInfo(
+            assets,
+            "confirmed",
+          );
+          accountsInfo.forEach((accountInfo, i) => {
+            const asset = assets[i];
+            const assetKey = asset.toBase58();
+            if (accountInfo) {
+              tokenProgramsByAsset.set(
+                assetKey,
+                parseMintAccountInfo(accountInfo, asset).tokenProgram,
+              );
+              return;
+            }
+
+            const fallback = ASSETS_MAINNET.get(assetKey);
+            if (fallback) {
+              tokenProgramsByAsset.set(assetKey, fallback.programId);
+            }
+          });
+        }
 
         // Transforms onchain asset meta to client asset meta
         const assetMetaMap = new Map<string, AssetMeta>(
-          globalConfig.assetMetas.map(
-            ({ asset, decimals, oracle, oracleSource }, i) => [
-              asset.toBase58(),
-              {
-                asset,
-                decimals,
-                oracle,
-                oracleSource,
-                programId: mintInfos[i].tokenProgram,
-              },
-            ],
+          globalConfig.assetMetas.flatMap(
+            ({ asset, decimals, oracle, oracleSource }) => {
+              const programId = tokenProgramsByAsset.get(asset.toBase58());
+              if (!programId) {
+                return [];
+              }
+
+              return [
+                [
+                  asset.toBase58(),
+                  {
+                    asset,
+                    decimals,
+                    oracle,
+                    oracleSource,
+                    programId,
+                  },
+                ],
+              ];
+            },
           ),
         );
 

@@ -1,5 +1,6 @@
 import GlamConfigIdlJson from "../../target/idl/glam_config.json";
 import { normalizeOracleSource } from "../../src/globalConfig";
+import { ASSETS_MAINNET } from "../../src/assets";
 
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
@@ -219,6 +220,72 @@ describe("BaseClient asset meta cache", () => {
       TOKEN_2022_PROGRAM_ID.toBase58(),
     );
     expect(fetchMintsAndTokenProgramsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps usable asset metas when some global-config mint accounts are missing", async () => {
+    const fallbackAssetMeta = ASSETS_MAINNET.values().next().value;
+    if (!fallbackAssetMeta) {
+      throw new Error("Expected ASSETS_MAINNET to contain at least one asset");
+    }
+
+    const missingAsset = new PublicKey(
+      "4RFi9iiGQ7wUff95uUbb98QiYbAqxG8gzcR8hx8shXAE",
+    );
+    const fetchGlobalConfigMock = jest.mocked(fetchGlobalConfig);
+    const fetchMintsAndTokenProgramsMock = jest.mocked(
+      fetchMintsAndTokenPrograms,
+    );
+    const getMultipleAccountsInfoMock = jest
+      .fn()
+      .mockResolvedValue([null, null]);
+
+    fetchGlobalConfigMock.mockResolvedValue({
+      admin: PublicKey.default,
+      feeAuthority: PublicKey.default,
+      referrer: PublicKey.default,
+      baseFeeBps: 0,
+      flowFeeBps: 0,
+      assetMetas: [
+        {
+          asset: fallbackAssetMeta.asset,
+          decimals: fallbackAssetMeta.decimals,
+          oracle: fallbackAssetMeta.oracle,
+          oracleSource: fallbackAssetMeta.oracleSource || "LstPoolState",
+          maxAgeSeconds: 30,
+          priority: 0,
+        },
+        {
+          asset: missingAsset,
+          decimals: 6,
+          oracle: PublicKey.default,
+          oracleSource: "Pyth",
+          maxAgeSeconds: 30,
+          priority: 0,
+        },
+      ],
+    });
+    fetchMintsAndTokenProgramsMock.mockRejectedValue(
+      new Error("Failed to fetch mint accounts for 2 mints"),
+    );
+    fetchMintsAndTokenProgramsMock.mockClear();
+
+    const client = Object.assign(Object.create(BaseClient.prototype), {
+      cluster: ClusterNetwork.Mainnet,
+      provider: {
+        connection: {
+          getMultipleAccountsInfo: getMultipleAccountsInfoMock,
+        },
+      },
+    }) as BaseClient;
+
+    const assetMetas = await client.fetchAssetMetas();
+
+    expect(fetchMintsAndTokenProgramsMock).toHaveBeenCalledTimes(1);
+    expect(getMultipleAccountsInfoMock).toHaveBeenCalledTimes(1);
+    expect(
+      assetMetas.get(fallbackAssetMeta.asset.toBase58())?.programId,
+    ).toEqual(fallbackAssetMeta.programId);
+    expect(assetMetas.has(missingAsset.toBase58())).toBe(false);
   });
 });
 
