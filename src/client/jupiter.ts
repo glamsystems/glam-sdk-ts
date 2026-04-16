@@ -12,7 +12,7 @@ import {
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 import { WSOL } from "../constants";
-import { STAKE_POOLS_MAP } from "../assets";
+import { AssetMeta, STAKE_POOLS_MAP } from "../assets";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
 import { VaultClient } from "./vault";
 import {
@@ -22,6 +22,8 @@ import {
   QuoteResponse,
   SwapInstructions,
 } from "../utils/jupiterApi";
+import { KaminoLendingClient } from "./kamino";
+import { PkSet } from "../utils";
 
 export type JupiterSwapOptions = {
   quoteParams?: QuoteParams;
@@ -34,11 +36,11 @@ export type JupiterSwapV2OracleAccounts = {
   solUsdOracle?: PublicKey;
   inputTokenOracle?: PublicKey;
   outputTokenOracle?: PublicKey;
+  kaminoReservesToRefresh: PublicKey[];
 };
 
 export type JupiterSwapV2Options = JupiterSwapOptions & {
   skipQuotePriceCheck?: boolean;
-  oracleAccounts?: JupiterSwapV2OracleAccounts;
 };
 
 class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
@@ -109,6 +111,56 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
     };
   }
 
+  async getSwapV2OracleAccounts(
+    inputMint: PublicKey,
+    outputMint: PublicKey,
+    skipQuotePriceCheck: boolean,
+  ): Promise<JupiterSwapV2OracleAccounts> {
+    let inputAssetMeta: AssetMeta | null = null;
+    let outputAssetMeta: AssetMeta | null = null;
+    let glamClient = this.client.base;
+
+    try {
+      inputAssetMeta = await glamClient.getAssetMeta(inputMint);
+    } catch {}
+
+    try {
+      outputAssetMeta = await glamClient.getAssetMeta(outputMint);
+    } catch {}
+
+    // Input and output asset metas might be kaminoReserve, which we need to refresh
+    const kaminoReservesSet = new PkSet();
+    if (inputAssetMeta?.oracleSource === "KaminoReserve") {
+      kaminoReservesSet.add(inputAssetMeta.oracle);
+    }
+    if (outputAssetMeta?.oracleSource === "KaminoReserve") {
+      kaminoReservesSet.add(outputAssetMeta.oracle);
+    }
+
+    const oracleAccounts = {
+      solUsdOracle: await glamClient.getSolOracle(),
+      inputTokenOracle: inputAssetMeta?.oracle,
+      outputTokenOracle: outputAssetMeta?.oracle,
+      kaminoReservesToRefresh: Array.from(kaminoReservesSet),
+    };
+
+    if (
+      !skipQuotePriceCheck &&
+      (!oracleAccounts.inputTokenOracle || !oracleAccounts.outputTokenOracle)
+    ) {
+      const missingOracles = [
+        !oracleAccounts.inputTokenOracle ? inputMint.toBase58() : null,
+        !oracleAccounts.outputTokenOracle ? outputMint.toBase58() : null,
+      ].filter(Boolean);
+
+      throw new Error(
+        `swap-v2 requires oracle accounts when quote price checks are enabled, but no oracle is configured in glam_config for ${missingOracles.join(", ")}. Pass --skip-quote-price-check if your signer has the SkipQuotePriceCheck permission, or add the missing oracle(s) to glam_config.`,
+      );
+    }
+
+    return oracleAccounts;
+  }
+
   /**
    * Returns the instructions for a Jupiter swap and the lookup tables
    */
@@ -154,7 +206,13 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
   ): Promise<[TransactionInstruction[], PublicKey[]]> {
     const { inputMint, outputMint, amount, swapIx, lookupTables } =
       await this.resolveSwapInstructionContext(options);
-    const { skipQuotePriceCheck = false, oracleAccounts } = options;
+
+    const { skipQuotePriceCheck = false } = options;
+    const oracleAccounts = await this.getSwapV2OracleAccounts(
+      inputMint,
+      outputMint,
+      skipQuotePriceCheck,
+    );
 
     const { tokenProgram: outputTokenProgram } = await fetchMintAndTokenProgram(
       this.client.base.connection,
@@ -172,7 +230,19 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
       amount,
       outputTokenProgram,
     );
-    // glam_config is auto-resolved by Anchor via its PDA seeds declaration.
+
+    if (oracleAccounts.kaminoReservesToRefresh.length > 0) {
+      const reserves = await this.client.klend.fetchAndParseReserves(
+        oracleAccounts.kaminoReservesToRefresh,
+      );
+      const refreshReservesIx =
+        this.client.klend.txBuilder.refreshReservesBatchIx(
+          reserves,
+          false, // always update prices
+        );
+      preInstructions.push(refreshReservesIx);
+    }
+
     const ix = await this.client.base.protocolProgram.methods
       .jupiterSwapV2(skipQuotePriceCheck, swapIx.data)
       .accounts({
@@ -207,13 +277,13 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
     return await this.buildVersionedTx(ixs, { lookupTables, ...txOptions });
   }
 
-  getPreInstructions = async (
+  async getPreInstructions(
     signer: PublicKey,
     inputMint: PublicKey,
     outputMint: PublicKey,
     amount: BN,
     outputTokenProgram: PublicKey = TOKEN_PROGRAM_ID,
-  ): Promise<TransactionInstruction[]> => {
+  ): Promise<TransactionInstruction[]> {
     const preInstructions = [
       createAssociatedTokenAccountIdempotentInstruction(
         signer,
@@ -231,7 +301,7 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
     }
 
     return preInstructions;
-  };
+  }
 
   toTransactionInstruction = (ix: JupiterInstruction) => {
     if (ix === null) {
@@ -257,6 +327,7 @@ export class JupiterSwapClient {
   public constructor(
     readonly base: BaseClient,
     readonly vault: VaultClient,
+    readonly klend: KaminoLendingClient,
   ) {
     this.txBuilder = new TxBuilder(this);
     this.jupApi =

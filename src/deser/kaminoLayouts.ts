@@ -485,11 +485,7 @@ export class Reserve extends Decodable {
 
   get liquidityFeeReceiver(): PublicKey {
     return PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("fee_receiver"),
-        this.lendingMarket.toBuffer(),
-        this.liquidity.mintPubkey.toBuffer(),
-      ],
+      [Buffer.from("fee_receiver"), this._address.toBuffer()],
       KAMINO_LENDING_PROGRAM,
     )[0];
   }

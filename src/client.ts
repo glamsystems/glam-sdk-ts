@@ -66,7 +66,11 @@ export class GlamClient extends BaseClient {
 
   get jupiterSwap(): JupiterSwapClient {
     if (!this._jupiterSwap) {
-      this._jupiterSwap = new JupiterSwapClient(this, this.vault);
+      this._jupiterSwap = new JupiterSwapClient(
+        this,
+        this.vault,
+        this.kaminoLending,
+      );
     }
     return this._jupiterSwap;
   }
