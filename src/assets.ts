@@ -45,7 +45,7 @@ export interface AssetMeta {
   decimals: number;
   oracle: PublicKey;
   programId: PublicKey;
-  oracleSource?: string;
+  oracleSource: string;
 }
 
 /**

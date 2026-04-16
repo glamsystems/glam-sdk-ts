@@ -989,15 +989,8 @@ export class BridgeClient {
   ) {
     const resolvedTransferId =
       params.transferId || Keypair.generate().publicKey;
-    const { tokenProgram } = await fetchMintAndTokenProgram(
-      this.base.connection,
-      params.sourceMint,
-    );
+
     const signer = txOptions.signer || this.base.signer;
-    const sourceTokenAccount = this.base.getVaultAta(
-      params.sourceMint,
-      tokenProgram,
-    );
     const auxiliaryTokenAccount = await this.deriveOftAuxiliaryTokenAccount(
       resolvedTransferId,
       params.sourceMint,

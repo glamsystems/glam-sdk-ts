@@ -61,8 +61,11 @@ import {
   resolveStaging,
 } from "../glamExports";
 import { ClusterNetwork, GlamClientConfig } from "../clientConfig";
-import { fetchGlobalConfig as fetchGlobalConfigAccount } from "../globalConfig";
-import type { GlobalConfigAccount } from "../globalConfig";
+import {
+  fetchGlobalConfig as fetchGlobalConfigAccount,
+  getOracleName,
+  GlobalConfig,
+} from "../globalConfig";
 import {
   RequestQueue,
   StateAccount,
@@ -130,8 +133,8 @@ export class BaseClient {
   private _extEpiProgram?: ExtEpiProgram;
 
   private _statePda?: PublicKey;
-  private _globalConfig?: GlobalConfigAccount;
-  private _globalConfigPromise?: Promise<GlobalConfigAccount>;
+  private _globalConfig?: GlobalConfig;
+  private _globalConfigPromise?: Promise<GlobalConfig>;
   private _assetMetas?: PkMap<AssetMeta>;
   private _assetMetasPromise?: Promise<PkMap<AssetMeta>>;
 
@@ -682,7 +685,7 @@ export class BaseClient {
 
   public async fetchGlobalConfig(options?: {
     refresh?: boolean;
-  }): Promise<GlobalConfigAccount> {
+  }): Promise<GlobalConfig> {
     const useCache = !options?.refresh;
 
     if (options?.refresh) {
@@ -775,7 +778,7 @@ export class BaseClient {
         // Transforms onchain asset meta to client asset meta
         const assetMetaEntries: [PublicKey, AssetMeta][] = [];
         globalConfig.assetMetas.forEach(
-          ({ asset, decimals, oracle, oracleSource }) => {
+          ({ asset, decimals, oracle, oracleSourceOrdinal }) => {
             const programId = tokenProgramsByAsset.get(asset);
             if (!programId) {
               return;
@@ -787,7 +790,7 @@ export class BaseClient {
                 asset,
                 decimals,
                 oracle,
-                oracleSource,
+                oracleSource: getOracleName(oracleSourceOrdinal),
                 programId,
               },
             ]);
