@@ -1812,14 +1812,24 @@
       "msg": "Drift spot market cumulative interest is stale"
     },
     {
-      "code": 49018,
+      "code": 49017,
       "name": "AssetBalanceNotZero",
       "msg": "Cannot delete asset: vault token account balance is not zero"
     },
     {
-      "code": 49019,
+      "code": 49018,
       "name": "CannotDeleteBaseAsset",
       "msg": "Cannot delete base asset from allowlist"
+    },
+    {
+      "code": 49019,
+      "name": "IntegrationAclLimitExceeded",
+      "msg": "Integration ACL limit exceeded"
+    },
+    {
+      "code": 49020,
+      "name": "DelegateAclLimitExceeded",
+      "msg": "Delegate ACL limit exceeded"
     },
     {
       "code": 50000,
@@ -3251,6 +3261,11 @@
       "name": "PROTO_SYSTEM",
       "type": "u16",
       "value": "1"
+    },
+    {
+      "name": "PROTO_SYSTEM_PERM_EMERGENCY_UPDATE",
+      "type": "u64",
+      "value": "4"
     },
     {
       "name": "PROTO_SYSTEM_PERM_TRANSFER",

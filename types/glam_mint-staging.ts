@@ -8,7 +8,7 @@ export type GlamMint = {
   "address": "gstgm1M39mhgnvgyScGUDRwNn5kNVSd97hTtyow1Et5",
   "metadata": {
     "name": "glamMint",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "spec": "0.1.0",
     "description": "GLAM mint program"
   },
@@ -2518,7 +2518,12 @@ export type GlamMint = {
         "Extra accounts for pricing N drift users under the same user stats:",
         "- user_stats x 1",
         "- drift_user x N",
-        "- markets and oracles used by all drift users (no specific order)"
+        "- markets and oracles used by all drift users (no specific order)",
+        "",
+        "Clients must pre-refresh any stale Drift spot market cumulative interest by",
+        "prepending Drift `update_spot_market_cumulative_interest` instructions for the",
+        "referenced spot markets. Calls will fail with `StaleDriftInterest` if a required",
+        "spot market's cumulative interest is too old."
       ],
       "discriminator": [
         12,
@@ -2753,7 +2758,12 @@ export type GlamMint = {
         "- (vault_depositor, drift_vault, drift_user) x N",
         "- spot_market used by drift users of vaults (no specific order)",
         "- perp markets used by drift users of vaults (no specific order)",
-        "- oracles of spot markets and perp markets (no specific order)"
+        "- oracles of spot markets and perp markets (no specific order)",
+        "",
+        "Clients must pre-refresh any stale Drift spot market cumulative interest by",
+        "prepending Drift `update_spot_market_cumulative_interest` instructions for the",
+        "referenced spot markets. Calls will fail with `StaleDriftInterest` if a required",
+        "spot market's cumulative interest is too old."
       ],
       "discriminator": [
         234,
@@ -5484,6 +5494,19 @@ export type GlamMint = {
   ],
   "accounts": [
     {
+      "name": "globalConfig",
+      "discriminator": [
+        149,
+        8,
+        156,
+        202,
+        160,
+        252,
+        176,
+        217
+      ]
+    },
+    {
       "name": "requestQueue",
       "discriminator": [
         172,
@@ -5557,7 +5580,7 @@ export type GlamMint = {
     {
       "code": 6003,
       "name": "invalidAsset",
-      "msg": "Invalid asset"
+      "msg": "Asset not allowed to subscribe"
     },
     {
       "code": 6004,
@@ -5611,26 +5634,31 @@ export type GlamMint = {
     },
     {
       "code": 6014,
+      "name": "amountBelowMinimum",
+      "msg": "Amount is below the minimum required"
+    },
+    {
+      "code": 6015,
       "name": "managerFeesNotCrystallized",
       "msg": "Manager fees should be crystallized before updating"
     },
     {
-      "code": 6015,
+      "code": 6016,
+      "name": "amountAboveMaximum",
+      "msg": "Amount exceeds maximum threshold"
+    },
+    {
+      "code": 6017,
       "name": "insufficientEscrowBalance",
       "msg": "Insufficient escrow balance for fee burn"
     },
     {
-      "code": 6016,
-      "name": "amountBelowMinimum",
-      "msg": "Amount below minimum threshold"
-    },
-    {
-      "code": 6017,
+      "code": 6018,
       "name": "tokenAclManagesFreezeThaw",
       "msg": "Token ACL is enabled; freeze/thaw is managed by the Token ACL program"
     },
     {
-      "code": 6018,
+      "code": 6019,
       "name": "invalidMintState",
       "msg": "Invalid mint state"
     }
@@ -5692,6 +5720,51 @@ export type GlamMint = {
           {
             "name": "protocolFlowFee",
             "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "assetMeta",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "oracleSource",
+            "type": {
+              "defined": {
+                "name": "oracleSource"
+              }
+            }
+          },
+          {
+            "name": "maxAgeSeconds",
+            "type": "u16"
+          },
+          {
+            "name": "priority",
+            "type": "i8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
           }
         ]
       }
@@ -6151,6 +6224,62 @@ export type GlamMint = {
       }
     },
     {
+      "name": "globalConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "The authority that can modify the config"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "feeAuthority",
+            "docs": [
+              "The authority that can modify fee structure of individual glam state and claim protocol fees"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "referrer",
+            "docs": [
+              "Default GLAM referrer"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "baseFeeBps",
+            "docs": [
+              "Default protocol base fee applied to all vaults"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "flowFeeBps",
+            "docs": [
+              "Default protocol flow fee applied to all vaults"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "assetMetas",
+            "docs": [
+              "List of assets and their oracle configs supported by the protocol"
+            ],
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "assetMeta"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "hurdleType",
       "type": {
         "kind": "enum",
@@ -6502,6 +6631,83 @@ export type GlamMint = {
                 12
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "oracleSource",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "pyth"
+          },
+          {
+            "name": "switchboard"
+          },
+          {
+            "name": "quoteAsset"
+          },
+          {
+            "name": "pyth1K"
+          },
+          {
+            "name": "pyth1M"
+          },
+          {
+            "name": "pythStableCoin"
+          },
+          {
+            "name": "prelaunch"
+          },
+          {
+            "name": "pythPull"
+          },
+          {
+            "name": "pyth1KPull"
+          },
+          {
+            "name": "pyth1MPull"
+          },
+          {
+            "name": "pythStableCoinPull"
+          },
+          {
+            "name": "switchboardOnDemand"
+          },
+          {
+            "name": "pythLazer"
+          },
+          {
+            "name": "pythLazer1K"
+          },
+          {
+            "name": "pythLazer1M"
+          },
+          {
+            "name": "pythLazerStableCoin"
+          },
+          {
+            "name": "notSet"
+          },
+          {
+            "name": "lstPoolState"
+          },
+          {
+            "name": "marinadeState"
+          },
+          {
+            "name": "baseAsset"
+          },
+          {
+            "name": "chainlinkRwa"
+          },
+          {
+            "name": "chainlinkX"
+          },
+          {
+            "name": "kaminoReserve"
           }
         ]
       }

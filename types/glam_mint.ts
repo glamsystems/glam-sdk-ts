@@ -4692,7 +4692,7 @@ export type GlamMint = {
           },
           {
             "name": "priority",
-            "type": "u8"
+            "type": "i8"
           },
           {
             "name": "padding",
@@ -5181,18 +5181,30 @@ export type GlamMint = {
           },
           {
             "name": "referrer",
+            "docs": [
+              "Default GLAM referrer"
+            ],
             "type": "pubkey"
           },
           {
             "name": "baseFeeBps",
+            "docs": [
+              "Default protocol base fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "flowFeeBps",
+            "docs": [
+              "Default protocol flow fee applied to all vaults"
+            ],
             "type": "u16"
           },
           {
             "name": "assetMetas",
+            "docs": [
+              "List of assets and their oracle configs supported by the protocol"
+            ],
             "type": {
               "vec": {
                 "defined": {

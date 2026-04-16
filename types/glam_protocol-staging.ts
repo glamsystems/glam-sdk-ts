@@ -1818,14 +1818,24 @@ export type GlamProtocol = {
       "msg": "Drift spot market cumulative interest is stale"
     },
     {
-      "code": 49018,
+      "code": 49017,
       "name": "assetBalanceNotZero",
       "msg": "Cannot delete asset: vault token account balance is not zero"
     },
     {
-      "code": 49019,
+      "code": 49018,
       "name": "cannotDeleteBaseAsset",
       "msg": "Cannot delete base asset from allowlist"
+    },
+    {
+      "code": 49019,
+      "name": "integrationAclLimitExceeded",
+      "msg": "Integration ACL limit exceeded"
+    },
+    {
+      "code": 49020,
+      "name": "delegateAclLimitExceeded",
+      "msg": "Delegate ACL limit exceeded"
     },
     {
       "code": 50000,
@@ -3257,6 +3267,11 @@ export type GlamProtocol = {
       "name": "protoSystem",
       "type": "u16",
       "value": "1"
+    },
+    {
+      "name": "protoSystemPermEmergencyUpdate",
+      "type": "u64",
+      "value": "4"
     },
     {
       "name": "protoSystemPermTransfer",
