@@ -52,37 +52,6 @@ export type ExtBridge = {
       ]
     },
     {
-      "name": "cleanupTransferRecord",
-      "docs": [
-        "Closes a finalized transfer record and returns its rent."
-      ],
-      "discriminator": [
-        65,
-        224,
-        219,
-        143,
-        99,
-        204,
-        215,
-        6
-      ],
-      "accounts": [
-        {
-          "name": "glamState"
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "transferRecord",
-          "writable": true
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "commitOftTransfer",
       "docs": [
         "Verifies the OFT send completed and records the resulting transfer."
@@ -134,48 +103,11 @@ export type ExtBridge = {
           "signer": true
         },
         {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
           "name": "cpiProgram"
         },
         {
           "name": "glamProtocolProgram",
           "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
         },
         {
           "name": "instructions",
@@ -249,49 +181,6 @@ export type ExtBridge = {
           }
         },
         {
-          "name": "transferRecord",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  98,
-                  114,
-                  105,
-                  100,
-                  103,
-                  101,
-                  45,
-                  116,
-                  114,
-                  97,
-                  110,
-                  115,
-                  102,
-                  101,
-                  114,
-                  45,
-                  114,
-                  101,
-                  99,
-                  111,
-                  114,
-                  100
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              },
-              {
-                "kind": "arg",
-                "path": "args.transfer_id"
-              }
-            ]
-          }
-        },
-        {
           "name": "sourceTokenAccount",
           "writable": true
         },
@@ -301,6 +190,43 @@ export type ExtBridge = {
         {
           "name": "auxiliaryTokenAccount",
           "writable": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -349,141 +275,6 @@ export type ExtBridge = {
               "name": "layerzeroOftRoute"
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "failOrCancelManagedTransfer",
-      "docs": [
-        "Marks a managed inflight transfer as failed or cancelled."
-      ],
-      "discriminator": [
-        39,
-        37,
-        213,
-        118,
-        191,
-        18,
-        194,
-        119
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glamProtocolProgram"
-            }
-          }
-        },
-        {
-          "name": "glamSigner",
-          "signer": true
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bridgeRegistry",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  98,
-                  114,
-                  105,
-                  100,
-                  103,
-                  101,
-                  45,
-                  114,
-                  101,
-                  103,
-                  105,
-                  115,
-                  116,
-                  114,
-                  121
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ]
-          }
-        },
-        {
-          "name": "transferRecord",
-          "writable": true
-        }
-      ],
-      "args": [
-        {
-          "name": "failureReason",
-          "type": "u8"
         }
       ]
     },
@@ -677,19 +468,19 @@ export type ExtBridge = {
       ]
     },
     {
-      "name": "reconcileManagedTransfer",
+      "name": "priceManagedTransfers",
       "docs": [
-        "Reconciles a managed inflight transfer back into normal pricing state."
+        "Prices managed inflight transfers and publishes aggregated amount."
       ],
       "discriminator": [
-        137,
-        31,
-        188,
-        80,
-        28,
-        252,
-        192,
-        50
+        77,
+        76,
+        20,
+        48,
+        41,
+        168,
+        205,
+        81
       ],
       "accounts": [
         {
@@ -697,34 +488,35 @@ export type ExtBridge = {
           "writable": true
         },
         {
-          "name": "glamVault",
-          "writable": true,
+          "name": "bridgeRegistry",
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
                 ]
               },
               {
                 "kind": "account",
                 "path": "glamState"
               }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glamProtocolProgram"
-            }
+            ]
           }
-        },
-        {
-          "name": "glamSigner",
-          "signer": true
         },
         {
           "name": "integrationAuthority",
@@ -764,8 +556,127 @@ export type ExtBridge = {
           "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
         },
         {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
+          "name": "glamConfig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                10,
+                11,
+                0,
+                83,
+                72,
+                16,
+                46,
+                144,
+                46,
+                42,
+                79,
+                22,
+                157,
+                123,
+                21,
+                242,
+                192,
+                146,
+                1,
+                78,
+                88,
+                59,
+                102,
+                9,
+                190,
+                226,
+                92,
+                189,
+                187,
+                232,
+                83,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "baseAssetOracle"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "settleManagedTransfer",
+      "docs": [
+        "Settles a managed inflight transfer and removes it from the registry."
+      ],
+      "discriminator": [
+        197,
+        87,
+        37,
+        239,
+        24,
+        244,
+        152,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
         },
         {
           "name": "bridgeRegistry",
@@ -800,41 +711,53 @@ export type ExtBridge = {
           }
         },
         {
-          "name": "transferRecord",
-          "writable": true
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "settleManagedTransfer",
-      "docs": [
-        "Marks a managed inflight transfer as settled on the destination side."
-      ],
-      "discriminator": [
-        197,
-        87,
-        37,
-        239,
-        24,
-        244,
-        152,
-        135
-      ],
-      "accounts": [
-        {
-          "name": "glamState"
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
         },
         {
-          "name": "glamSigner",
-          "signer": true
-        },
-        {
-          "name": "transferRecord",
-          "writable": true
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "settleManagedTransferArgs"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "updateLayerzeroOftRoute",
@@ -873,6 +796,74 @@ export type ExtBridge = {
           }
         }
       ]
+    },
+    {
+      "name": "validateManagedTransfer",
+      "docs": [
+        "Validates a managed inflight transfer so that it becomes priceable."
+      ],
+      "discriminator": [
+        47,
+        86,
+        129,
+        235,
+        30,
+        249,
+        248,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "signer": true
+        },
+        {
+          "name": "bridgeRegistry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "validateManagedTransferArgs"
+            }
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -900,19 +891,6 @@ export type ExtBridge = {
         173,
         141,
         184
-      ]
-    },
-    {
-      "name": "bridgeTransferRecord",
-      "discriminator": [
-        46,
-        131,
-        253,
-        32,
-        218,
-        137,
-        45,
-        96
       ]
     },
     {
@@ -1034,6 +1012,26 @@ export type ExtBridge = {
       "code": 6020,
       "name": "invalidOftAuxiliaryBalance",
       "msg": "The OFT auxiliary token balance did not change as expected"
+    },
+    {
+      "code": 6021,
+      "name": "invalidRemainingAccounts",
+      "msg": "The remaining accounts are invalid"
+    },
+    {
+      "code": 6022,
+      "name": "duplicateTransferRecord",
+      "msg": "Duplicate transfer record found"
+    },
+    {
+      "code": 6023,
+      "name": "tooManyManagedTransfers",
+      "msg": "Too many managed transfers are inflight for this vault"
+    },
+    {
+      "code": 6024,
+      "name": "invalidBridgeRegistry",
+      "msg": "The bridge registry does not belong to this vault"
     }
   ],
   "types": [
@@ -1098,7 +1096,88 @@ export type ExtBridge = {
       }
     },
     {
+      "name": "bridgeManagedTransfer",
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transferId",
+            "type": "pubkey"
+          },
+          {
+            "name": "sourceMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "destinationRecipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "providerProgram",
+            "type": "pubkey"
+          },
+          {
+            "name": "providerConfig",
+            "type": "pubkey"
+          },
+          {
+            "name": "providerEmitter",
+            "type": "pubkey"
+          },
+          {
+            "name": "sourceAmount",
+            "type": "u64"
+          },
+          {
+            "name": "quotedOutAmount",
+            "type": "u64"
+          },
+          {
+            "name": "providerSequence",
+            "type": "u64"
+          },
+          {
+            "name": "committedSlot",
+            "type": "u64"
+          },
+          {
+            "name": "protocol",
+            "type": "u16"
+          },
+          {
+            "name": "destinationChain",
+            "type": "u16"
+          },
+          {
+            "name": "sourceDecimals",
+            "type": "u8"
+          },
+          {
+            "name": "status",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                2
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "bridgeRegistry",
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
         "kind": "struct",
         "fields": [
@@ -1108,11 +1187,29 @@ export type ExtBridge = {
           },
           {
             "name": "managedTransferCount",
-            "type": "u64"
+            "type": "u8"
           },
           {
-            "name": "bump",
-            "type": "u8"
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "transfers",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "bridgeManagedTransfer"
+                  }
+                },
+                16
+              ]
+            }
           }
         ]
       }
@@ -1132,12 +1229,7 @@ export type ExtBridge = {
           },
           {
             "name": "transferId",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
+            "type": "pubkey"
           },
           {
             "name": "protocol",
@@ -1150,6 +1242,10 @@ export type ExtBridge = {
           {
             "name": "sourceMint",
             "type": "pubkey"
+          },
+          {
+            "name": "sourceDecimals",
+            "type": "u8"
           },
           {
             "name": "sourceTokenAccount",
@@ -1228,148 +1324,13 @@ export type ExtBridge = {
       }
     },
     {
-      "name": "bridgeTransferRecord",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "glamState",
-            "type": "pubkey"
-          },
-          {
-            "name": "transferId",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "protocol",
-            "type": "u16"
-          },
-          {
-            "name": "status",
-            "type": {
-              "defined": {
-                "name": "bridgeTransferStatus"
-              }
-            }
-          },
-          {
-            "name": "managed",
-            "type": "bool"
-          },
-          {
-            "name": "receiptVerified",
-            "type": "bool"
-          },
-          {
-            "name": "sourceMint",
-            "type": "pubkey"
-          },
-          {
-            "name": "sourceTokenAccount",
-            "type": "pubkey"
-          },
-          {
-            "name": "providerProgram",
-            "type": "pubkey"
-          },
-          {
-            "name": "providerConfig",
-            "type": "pubkey"
-          },
-          {
-            "name": "sourceAmount",
-            "type": "u64"
-          },
-          {
-            "name": "quotedOutAmount",
-            "type": "u64"
-          },
-          {
-            "name": "destinationChain",
-            "type": "u16"
-          },
-          {
-            "name": "destinationRecipient",
-            "type": "pubkey"
-          },
-          {
-            "name": "providerTransferId",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "providerEmitter",
-            "type": "pubkey"
-          },
-          {
-            "name": "providerSequence",
-            "type": "u64"
-          },
-          {
-            "name": "committedSlot",
-            "type": "u64"
-          },
-          {
-            "name": "settledSlot",
-            "type": "u64"
-          },
-          {
-            "name": "reconciledSlot",
-            "type": "u64"
-          },
-          {
-            "name": "failureReason",
-            "type": "u8"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "bridgeTransferStatus",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "committed"
-          },
-          {
-            "name": "settled"
-          },
-          {
-            "name": "reconciled"
-          },
-          {
-            "name": "failed"
-          }
-        ]
-      }
-    },
-    {
       "name": "commitOftTransferArgs",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "transferId",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
+            "type": "pubkey"
           }
         ]
       }
@@ -2073,12 +2034,7 @@ export type ExtBridge = {
         "fields": [
           {
             "name": "transferId",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
+            "type": "pubkey"
           },
           {
             "name": "middleInstructionHash",
@@ -2210,6 +2166,18 @@ export type ExtBridge = {
           },
           {
             "name": "either"
+          }
+        ]
+      }
+    },
+    {
+      "name": "settleManagedTransferArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transferId",
+            "type": "pubkey"
           }
         ]
       }
@@ -2361,6 +2329,18 @@ export type ExtBridge = {
       }
     },
     {
+      "name": "validateManagedTransferArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transferId",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "valuationModel",
       "type": {
         "kind": "enum",
@@ -2377,14 +2357,19 @@ export type ExtBridge = {
   ],
   "constants": [
     {
-      "name": "protoBridgePermReconcile",
-      "type": "u64",
-      "value": "2"
-    },
-    {
       "name": "protoBridgePermSend",
       "type": "u64",
       "value": "1"
+    },
+    {
+      "name": "protoBridgePermSettle",
+      "type": "u64",
+      "value": "4"
+    },
+    {
+      "name": "protoBridgePermValidate",
+      "type": "u64",
+      "value": "2"
     },
     {
       "name": "protoLayerzeroOft",
