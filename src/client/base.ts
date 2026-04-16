@@ -132,8 +132,8 @@ export class BaseClient {
   private _statePda?: PublicKey;
   private _globalConfig?: GlobalConfigAccount;
   private _globalConfigPromise?: Promise<GlobalConfigAccount>;
-  private _assetMetas?: Map<string, AssetMeta>;
-  private _assetMetasPromise?: Promise<Map<string, AssetMeta>>;
+  private _assetMetas?: PkMap<AssetMeta>;
+  private _assetMetasPromise?: Promise<PkMap<AssetMeta>>;
 
   public constructor(config?: GlamClientConfig) {
     if (config?.provider) {
@@ -723,7 +723,7 @@ export class BaseClient {
 
   public async fetchAssetMetas(options?: {
     refresh?: boolean;
-  }): Promise<Map<string, AssetMeta>> {
+  }): Promise<PkMap<AssetMeta>> {
     const useCache = !options?.refresh;
 
     if (useCache) {
@@ -741,7 +741,7 @@ export class BaseClient {
     const fetchPromise = this.fetchGlobalConfig(options)
       .then(async (globalConfig) => {
         const assets = globalConfig.assetMetas.map((am) => am.asset);
-        const tokenProgramsByAsset = new Map<string, PublicKey>();
+        const tokenProgramsByAsset = new PkMap<PublicKey>();
 
         try {
           // Fast path when every global-config mint account is available.
@@ -750,10 +750,7 @@ export class BaseClient {
             assets,
           );
           assets.forEach((asset, i) => {
-            tokenProgramsByAsset.set(
-              asset.toBase58(),
-              mintInfos[i].tokenProgram,
-            );
+            tokenProgramsByAsset.set(asset, mintInfos[i].tokenProgram);
           });
         } catch {
           // Local validators may clone a newer global config than the set of
@@ -765,46 +762,39 @@ export class BaseClient {
           );
           accountsInfo.forEach((accountInfo, i) => {
             const asset = assets[i];
-            const assetKey = asset.toBase58();
             if (accountInfo) {
               tokenProgramsByAsset.set(
-                assetKey,
+                asset,
                 parseMintAccountInfo(accountInfo, asset).tokenProgram,
               );
               return;
-            }
-
-            const fallback = ASSETS_MAINNET.get(assetKey);
-            if (fallback) {
-              tokenProgramsByAsset.set(assetKey, fallback.programId);
             }
           });
         }
 
         // Transforms onchain asset meta to client asset meta
-        const assetMetaMap = new Map<string, AssetMeta>(
-          globalConfig.assetMetas.flatMap(
-            ({ asset, decimals, oracle, oracleSource }) => {
-              const programId = tokenProgramsByAsset.get(asset.toBase58());
-              if (!programId) {
-                return [];
-              }
+        const assetMetaEntries: [PublicKey, AssetMeta][] = [];
+        globalConfig.assetMetas.forEach(
+          ({ asset, decimals, oracle, oracleSource }) => {
+            const programId = tokenProgramsByAsset.get(asset);
+            if (!programId) {
+              return;
+            }
 
-              return [
-                [
-                  asset.toBase58(),
-                  {
-                    asset,
-                    decimals,
-                    oracle,
-                    oracleSource,
-                    programId,
-                  },
-                ],
-              ];
-            },
-          ),
+            assetMetaEntries.push([
+              asset,
+              {
+                asset,
+                decimals,
+                oracle,
+                oracleSource,
+                programId,
+              },
+            ]);
+          },
         );
+
+        const assetMetaMap = new PkMap<AssetMeta>(assetMetaEntries);
 
         if (useCache) {
           this._assetMetas = assetMetaMap;
@@ -821,7 +811,7 @@ export class BaseClient {
     return await fetchPromise;
   }
 
-  public async refreshAssetMetaCache(): Promise<Map<string, AssetMeta>> {
+  public async refreshAssetMetaCache(): Promise<PkMap<AssetMeta>> {
     this._globalConfig = undefined;
     this._globalConfigPromise = undefined;
     this._assetMetas = undefined;
@@ -834,8 +824,7 @@ export class BaseClient {
     assetMint: string | PublicKey,
     options?: { refresh?: boolean },
   ): Promise<AssetMeta> {
-    const mint =
-      assetMint instanceof PublicKey ? assetMint.toBase58() : assetMint;
+    const mint = new PublicKey(assetMint);
     const assetMetas = await this.fetchAssetMetas(options);
     const assetMeta = assetMetas.get(mint) || ASSETS_MAINNET.get(mint);
 

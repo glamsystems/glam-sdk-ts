@@ -1,12 +1,21 @@
 import { PublicKey } from "@solana/web3.js";
 
+type PkMapKey = PublicKey | string;
+
+function normalizePkMapKey(key: PkMapKey): string {
+  return key instanceof PublicKey
+    ? key.toBase58()
+    : new PublicKey(key).toBase58();
+}
+
 /**
- * A Map implementation that uses PublicKey as keys.
+ * A Map implementation that uses PublicKey-compatible keys.
  *
  * This class extends the standard Map and allows using PublicKey objects
- * as keys by converting them to base58 strings internally. This solves the
- * problem of PublicKey object reference equality - two PublicKey objects
- * with the same address would normally be considered different keys in a Map.
+ * or base58 strings as keys by converting them to base58 strings internally.
+ * This solves the problem of PublicKey object reference equality - two
+ * PublicKey objects with the same address would normally be considered
+ * different keys in a Map.
  *
  * @example
  * ```typescript
@@ -17,7 +26,7 @@ import { PublicKey } from "@solana/web3.js";
  *
  * // Create with initial entries
  * const map2 = new PkMap<string>([
- *   [new PublicKey("11111111111111111111111111111111"), "value1"],
+ *   ["11111111111111111111111111111111", "value1"],
  *   [new PublicKey("22222222222222222222222222222222"), "value2"]
  * ]);
  *
@@ -31,51 +40,60 @@ export class PkMap<V> {
 
   /**
    * Creates a new PkMap instance.
-   * @param entries - Optional initial entries as [PublicKey, V] pairs
+   * @param entries - Optional initial entries as [PublicKey|string, V] pairs
    */
-  constructor(entries?: readonly (readonly [PublicKey, V])[] | null) {
+  constructor();
+  constructor(entries?: readonly (readonly [PkMapKey, V])[] | null);
+  constructor(entries?: Iterable<readonly [PkMapKey, V]> | null);
+  constructor(
+    entries?:
+      | readonly (readonly [PkMapKey, V])[]
+      | Iterable<readonly [PkMapKey, V]>
+      | null,
+  ) {
     if (entries) {
       for (const [key, value] of entries) {
-        this._map.set(key.toBase58(), value);
+        this._map.set(normalizePkMapKey(key), value);
       }
     }
   }
+
   /**
    * Associates the specified value with the specified PublicKey in this map.
-   * @param key - The PublicKey to use as the key
+   * @param key - The PublicKey or base58 string to use as the key
    * @param value - The value to associate with the key
    * @returns This PkMap instance for chaining
    */
-  set(key: PublicKey, value: V): this {
-    this._map.set(key.toBase58(), value);
+  set(key: PkMapKey, value: V): this {
+    this._map.set(normalizePkMapKey(key), value);
     return this;
   }
 
   /**
-   * Returns the value associated with the specified PublicKey, or undefined if not found.
-   * @param key - The PublicKey whose associated value is to be returned
+   * Returns the value associated with the specified key, or undefined if not found.
+   * @param key - The PublicKey or base58 string whose associated value is to be returned
    * @returns The value associated with the specified key, or undefined
    */
-  get(key: PublicKey): V | undefined {
-    return this._map.get(key.toBase58());
+  get(key: PkMapKey): V | undefined {
+    return this._map.get(normalizePkMapKey(key));
   }
 
   /**
-   * Returns true if this map contains a mapping for the specified PublicKey.
-   * @param key - The PublicKey whose presence in this map is to be tested
+   * Returns true if this map contains a mapping for the specified key.
+   * @param key - The PublicKey or base58 string whose presence in this map is to be tested
    * @returns true if this map contains a mapping for the specified key
    */
-  has(key: PublicKey): boolean {
-    return this._map.has(key.toBase58());
+  has(key: PkMapKey): boolean {
+    return this._map.has(normalizePkMapKey(key));
   }
 
   /**
-   * Removes the mapping for the specified PublicKey from this map if present.
-   * @param key - The PublicKey whose mapping is to be removed
+   * Removes the mapping for the specified key from this map if present.
+   * @param key - The PublicKey or base58 string whose mapping is to be removed
    * @returns true if the element was removed, false otherwise
    */
-  delete(key: PublicKey): boolean {
-    return this._map.delete(key.toBase58());
+  delete(key: PkMapKey): boolean {
+    return this._map.delete(normalizePkMapKey(key));
   }
 
   /**

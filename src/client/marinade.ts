@@ -362,7 +362,7 @@ export class MarinadeClient {
     const stakedLamports =
       parsedData?.parsed?.info?.stake?.delegation?.stake ?? null;
 
-    if (parsedData.space != 200) {
+    if (parsedData.space !== 200) {
       throw new Error(
         `${stakeAccount} is not a stake account. Account size ${
           parsedData.space
@@ -394,11 +394,10 @@ export class MarinadeClient {
       throw new Error("Stake account is not delegated");
     }
 
-    const accountsInfo =
-      await this.base.connection.getMultipleAccountsInfo([
-        stakeList.account,
-        validatorList.account,
-      ]);
+    const accountsInfo = await this.base.connection.getMultipleAccountsInfo([
+      stakeList.account,
+      validatorList.account,
+    ]);
 
     if (!accountsInfo[0] || !accountsInfo[1]) {
       throw new Error(

@@ -1,5 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { LstList } from "@glamsystems/sanctum-lst-list";
+import { PkMap } from "./utils/pkmap";
 
 export const STAKE_POOLS = LstList.filter(
   (lst) =>
@@ -48,14 +49,13 @@ export interface AssetMeta {
 }
 
 /**
- * Legacy asset metadata snapshot retained for backward compatibility.
+ * Transforms the LST list into a map of asset metas.
  *
- * Runtime consumers should prefer the onchain-backed helpers in `globalConfig.ts`.
- * Note that we use functional prices for LSTs, and the oracle pubkey of a LST
+ * We use functional prices for LSTs, and the oracle pubkey of a LST
  * asset is the pool state.
  */
-export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map(
-  STAKE_POOLS.map((p) => [
+export const ASSETS_MAINNET: PkMap<AssetMeta> = new PkMap(
+  STAKE_POOLS.map((p): [string, AssetMeta] => [
     p.mint,
     {
       asset: new PublicKey(p.mint),
@@ -66,5 +66,3 @@ export const ASSETS_MAINNET: Map<string, AssetMeta> = new Map(
     },
   ]),
 );
-
-export const ASSETS_TESTS: Map<string, AssetMeta> = new Map([]);

@@ -183,9 +183,9 @@ export const getStakeAccountsWithStates = async (
 
       // possible state if delegated: active, inactive, activating, deactivating
       const { activationEpoch, deactivationEpoch, voter } = delegation;
-      if (activationEpoch == epochInfo.epoch) {
+      if (activationEpoch === epochInfo.epoch) {
         state = "activating";
-      } else if (deactivationEpoch == epochInfo.epoch) {
+      } else if (deactivationEpoch === epochInfo.epoch) {
         state = "deactivating";
       } else if (epochInfo.epoch > deactivationEpoch) {
         state = "inactive";

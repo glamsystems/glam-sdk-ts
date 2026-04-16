@@ -13,6 +13,8 @@ import {
 } from "@solana/web3.js";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import { KaminoLendingClient } from "./kamino";
+import { VaultClient } from "./vault";
 import {
   LayerzeroOftRouteProfile,
   SerializableRouteAccountMeta,
@@ -26,15 +28,17 @@ import {
   RouteManagementMode,
 } from "../deser/integrationPolicies";
 import {
+  getGlobalConfigPda,
+  getIntegrationAuthorityPda,
+} from "../utils/glamPDAs";
+import {
   SEED_BRIDGE_REGISTRY,
   SEED_BRIDGE_SESSION,
-  SEED_BRIDGE_TRANSFER_RECORD,
   SEED_INTEGRATION_AUTHORITY,
 } from "../constants";
 
 const LAYERZERO_OFT_PROTOCOL = 1 << 2;
 
-type BufferLike32 = Uint8Array | number[] | Buffer;
 type BufferLike = Uint8Array | number[] | Buffer;
 
 type RouteManagementModeArg =
@@ -52,25 +56,22 @@ export type LayerzeroOftRouteInput = Omit<
 };
 
 export type OftTransferParams = {
-  transferId: BufferLike32;
+  transferId: PublicKey;
   sourceMint: PublicKey;
   sourceAmount: BN;
   providerInstructions: TransactionInstruction[];
   providerReceipt: PublicKey;
-  sourceTokenAccount?: PublicKey;
   managed?: boolean;
   providerSigners?: Keypair[];
-  prepareRemainingAccounts?: AccountMeta[];
-  commitRemainingAccounts?: AccountMeta[];
 };
 
 export type LayerzeroOftSendParams = {
-  transferId?: BufferLike32;
+  transferId?: PublicKey;
   sourceMint: PublicKey;
   sourceAmount: BN;
   destinationChain: number;
   destinationRecipient: PublicKey;
-  nativeFee: BN;
+  nativeFeeLamports: BN;
   minAmountLd?: BN;
   lzTokenFee?: BN;
   options?: BufferLike;
@@ -81,13 +82,30 @@ export type LayerzeroOftSendParams = {
   providerProgram?: PublicKey;
 };
 
-function toFixedArray32(value: BufferLike32, label: string): number[] {
-  const bytes = Array.from(Buffer.from(value));
-  if (bytes.length !== 32) {
-    throw new Error(`${label} must be exactly 32 bytes`);
-  }
-  return bytes;
-}
+type BridgeTransferStatusAccount =
+  | { committed: Record<string, never> }
+  | { validated: Record<string, never> }
+  | { settled: Record<string, never> };
+
+type BridgeTransferRecordAccount = {
+  glamState: PublicKey;
+  transferId: PublicKey;
+  protocol: number;
+  status: BridgeTransferStatusAccount;
+  managed: true;
+  receiptVerified: true;
+  sourceMint: PublicKey;
+  sourceDecimals: number;
+  providerProgram: PublicKey;
+  providerConfig: PublicKey;
+  sourceAmount: BN;
+  quotedOutAmount: BN;
+  destinationChain: number;
+  destinationRecipient: PublicKey;
+  providerEmitter: PublicKey;
+  providerSequence: BN;
+  committedSlot: BN;
+};
 
 function appendU16Le(parts: Buffer[], value: number) {
   const out = Buffer.alloc(2);
@@ -201,14 +219,6 @@ async function hashMiddleInstructions(
   return await sha256(Buffer.concat(parts));
 }
 
-function cloneAccountMeta(meta: AccountMeta): AccountMeta {
-  return {
-    pubkey: meta.pubkey,
-    isSigner: meta.isSigner,
-    isWritable: meta.isWritable,
-  };
-}
-
 function getBridgeRegistryPda(
   glamState: PublicKey,
   bridgeProgramId: PublicKey,
@@ -221,32 +231,66 @@ function getBridgeRegistryPda(
 
 function getBridgeSessionPda(
   glamState: PublicKey,
-  transferId: BufferLike32,
+  transferId: PublicKey,
   bridgeProgramId: PublicKey,
 ): PublicKey {
   return PublicKey.findProgramAddressSync(
     [
       Buffer.from(SEED_BRIDGE_SESSION),
       glamState.toBuffer(),
-      Buffer.from(toFixedArray32(transferId, "transferId")),
+      transferId.toBuffer(),
     ],
     bridgeProgramId,
   )[0];
 }
 
-function getBridgeTransferRecordPda(
+function toCount(value: BN | number): number {
+  return BN.isBN(value) ? value.toNumber() : value;
+}
+
+function toBridgeTransferStatus(status: number): BridgeTransferStatusAccount {
+  switch (status) {
+    case 0:
+      return { committed: {} };
+    case 1:
+      return { validated: {} };
+    case 2:
+      return { settled: {} };
+    default:
+      throw new Error(`Unsupported bridge transfer status: ${status}`);
+  }
+}
+
+function getActiveRegistryTransfers(registry: {
+  managedTransferCount: BN | number;
+  transfers: any[];
+}) {
+  return registry.transfers.slice(0, toCount(registry.managedTransferCount));
+}
+
+function registryTransferToRecord(
+  transfer: any,
   glamState: PublicKey,
-  transferId: BufferLike32,
-  bridgeProgramId: PublicKey,
-): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [
-      Buffer.from(SEED_BRIDGE_TRANSFER_RECORD),
-      glamState.toBuffer(),
-      Buffer.from(toFixedArray32(transferId, "transferId")),
-    ],
-    bridgeProgramId,
-  )[0];
+): BridgeTransferRecordAccount {
+  return {
+    glamState,
+    transferId: transfer.transferId,
+    protocol: transfer.protocol,
+    status: toBridgeTransferStatus(transfer.status),
+    managed: true,
+    receiptVerified: true,
+    sourceMint: transfer.sourceMint,
+    sourceDecimals: transfer.sourceDecimals,
+    providerProgram: transfer.providerProgram,
+    providerConfig: transfer.providerConfig,
+    sourceAmount: transfer.sourceAmount,
+    quotedOutAmount: transfer.quotedOutAmount,
+    destinationChain: transfer.destinationChain,
+    destinationRecipient: transfer.destinationRecipient,
+    providerEmitter: transfer.providerEmitter,
+    providerSequence: transfer.providerSequence,
+    committedSlot: transfer.committedSlot,
+  };
 }
 
 function toRouteManagementModeArg(managementMode: RouteManagementModeArg) {
@@ -303,13 +347,13 @@ export function deriveLayerzeroNoncePda(
 
 export async function deriveOftAuxiliaryAccountSeed(
   glamState: PublicKey,
-  transferId: BufferLike32,
+  transferId: PublicKey,
 ) {
   const digest = await sha256(
     Buffer.concat([
       Buffer.from("oft-auxiliary-account"),
       glamState.toBuffer(),
-      Buffer.from(toFixedArray32(transferId, "transferId")),
+      transferId.toBuffer(),
     ]),
   );
   return digest.subarray(0, 16).toString("hex");
@@ -318,7 +362,7 @@ export async function deriveOftAuxiliaryAccountSeed(
 export async function deriveOftAuxiliaryAccount(
   glamSigner: PublicKey,
   glamState: PublicKey,
-  transferId: BufferLike32,
+  transferId: PublicKey,
   tokenProgram: PublicKey,
 ) {
   const seed = await deriveOftAuxiliaryAccountSeed(glamState, transferId);
@@ -390,10 +434,10 @@ class TxBuilder extends BaseTxBuilder<BridgeClient> {
   ): Promise<TransactionInstruction> {
     return await this.client.base.extBridgeProgram.methods
       .deleteLayerzeroOftRoute(normalizeRoute(route))
-      .accounts({
+      .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
-        // glamProtocolProgram: this.client.base.protocolProgram.programId,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
       })
       .instruction();
   }
@@ -405,7 +449,6 @@ class TxBuilder extends BaseTxBuilder<BridgeClient> {
     tx: VersionedTransaction;
     additionalSigners: Keypair[];
     sessionPda: PublicKey;
-    transferRecordPda: PublicKey;
     auxiliaryTokenAccount: PublicKey;
     sourceTokenAccount: PublicKey;
   }> {
@@ -413,7 +456,7 @@ class TxBuilder extends BaseTxBuilder<BridgeClient> {
       throw new Error("OFT transfers require exactly one provider instruction");
     }
 
-    const transferId = toFixedArray32(params.transferId, "transferId");
+    const transferId = params.transferId;
     const registryPda = getBridgeRegistryPda(
       this.client.base.statePda,
       this.client.base.extBridgeProgram.programId,
@@ -423,22 +466,15 @@ class TxBuilder extends BaseTxBuilder<BridgeClient> {
       transferId,
       this.client.base.extBridgeProgram.programId,
     );
-    const transferRecordPda = getBridgeTransferRecordPda(
-      this.client.base.statePda,
-      transferId,
-      this.client.base.extBridgeProgram.programId,
-    );
-    const integrationAuthority = PublicKey.findProgramAddressSync(
-      [Buffer.from(SEED_INTEGRATION_AUTHORITY)],
-      this.client.base.extBridgeProgram.programId,
-    )[0];
+
     const { tokenProgram } = await fetchMintAndTokenProgram(
       this.client.base.connection,
       params.sourceMint,
     );
-    const sourceTokenAccount =
-      params.sourceTokenAccount ||
-      this.client.base.getVaultAta(params.sourceMint, tokenProgram);
+    const sourceTokenAccount = this.client.base.getVaultAta(
+      params.sourceMint,
+      tokenProgram,
+    );
     const { address: auxiliaryTokenAccount } = await deriveOftAuxiliaryAccount(
       txOptions.signer || this.client.base.signer,
       this.client.base.statePda,
@@ -454,9 +490,6 @@ class TxBuilder extends BaseTxBuilder<BridgeClient> {
         isSigner: false,
         isWritable: false,
       } satisfies AccountMeta,
-      ...((params.prepareRemainingAccounts || []).map(
-        cloneAccountMeta,
-      ) as AccountMeta[]),
     ];
     const commitRemainingAccounts = [
       {
@@ -464,10 +497,11 @@ class TxBuilder extends BaseTxBuilder<BridgeClient> {
         isSigner: false,
         isWritable: false,
       } satisfies AccountMeta,
-      ...((params.commitRemainingAccounts || []).map(
-        cloneAccountMeta,
-      ) as AccountMeta[]),
     ];
+
+    const integrationAuthority = getIntegrationAuthorityPda(
+      this.client.base.extBridgeProgram.programId,
+    );
 
     const prepareMethod = this.client.base.extBridgeProgram.methods
       .prepareOftTransfer({
@@ -503,17 +537,16 @@ class TxBuilder extends BaseTxBuilder<BridgeClient> {
         glamState: this.client.base.statePda,
         glamVault: this.client.base.vaultPda,
         glamSigner: txOptions.signer || this.client.base.signer,
-        integrationAuthority,
         cpiProgram: tokenProgram,
         glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
         instructions: SYSVAR_INSTRUCTIONS_PUBKEY,
         bridgeRegistry: registryPda,
         bridgeSession: sessionPda,
-        transferRecord: transferRecordPda,
         sourceTokenAccount,
         sourceMint: params.sourceMint,
         auxiliaryTokenAccount,
+        integrationAuthority,
+        systemProgram: SystemProgram.programId,
       });
     commitMethod.remainingAccounts(commitRemainingAccounts);
     const commitIx = await commitMethod.instruction();
@@ -527,10 +560,85 @@ class TxBuilder extends BaseTxBuilder<BridgeClient> {
       tx,
       additionalSigners: params.providerSigners || [],
       sessionPda,
-      transferRecordPda,
       auxiliaryTokenAccount,
       sourceTokenAccount,
     };
+  }
+
+  async priceManagedTransfersIxs(): Promise<TransactionInstruction[]> {
+    const [stateAccount, registry] = await Promise.all([
+      this.client.base.fetchStateAccount(),
+      this.client.fetchRegistry(),
+    ]);
+    if (!registry) {
+      throw new Error("Managed bridge registry not initialized");
+    }
+
+    const transfers = getActiveRegistryTransfers(registry);
+    const [baseAssetMeta, assetMetas] = await Promise.all([
+      this.client.base.getAssetMeta(stateAccount.baseAssetMint),
+      Promise.all(
+        transfers.map(async (transfer) => ({
+          transfer,
+          assetMeta: await this.client.base.getAssetMeta(transfer.sourceMint),
+        })),
+      ),
+    ]);
+    const integrationAuthority = PublicKey.findProgramAddressSync(
+      [Buffer.from(SEED_INTEGRATION_AUTHORITY)],
+      this.client.base.extBridgeProgram.programId,
+    )[0];
+    const ixs: TransactionInstruction[] = [];
+    const kaminoReserveKeys = new Map<string, PublicKey>();
+    [baseAssetMeta, ...assetMetas.map(({ assetMeta }) => assetMeta)].forEach(
+      (assetMeta) => {
+        if (assetMeta.oracleSource === "KaminoReserve") {
+          kaminoReserveKeys.set(assetMeta.oracle.toBase58(), assetMeta.oracle);
+        }
+      },
+    );
+
+    if (kaminoReserveKeys.size > 0) {
+      const klend = new KaminoLendingClient(
+        this.client.base,
+        new VaultClient(this.client.base),
+      );
+      const reserves = await klend.fetchAndParseReserves(
+        Array.from(kaminoReserveKeys.values()),
+      );
+      ixs.push(klend.txBuilder.refreshReservesBatchIx(reserves, false));
+    }
+
+    const remainingAccounts = assetMetas.map(
+      ({ assetMeta }) =>
+        ({
+          pubkey: assetMeta.oracle,
+          isSigner: false,
+          isWritable: false,
+        }) satisfies AccountMeta,
+    );
+
+    const priceMethod = this.client.base.extBridgeProgram.methods
+      .priceManagedTransfers()
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        bridgeRegistry: this.client.getRegistryPda(),
+        integrationAuthority,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        glamConfig: getGlobalConfigPda(),
+        baseAssetOracle: baseAssetMeta.oracle,
+      });
+    priceMethod.remainingAccounts(remainingAccounts);
+    ixs.push(await priceMethod.instruction());
+
+    return ixs;
+  }
+
+  async priceManagedTransfersTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ixs = await this.priceManagedTransfersIxs();
+    return await this.buildVersionedTx(ixs, txOptions);
   }
 }
 
@@ -566,16 +674,8 @@ export class BridgeClient {
     );
   }
 
-  getSessionPda(transferId: BufferLike32): PublicKey {
+  getSessionPda(transferId: PublicKey): PublicKey {
     return getBridgeSessionPda(
-      this.base.statePda,
-      transferId,
-      this.base.extBridgeProgram.programId,
-    );
-  }
-
-  getTransferRecordPda(transferId: BufferLike32): PublicKey {
-    return getBridgeTransferRecordPda(
       this.base.statePda,
       transferId,
       this.base.extBridgeProgram.programId,
@@ -597,7 +697,7 @@ export class BridgeClient {
   }
 
   async deriveOftAuxiliaryTokenAccount(
-    transferId: BufferLike32,
+    transferId: PublicKey,
     sourceMint: PublicKey,
     signer?: PublicKey,
   ) {
@@ -804,16 +904,24 @@ export class BridgeClient {
     );
   }
 
-  async fetchSession(transferId: BufferLike32) {
+  async fetchSession(transferId: PublicKey) {
     return await this.base.extBridgeProgram.account.bridgeSession.fetchNullable(
       this.getSessionPda(transferId),
     );
   }
 
-  async fetchTransferRecord(transferId: BufferLike32) {
-    return await this.base.extBridgeProgram.account.bridgeTransferRecord.fetch(
-      this.getTransferRecordPda(transferId),
+  async fetchTransferRecordNullable(transferId: PublicKey) {
+    const registry = await this.fetchRegistry();
+    if (!registry) {
+      return null;
+    }
+
+    const transfer = getActiveRegistryTransfers(registry).find((candidate) =>
+      candidate.transferId.equals(transferId),
     );
+    return transfer
+      ? registryTransferToRecord(transfer, this.base.statePda)
+      : null;
   }
 
   async addLayerzeroOftRoute(
@@ -880,15 +988,16 @@ export class BridgeClient {
     txOptions: TxOptions = {},
   ) {
     const resolvedTransferId =
-      params.transferId || Keypair.generate().publicKey.toBuffer();
+      params.transferId || Keypair.generate().publicKey;
     const { tokenProgram } = await fetchMintAndTokenProgram(
       this.base.connection,
       params.sourceMint,
     );
     const signer = txOptions.signer || this.base.signer;
-    const sourceTokenAccount =
-      params.sourceTokenAccount ||
-      this.base.getVaultAta(params.sourceMint, tokenProgram);
+    const sourceTokenAccount = this.base.getVaultAta(
+      params.sourceMint,
+      tokenProgram,
+    );
     const auxiliaryTokenAccount = await this.deriveOftAuxiliaryTokenAccount(
       resolvedTransferId,
       params.sourceMint,
@@ -905,7 +1014,7 @@ export class BridgeClient {
         minAmountLd: params.minAmountLd,
         options: params.options,
         composeMsg: params.composeMsg,
-        nativeFee: params.nativeFee,
+        nativeFee: params.nativeFeeLamports,
         lzTokenFee: params.lzTokenFee,
         nonceAccount: params.nonceAccount,
       });
@@ -920,7 +1029,6 @@ export class BridgeClient {
         sourceAmount: params.sourceAmount,
         providerInstructions: [instruction],
         providerReceipt,
-        sourceTokenAccount,
         managed: params.managed,
       },
       oftTxOptions,
@@ -981,85 +1089,48 @@ export class BridgeClient {
   }
 
   async settleManagedTransfer(
-    transferId: BufferLike32,
+    transferId: PublicKey,
     txOptions: TxOptions = {},
   ) {
     const ix = await this.base.extBridgeProgram.methods
-      .settleManagedTransfer()
-      .accounts({
+      .settleManagedTransfer({
+        transferId,
+      })
+      .accountsPartial({
         glamState: this.base.statePda,
+        glamVault: this.base.vaultPda,
         glamSigner: txOptions.signer || this.base.signer,
-        transferRecord: this.getTransferRecordPda(transferId),
+        glamProtocolProgram: this.base.protocolProgram.programId,
+        bridgeRegistry: this.getRegistryPda(),
+        integrationAuthority: getIntegrationAuthorityPda(
+          this.base.extBridgeProgram.programId,
+        ),
+        systemProgram: SystemProgram.programId,
       })
       .instruction();
     const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 
-  async reconcileManagedTransfer(
-    transferId: BufferLike32,
+  async validateManagedTransfer(
+    transferId: PublicKey,
     txOptions: TxOptions = {},
   ) {
-    const integrationAuthority = PublicKey.findProgramAddressSync(
-      [Buffer.from(SEED_INTEGRATION_AUTHORITY)],
-      this.base.extBridgeProgram.programId,
-    )[0];
     const ix = await this.base.extBridgeProgram.methods
-      .reconcileManagedTransfer()
+      .validateManagedTransfer({
+        transferId,
+      })
       .accounts({
         glamState: this.base.statePda,
-        // glamVault: this.base.vaultPda,
         glamSigner: txOptions.signer || this.base.signer,
-        // integrationAuthority,
-        // glamProtocolProgram: this.base.protocolProgram.programId,
-        // systemProgram: SystemProgram.programId,
-        // bridgeRegistry: this.getRegistryPda(),
-        transferRecord: this.getTransferRecordPda(transferId),
       })
       .instruction();
     const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 
-  async failManagedTransfer(
-    transferId: BufferLike32,
-    failureReason: number,
-    txOptions: TxOptions = {},
-  ) {
-    const integrationAuthority = PublicKey.findProgramAddressSync(
-      [Buffer.from(SEED_INTEGRATION_AUTHORITY)],
-      this.base.extBridgeProgram.programId,
-    )[0];
-    const ix = await this.base.extBridgeProgram.methods
-      .failOrCancelManagedTransfer(failureReason)
-      .accounts({
-        glamState: this.base.statePda,
-        // glamVault: this.base.vaultPda,
-        glamSigner: txOptions.signer || this.base.signer,
-        // integrationAuthority,
-        // glamProtocolProgram: this.base.protocolProgram.programId,
-        // systemProgram: SystemProgram.programId,
-        // bridgeRegistry: this.getRegistryPda(),
-        transferRecord: this.getTransferRecordPda(transferId),
-      })
-      .instruction();
-    const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
-    return await this.base.sendAndConfirm(tx);
-  }
-
-  async cleanupTransferRecord(
-    transferId: BufferLike32,
-    txOptions: TxOptions = {},
-  ) {
-    const ix = await this.base.extBridgeProgram.methods
-      .cleanupTransferRecord()
-      .accounts({
-        glamState: this.base.statePda,
-        glamSigner: txOptions.signer || this.base.signer,
-        transferRecord: this.getTransferRecordPda(transferId),
-      })
-      .instruction();
-    const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
+  async priceManagedTransfers(txOptions: TxOptions = {}) {
+    const tx = await this.txBuilder.priceManagedTransfersTx(txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 }

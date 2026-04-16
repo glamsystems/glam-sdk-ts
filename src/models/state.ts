@@ -21,6 +21,7 @@ import { PkSet } from "../utils";
 export type StateAccount = IdlAccounts<GlamProtocol>["stateAccount"];
 
 export type StateModelType = IdlTypes<GlamProtocol>["stateModel"];
+export type OracleConfigsType = IdlTypes<GlamProtocol>["oracleConfigs"];
 
 /**
  * State model class as defined in the IDL.
@@ -30,6 +31,7 @@ export class StateIdlModel implements StateModelType {
   name: number[] | null;
   uri: string | null;
   enabled: boolean | null;
+  oracleConfigs: OracleConfigsType | null;
 
   assets: PublicKey[] | null;
   created: CreatedModel | null;
@@ -46,6 +48,7 @@ export class StateIdlModel implements StateModelType {
     this.name = data.name ?? null;
     this.uri = data.uri ?? null;
     this.enabled = data.enabled ?? null;
+    this.oracleConfigs = data.oracleConfigs ?? null;
 
     this.assets = data.assets ?? null;
     this.created = data.created ?? null;

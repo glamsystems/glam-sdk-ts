@@ -154,6 +154,21 @@ const RESERVE_FIXTURES: ReserveFixture[] = [
     ),
   },
   {
+    fixtureName: "reserve_wsol_main_market",
+    reserveAddress: new PublicKey(
+      "d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q",
+    ),
+    lendingMarket: new PublicKey(
+      "7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF",
+    ),
+    mint: new PublicKey("So11111111111111111111111111111111111111112"),
+    mintDecimals: 9,
+    farmDebtNullable: null,
+    farmCollateralNullable: new PublicKey(
+      "955xWFhSDcDiUgUr4sBRtCpTLiMd4H5uZLAmgtP3R3sX",
+    ),
+  },
+  {
     fixtureName: "reserve_usdc_jlp_market",
     reserveAddress: new PublicKey(
       "Ga4rZytCpq1unD4DbEJ5bkHeUz9g3oh9AAFEi6vSauXp",

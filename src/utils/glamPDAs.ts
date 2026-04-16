@@ -12,6 +12,7 @@ import {
   TOKEN_ACL_PROGRAM,
   TOKEN_ACL_GATE_PROGRAM,
   TRANSFER_HOOK_PROGRAM,
+  SEED_INTEGRATION_AUTHORITY,
 } from "../constants";
 
 export function getStatePda(
@@ -134,5 +135,12 @@ export function getGlobalConfigPda() {
   return PublicKey.findProgramAddressSync(
     [Buffer.from(SEED_GLOBAL_CONFIG)],
     GLAM_CONFIG_PROGRAM,
+  )[0];
+}
+
+export function getIntegrationAuthorityPda(integrationProgram: PublicKey) {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from(SEED_INTEGRATION_AUTHORITY)],
+    integrationProgram,
   )[0];
 }

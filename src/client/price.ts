@@ -29,6 +29,7 @@ import {
 import { KVaultState, Obligation, Reserve } from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
 import { SEED_OBSERVATION_STATE } from "../constants";
+import { BridgeClient } from "./bridge";
 
 /**
  * Represents a single asset holding within a vault.
@@ -101,6 +102,7 @@ export class PriceClient {
     readonly base: BaseClient,
     readonly klend: KaminoLendingClient,
     readonly kvaults: KaminoVaultsClient,
+    readonly bridge: BridgeClient,
     private readonly getJupiterApi: () => JupiterApiClient,
   ) {}
 
@@ -1073,6 +1075,10 @@ export class PriceClient {
 
     const epiRefreshIx = await this.priceEpiValidatedPositionsIx();
     if (epiRefreshIx) pricingIxs.push(epiRefreshIx);
+
+    const priceBridgeIxs =
+      await this.bridge.txBuilder.priceManagedTransfersIxs();
+    if (priceBridgeIxs) pricingIxs.push(...priceBridgeIxs);
 
     return pricingIxs.filter(Boolean);
   }
