@@ -4,6 +4,7 @@ import {
   getExtCctpProgramId,
   getExtEpiProgramId,
   getExtKaminoProgramId,
+  getExtLoopscaleProgramId,
   getExtMarinadeProgramId,
   getExtSplProgramId,
   getExtStakePoolProgramId,
@@ -97,6 +98,9 @@ export const TOKEN_MESSENGER_MINTER_V2 = new PublicKey(
 export const MESSAGE_TRANSMITTER_V2 = new PublicKey(
   "CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC",
 );
+export const LOOPSCALE_PROGRAM_ID = new PublicKey(
+  "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78",
+);
 
 /**
  * Token ACL (sRFC-37)
@@ -185,18 +189,14 @@ export const getProtocolsAndPermissions = (
     "0000000000000100": {
       name: "JupiterSwap",
       staging: false,
-      permissions: staging
-        ? {
-            [1 << 0]: "SwapToAny",
-            [1 << 1]: "SwapLST",
-            [1 << 2]: "SwapAllowlisted",
-            [1 << 3]: "SwapFromAny",
-          }
-        : {
-            [1 << 0]: "SwapAny",
-            [1 << 1]: "SwapLST",
-            [1 << 2]: "SwapAllowlisted",
-          },
+      permissions: {
+        [1 << 0]: "SwapToAny",
+        [1 << 1]: "SwapLST",
+        [1 << 2]: "SwapAllowlisted",
+        [1 << 3]: "SwapFromAny",
+        [1 << 4]: "SkipQuotePriceCheckLimited", // Skip oracle check when dest token has no oracle
+        [1 << 5]: "SkipQuotePriceCheck", // Skip oracle check unconditionally
+      },
     },
   },
   // GLAM mint protocols and permissions are defined in:
@@ -219,7 +219,7 @@ export const getProtocolsAndPermissions = (
     },
   },
   // Kamino integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_kamino/src/state/acl.rs
+  // @anchor/programs/ext_kamino/src/state/access.rs
   [getExtKaminoProgramId(staging).toBase58()]: {
     "0000000000000001": {
       name: "KaminoLend",
@@ -230,6 +230,7 @@ export const getProtocolsAndPermissions = (
         [1 << 2]: "Withdraw",
         [1 << 3]: "Borrow",
         [1 << 4]: "Repay",
+        [1 << 5]: "Liquidate",
       },
     },
     "0000000000000010": {
@@ -272,6 +273,27 @@ export const getProtocolsAndPermissions = (
       },
     },
   },
+  // Loopscale integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_loopscale/src/state/access.rs
+  [getExtLoopscaleProgramId(staging).toBase58()]: {
+    "0000000000000001": {
+      name: "Loopscale",
+      staging: true,
+      permissions: {
+        [1 << 0]: "ManageLoan",
+        [1 << 1]: "DepositCollateral",
+        [1 << 2]: "WithdrawCollateral",
+        [1 << 3]: "BorrowPrincipal",
+        [1 << 4]: "RepayPrincipal",
+        [1 << 5]: "RefinanceLedger",
+        [1 << 6]: "DepositUserVault",
+        [1 << 7]: "WithdrawUserVault",
+        [1 << 8]: "StakeUserVaultLp",
+        [1 << 9]: "UnstakeUserVaultLp",
+        [1 << 10]: "ClaimVaultRewards",
+      },
+    },
+  },
   // Bridge integration program protocols and permissions are defined in:
   // @anchor/programs/ext_bridge/src/state/access.rs
   [getExtBridgeProgramId(staging).toBase58()]: {
@@ -280,7 +302,8 @@ export const getProtocolsAndPermissions = (
       staging: true,
       permissions: {
         [1 << 0]: "Send",
-        [1 << 1]: "Reconcile",
+        [1 << 1]: "Validate",
+        [1 << 2]: "Settle",
       },
     },
   },
@@ -298,7 +321,7 @@ export const getProtocolsAndPermissions = (
     },
   },
   // Marinade integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_marinade/src/state/acl.rs
+  // @anchor/programs/ext_marinade/src/state/access.rs
   [getExtMarinadeProgramId(staging).toBase58()]: {
     "0000000000000001": {
       name: "Marinade",
@@ -310,7 +333,7 @@ export const getProtocolsAndPermissions = (
     },
   },
   // Stake pool integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_stake_pool/src/state/acl.rs
+  // @anchor/programs/ext_stake_pool/src/state/access.rs
   [getExtStakePoolProgramId(staging).toBase58()]: {
     "0000000000000001": {
       name: "StakePool",

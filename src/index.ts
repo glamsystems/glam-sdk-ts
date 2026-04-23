@@ -7,6 +7,7 @@ export * from "./client/timelock";
 export * from "./client/cctp";
 export * from "./client/bridge";
 export * from "./client/epi";
+export * from "./client/loopscale";
 export * from "./client/price";
 export * from "./deser/integrationPolicies";
 export * from "./deser/tokenAclLayouts";

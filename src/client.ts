@@ -20,6 +20,7 @@ import { StakePoolClient } from "./client/stake-pool";
 import { CctpClient } from "./client/cctp";
 import { BridgeClient } from "./client/bridge";
 import { EpiClient } from "./client/epi";
+import { LoopscaleClient } from "./client/loopscale";
 
 /**
  * Main entrypoint for the GLAM SDK
@@ -45,6 +46,7 @@ export class GlamClient extends BaseClient {
   private _cctp?: CctpClient;
   private _bridge?: BridgeClient;
   private _epi?: EpiClient;
+  private _loopscale?: LoopscaleClient;
 
   public constructor(config?: GlamClientConfig) {
     super(config);
@@ -184,5 +186,12 @@ export class GlamClient extends BaseClient {
       this._epi = new EpiClient(this);
     }
     return this._epi;
+  }
+
+  get loopscale(): LoopscaleClient {
+    if (!this._loopscale) {
+      this._loopscale = new LoopscaleClient(this);
+    }
+    return this._loopscale;
   }
 }

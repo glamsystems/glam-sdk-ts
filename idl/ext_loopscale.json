@@ -1,0 +1,3541 @@
+{
+  "address": "G1NTLoPS5orMCxgFjzNDE5H6c3AbxiU1DgqCJBaJ1pfM",
+  "metadata": {
+    "name": "ext_loopscale",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Loopscale integration for GLAM Protocol"
+  },
+  "instructions": [
+    {
+      "name": "borrow_principal",
+      "docs": [
+        "Borrow principal against a locked loan.",
+        "",
+        "- Permission: `BorrowPrincipal`.",
+        "- Policy",
+        "- `principal_mint` must be present in `LoopscalePolicy::borrow_allowlist`.",
+        "- `market_information` must be present in `LoopscalePolicy::market_allowlist`."
+      ],
+      "discriminator": [
+        106,
+        10,
+        38,
+        204,
+        139,
+        188,
+        124,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "market_information",
+          "writable": true
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "borrower_ta",
+          "writable": true
+        },
+        {
+          "name": "strategy_ta",
+          "writable": true
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "BorrowPrincipalParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "claim_vault_rewards",
+      "docs": [
+        "Claim accrued rewards on staked user-vault LP positions.",
+        "",
+        "- Permission: `ClaimVaultRewards`."
+      ],
+      "discriminator": [
+        0,
+        152,
+        75,
+        29,
+        195,
+        223,
+        12,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vault_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "user_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "stake_account",
+          "writable": true
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "mints",
+          "type": {
+            "vec": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "close_loan",
+      "docs": [
+        "Close an existing Loopscale loan PDA.",
+        "",
+        "- Permission: `ManageLoan`."
+      ],
+      "discriminator": [
+        96,
+        114,
+        111,
+        204,
+        149,
+        228,
+        235,
+        124
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_loan",
+      "docs": [
+        "Create a new Loopscale loan PDA owned by the GLAM vault.",
+        "",
+        "- Permission: `ManageLoan`."
+      ],
+      "discriminator": [
+        166,
+        131,
+        118,
+        219,
+        138,
+        218,
+        206,
+        140
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "CreateLoanParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "deposit_collateral",
+      "docs": [
+        "Deposit collateral into a Loopscale loan.",
+        "",
+        "- Permission: `DepositCollateral`.",
+        "- Policy: `deposit_mint` must be present in `LoopscalePolicy::deposit_allowlist`."
+      ],
+      "discriminator": [
+        156,
+        131,
+        142,
+        116,
+        146,
+        247,
+        162,
+        120
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "borrower_collateral_ta",
+          "writable": true
+        },
+        {
+          "name": "loan_collateral_ta",
+          "writable": true
+        },
+        {
+          "name": "deposit_mint"
+        },
+        {
+          "name": "asset_identifier"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "DepositCollateralParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "deposit_user_vault",
+      "docs": [
+        "Deposit principal into a Loopscale user vault and mint LP tokens to the GLAM vault.",
+        "",
+        "- Permission: `DepositUserVault`."
+      ],
+      "discriminator": [
+        204,
+        190,
+        182,
+        224,
+        15,
+        219,
+        247,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "market_information"
+        },
+        {
+          "name": "lp_mint",
+          "writable": true
+        },
+        {
+          "name": "user_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "user_principal_ta",
+          "writable": true
+        },
+        {
+          "name": "strategy_principal_ta",
+          "writable": true
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "principal_token_program"
+        },
+        {
+          "name": "token_2022_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LpParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "lock_loan",
+      "docs": [
+        "Lock a loan to commit borrowed principal and collateral.",
+        "",
+        "- Permission: `ManageLoan`."
+      ],
+      "discriminator": [
+        28,
+        101,
+        52,
+        240,
+        146,
+        230,
+        95,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LockLoanParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "refinance_ledger",
+      "docs": [
+        "Refinance a loan ledger from one strategy to another.",
+        "",
+        "- Permission: `RefinanceLedger`.",
+        "- Policy",
+        "- `principal_mint` must be present in `LoopscalePolicy::borrow_allowlist`.",
+        "- `new_strategy_market_information` must be present in `LoopscalePolicy::market_allowlist`."
+      ],
+      "discriminator": [
+        103,
+        41,
+        134,
+        43,
+        140,
+        152,
+        253,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "old_strategy",
+          "writable": true
+        },
+        {
+          "name": "new_strategy",
+          "writable": true
+        },
+        {
+          "name": "old_strategy_ta",
+          "writable": true
+        },
+        {
+          "name": "new_strategy_ta",
+          "writable": true
+        },
+        {
+          "name": "old_strategy_market_information",
+          "writable": true
+        },
+        {
+          "name": "new_strategy_market_information",
+          "writable": true
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "RefinanceLedgerParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "repay_principal",
+      "docs": [
+        "Repay principal on a Loopscale loan.",
+        "",
+        "- Permission: `RepayPrincipal`."
+      ],
+      "discriminator": [
+        229,
+        67,
+        83,
+        65,
+        77,
+        84,
+        80,
+        141
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "market_information",
+          "writable": true
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "borrower_ta",
+          "writable": true
+        },
+        {
+          "name": "strategy_ta",
+          "writable": true
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "RepayPrincipalParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_loopscale_policy",
+      "docs": [
+        "Set the `LoopscalePolicy` (deposit, borrow, and market allowlists) on the GLAM state."
+      ],
+      "discriminator": [
+        216,
+        84,
+        180,
+        148,
+        164,
+        253,
+        148,
+        173
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "LoopscalePolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "stake_user_vault_lp",
+      "docs": [
+        "Stake user-vault LP tokens to earn rewards.",
+        "",
+        "- Permission: `StakeUserVaultLp`."
+      ],
+      "discriminator": [
+        114,
+        132,
+        194,
+        209,
+        208,
+        149,
+        43,
+        136
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "nonce",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "vault_stake",
+          "writable": true
+        },
+        {
+          "name": "lp_mint"
+        },
+        {
+          "name": "user_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "vault_stake_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "vault_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "user_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "VaultStakeParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unlock_loan",
+      "docs": [
+        "Unlock a previously locked loan.",
+        "",
+        "- Permission: `ManageLoan`."
+      ],
+      "discriminator": [
+        121,
+        226,
+        178,
+        98,
+        215,
+        209,
+        240,
+        38
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LoanUnlockParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unstake_user_vault_lp",
+      "docs": [
+        "Unstake user-vault LP tokens.",
+        "",
+        "- Permission: `UnstakeUserVaultLp`."
+      ],
+      "discriminator": [
+        83,
+        78,
+        230,
+        123,
+        226,
+        40,
+        158,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "writable": true
+        },
+        {
+          "name": "vault_stake",
+          "writable": true
+        },
+        {
+          "name": "user_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "vault_stake_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "vault_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "user_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "VaultUnstakeParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_weight_matrix",
+      "docs": [
+        "Update the collateral weight matrix on a loan.",
+        "",
+        "- Permission: `ManageLoan`."
+      ],
+      "discriminator": [
+        252,
+        166,
+        37,
+        207,
+        154,
+        83,
+        187,
+        128
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "UpdateWeightMatrixParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw_collateral",
+      "docs": [
+        "Withdraw collateral from a Loopscale loan.",
+        "",
+        "- Permission: `WithdrawCollateral`."
+      ],
+      "discriminator": [
+        115,
+        135,
+        168,
+        106,
+        139,
+        214,
+        138,
+        150
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "borrower_ta",
+          "writable": true
+        },
+        {
+          "name": "loan_ta",
+          "writable": true
+        },
+        {
+          "name": "asset_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "WithdrawCollateralParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw_user_vault",
+      "docs": [
+        "Withdraw principal from a Loopscale user vault by redeeming LP tokens.",
+        "",
+        "- Permission: `WithdrawUserVault`."
+      ],
+      "discriminator": [
+        9,
+        80,
+        134,
+        138,
+        212,
+        20,
+        61,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true,
+          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "market_information"
+        },
+        {
+          "name": "lp_mint",
+          "writable": true
+        },
+        {
+          "name": "user_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "user_principal_ta",
+          "writable": true
+        },
+        {
+          "name": "strategy_principal_ta",
+          "writable": true
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "principal_token_program"
+        },
+        {
+          "name": "token_2022_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LpParams"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StateAccount",
+      "discriminator": [
+        142,
+        247,
+        54,
+        95,
+        85,
+        133,
+        249,
+        103
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "AccountType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Vault"
+          },
+          {
+            "name": "TokenizedVault"
+          },
+          {
+            "name": "Mint"
+          },
+          {
+            "name": "SingleAssetVault"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccruedFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "vault_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "management_fee",
+            "type": "u128"
+          },
+          {
+            "name": "performance_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_base_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_flow_fee",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BorrowPrincipalParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "asset_index_guidance",
+            "type": "bytes"
+          },
+          {
+            "name": "duration",
+            "type": "u8"
+          },
+          {
+            "name": "expected_loan_values",
+            "type": {
+              "defined": {
+                "name": "ExpectedLoanValues"
+              }
+            }
+          },
+          {
+            "name": "skip_sol_unwrap",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateLoanParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "nonce",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatedModel",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "created_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateAcl",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "integration_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationPermissions"
+                }
+              }
+            }
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositCollateralParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "asset_type",
+            "type": "u8"
+          },
+          {
+            "name": "asset_identifier",
+            "type": "pubkey"
+          },
+          {
+            "name": "asset_index_guidance",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineField",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": {
+              "defined": {
+                "name": "EngineFieldName"
+              }
+            }
+          },
+          {
+            "name": "value",
+            "type": {
+              "defined": {
+                "name": "EngineFieldValue"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldName",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Owner"
+          },
+          {
+            "name": "PortfolioManagerName"
+          },
+          {
+            "name": "Name"
+          },
+          {
+            "name": "Uri"
+          },
+          {
+            "name": "Assets"
+          },
+          {
+            "name": "DelegateAcls"
+          },
+          {
+            "name": "IntegrationAcls"
+          },
+          {
+            "name": "TimelockDuration"
+          },
+          {
+            "name": "Borrowable"
+          },
+          {
+            "name": "DefaultAccountStateFrozen"
+          },
+          {
+            "name": "PermanentDelegate"
+          },
+          {
+            "name": "NotifyAndSettle"
+          },
+          {
+            "name": "FeeStructure"
+          },
+          {
+            "name": "FeeParams"
+          },
+          {
+            "name": "ClaimableFees"
+          },
+          {
+            "name": "ClaimedFees"
+          },
+          {
+            "name": "OracleConfigs"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldValue",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Boolean",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "U8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u8"
+              }
+            ]
+          },
+          {
+            "name": "U32",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u32"
+              }
+            ]
+          },
+          {
+            "name": "U64",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "String",
+            "fields": [
+              {
+                "name": "val",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "Pubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "VecPubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "pubkey"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecU8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "VecU32",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "u32"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecDelegateAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "DelegateAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecIntegrationAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "IntegrationAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeStructure",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeStructure"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeParams",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeParams"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "AccruedFees",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "AccruedFees"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "NotifyAndSettle",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "NotifyAndSettle"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "OracleConfigs",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "OracleConfigs"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "EntryExitFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subscription_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "redemption_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExactInParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount_in",
+            "type": "u64"
+          },
+          {
+            "name": "min_amount_out",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExactOutParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount_out",
+            "type": "u64"
+          },
+          {
+            "name": "max_amount_in",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExpectedLoanValues",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "expected_apy",
+            "type": "u64"
+          },
+          {
+            "name": "expected_lqt",
+            "type": {
+              "array": [
+                "u32",
+                5
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "year_in_seconds",
+            "type": "u32"
+          },
+          {
+            "name": "pa_high_water_mark",
+            "type": "i128"
+          },
+          {
+            "name": "pa_last_nav",
+            "type": "i128"
+          },
+          {
+            "name": "last_aum",
+            "type": "i128"
+          },
+          {
+            "name": "last_performance_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_management_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_protocol_fee_crystallized",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeStructure",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "manager",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "management",
+            "type": {
+              "defined": {
+                "name": "ManagementFee"
+              }
+            }
+          },
+          {
+            "name": "performance",
+            "type": {
+              "defined": {
+                "name": "PerformanceFee"
+              }
+            }
+          },
+          {
+            "name": "protocol",
+            "type": {
+              "defined": {
+                "name": "ProtocolFees"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "HurdleType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationAcl",
+      "docs": [
+        "An integration program can have multiple protocols supported.",
+        "Enabled protocols are stored in a bitmask, and each protocol can have its own policy."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocols_bitmask",
+            "type": "u16"
+          },
+          {
+            "name": "protocol_policies",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPolicy"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationPermissions",
+      "docs": [
+        "Stores delegate permissions for an integration program."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPermissions"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LoanUnlockParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_index_guidance",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LockLoanParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "unlock_idx",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LoopscalePolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "deposit_allowlist",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "borrow_allowlist",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "markets_allowlist",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LpParams",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "ExactIn",
+            "fields": [
+              {
+                "defined": {
+                  "name": "ExactInParams"
+                }
+              }
+            ]
+          },
+          {
+            "name": "ExactOut",
+            "fields": [
+              {
+                "defined": {
+                  "name": "ExactOutParams"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ManagementFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NoticePeriodType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NotifyAndSettle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "model",
+            "type": {
+              "defined": {
+                "name": "ValuationModel"
+              }
+            }
+          },
+          {
+            "name": "permissionless_fulfillment",
+            "type": "bool"
+          },
+          {
+            "name": "subscribe_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "subscribe_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "redeem_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "time_unit",
+            "type": {
+              "defined": {
+                "name": "TimeUnit"
+              }
+            }
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleConfigs",
+      "docs": [
+        "Vault-specific oracle configs. If available, these configs are preferred over the global config."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_ages_seconds",
+            "type": {
+              "vec": {
+                "array": [
+                  "u16",
+                  2
+                ]
+              }
+            }
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                12
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PerformanceFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_rate_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_type",
+            "type": {
+              "defined": {
+                "name": "HurdleType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PricedProtocol",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "rent",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "i128"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "last_updated_slot",
+            "type": "u64"
+          },
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "base_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "flow_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPermissions",
+      "docs": [
+        "Represents a delegate's permissions for a specific protocol"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "permissions_bitmask",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPolicy",
+      "docs": [
+        "Stores policy data for an integrated protocol.",
+        "Integration programs serialize/deserialize this data."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "data",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RefinanceLedgerParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ledger_index",
+            "type": "u8"
+          },
+          {
+            "name": "duration_index",
+            "type": "u8"
+          },
+          {
+            "name": "asset_index_guidance",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RepayPrincipalParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "ledger_index",
+            "type": "u8"
+          },
+          {
+            "name": "repay_all",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StateAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "account_type",
+            "type": {
+              "defined": {
+                "name": "AccountType"
+              }
+            }
+          },
+          {
+            "name": "enabled",
+            "type": "bool"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "portfolio_manager_name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "created",
+            "type": {
+              "defined": {
+                "name": "CreatedModel"
+              }
+            }
+          },
+          {
+            "name": "base_asset_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_asset_decimals",
+            "type": "u8"
+          },
+          {
+            "name": "base_asset_token_program",
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timelock_duration",
+            "type": "u32"
+          },
+          {
+            "name": "timelock_expires_at",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "assets",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "integration_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "delegate_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "DelegateAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "external_positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "priced_protocols",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "PricedProtocol"
+                }
+              }
+            }
+          },
+          {
+            "name": "params",
+            "type": {
+              "vec": {
+                "vec": {
+                  "defined": {
+                    "name": "EngineField"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TimeUnit",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Second"
+          },
+          {
+            "name": "Slot"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateWeightMatrixParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "collateral_index",
+            "type": "u8"
+          },
+          {
+            "name": "weight_matrix",
+            "type": {
+              "array": [
+                "u32",
+                5
+              ]
+            }
+          },
+          {
+            "name": "expected_loan_values",
+            "type": {
+              "defined": {
+                "name": "ExpectedLoanValues"
+              }
+            }
+          },
+          {
+            "name": "asset_index_guidance",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ValuationModel",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Continuous"
+          },
+          {
+            "name": "Periodic"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultStakeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "principal_amount",
+            "type": "u64"
+          },
+          {
+            "name": "stake_all",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "duration",
+            "type": "u32"
+          },
+          {
+            "name": "duration_type",
+            "type": "u8"
+          },
+          {
+            "name": "action_type",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultUnstakeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_type",
+            "type": "u8"
+          },
+          {
+            "name": "principal_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawCollateralParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "collateral_index",
+            "type": "u8"
+          },
+          {
+            "name": "asset_index_guidance",
+            "type": "bytes"
+          },
+          {
+            "name": "expected_loan_values",
+            "type": {
+              "defined": {
+                "name": "ExpectedLoanValues"
+              }
+            }
+          },
+          {
+            "name": "close_if_eligible",
+            "type": "bool"
+          },
+          {
+            "name": "withdraw_all",
+            "type": "bool"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "PROTO_LOOPSCALE",
+      "type": "u16",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_BORROW_PRINCIPAL",
+      "type": "u64",
+      "value": "8"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_CLAIM_VAULT_REWARDS",
+      "type": "u64",
+      "value": "1024"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_DEPOSIT_COLLATERAL",
+      "type": "u64",
+      "value": "2"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_DEPOSIT_USER_VAULT",
+      "type": "u64",
+      "value": "64"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_MANAGE_LOAN",
+      "type": "u64",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_REFINANCE_LEDGER",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_REPAY_PRINCIPAL",
+      "type": "u64",
+      "value": "16"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_STAKE_USER_VAULT_LP",
+      "type": "u64",
+      "value": "256"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_UNSTAKE_USER_VAULT_LP",
+      "type": "u64",
+      "value": "512"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_WITHDRAW_COLLATERAL",
+      "type": "u64",
+      "value": "4"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_WITHDRAW_USER_VAULT",
+      "type": "u64",
+      "value": "128"
+    }
+  ]
+}

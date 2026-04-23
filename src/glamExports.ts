@@ -11,17 +11,20 @@ import type { ExtStakePool } from "../target/types/ext_stake_pool";
 import type { ExtCctp } from "../target/types/ext_cctp";
 import type { ExtBridge } from "../target/types/ext_bridge";
 import type { ExtEpi } from "../target/types/ext_epi";
+import type { ExtLoopscale } from "../target/types/ext_loopscale";
 
 import GlamProtocolIdlJson from "../target/idl/glam_protocol.json";
 import GlamConfigIdlJson from "../target/idl/glam_config.json";
 import GlamMintIdlJson from "../target/idl/glam_mint.json";
 import ExtSplIdlJson from "../target/idl/ext_spl.json";
+import ExtDriftIdlJson from "../target/idl/ext_drift.json";
 import ExtKaminoIdlJson from "../target/idl/ext_kamino.json";
 import ExtMarinadeIdlJson from "../target/idl/ext_marinade.json";
 import ExtStakePoolIdlJson from "../target/idl/ext_stake_pool.json";
 import ExtCctpIdlJson from "../target/idl/ext_cctp.json";
 import ExtBridgeIdlJson from "../target/idl/ext_bridge.json";
 import ExtEpiIdlJson from "../target/idl/ext_epi.json";
+import ExtLoopscaleIdlJson from "../target/idl/ext_loopscale.json";
 
 import GlamProtocolIdlJsonStaging from "../target/idl/glam_protocol-staging.json";
 import GlamMintIdlJsonStaging from "../target/idl/glam_mint-staging.json";
@@ -31,8 +34,12 @@ import ExtStakePoolIdlJsonStaging from "../target/idl/ext_stake_pool-staging.jso
 import ExtMarinadeIdlJsonStaging from "../target/idl/ext_marinade-staging.json";
 import ExtBridgeIdlJsonStaging from "../target/idl/ext_bridge-staging.json";
 import ExtEpiIdlJsonStaging from "../target/idl/ext_epi-staging.json";
+import ExtLoopscaleIdlJsonStaging from "../target/idl/ext_loopscale-staging.json";
 
-export { GlamProtocol, GlamMint, GlamConfig };
+export { GlamProtocol, GlamMint, GlamConfig, ExtLoopscale };
+
+const EXT_DRIFT_STAGING_PROGRAM_ID =
+  "gstgdpMFXKobURsFtStdaMLRSuwdmDUsrndov7kyu9h";
 
 export type GlamProtocolProgram = Program<GlamProtocol>;
 export type GlamConfigProgram = Program<GlamConfig>;
@@ -44,6 +51,7 @@ export type ExtStakePoolProgram = Program<ExtStakePool>;
 export type ExtCctpProgram = Program<ExtCctp>;
 export type ExtBridgeProgram = Program<ExtBridge>;
 export type ExtEpiProgram = Program<ExtEpi>;
+export type ExtLoopscaleProgram = Program<ExtLoopscale>;
 
 const isStaging = () => {
   const s = process.env.NEXT_PUBLIC_GLAM_STAGING || process.env.GLAM_STAGING;
@@ -97,6 +105,10 @@ export function getExtEpiIdl(staging: boolean) {
   return staging ? ExtEpiIdlJsonStaging : ExtEpiIdlJson;
 }
 
+export function getExtLoopscaleIdl(staging: boolean) {
+  return staging ? ExtLoopscaleIdlJsonStaging : ExtLoopscaleIdlJson;
+}
+
 export function getExtMarinadeIdl(staging: boolean) {
   return staging ? ExtMarinadeIdlJsonStaging : ExtMarinadeIdlJson;
 }
@@ -111,6 +123,12 @@ export function getGlamMintProgramId(staging: boolean) {
 
 export function getExtSplProgramId(staging: boolean) {
   return new PublicKey(getExtSplIdl(staging).address);
+}
+
+export function getExtDriftProgramId(staging: boolean) {
+  return new PublicKey(
+    staging ? EXT_DRIFT_STAGING_PROGRAM_ID : ExtDriftIdlJson.address,
+  );
 }
 
 export function getExtKaminoProgramId(staging: boolean) {
@@ -131,6 +149,10 @@ export function getExtBridgeProgramId(staging: boolean) {
 
 export function getExtEpiProgramId(staging: boolean) {
   return new PublicKey(getExtEpiIdl(staging).address);
+}
+
+export function getExtLoopscaleProgramId(staging: boolean) {
+  return new PublicKey(getExtLoopscaleIdl(staging).address);
 }
 
 export function getExtMarinadeProgramId(staging: boolean) {
@@ -202,4 +224,11 @@ export function getExtEpiProgram(
   staging: boolean,
 ): ExtEpiProgram {
   return new Program<ExtEpi>(getExtEpiIdl(staging), provider);
+}
+
+export function getExtLoopscaleProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtLoopscaleProgram {
+  return new Program<ExtLoopscale>(getExtLoopscaleIdl(staging), provider);
 }
