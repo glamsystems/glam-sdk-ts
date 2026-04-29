@@ -28,7 +28,7 @@ import {
 import { getIntegrationAuthorityPda } from "../utils/glamPDAs";
 import { SEED_BRIDGE_REGISTRY, SEED_BRIDGE_SESSION } from "../constants";
 
-const LAYERZERO_OFT_PROTOCOL = 1 << 2;
+export const LAYERZERO_OFT_PROTOCOL = 1 << 2;
 
 type BufferLike = Uint8Array | number[] | Buffer;
 

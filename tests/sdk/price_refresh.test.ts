@@ -3,7 +3,7 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { PriceClient } from "../../src/client/price";
 import { KAMINO_LENDING_PROGRAM, WSOL } from "../../src/constants";
 import { StateAccountType } from "../../src/models";
-import { PkMap, PkSet } from "../../src/utils";
+import { PkMap } from "../../src/utils";
 
 const VAULT = new PublicKey("31xmCqzfdYT4GHjo39BQiTHVPjpugw6JqXNwckVL9cEf");
 const STATE = new PublicKey("3XYX3QvpHQ7TqvjhZcoBBmykNDruV9PtrGXRxJFzsiCF");
@@ -204,43 +204,31 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     expectPubkeys(kaminoReserves, [RESERVE_B, RESERVE_C, RESERVE_A]);
   });
 
-  it("does not refresh obligation reserves already refreshed by vault token pricing", async () => {
+  it("returns reserves and ixs separately for vault token pricing", async () => {
     const { client, fetchAndParseReserves, refreshReservesBatchIx } =
       makeClient([RESERVE_A, RESERVE_B]);
-    const refreshedKaminoReserves = new PkSet();
 
-    const vaultIxs = await client.priceVaultTokensIx(refreshedKaminoReserves);
-    const obligationIxs = await client.priceKaminoObligationsIxs(
-      refreshedKaminoReserves,
-    );
+    const chunk = await client.priceVaultTokensIx();
 
-    expect(vaultIxs).toHaveLength(2);
-    expect(obligationIxs).toHaveLength(2);
-    expect(fetchAndParseReserves).toHaveBeenCalledTimes(1);
-    expect(refreshReservesBatchIx).toHaveBeenCalledTimes(1);
-    expectPubkeys(fetchAndParseReserves.mock.calls[0][0], [
-      RESERVE_A,
-      RESERVE_B,
-    ]);
+    expect(chunk.ixs).toHaveLength(1);
+    expectPubkeys(chunk.kaminoReserves, [RESERVE_A, RESERVE_B]);
+    expect(fetchAndParseReserves).not.toHaveBeenCalled();
+    expect(refreshReservesBatchIx).not.toHaveBeenCalled();
   });
 
-  it("refreshes only obligation reserves missing from the shared pricing context", async () => {
+  it("returns obligation-only reserves and ixs without refreshing", async () => {
     const { client, fetchAndParseReserves, refreshReservesBatchIx } =
       makeClient([RESERVE_A, RESERVE_C]);
-    const refreshedKaminoReserves = new PkSet();
 
-    await client.priceVaultTokensIx(refreshedKaminoReserves);
-    const obligationIxs = await client.priceKaminoObligationsIxs(
-      refreshedKaminoReserves,
-    );
+    const chunk = await client.priceKaminoObligationsIxs();
 
-    expect(obligationIxs).toHaveLength(3);
-    expect(fetchAndParseReserves).toHaveBeenCalledTimes(2);
-    expect(refreshReservesBatchIx).toHaveBeenCalledTimes(2);
-    expectPubkeys(fetchAndParseReserves.mock.calls[1][0], [RESERVE_C]);
+    expect(chunk.ixs).toHaveLength(2);
+    expectPubkeys(chunk.kaminoReserves, [RESERVE_A, RESERVE_C]);
+    expect(fetchAndParseReserves).not.toHaveBeenCalled();
+    expect(refreshReservesBatchIx).not.toHaveBeenCalled();
   });
 
-  it("preloads obligation-only reserves into the first aggregate refresh", async () => {
+  it("coalesces all kamino reserves into a single front-loaded refresh ix", async () => {
     const { client, fetchAndParseReserves, refreshReservesBatchIx } =
       makeClient([RESERVE_A, RESERVE_C]);
 
@@ -253,6 +241,22 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       RESERVE_A,
       RESERVE_B,
       RESERVE_C,
+    ]);
+    expect(ixs[0].programId.toBase58()).toBe(KAMINO_LENDING_PROGRAM.toBase58());
+  });
+
+  it("does not duplicate reserves shared between obligation and vault-token pricing", async () => {
+    const { client, fetchAndParseReserves } = makeClient([
+      RESERVE_A,
+      RESERVE_B,
+    ]);
+
+    await client.priceVaultIxs();
+
+    expect(fetchAndParseReserves).toHaveBeenCalledTimes(1);
+    expectPubkeys(fetchAndParseReserves.mock.calls[0][0], [
+      RESERVE_A,
+      RESERVE_B,
     ]);
   });
 
@@ -290,7 +294,7 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     const { client } = makeClient([RESERVE_A, RESERVE_C]);
     const priceBridgeSpy = jest
       .spyOn(client as any, "priceManagedTransfersIxs")
-      .mockResolvedValue([bridgeIx]);
+      .mockResolvedValue({ ixs: [bridgeIx], kaminoReserves: [] });
 
     const ixs = await client.priceVaultIxs();
 
@@ -306,7 +310,7 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     );
     const priceBridgeSpy = jest
       .spyOn(client as any, "priceManagedTransfersIxs")
-      .mockResolvedValue([bridgeIx]);
+      .mockResolvedValue({ ixs: [bridgeIx], kaminoReserves: [] });
 
     const ixs = await client.priceVaultIxs();
 

@@ -31,7 +31,11 @@ import {
 import { KVaultState, Obligation, Reserve } from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
 import { WSOL } from "../constants";
-import { BridgeClient, getActiveRegistryTransfers } from "./bridge";
+import {
+  BridgeClient,
+  LAYERZERO_OFT_PROTOCOL,
+  getActiveRegistryTransfers,
+} from "./bridge";
 import { EpiClient } from "./epi";
 
 /**
@@ -99,6 +103,11 @@ type ParsedKaminoObligation = Awaited<
   ReturnType<KaminoLendingClient["findAndParseObligations"]>
 >[number];
 
+type PricingChunk = {
+  ixs: TransactionInstruction[];
+  kaminoReserves: PublicKey[];
+};
+
 export class PriceClient {
   private _stateModel: StateModel | null = null;
   private _lookupTables = new PkSet();
@@ -132,29 +141,6 @@ export class PriceClient {
 
   get kaminoVaults() {
     return Array.from(this._kaminoVaults);
-  }
-
-  private async refreshKaminoReservesBatchIx(
-    reservePubkeys: PublicKey[],
-    refreshedKaminoReserves: PkSet,
-  ): Promise<TransactionInstruction | null> {
-    const reservesToRefreshSet = new PkSet();
-    for (const reservePubkey of reservePubkeys) {
-      if (!refreshedKaminoReserves.has(reservePubkey)) {
-        reservesToRefreshSet.add(reservePubkey);
-      }
-    }
-
-    const reservesToRefresh = Array.from(reservesToRefreshSet);
-    if (reservesToRefresh.length === 0) {
-      return null;
-    }
-
-    const reserves = await this.klend.fetchAndParseReserves(reservesToRefresh);
-    reserves.forEach((reserve) =>
-      refreshedKaminoReserves.add(reserve.getAddress()),
-    );
-    return this.klend.txBuilder.refreshReservesBatchIx(reserves, false);
   }
 
   private getKaminoObligationReserveSets(
@@ -736,31 +722,18 @@ export class PriceClient {
    * Returns an instruction that prices Kamino obligations.
    * If there are no Kamino obligations, returns null.
    */
-  async priceKaminoObligationsIxs(
-    refreshedKaminoReserves = new PkSet(),
-    parsedKaminoObligations?: ParsedKaminoObligation[],
-  ): Promise<TransactionInstruction[]> {
-    const parsedObligations =
-      parsedKaminoObligations ??
-      (await this.klend.findAndParseObligations(this.base.vaultPda));
+  async priceKaminoObligationsIxs(): Promise<PricingChunk> {
+    const parsedObligations = await this.klend.findAndParseObligations(
+      this.base.vaultPda,
+    );
     if (parsedObligations.length === 0) {
-      return [];
+      return { ixs: [], kaminoReserves: [] };
     }
-
-    const ixs: TransactionInstruction[] = [];
 
     const { obligationReservesMap, reservesSet } =
       this.getKaminoObligationReserveSets(parsedObligations);
 
-    // Refresh reserves in batch, skipping reserves already refreshed earlier
-    // in this pricing transaction.
-    const refreshReservesIx = await this.refreshKaminoReservesBatchIx(
-      Array.from(reservesSet),
-      refreshedKaminoReserves,
-    );
-    if (refreshReservesIx) {
-      ixs.push(refreshReservesIx);
-    }
+    const ixs: TransactionInstruction[] = [];
 
     // Refresh obligations
     parsedObligations.forEach((obligation) => {
@@ -799,12 +772,10 @@ export class PriceClient {
       .instruction();
     ixs.push(priceIx);
 
-    return ixs;
+    return { ixs, kaminoReserves: Array.from(reservesSet) };
   }
 
-  public async priceKaminoVaultSharesIx(
-    refreshedKaminoReserves = new PkSet(),
-  ): Promise<TransactionInstruction[] | null> {
+  public async priceKaminoVaultSharesIx(): Promise<PricingChunk | null> {
     const allKvaultStates = await this.kvaults.findAndParseKaminoVaults();
     const allKvaultMints = allKvaultStates.map((kvault) => kvault.sharesMint);
     const assetMetas = await this.base.fetchAssetMetas();
@@ -892,11 +863,6 @@ export class PriceClient {
       }
     }
 
-    const refreshReservesIx = await this.refreshKaminoReservesBatchIx(
-      reserves,
-      refreshedKaminoReserves,
-    );
-    const preInstructions = refreshReservesIx ? [refreshReservesIx] : [];
     const [solUsdOracle, baseAssetOracle] = await Promise.all([
       this.base.getSolOracle(),
       this.getBaseAssetOracle(),
@@ -912,30 +878,15 @@ export class PriceClient {
       .remainingAccounts(remainingAccounts)
       .instruction();
 
-    return [...preInstructions, priceIx];
+    return { ixs: [priceIx], kaminoReserves: reserves };
   }
 
   /**
    * Returns an instruction that prices vault balance and tokens
    */
-  async priceVaultTokensIx(
-    refreshedKaminoReserves = new PkSet(),
-    additionalKaminoReserves: PublicKey[] = [],
-  ): Promise<TransactionInstruction[]> {
+  async priceVaultTokensIx(): Promise<PricingChunk> {
     const [remainingAccounts, kaminoReserves] =
       await this.remainingAccountsForPricingVaultAssets();
-    const reservesToRefresh = Array.from(
-      new PkSet([...kaminoReserves, ...additionalKaminoReserves]),
-    );
-
-    // If Kamino reserves are needed, refresh them before pricing.
-    let refreshReservesIx: TransactionInstruction | null = null;
-    if (reservesToRefresh.length > 0) {
-      refreshReservesIx = await this.refreshKaminoReservesBatchIx(
-        reservesToRefresh,
-        refreshedKaminoReserves,
-      );
-    }
 
     const [solUsdOracle, baseAssetOracle] = await Promise.all([
       this.base.getSolOracle(),
@@ -957,11 +908,7 @@ export class PriceClient {
       .remainingAccounts(remainingAccounts)
       .instruction();
 
-    if (refreshReservesIx) {
-      return [refreshReservesIx, priceVaultIx];
-    } else {
-      return [priceVaultIx];
-    }
+    return { ixs: [priceVaultIx], kaminoReserves };
   }
 
   /**
@@ -1012,13 +959,13 @@ export class PriceClient {
     return next;
   }
 
-  private async priceManagedTransfersIxs(): Promise<TransactionInstruction[]> {
+  private async priceManagedTransfersIxs(): Promise<PricingChunk> {
     const [stateAccount, registry] = await Promise.all([
       this.base.fetchStateAccount(),
       this.bridge.fetchRegistry(),
     ]);
     if (!registry) {
-      return [];
+      return { ixs: [], kaminoReserves: [] };
     }
 
     const transfers = getActiveRegistryTransfers(registry);
@@ -1034,22 +981,14 @@ export class PriceClient {
     const integrationAuthority = getIntegrationAuthorityPda(
       this.base.extBridgeProgram.programId,
     );
-    const ixs: TransactionInstruction[] = [];
-    const kaminoReserveKeys = new Map<string, PublicKey>();
+    const kaminoReserves = new PkSet();
     [baseAssetMeta, ...assetMetas.map(({ assetMeta }) => assetMeta)].forEach(
       (assetMeta) => {
         if (assetMeta.oracleSource === "KaminoReserve") {
-          kaminoReserveKeys.set(assetMeta.oracle.toBase58(), assetMeta.oracle);
+          kaminoReserves.add(assetMeta.oracle);
         }
       },
     );
-
-    if (kaminoReserveKeys.size > 0) {
-      const reserves = await this.klend.fetchAndParseReserves(
-        Array.from(kaminoReserveKeys.values()),
-      );
-      ixs.push(this.klend.txBuilder.refreshReservesBatchIx(reserves, false));
-    }
 
     const remainingAccounts = assetMetas.map(
       ({ assetMeta }) =>
@@ -1072,9 +1011,8 @@ export class PriceClient {
       })
       .remainingAccounts(remainingAccounts)
       .instruction();
-    ixs.push(ix);
 
-    return ixs;
+    return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
 
   private async priceEpiValidatedPositionsIx(): Promise<TransactionInstruction | null> {
@@ -1133,88 +1071,69 @@ export class PriceClient {
       return [ix];
     }
 
-    const kaminoIntegrationAcl = integrationAcls.find((acl) =>
-      acl.integrationProgram.equals(this.base.extKaminoProgram.programId),
-    );
-    let parsedKaminoObligations: ParsedKaminoObligation[] | undefined;
-    let upfrontKaminoReserves: PublicKey[] = [];
-    if (
-      (externalPositions || []).length > 0 &&
-      kaminoIntegrationAcl &&
-      kaminoIntegrationAcl.protocolsBitmask & 0b01
-    ) {
-      parsedKaminoObligations = await this.klend.findAndParseObligations(
-        this.base.vaultPda,
+    const chunks: PricingChunk[] = [];
+    chunks.push(await this.priceVaultTokensIx());
+
+    if ((externalPositions || []).length > 0) {
+      const kaminoIntegrationAcl = integrationAcls.find((acl) =>
+        acl.integrationProgram.equals(this.base.extKaminoProgram.programId),
       );
-      upfrontKaminoReserves = Array.from(
-        this.getKaminoObligationReserveSets(parsedKaminoObligations)
-          .reservesSet,
+      if (kaminoIntegrationAcl) {
+        // kamino lending
+        if ((kaminoIntegrationAcl.protocolsBitmask & 0b01) !== 0) {
+          chunks.push(await this.priceKaminoObligationsIxs());
+        }
+        // kamino vaults
+        if ((kaminoIntegrationAcl.protocolsBitmask & 0b10) !== 0) {
+          const chunk = await this.priceKaminoVaultSharesIx();
+          if (chunk) chunks.push(chunk);
+        }
+      }
+
+      const nativeIntegrationAcl = integrationAcls.find((acl) =>
+        acl.integrationProgram.equals(this.base.protocolProgram.programId),
       );
-    }
-
-    const refreshedKaminoReserves = new PkSet();
-    const priceVaultIxs = await this.priceVaultTokensIx(
-      refreshedKaminoReserves,
-      upfrontKaminoReserves,
-    );
-
-    // If there are no external assets, we don't need to price DeFi positions
-    if ((externalPositions || []).length === 0) {
-      return [...priceVaultIxs];
-    }
-
-    const pricingIxs = [...priceVaultIxs];
-
-    if (kaminoIntegrationAcl) {
-      // kamino lending
-      if (kaminoIntegrationAcl.protocolsBitmask & 0b01) {
-        const ixs = await this.priceKaminoObligationsIxs(
-          refreshedKaminoReserves,
-          parsedKaminoObligations,
-        );
-        pricingIxs.push(...ixs);
-      }
-      // kamino vaults
-      if (kaminoIntegrationAcl.protocolsBitmask & 0b10) {
-        const ixs = await this.priceKaminoVaultSharesIx(
-          refreshedKaminoReserves,
-        );
-        if (ixs) pricingIxs.push(...ixs);
-      }
-    }
-
-    const nativeIntegrationAcl = integrationAcls.find((acl) =>
-      acl.integrationProgram.equals(this.base.protocolProgram.programId),
-    );
-    if (nativeIntegrationAcl) {
-      // stake program
-      if (nativeIntegrationAcl.protocolsBitmask & 0b10) {
+      if (
+        nativeIntegrationAcl &&
+        (nativeIntegrationAcl.protocolsBitmask & 0b10) !== 0
+      ) {
         const ix = await this.priceStakeAccountsIx();
-        if (ix) pricingIxs.push(ix);
+        if (ix) chunks.push({ ixs: [ix], kaminoReserves: [] });
+      }
+
+      const epiIntegrationAcl = integrationAcls.find(
+        (acl) =>
+          acl.integrationProgram.equals(this.base.extEpiProgram.programId) &&
+          (acl.protocolsBitmask & 0b01) !== 0,
+      );
+      if (epiIntegrationAcl) {
+        const ix = await this.priceEpiValidatedPositionsIx();
+        if (ix) chunks.push({ ixs: [ix], kaminoReserves: [] });
+      }
+
+      const bridgeIntegrationAcl = integrationAcls.find(
+        (acl) =>
+          acl.integrationProgram.equals(this.base.extBridgeProgram.programId) &&
+          (acl.protocolsBitmask & LAYERZERO_OFT_PROTOCOL) !== 0,
+      );
+      if (bridgeIntegrationAcl) {
+        chunks.push(await this.priceManagedTransfersIxs());
       }
     }
 
-    const epiIntegrationAcl = integrationAcls.find(
-      (acl) =>
-        acl.integrationProgram.equals(this.base.extEpiProgram.programId) &&
-        (acl.protocolsBitmask & 0b01) !== 0,
-    );
-    if (epiIntegrationAcl) {
-      const epiRefreshIx = await this.priceEpiValidatedPositionsIx();
-      if (epiRefreshIx) pricingIxs.push(epiRefreshIx);
-    }
+    // Coalesce all kamino reserve refreshes into a single front-loaded ix.
+    const allReserves = new PkSet();
+    chunks.forEach((c) => c.kaminoReserves.forEach((r) => allReserves.add(r)));
 
-    const bridgeIntegrationAcl = integrationAcls.find(
-      (acl) =>
-        acl.integrationProgram.equals(this.base.extBridgeProgram.programId) &&
-        acl.protocolsBitmask !== 0,
-    );
-    if (bridgeIntegrationAcl) {
-      const priceBridgeIxs = await this.priceManagedTransfersIxs();
-      if (priceBridgeIxs) pricingIxs.push(...priceBridgeIxs);
+    const ixs: TransactionInstruction[] = [];
+    if (allReserves.size > 0) {
+      const reserves = await this.klend.fetchAndParseReserves(
+        Array.from(allReserves),
+      );
+      ixs.push(this.klend.txBuilder.refreshReservesBatchIx(reserves, false));
     }
-
-    return pricingIxs.filter(Boolean);
+    chunks.forEach((c) => ixs.push(...c.ixs));
+    return ixs;
   }
 
   public async validateAumIx(): Promise<TransactionInstruction> {
@@ -1239,7 +1158,7 @@ export class PriceClient {
       this.cachedStateModel ?? (await this.base.fetchStateModel());
     const assetMetas = await this.base.fetchAssetMetas();
     const kaminoReserves = new PkSet();
-    const addKaminoReserve = ({
+    const mayAddKaminoReserve = ({
       oracle,
       oracleSource,
     }: {
@@ -1257,7 +1176,7 @@ export class PriceClient {
         if (!assetMeta) {
           throw new Error(`Asset meta not found for ${mint}`);
         }
-        addKaminoReserve(assetMeta);
+        mayAddKaminoReserve(assetMeta);
         const ata = this.base.getVaultAta(mint, assetMeta.programId);
         return [ata, mint, assetMeta.oracle];
       })
@@ -1271,7 +1190,7 @@ export class PriceClient {
     [
       await this.base.getAssetMeta(WSOL),
       await this.base.getAssetMeta(stateModel.baseAssetMint),
-    ].forEach(addKaminoReserve);
+    ].forEach(mayAddKaminoReserve);
 
     return [accMetas, Array.from(kaminoReserves)];
   }
