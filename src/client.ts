@@ -112,6 +112,7 @@ export class GlamClient extends BaseClient {
         this.kaminoLending,
         this.kaminoVaults,
         this.bridge,
+        this.epi,
         () => this.jupiterSwap.jupApi,
       );
     }

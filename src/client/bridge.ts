@@ -13,8 +13,6 @@ import {
 } from "@solana/web3.js";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
-import { KaminoLendingClient } from "./kamino";
-import { VaultClient } from "./vault";
 import {
   LayerzeroOftRouteProfile,
   SerializableRouteAccountMeta,
@@ -27,15 +25,8 @@ import {
   LayerzeroOftRoute,
   RouteManagementMode,
 } from "../deser/integrationPolicies";
-import {
-  getGlobalConfigPda,
-  getIntegrationAuthorityPda,
-} from "../utils/glamPDAs";
-import {
-  SEED_BRIDGE_REGISTRY,
-  SEED_BRIDGE_SESSION,
-  SEED_INTEGRATION_AUTHORITY,
-} from "../constants";
+import { getIntegrationAuthorityPda } from "../utils/glamPDAs";
+import { SEED_BRIDGE_REGISTRY, SEED_BRIDGE_SESSION } from "../constants";
 
 const LAYERZERO_OFT_PROTOCOL = 1 << 2;
 
@@ -261,7 +252,7 @@ function toBridgeTransferStatus(status: number): BridgeTransferStatusAccount {
   }
 }
 
-function getActiveRegistryTransfers(registry: {
+export function getActiveRegistryTransfers(registry: {
   managedTransferCount: BN | number;
   transfers: any[];
 }) {
@@ -563,82 +554,6 @@ class TxBuilder extends BaseTxBuilder<BridgeClient> {
       auxiliaryTokenAccount,
       sourceTokenAccount,
     };
-  }
-
-  async priceManagedTransfersIxs(): Promise<TransactionInstruction[]> {
-    const [stateAccount, registry] = await Promise.all([
-      this.client.base.fetchStateAccount(),
-      this.client.fetchRegistry(),
-    ]);
-    if (!registry) {
-      throw new Error("Managed bridge registry not initialized");
-    }
-
-    const transfers = getActiveRegistryTransfers(registry);
-    const [baseAssetMeta, assetMetas] = await Promise.all([
-      this.client.base.getAssetMeta(stateAccount.baseAssetMint),
-      Promise.all(
-        transfers.map(async (transfer) => ({
-          transfer,
-          assetMeta: await this.client.base.getAssetMeta(transfer.sourceMint),
-        })),
-      ),
-    ]);
-    const integrationAuthority = PublicKey.findProgramAddressSync(
-      [Buffer.from(SEED_INTEGRATION_AUTHORITY)],
-      this.client.base.extBridgeProgram.programId,
-    )[0];
-    const ixs: TransactionInstruction[] = [];
-    const kaminoReserveKeys = new Map<string, PublicKey>();
-    [baseAssetMeta, ...assetMetas.map(({ assetMeta }) => assetMeta)].forEach(
-      (assetMeta) => {
-        if (assetMeta.oracleSource === "KaminoReserve") {
-          kaminoReserveKeys.set(assetMeta.oracle.toBase58(), assetMeta.oracle);
-        }
-      },
-    );
-
-    if (kaminoReserveKeys.size > 0) {
-      const klend = new KaminoLendingClient(
-        this.client.base,
-        new VaultClient(this.client.base),
-      );
-      const reserves = await klend.fetchAndParseReserves(
-        Array.from(kaminoReserveKeys.values()),
-      );
-      ixs.push(klend.txBuilder.refreshReservesBatchIx(reserves, false));
-    }
-
-    const remainingAccounts = assetMetas.map(
-      ({ assetMeta }) =>
-        ({
-          pubkey: assetMeta.oracle,
-          isSigner: false,
-          isWritable: false,
-        }) satisfies AccountMeta,
-    );
-
-    const priceMethod = this.client.base.extBridgeProgram.methods
-      .priceManagedTransfers()
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        bridgeRegistry: this.client.getRegistryPda(),
-        integrationAuthority,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        glamConfig: getGlobalConfigPda(),
-        baseAssetOracle: baseAssetMeta.oracle,
-      });
-    priceMethod.remainingAccounts(remainingAccounts);
-    ixs.push(await priceMethod.instruction());
-
-    return ixs;
-  }
-
-  async priceManagedTransfersTx(
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ixs = await this.priceManagedTransfersIxs();
-    return await this.buildVersionedTx(ixs, txOptions);
   }
 }
 
@@ -1119,11 +1034,6 @@ export class BridgeClient {
       })
       .instruction();
     const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
-    return await this.base.sendAndConfirm(tx);
-  }
-
-  async priceManagedTransfers(txOptions: TxOptions = {}) {
-    const tx = await this.txBuilder.priceManagedTransfersTx(txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 }

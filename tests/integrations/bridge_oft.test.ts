@@ -229,7 +229,12 @@ describe("bridge_oft", () => {
     registry = await glamClient.bridge.fetchRegistry();
     expect(registry?.managedTransferCount.toString()).toBe("1");
 
-    await glamClient.bridge.priceManagedTransfers(txOptions);
+    const priceIxs = await glamClient.price.priceVaultIxs();
+    const priceTx = await glamClient.bridge.txBuilder.buildVersionedTx(
+      priceIxs,
+      txOptions,
+    );
+    await glamClient.sendAndConfirm(priceTx);
 
     stateAccount = await glamClient.fetchStateAccount();
     const pricedProtocol = stateAccount.pricedProtocols.find(
