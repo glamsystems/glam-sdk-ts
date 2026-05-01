@@ -65,7 +65,7 @@ describe("fees", () => {
 
   it("Set protocol fees: fail before fees crystallized", async () => {
     try {
-      const setIx = await glamClient.fees.setProtocolFeesIx(2, 4000);
+      const setIx = await glamClient.fees.setProtocolFeesIx(2, 2000);
       const vTx = await glamClient.intoVersionedTransaction(
         new Transaction().add(setIx),
         txOptions,
@@ -81,7 +81,7 @@ describe("fees", () => {
 
   it("First-time crystallize fees and set protocol fees", async () => {
     try {
-      const txSig = await glamClient.fees.setProtocolFees(2, 4000, txOptions);
+      const txSig = await glamClient.fees.setProtocolFees(2, 2000, txOptions);
       console.log("Crystallize fees and set protocol fees:", txSig);
     } catch (e) {
       console.error(e);
@@ -92,7 +92,7 @@ describe("fees", () => {
     const stateModel = await glamClient.fetchStateModel();
     expect(stateModel.mintModel?.feeStructure.protocol.baseFeeBps).toEqual(2);
     expect(stateModel.mintModel?.feeStructure.protocol.flowFeeBps).toEqual(
-      4000,
+      2000,
     );
 
     // After first-time crystallization, all fees should be 0
