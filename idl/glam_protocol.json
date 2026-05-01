@@ -1253,6 +1253,11 @@
       "msg": "Delegate ACL limit exceeded"
     },
     {
+      "code": 49021,
+      "name": "InvalidFeeStructure",
+      "msg": "Invalid fee structure"
+    },
+    {
       "code": 50000,
       "name": "WithdrawDenied",
       "msg": "Withdraw denied. Only vaults allow withdraws (funds and mints don't)"

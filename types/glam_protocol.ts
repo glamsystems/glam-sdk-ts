@@ -1259,6 +1259,11 @@ export type GlamProtocol = {
       "msg": "Delegate ACL limit exceeded"
     },
     {
+      "code": 49021,
+      "name": "invalidFeeStructure",
+      "msg": "Invalid fee structure"
+    },
+    {
       "code": 50000,
       "name": "withdrawDenied",
       "msg": "Withdraw denied. Only vaults allow withdraws (funds and mints don't)"
