@@ -12,7 +12,6 @@ import {
   TransactionMessage,
   TransactionSignature,
   VersionedTransaction,
-  sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import { getSimulationResult, parseProgramLogs } from "../utils/transaction";
 import {
@@ -408,23 +407,22 @@ export class BaseClient {
           )
         : this.connection;
 
-    // This is just a convenient method so that in tests we can send legacy
-    // txs, for example transfer SOL, create ATA, etc.
-    if (tx instanceof Transaction) {
-      return await sendAndConfirmTransaction(
-        txConnection,
-        tx,
-        [this.wallet.payer, ...additionalSigners],
-        {
-          skipPreflight: true,
-        },
-      );
-    }
-
     // Anchor provider.sendAndConfirm forces a signature with the wallet, which we don't want
     // https://github.com/coral-xyz/anchor/blob/v0.30.0/ts/packages/anchor/src/provider.ts#L159
+    if (tx instanceof Transaction) {
+      tx.feePayer = tx.feePayer || this.signer;
+      tx.recentBlockhash =
+        tx.recentBlockhash || (await this.blockhashWithCache.get()).blockhash;
+      if (additionalSigners.length > 0) {
+        tx.partialSign(...additionalSigners);
+      }
+    }
+
     const signedTx = await this.wallet.signTransaction(tx);
-    if (additionalSigners && additionalSigners.length > 0) {
+    if (
+      signedTx instanceof VersionedTransaction &&
+      additionalSigners.length > 0
+    ) {
       signedTx.sign(additionalSigners);
     }
     const serializedTx = signedTx.serialize();
