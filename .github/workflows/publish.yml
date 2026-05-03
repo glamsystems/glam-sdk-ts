@@ -73,7 +73,18 @@ jobs:
           path: npm-pack-dry-run.json
 
       - name: Publish
-        run: npm publish --access public --provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="$(node -p "require('./package.json').version")"
+          DIST_TAG="latest"
+
+          if [[ "${VERSION}" == *"-test"* ]]; then
+            DIST_TAG="test"
+          fi
+
+          npm publish --access public --provenance --tag "${DIST_TAG}"
 
       - name: Verify published signatures
         shell: bash
