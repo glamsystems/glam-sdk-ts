@@ -5,6 +5,7 @@ target/
 
 index.cjs.js
 index.esm.js
+buffer-layout.d.ts
 index.cjs.d.ts
 index.esm.d.ts
 src/**/*.d.ts

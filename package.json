@@ -24,6 +24,7 @@
   "files": [
     "README.md",
     "LICENSE",
+    "buffer-layout.d.ts",
     "index.cjs.js",
     "index.esm.js",
     "index.cjs.d.ts",
@@ -45,6 +46,7 @@
     "@solana/spl-token": "^0.4.9",
     "@solana/spl-token-metadata": "^0.1.4",
     "@solana/web3.js": "^1.98.4",
+    "@types/bn.js": "^5.2.0",
     "bs58": "^6.0.0",
     "buffer": "^6.0.3",
     "decimal.js": "^10.6.0",

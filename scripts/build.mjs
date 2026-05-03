@@ -49,7 +49,21 @@ async function copyDeclarations() {
     }
   }
 
-  const entryDeclaration = 'export * from "./src/index";\n';
+  const bufferLayoutDeclaration = await readFile(
+    join(
+      "node_modules",
+      "@coral-xyz",
+      "anchor",
+      "types",
+      "buffer-layout",
+      "index.d.ts",
+    ),
+    "utf8",
+  );
+  await writeFile("buffer-layout.d.ts", bufferLayoutDeclaration);
+
+  const entryDeclaration =
+    '/// <reference path="./buffer-layout.d.ts" />\nexport * from "./src/index";\n';
   await writeFile("index.cjs.d.ts", entryDeclaration);
   await writeFile("index.esm.d.ts", entryDeclaration);
 }

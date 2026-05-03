@@ -8,6 +8,7 @@ const rootFiles = [
   "index.esm.js",
   "index.cjs.d.ts",
   "index.esm.d.ts",
+  "buffer-layout.d.ts",
 ];
 
 async function removeDtsFiles(dir) {
@@ -35,5 +36,7 @@ async function removeDtsFiles(dir) {
   );
 }
 
-await Promise.all(rootFiles.map((path) => rm(path, { recursive: true, force: true })));
+await Promise.all(
+  rootFiles.map((path) => rm(path, { recursive: true, force: true })),
+);
 await removeDtsFiles("src");
