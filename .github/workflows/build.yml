@@ -1,0 +1,85 @@
+name: Build SDK
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-sdk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Check package contents
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npm pack --dry-run --json > npm-pack-dry-run.json
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const pack = JSON.parse(fs.readFileSync("npm-pack-dry-run.json", "utf8"))[0];
+          const files = new Set(pack.files.map((file) => file.path));
+          const required = [
+            "index.cjs.js",
+            "index.esm.js",
+            "index.cjs.d.ts",
+            "index.esm.d.ts",
+            "target/idl/glam_protocol.json",
+            "target/types/glam_protocol.ts",
+          ];
+
+          for (const file of required) {
+            if (!files.has(file)) {
+              throw new Error(`Missing expected package file: ${file}`);
+            }
+          }
+
+          console.log(
+            JSON.stringify(
+              {
+                filename: pack.filename,
+                files: pack.files.length,
+                unpackedSize: pack.unpackedSize,
+              },
+              null,
+              2,
+            ),
+          );
+          NODE
+
+      - name: Smoke test package entrypoint
+        run: |
+          node -e "const sdk = require('./index.cjs.js'); if (typeof sdk.getGlamProtocolProgramId !== 'function') process.exit(1);"
+
+      - name: Upload pack manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-pack-dry-run
+          path: npm-pack-dry-run.json

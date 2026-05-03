@@ -2,18 +2,37 @@
   "name": "@glamsystems/glam-sdk",
   "version": "1.0.13",
   "description": "TypeScript SDK for the GLAM Protocol",
-  "main": "./index.cjs",
+  "main": "./index.cjs.js",
   "module": "./index.esm.js",
+  "types": "./index.esm.d.ts",
   "homepage": "https://www.glam.systems",
   "repository": {
     "type": "git",
-    "url": "git@github.com:glamsystems/glam-sdk-ts.git"
+    "url": "https://github.com/glamsystems/glam-sdk-ts.git"
   },
   "keywords": [
     "glam",
     "solana"
   ],
   "license": "Apache-2.0",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "clean": "node scripts/clean.mjs",
+    "prepack": "npm run build",
+    "pack:dry-run": "npm pack --dry-run --json"
+  },
+  "files": [
+    "README.md",
+    "LICENSE",
+    "index.cjs.js",
+    "index.esm.js",
+    "index.cjs.d.ts",
+    "index.esm.d.ts",
+    "src/**/*.d.ts",
+    "target/idl/**/*.json",
+    "target/types/**/*.ts",
+    "target/types/**/*.d.ts"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -36,15 +55,8 @@
     "node": ">=20.20.0"
   },
   "devDependencies": {
-    "@rollup/plugin-terser": "^0.4.4"
-  },
-  "pnpm": {
-    "overrides": {
-      "@solana/web3.js@>=0.0.1": "^1.98.4",
-      "@solana/spl-token@>=0.0.1": "^0.4.6",
-      "@solana/spl-stake-pool@>=0.0.1": "^1.1.5",
-      "typescript@>=0.0.1": "^5.5.3",
-      "solana-bankrun@>=0.0.1": "^0.3.0"
-    }
+    "@types/node": "^20.17.30",
+    "esbuild": "^0.25.2",
+    "typescript": "^5.8.3"
   }
 }
