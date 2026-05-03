@@ -21,7 +21,11 @@ import { PkSet } from "../utils";
 export type StateAccount = IdlAccounts<GlamProtocol>["stateAccount"];
 
 export type StateModelType = IdlTypes<GlamProtocol>["stateModel"];
+export type StateAccountType = NonNullable<StateModelType["accountType"]>;
 export type OracleConfigsType = IdlTypes<GlamProtocol>["oracleConfigs"];
+type StateIdlModelInput = Partial<StateModelType> & {
+  oracleConfigs?: OracleConfigsType | null;
+};
 
 /**
  * State model class as defined in the IDL.
@@ -43,7 +47,7 @@ export class StateIdlModel implements StateModelType {
   integrationAcls: IntegrationAcl[] | null;
   delegateAcls: DelegateAcl[] | null;
 
-  constructor(data: Partial<StateModelType>) {
+  constructor(data: StateIdlModelInput) {
     this.accountType = data.accountType ?? null;
     this.name = data.name ?? null;
     this.uri = data.uri ?? null;
@@ -282,10 +286,12 @@ export class StateModel extends StateIdlModel {
       const mintPolicyData = mintIntegrationPolicy?.protocolPolicies?.find(
         (policy: any) => policy.protocolBitflag === 1,
       )?.data;
-      const mintPolicy = MintPolicy.decode(mintPolicyData);
-      Object.entries(mintPolicy).forEach(([key, value]) => {
-        (mintModel as any)[key] = value;
-      });
+      if (mintPolicyData) {
+        const mintPolicy = MintPolicy.decode(mintPolicyData);
+        Object.entries(mintPolicy).forEach(([key, value]) => {
+          (mintModel as any)[key] = value;
+        });
+      }
 
       // Parse request queue
       if (requestQueue) {
@@ -315,17 +321,17 @@ export class CreatedModel implements CreatedModelType {
   }
 }
 
-export class StateAccountType {
-  static readonly VAULT = { vault: {} };
-  static readonly TOKENIZED_VAULT = { tokenizedVault: {} };
-  static readonly MINT = { mint: {} };
-  static readonly SINGLE_ASSET_VAULT = { singleAssetVault: {} };
+export const StateAccountType = {
+  VAULT: { vault: {} } as StateAccountType,
+  TOKENIZED_VAULT: { tokenizedVault: {} } as StateAccountType,
+  MINT: { mint: {} } as StateAccountType,
+  SINGLE_ASSET_VAULT: { singleAssetVault: {} } as StateAccountType,
 
-  static equals(a: StateAccountType, b: StateAccountType) {
+  equals(a: StateAccountType, b: StateAccountType) {
     return Object.keys(a)[0] === Object.keys(b)[0];
-  }
+  },
 
-  static from(s: string) {
+  from(s: string): StateAccountType {
     if (s === "vault") {
       return StateAccountType.VAULT;
     }
@@ -343,5 +349,5 @@ export class StateAccountType {
     }
 
     throw new Error(`Invalid state account type: ${s}`);
-  }
-}
+  },
+};

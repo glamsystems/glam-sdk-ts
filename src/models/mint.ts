@@ -9,7 +9,7 @@ export type FeeParams = IdlTypes<GlamProtocol>["feeParams"];
 export type AccruedFees = IdlTypes<GlamProtocol>["accruedFees"];
 export type NotifyAndSettle = IdlTypes<GlamProtocol>["notifyAndSettle"];
 
-export type MintModelType = IdlTypes<GlamProtocol>["mintModel"];
+export type MintModelType = IdlTypes<GlamMint>["mintModel"];
 export class MintIdlModel implements MintModelType {
   symbol: string | null;
   name: number[] | null;
@@ -79,20 +79,21 @@ export class MintModel extends MintIdlModel {
 
 export type EmergencyUpdateMintArgsType =
   IdlTypes<GlamMint>["emergencyUpdateMintArgs"];
+export type RequestType = EmergencyUpdateMintArgsType["requestType"];
 export class EmergencyUpdateMintArgs implements EmergencyUpdateMintArgsType {
   requestType!: RequestType;
   setPaused!: boolean;
 }
 
-export class RequestType {
-  static readonly SUBSCRIPTION = { subscription: {} };
-  static readonly REDEMPTION = { redemption: {} };
+export const RequestType = {
+  SUBSCRIPTION: { subscription: {} } as RequestType,
+  REDEMPTION: { redemption: {} } as RequestType,
 
-  static equals(a: RequestType, b: RequestType) {
+  equals(a: RequestType, b: RequestType) {
     return Object.keys(a)[0] === Object.keys(b)[0];
-  }
+  },
 
-  static fromInt(int: number) {
+  fromInt(int: number): RequestType {
     switch (int) {
       case 0:
         return RequestType.SUBSCRIPTION;
@@ -101,8 +102,8 @@ export class RequestType {
       default:
         throw new Error("Invalid request type");
     }
-  }
-}
+  },
+};
 
 export type OracleConfigsType = IdlTypes<GlamProtocol>["oracleConfigs"];
 export class OracleConfigs implements OracleConfigsType {

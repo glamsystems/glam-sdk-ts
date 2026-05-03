@@ -6,7 +6,9 @@ import {
 } from "../constants";
 import { getGlamMintProgramId, getGlamProtocolProgramId } from "../glamExports";
 
-type IntegrationProtocolMap = ReturnType<typeof getProtocolsAndPermissions>[string];
+type IntegrationProtocolMap = ReturnType<
+  typeof getProtocolsAndPermissions
+>[string];
 
 function getIntegrationProtocolMap(
   integrationProgram: PublicKey,
@@ -33,7 +35,11 @@ export function resolveStateAclsStaging(
   ];
 
   for (const acl of integrationAcls ?? []) {
-    if (prodProgramIds.some((programId) => acl.integrationProgram.equals(programId))) {
+    if (
+      prodProgramIds.some((programId) =>
+        acl.integrationProgram.equals(programId),
+      )
+    ) {
       return false;
     }
     if (
@@ -108,7 +114,7 @@ export function parseProtocolsBitmask(
  */
 function isPowerOfTwo(n: number | BN): boolean {
   if (BN.isBN(n)) {
-    return n.isPowerOfTwo();
+    return n.gt(new BN(0)) && n.and(n.sub(new BN(1))).isZero();
   }
   return n > 0 && (n & (n - 1)) === 0;
 }
@@ -150,17 +156,13 @@ export function parseProtocolPermissionsBitmask(
     };
   }
 
-  const permissions: { bitflag: number; name: string }[] = [];
+  const permissions: { bitflag: number | BN; name: string }[] = [];
 
   // Check each permission in the protocol
   Object.entries(protocol.permissions).forEach(([bitflagStr, name]) => {
     if (BN.isBN(permissionsBitmask)) {
       const permissionBitflag = new BN(bitflagStr);
-      if (
-        permissionsBitmask
-          .and(new BN(permissionBitflag))
-          .eq(new BN(permissionBitflag))
-      ) {
+      if (permissionsBitmask.and(permissionBitflag).eq(permissionBitflag)) {
         permissions.push({ bitflag: permissionBitflag, name });
       }
     } else {

@@ -27,6 +27,13 @@ export function nameToChars(name: string, length: number = 32): number[] {
 }
 
 /**
+ * Normalizes a base-unit amount into a BN while preserving existing BN values.
+ */
+export function toBnAmount(amount: BN | number | string): BN {
+  return BN.isBN(amount) ? amount : new BN(amount);
+}
+
+/**
  * Safely converts a BN amount to a UI amount (with decimals).
  *
  * @param amount - The amount in base units (BN)
@@ -81,7 +88,9 @@ export function fromUiAmount(amount: number | string, decimals: number): BN {
   let fractionalBN = new BN(0);
   if (fractionalPart) {
     // Pad or truncate fractional part to match decimals
-    const paddedFractional = fractionalPart.padEnd(decimals, "0").slice(0, decimals);
+    const paddedFractional = fractionalPart
+      .padEnd(decimals, "0")
+      .slice(0, decimals);
     fractionalBN = new BN(paddedFractional);
   }
 
