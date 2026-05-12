@@ -1,4 +1,6 @@
-import { extractFailedProgramId } from "../../src/error";
+import { extractFailedProgramId, resolveErrorCode } from "../../src/error";
+import { getGlamProtocolIdl, getExtSplIdl } from "../../src/glamExports";
+import { JUPITER_PROGRAM_ID } from "../../src/constants";
 
 describe("extractFailedProgramId", () => {
   it("extracts the failed Jupiter program from real RouteV2 logs", () => {
@@ -19,5 +21,46 @@ describe("extractFailedProgramId", () => {
     expect(extractFailedProgramId(logs)).toBe(
       "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
     );
+  });
+});
+
+describe("resolveErrorCode", () => {
+  const protocolId = getGlamProtocolIdl(false).address;
+  const protocolError = getGlamProtocolIdl(false).errors[0];
+  const splId = getExtSplIdl(false).address;
+  const jupiterId = JUPITER_PROGRAM_ID.toBase58();
+
+  it("resolves a GLAM protocol error by programId", () => {
+    expect(resolveErrorCode(protocolError.code, protocolId)).toBe(
+      protocolError.msg,
+    );
+  });
+
+  it("scopes lookup to the matching IDL when programId is provided", () => {
+    // ext_spl programId paired with a protocol-only error code returns
+    // undefined (falls through to Jupiter, which doesn't have it either),
+    // proving the resolver isn't blindly scanning every IDL.
+    expect(resolveErrorCode(protocolError.code, splId)).toBeUndefined();
+  });
+
+  it("resolves Jupiter errors when programId is Jupiter", () => {
+    expect(resolveErrorCode(6001, jupiterId)).toContain(
+      "Slippage tolerance exceeded",
+    );
+  });
+
+  it("accepts hex codes", () => {
+    expect(resolveErrorCode("0x1771", jupiterId)).toContain(
+      "Slippage tolerance exceeded",
+    );
+  });
+
+  it("returns undefined for unknown codes from unknown programs", () => {
+    const unknownProgram = "11111111111111111111111111111111";
+    expect(resolveErrorCode(99999, unknownProgram)).toBeUndefined();
+  });
+
+  it("returns undefined for NaN inputs", () => {
+    expect(resolveErrorCode("not-a-number")).toBeUndefined();
   });
 });

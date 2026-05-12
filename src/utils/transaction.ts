@@ -44,7 +44,7 @@ export function parseProgramLogs(logs: string[], staging: boolean): string {
     );
     if (match) {
       const failedProgramId = extractFailedProgramId(logs);
-      const resolved = resolveErrorCode(match[1], staging, failedProgramId);
+      const resolved = resolveErrorCode(match[1], failedProgramId, staging);
       if (resolved) return resolved;
       return `Program error: ${match[1]}`;
     }
@@ -117,7 +117,7 @@ const getErrorFromRpcResponse = (
       const customErrorCode = instructionError?.[1]?.["Custom"];
       if (customErrorCode !== undefined) {
         const failedProgramId = extractFailedProgramId(rpcResponse.value.logs);
-        const msg = resolveErrorCode(customErrorCode, staging, failedProgramId);
+        const msg = resolveErrorCode(customErrorCode, failedProgramId, staging);
         if (msg) throw new Error(msg);
       }
       // Fallback to log-based parsing

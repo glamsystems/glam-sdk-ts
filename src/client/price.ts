@@ -1,10 +1,12 @@
 import {
   AccountMeta,
+  AddressLookupTableAccount,
   Commitment,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
+import { fetchAddressLookupTableAccounts } from "../utils/lookupTables";
 import { BN } from "@coral-xyz/anchor";
 import { KaminoLendingClient, KaminoVaultsClient } from "./kamino";
 
@@ -110,7 +112,7 @@ type PricingChunk = {
 
 export class PriceClient {
   private _stateModel: StateModel | null = null;
-  private _lookupTables = new PkSet();
+  private _lookupTables = new PkMap<AddressLookupTableAccount>();
   private _kaminoVaults = new PkSet();
   private _priceVaultIxsQueue: Promise<unknown> = Promise.resolve();
 
@@ -135,8 +137,8 @@ export class PriceClient {
     this._stateModel = stateModel;
   }
 
-  get lookupTables() {
-    return Array.from(this._lookupTables);
+  get lookupTables(): AddressLookupTableAccount[] {
+    return Array.from(this._lookupTables.values());
   }
 
   get kaminoVaults() {
@@ -791,6 +793,7 @@ export class PriceClient {
     const shareMints: typeof allKvaultMints = [];
     const kvaultStates: typeof allKvaultStates = [];
     const oracles: PublicKey[] = []; // oracle of kvault deposit token
+    const newLookupTableKeys = new PkSet();
     possibleShareAtaAccountsInfo.forEach((info, i) => {
       // share ata must exist and it must be tracked by glam state
       // otherwise skip it for pricing
@@ -811,9 +814,20 @@ export class PriceClient {
           throw new Error(`Oracle unavailable for asset ${tokenMint}`);
         }
         oracles.push(assetMeta.oracle);
-        this._lookupTables.add(vaultLookupTable); // cache lookup table
+        newLookupTableKeys.add(vaultLookupTable);
       }
     });
+
+    // Resolve any newly-seen kvault lookup tables in a single batch so that
+    // downstream callers (e.g. `intoVersionedTransaction`) can use them
+    // directly without re-fetching account data.
+    if (newLookupTableKeys.size > 0) {
+      const resolved = await fetchAddressLookupTableAccounts(
+        this.base.connection,
+        Array.from(newLookupTableKeys),
+      );
+      resolved.forEach((alt) => this._lookupTables.set(alt.key, alt));
+    }
     const kvaultPdas = await this.kvaults.getVaultPdasByShareMints(shareMints);
     kvaultPdas.forEach((p) => this._kaminoVaults.add(p)); // cache kvault keys
 

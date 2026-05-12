@@ -141,6 +141,10 @@ export class BaseClient {
   private _assetMetas?: PkMap<AssetMeta>;
   private _assetMetasPromise?: Promise<PkMap<AssetMeta>>;
 
+  private _defaultLookupTablesPromise?: Promise<AddressLookupTableAccount[]>;
+  private _glamLookupTablesPromise?: Promise<AddressLookupTableAccount[]>;
+  private _glamLookupTablesCacheKey?: string;
+
   public constructor(config?: GlamClientConfig) {
     if (config?.provider) {
       this.provider = config?.provider;
@@ -267,7 +271,64 @@ export class BaseClient {
   }
 
   set statePda(statePda: PublicKey) {
+    if (this._statePda && !this._statePda.equals(statePda)) {
+      this._glamLookupTablesPromise = undefined;
+      this._glamLookupTablesCacheKey = undefined;
+    }
     this._statePda = statePda;
+  }
+
+  /**
+   * Mainnet-only default lookup tables (Kamino lending, Loopscale).
+   * Cached for the session; safe to assume static contents.
+   */
+  private getDefaultLookupTables(): Promise<AddressLookupTableAccount[]> {
+    if (!this.isMainnet) {
+      return Promise.resolve([]);
+    }
+    if (!this._defaultLookupTablesPromise) {
+      this._defaultLookupTablesPromise = fetchAddressLookupTableAccounts(
+        this.connection,
+        LOOKUP_TABLES,
+      ).catch((error) => {
+        this._defaultLookupTablesPromise = undefined;
+        throw error;
+      });
+    }
+    return this._defaultLookupTablesPromise;
+  }
+
+  /**
+   * Discovers GLAM ALTs for the connected vault and caches the result for the
+   * session.
+   *
+   * Call `invalidateGlamLookupTablesCache()` after creating or extending an ALT
+   * to force a re-discovery on the next tx.
+   */
+  private getGlamLookupTablesCached(): Promise<AddressLookupTableAccount[]> {
+    const key = this.statePda.toBase58();
+    if (
+      this._glamLookupTablesPromise &&
+      this._glamLookupTablesCacheKey === key
+    ) {
+      return this._glamLookupTablesPromise;
+    }
+    this._glamLookupTablesCacheKey = key;
+    this._glamLookupTablesPromise = findGlamLookupTables(
+      this.statePda,
+      this.vaultPda,
+      this.connection,
+    ).catch((error) => {
+      this._glamLookupTablesPromise = undefined;
+      this._glamLookupTablesCacheKey = undefined;
+      throw error;
+    });
+    return this._glamLookupTablesPromise;
+  }
+
+  public invalidateGlamLookupTablesCache(): void {
+    this._glamLookupTablesPromise = undefined;
+    this._glamLookupTablesCacheKey = undefined;
   }
 
   get isMainnet(): boolean {
@@ -294,32 +355,42 @@ export class BaseClient {
     const instructions = tx.instructions;
     const lookupTableAccounts: AddressLookupTableAccount[] = [];
 
-    // Fetch custom lookup tables and default lookup tables
+    // Default (mainnet-only) lookup tables are cached for the session. Start
+    // the fetch in parallel with caller-provided lookups; swallow failures so
+    // an RPC hiccup doesn't fail tx building (same fallback policy used for
+    // GLAM ALT discovery below). Attaching `.catch` also keeps the cached
+    // promise from surfacing as an unhandled rejection if caller-key fetch
+    // throws first.
+    const defaultLookupTablesPromise = this.getDefaultLookupTables().catch(
+      (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `Failed to fetch default address lookup tables. Continuing without them: ${message}`,
+        );
+        return [] as AddressLookupTableAccount[];
+      },
+    );
+
+    // Fetch caller-provided lookup tables. If already resolved, use as-is;
+    // otherwise batch-fetch their account data.
     if (lookupTables.every((t) => t instanceof AddressLookupTableAccount)) {
+      lookupTableAccounts.push(...lookupTables);
+    } else if (lookupTables.length > 0) {
       const accounts = await fetchAddressLookupTableAccounts(
         this.connection,
-        LOOKUP_TABLES,
+        lookupTables as PublicKey[] | string[],
       );
-      lookupTableAccounts.push(...lookupTables, ...accounts);
-    } else {
-      const accounts = await fetchAddressLookupTableAccounts(this.connection, [
-        ...lookupTables,
-        ...LOOKUP_TABLES,
-      ]);
       lookupTableAccounts.push(...accounts);
     }
 
+    lookupTableAccounts.push(...(await defaultLookupTablesPromise));
+
     // Fetch GLAM specific lookup tables only if vault state has been set.
-    // If ALT discovery fails (e.g., RPC deprioritization) we fall back to an
-    // empty list so tx building continues; the resulting transaction may be
-    // larger and could exceed size limits, which fails visibly downstream.
+    // Discovery is cached per-statePda for the session; if it fails (e.g., RPC
+    // deprioritization) we fall back to an empty list so tx building continues.
     if (this.isVaultConnected) {
       try {
-        const glamLookupTableAccounts = await findGlamLookupTables(
-          this.statePda,
-          this.vaultPda,
-          this.connection,
-        );
+        const glamLookupTableAccounts = await this.getGlamLookupTablesCached();
         lookupTableAccounts.push(...glamLookupTableAccounts);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

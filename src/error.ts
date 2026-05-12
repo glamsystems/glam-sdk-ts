@@ -2,10 +2,17 @@ import { TransactionError } from "@solana/web3.js";
 import {
   getGlamProtocolIdl,
   getGlamMintIdl,
-  getGlamProtocolProgramId,
-  getGlamMintProgramId,
+  getExtSplIdl,
+  getExtKaminoIdl,
+  getExtMarinadeIdl,
+  getExtStakePoolIdl,
+  getExtCctpIdl,
+  getExtBridgeIdl,
+  getExtEpiIdl,
+  getExtLoopscaleIdl,
   resolveStaging,
 } from "./glamExports";
+import { JUPITER_PROGRAM_ID } from "./constants";
 
 export class GlamError extends Error {
   message: string;
@@ -56,8 +63,8 @@ export function extractFailedProgramId(
  */
 export function resolveErrorCode(
   code: number | string,
-  staging?: boolean,
   programId?: string,
+  staging?: boolean,
 ): string | undefined {
   const decimal =
     typeof code === "string"
@@ -70,39 +77,37 @@ export function resolveErrorCode(
       : code;
   if (isNaN(decimal)) return undefined;
 
-  const s = resolveStaging(staging);
+  if (programId === JUPITER_PROGRAM_ID.toBase58()) {
+    return JUPITER_SWAP_ERRORS[decimal];
+  }
 
-  const glamProtocolId = getGlamProtocolProgramId(s).toBase58();
-  const glamMintId = getGlamMintProgramId(s).toBase58();
+  const isStaging = resolveStaging(staging);
+
+  type IdlWithErrors = {
+    address: string;
+    errors?: Array<{ code: number; msg?: string }>;
+  };
+  const glamIdls: IdlWithErrors[] = [
+    getGlamProtocolIdl(isStaging),
+    getGlamMintIdl(isStaging),
+    getExtSplIdl(isStaging),
+    getExtKaminoIdl(isStaging),
+    getExtMarinadeIdl(isStaging),
+    getExtStakePoolIdl(isStaging),
+    getExtCctpIdl(isStaging),
+    getExtBridgeIdl(isStaging),
+    getExtEpiIdl(isStaging),
+    getExtLoopscaleIdl(isStaging),
+  ];
 
   if (programId) {
     // Match against the specific program that failed
-    if (programId === glamProtocolId) {
-      const err = getGlamProtocolIdl(s).errors.find((e) => e.code === decimal);
+    const idl = glamIdls.find((i) => i.address === programId);
+    if (idl) {
+      const err = idl.errors?.find((e) => e.code === decimal);
       if (err?.msg) return err.msg;
     }
-    if (programId === glamMintId) {
-      const err = getGlamMintIdl(s).errors.find((e) => e.code === decimal);
-      if (err?.msg) return err.msg;
-    }
-    // Not a GLAM program — check third-party errors
-    const jupiterMsg = JUPITER_SWAP_ERRORS[decimal];
-    if (jupiterMsg) return jupiterMsg;
-
-    return undefined;
   }
-
-  // Fallback: no programId provided, check all (legacy behavior)
-  const protocolError = getGlamProtocolIdl(s).errors.find(
-    (e) => e.code === decimal,
-  );
-  if (protocolError?.msg) return protocolError.msg;
-
-  const mintError = getGlamMintIdl(s).errors.find((e) => e.code === decimal);
-  if (mintError?.msg) return mintError.msg;
-
-  const jupiterMsg = JUPITER_SWAP_ERRORS[decimal];
-  if (jupiterMsg) return jupiterMsg;
 
   return undefined;
 }

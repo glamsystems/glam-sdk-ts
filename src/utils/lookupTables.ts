@@ -26,12 +26,8 @@ import { PkSet } from "./pkset";
  */
 export async function fetchAddressLookupTableAccounts(
   connection: Connection,
-  pubkeys?: string[] | PublicKey[],
+  pubkeys: string[] | PublicKey[],
 ): Promise<AddressLookupTableAccount[]> {
-  if (!pubkeys) {
-    throw new Error("addressLookupTableAddresses is undefined");
-  }
-
   if (pubkeys.length === 0) {
     return [];
   }
