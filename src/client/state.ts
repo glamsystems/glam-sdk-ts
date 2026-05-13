@@ -1,4 +1,3 @@
-import * as anchor from "@coral-xyz/anchor";
 import {
   VersionedTransaction,
   TransactionSignature,
@@ -8,7 +7,7 @@ import {
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 import { CreatedModel, StateIdlModel, StateAccountType } from "../models";
 import { getStatePda } from "../utils/glamPDAs";
-import { charsToString } from "../utils/common";
+import { sha256First8Bytes } from "../utils/common";
 
 export type InitStateParams = {
   accountType: StateAccountType;
@@ -35,11 +34,7 @@ class TxBuilder extends BaseTxBuilder<StateClient> {
   ): Promise<[TransactionInstruction, PublicKey]> {
     // stateInitKey = hash state name and get first 8 bytes
     // useful for re-computing state account PDA in the future
-    const stateInitKey = [
-      ...Buffer.from(
-        anchor.utils.sha256.hash(charsToString(params.name)),
-      ).subarray(0, 8),
-    ];
+    const stateInitKey = await sha256First8Bytes(params.name);
     const created = new CreatedModel({ key: stateInitKey });
     const owner = params.owner || glamSigner;
     const statePda = getStatePda(

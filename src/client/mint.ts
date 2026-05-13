@@ -1,4 +1,4 @@
-import { BN, utils as anchorUtils } from "@coral-xyz/anchor";
+import { BN } from "@coral-xyz/anchor";
 
 import {
   Connection,
@@ -41,7 +41,7 @@ import {
 } from "../utils/glamPDAs";
 import { TOKEN_ACL_GATE_PROGRAM, TOKEN_ACL_PROGRAM } from "../constants";
 import { ClusterNetwork } from "../clientConfig";
-import { charsToString, toBnAmount } from "../utils/common";
+import { sha256First8Bytes, toBnAmount } from "../utils/common";
 import { UpdateStateParams } from "./state";
 
 export type InitMintParams = {
@@ -482,11 +482,7 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
         ? initMintParams.decimals
         : null;
 
-    const stateInitKey = [
-      ...Buffer.from(
-        anchorUtils.sha256.hash(charsToString(initMintParams.name)),
-      ).subarray(0, 8),
-    ];
+    const stateInitKey = await sha256First8Bytes(initMintParams.name);
     const glamState = getStatePda(
       stateInitKey,
       glamSigner,

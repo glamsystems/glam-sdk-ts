@@ -27,6 +27,15 @@ export function nameToChars(name: string, length: number = 32): number[] {
 }
 
 /**
+ * Returns the first 8 raw SHA-256 bytes for PDA seed derivation.
+ */
+export async function sha256First8Bytes(chars: number[]): Promise<number[]> {
+  const bytes = Uint8Array.from(chars.filter((byte) => byte !== 0));
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest).subarray(0, 8));
+}
+
+/**
  * Normalizes a base-unit amount into a BN while preserving existing BN values.
  */
 export function toBnAmount(amount: BN | number | string): BN {
