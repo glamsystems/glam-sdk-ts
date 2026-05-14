@@ -24,7 +24,9 @@ import {
 import { TRANSFER_HOOK_PROGRAM } from "../constants";
 import {
   fetchMintAndTokenProgram,
+  getHeliusApiKey,
   getProgramAccounts,
+  getTokenAccountsByMint,
   isTokenAclEnabled,
 } from "../utils";
 import {
@@ -41,7 +43,7 @@ import {
 } from "../utils/glamPDAs";
 import { TOKEN_ACL_GATE_PROGRAM, TOKEN_ACL_PROGRAM } from "../constants";
 import { ClusterNetwork } from "../clientConfig";
-import { sha256First8Bytes, toBnAmount } from "../utils/common";
+import { sha256First8Bytes, toBnAmount, toUiAmount } from "../utils/common";
 import { UpdateStateParams } from "./state";
 
 export type InitMintParams = {
@@ -1060,55 +1062,34 @@ export class MintClient {
   }
 
   /**
-   * Fetches token holders of the GLAM mint using helius RPC
+   * Fetches token holders of the GLAM mint using helius RPC. Falls back to
+   * getHolders if helius API key is not provided or cluster is not mainnet.
    */
   public async fetchTokenHolders(
     showZeroBalance: boolean = true,
   ): Promise<TokenAccount[]> {
-    // `getTokenAccounts` is a helius only RPC endpoint, we hardcode the URL here
-    // in case users choose to use a non-helius RPC. Fall back to getHolders if
-    // helius API key is not provided
-
-    const heliusApiKey =
-      process.env.NEXT_PUBLIC_HELIUS_API_KEY || process.env.HELIUS_API_KEY;
-    if (!heliusApiKey || this.base.cluster !== ClusterNetwork.Mainnet) {
+    if (!getHeliusApiKey() || this.base.cluster !== ClusterNetwork.Mainnet) {
       return await this.getHolders(showZeroBalance);
     }
 
-    const response = await fetch(
-      `https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "1",
-          method: "getTokenAccounts",
-          params: {
-            mint: this.base.mintPda.toBase58(),
-            options: { showZeroBalance },
-          },
-        }),
-      },
-    );
-
-    const data = await response.json();
-    const { token_accounts: tokenAccounts } = data.result;
+    const tokenAccounts = await getTokenAccountsByMint(this.base.mintPda, {
+      showZeroBalance,
+    });
 
     const { mint, tokenProgram } = await fetchMintAndTokenProgram(
       this.base.connection,
       this.base.mintPda,
     );
 
-    return tokenAccounts.map((ta: any) => ({
+    return tokenAccounts.map((ta) => ({
       owner: new PublicKey(ta.owner),
       pubkey: new PublicKey(ta.address),
       mint: this.base.mintPda,
       programId: tokenProgram,
       decimals: mint.decimals,
-      amount: ta.amount,
-      uiAmount: Number(ta.amount) / 10 ** mint.decimals,
-      frozen: ta.frozen,
+      amount: String(ta.amount),
+      uiAmount: toUiAmount(new BN(ta.amount), mint.decimals),
+      frozen: Boolean(ta.frozen),
     }));
   }
 
