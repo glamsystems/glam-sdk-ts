@@ -1,0 +1,3633 @@
+{
+  "address": "G1NTPhharzUz2WsdjBVrczrYjM2USsPMtboHYgdbSpiL",
+  "metadata": {
+    "name": "ext_phoenix",
+    "version": "0.1.1",
+    "spec": "0.1.0",
+    "description": "Phoenix and Ember integration for GLAM Protocol"
+  },
+  "instructions": [
+    {
+      "name": "cancel_all",
+      "docs": [
+        "Cancels all of the trader's resting orders on the market identified by the orderbook account."
+      ],
+      "discriminator": [
+        98,
+        191,
+        75,
+        220,
+        115,
+        40,
+        71,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_orders_by_id",
+      "docs": [
+        "Cancels specific resting orders by their order IDs."
+      ],
+      "discriminator": [
+        234,
+        204,
+        126,
+        94,
+        222,
+        22,
+        141,
+        24
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "order_ids",
+          "type": {
+            "defined": {
+              "name": "OrderIds"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "cancel_up_to",
+      "docs": [
+        "Cancels orders on one side of the book up to an optional count and/or tick limit."
+      ],
+      "discriminator": [
+        26,
+        209,
+        244,
+        253,
+        59,
+        175,
+        227,
+        54
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CancelUpToInstruction"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "deposit",
+      "docs": [
+        "Ember deposit: converts the vault's input mint into the Phoenix-side output mint."
+      ],
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EMBERpYNE6ehWmXymZZS2skiFmCa9V5dp14e1iduM5qy"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "ember_state"
+        },
+        {
+          "name": "input_mint"
+        },
+        {
+          "name": "output_mint",
+          "writable": true
+        },
+        {
+          "name": "input_token_account",
+          "writable": true
+        },
+        {
+          "name": "output_token_account",
+          "writable": true
+        },
+        {
+          "name": "ember_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "deposit_params",
+          "type": {
+            "defined": {
+              "name": "DepositParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "deposit_funds",
+      "docs": [
+        "Deposits base or quote mint tokens from the vault's token account into the Phoenix trader account."
+      ],
+      "discriminator": [
+        202,
+        39,
+        52,
+        211,
+        53,
+        20,
+        250,
+        88
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "DepositFundsInstruction"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "place_limit_order",
+      "docs": [
+        "Places a limit order; the unfilled portion rests on the orderbook."
+      ],
+      "discriminator": [
+        108,
+        176,
+        33,
+        186,
+        146,
+        229,
+        1,
+        197
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "packet",
+          "type": {
+            "defined": {
+              "name": "OrderPacket"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "place_market_order",
+      "docs": [
+        "Places an immediate-or-cancel market order; unfilled size is dropped rather than rested."
+      ],
+      "discriminator": [
+        90,
+        118,
+        192,
+        252,
+        192,
+        99,
+        39,
+        145
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "packet",
+          "type": {
+            "defined": {
+              "name": "OrderPacket"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "place_multi_limit_order",
+      "docs": [
+        "Places multiple limit orders (bids and/or asks) on a single market in one CPI."
+      ],
+      "discriminator": [
+        236,
+        208,
+        221,
+        172,
+        141,
+        226,
+        129,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "packet",
+          "type": {
+            "defined": {
+              "name": "MultipleOrderPacket"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "place_post_only_order",
+      "docs": [
+        "Places a maker-only limit order; rejected if it would cross the book."
+      ],
+      "discriminator": [
+        253,
+        171,
+        187,
+        207,
+        158,
+        181,
+        93,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "packet",
+          "type": {
+            "defined": {
+              "name": "OrderPacket"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "register_trader",
+      "docs": [
+        "Initializes a Phoenix trader account (parent or child subaccount) owned by the vault."
+      ],
+      "discriminator": [
+        75,
+        243,
+        224,
+        167,
+        1,
+        5,
+        51,
+        32
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "log_authority"
+        },
+        {
+          "name": "global_config"
+        },
+        {
+          "name": "trader_account",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "RegisterTraderParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_phoenix_policy",
+      "docs": [
+        "Sets the GLAM Phoenix policy (market allowlist, order types, and price-deviation limits) on the vault state."
+      ],
+      "discriminator": [
+        57,
+        235,
+        161,
+        196,
+        65,
+        41,
+        80,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "PhoenixPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "sync_parent_to_child",
+      "docs": [
+        "Syncs collateral and state from a parent trader account down to a child subaccount."
+      ],
+      "discriminator": [
+        175,
+        137,
+        217,
+        11,
+        235,
+        39,
+        150,
+        19
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "transfer_collateral",
+      "docs": [
+        "Transfers collateral from a source trader subaccount to a destination trader subaccount."
+      ],
+      "discriminator": [
+        157,
+        163,
+        63,
+        27,
+        242,
+        72,
+        251,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "TransferCollateralInstruction"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "transfer_collateral_child_to_parent",
+      "docs": [
+        "Transfers collateral from a child subaccount back to its parent trader account."
+      ],
+      "discriminator": [
+        51,
+        100,
+        177,
+        115,
+        139,
+        135,
+        247,
+        139
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "TransferCollateralChildToParentInstruction"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_trader_state",
+      "docs": [
+        "Refreshes the trader account's cached state (PnL, funding, margin) against current market data."
+      ],
+      "discriminator": [
+        249,
+        139,
+        82,
+        44,
+        126,
+        66,
+        133,
+        220
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdraw",
+      "docs": [
+        "Ember withdraw: converts the Phoenix-side output mint back to the input mint; `None` = full balance."
+      ],
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EMBERpYNE6ehWmXymZZS2skiFmCa9V5dp14e1iduM5qy"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "ember_state"
+        },
+        {
+          "name": "input_mint"
+        },
+        {
+          "name": "output_mint",
+          "writable": true
+        },
+        {
+          "name": "input_token_account",
+          "writable": true
+        },
+        {
+          "name": "output_token_account",
+          "writable": true
+        },
+        {
+          "name": "ember_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "withdraw_params",
+          "type": {
+            "defined": {
+              "name": "WithdrawParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw_funds",
+      "docs": [
+        "Withdraws base or quote mint tokens from the Phoenix trader account back to the vault's token account."
+      ],
+      "discriminator": [
+        241,
+        36,
+        29,
+        111,
+        208,
+        31,
+        104,
+        217
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "WithdrawFundsInstruction"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StateAccount",
+      "discriminator": [
+        142,
+        247,
+        54,
+        95,
+        85,
+        133,
+        249,
+        103
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PayloadTooLarge",
+      "msg": "Phoenix packet payload is too large"
+    },
+    {
+      "code": 6001,
+      "name": "MarketNotAllowed",
+      "msg": "Market is not allowed by Phoenix policy"
+    },
+    {
+      "code": 6002,
+      "name": "OrderSizeExceeded",
+      "msg": "Order size exceeds Phoenix policy"
+    },
+    {
+      "code": 6003,
+      "name": "RiskIncreasingOrderDisabled",
+      "msg": "Risk-increasing orders are disabled by Phoenix policy"
+    },
+    {
+      "code": 6004,
+      "name": "ReduceOnlyRequired",
+      "msg": "Order must be reduce-only by Phoenix policy"
+    },
+    {
+      "code": 6005,
+      "name": "MissingReferencePrice",
+      "msg": "Missing reference price for Phoenix price tolerance check"
+    },
+    {
+      "code": 6006,
+      "name": "PriceDeviationExceeded",
+      "msg": "Order price exceeds Phoenix price tolerance"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidPhoenixAccount",
+      "msg": "Invalid Phoenix account"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidEmberMint",
+      "msg": "Invalid Ember mint"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidEmberTokenAccount",
+      "msg": "Invalid Ember token account"
+    },
+    {
+      "code": 6010,
+      "name": "EmberAmountExceeded",
+      "msg": "Ember conversion amount exceeds policy"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidAmount",
+      "msg": "Amount must be greater than zero"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidPhoenixAccountOrder",
+      "msg": "Invalid Phoenix account order"
+    },
+    {
+      "code": 6013,
+      "name": "DuplicateAccount",
+      "msg": "Duplicate account"
+    },
+    {
+      "code": 6014,
+      "name": "UnexpectedSigner",
+      "msg": "Unexpected signer account"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidPhoenixPda",
+      "msg": "Invalid Phoenix PDA"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidOrderPacket",
+      "msg": "Invalid Phoenix order packet"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidSide",
+      "msg": "Invalid Phoenix side"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidOrderFlags",
+      "msg": "Invalid Phoenix order flags"
+    },
+    {
+      "code": 6019,
+      "name": "InvalidTraderCapability",
+      "msg": "Invalid Phoenix trader capability"
+    },
+    {
+      "code": 6020,
+      "name": "DuplicateTraderCapability",
+      "msg": "Duplicate Phoenix trader capability"
+    },
+    {
+      "code": 6021,
+      "name": "EmptyTraderCapabilityUpdates",
+      "msg": "Trader capability updates must not be empty"
+    },
+    {
+      "code": 6022,
+      "name": "TooManyTraderCapabilityUpdates",
+      "msg": "Too many trader capability updates"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidCancelLimit",
+      "msg": "Invalid cancel-up-to limit"
+    },
+    {
+      "code": 6024,
+      "name": "GlamVaultLamportsDecreased",
+      "msg": "GLAM vault lamports decreased during external CPI"
+    },
+    {
+      "code": 6025,
+      "name": "TooManyPhoenixMarkets",
+      "msg": "Too many Phoenix markets in policy allowlist"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidPhoenixPolicy",
+      "msg": "Invalid Phoenix policy"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidReferencePriceTimestamp",
+      "msg": "Invalid Phoenix reference price timestamp"
+    },
+    {
+      "code": 6028,
+      "name": "ReferencePriceStale",
+      "msg": "Phoenix reference price is stale"
+    },
+    {
+      "code": 6029,
+      "name": "OrderTypeNotAllowed",
+      "msg": "Phoenix order type is not allowed by policy"
+    }
+  ],
+  "types": [
+    {
+      "name": "AccountType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Vault"
+          },
+          {
+            "name": "TokenizedVault"
+          },
+          {
+            "name": "Mint"
+          },
+          {
+            "name": "SingleAssetVault"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccruedFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "vault_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "management_fee",
+            "type": "u128"
+          },
+          {
+            "name": "performance_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_base_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_flow_fee",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BaseLots",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "inner",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CancelId",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "node_pointer",
+            "type": {
+              "defined": {
+                "name": "NodePointer"
+              }
+            }
+          },
+          {
+            "name": "order_id",
+            "type": {
+              "defined": {
+                "name": "FIFOOrderId"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CancelUpToInstruction",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "side",
+            "type": {
+              "defined": {
+                "name": "Side"
+              }
+            }
+          },
+          {
+            "name": "num_orders_to_cancel",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "tick_limit",
+            "type": {
+              "option": "u64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CondensedOrder",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "price_in_ticks",
+            "type": "u64"
+          },
+          {
+            "name": "size_in_base_lots",
+            "type": "u64"
+          },
+          {
+            "name": "last_valid_slot",
+            "type": {
+              "option": "u64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatedModel",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "created_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateAcl",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "integration_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationPermissions"
+                }
+              }
+            }
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositFundsInstruction",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineField",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": {
+              "defined": {
+                "name": "EngineFieldName"
+              }
+            }
+          },
+          {
+            "name": "value",
+            "type": {
+              "defined": {
+                "name": "EngineFieldValue"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldName",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Owner"
+          },
+          {
+            "name": "PortfolioManagerName"
+          },
+          {
+            "name": "Name"
+          },
+          {
+            "name": "Uri"
+          },
+          {
+            "name": "Assets"
+          },
+          {
+            "name": "DelegateAcls"
+          },
+          {
+            "name": "IntegrationAcls"
+          },
+          {
+            "name": "TimelockDuration"
+          },
+          {
+            "name": "Borrowable"
+          },
+          {
+            "name": "DefaultAccountStateFrozen"
+          },
+          {
+            "name": "PermanentDelegate"
+          },
+          {
+            "name": "NotifyAndSettle"
+          },
+          {
+            "name": "FeeStructure"
+          },
+          {
+            "name": "FeeParams"
+          },
+          {
+            "name": "ClaimableFees"
+          },
+          {
+            "name": "ClaimedFees"
+          },
+          {
+            "name": "OracleConfigs"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldValue",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Boolean",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "U8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u8"
+              }
+            ]
+          },
+          {
+            "name": "U32",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u32"
+              }
+            ]
+          },
+          {
+            "name": "U64",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "String",
+            "fields": [
+              {
+                "name": "val",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "Pubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "VecPubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "pubkey"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecU8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "VecU32",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "u32"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecDelegateAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "DelegateAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecIntegrationAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "IntegrationAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeStructure",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeStructure"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeParams",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeParams"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "AccruedFees",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "AccruedFees"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "NotifyAndSettle",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "NotifyAndSettle"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "OracleConfigs",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "OracleConfigs"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "EntryExitFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subscription_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "redemption_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FIFOOrderId",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "price_in_ticks",
+            "type": {
+              "defined": {
+                "name": "Ticks"
+              }
+            }
+          },
+          {
+            "name": "order_sequence_number",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "year_in_seconds",
+            "type": "u32"
+          },
+          {
+            "name": "pa_high_water_mark",
+            "type": "i128"
+          },
+          {
+            "name": "pa_last_nav",
+            "type": "i128"
+          },
+          {
+            "name": "last_aum",
+            "type": "i128"
+          },
+          {
+            "name": "last_performance_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_management_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_protocol_fee_crystallized",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeStructure",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "manager",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "management",
+            "type": {
+              "defined": {
+                "name": "ManagementFee"
+              }
+            }
+          },
+          {
+            "name": "performance",
+            "type": {
+              "defined": {
+                "name": "PerformanceFee"
+              }
+            }
+          },
+          {
+            "name": "protocol",
+            "type": {
+              "defined": {
+                "name": "ProtocolFees"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "HurdleType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationAcl",
+      "docs": [
+        "An integration program can have multiple protocols supported.",
+        "Enabled protocols are stored in a bitmask, and each protocol can have its own policy."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocols_bitmask",
+            "type": "u16"
+          },
+          {
+            "name": "protocol_policies",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPolicy"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationPermissions",
+      "docs": [
+        "Stores delegate permissions for an integration program."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPermissions"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ManagementFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MultipleOrderPacket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bids",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "CondensedOrder"
+                }
+              }
+            }
+          },
+          {
+            "name": "asks",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "CondensedOrder"
+                }
+              }
+            }
+          },
+          {
+            "name": "client_order_id",
+            "type": {
+              "option": {
+                "array": [
+                  "u8",
+                  16
+                ]
+              }
+            }
+          },
+          {
+            "name": "slide",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NodePointer",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NoticePeriodType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NotifyAndSettle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "model",
+            "type": {
+              "defined": {
+                "name": "ValuationModel"
+              }
+            }
+          },
+          {
+            "name": "permissionless_fulfillment",
+            "type": "bool"
+          },
+          {
+            "name": "subscribe_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "subscribe_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "redeem_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "time_unit",
+            "type": {
+              "defined": {
+                "name": "TimeUnit"
+              }
+            }
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleConfigs",
+      "docs": [
+        "Vault-specific oracle configs. If available, these configs are preferred over the global config."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_ages_seconds",
+            "type": {
+              "vec": {
+                "array": [
+                  "u16",
+                  2
+                ]
+              }
+            }
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                12
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OrderFlags",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "flags",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OrderIds",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "order_ids",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "CancelId"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OrderPacket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "kind",
+            "type": {
+              "defined": {
+                "name": "OrderPacketKind"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OrderPacketKind",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "PostOnly",
+            "fields": [
+              {
+                "name": "side",
+                "type": {
+                  "defined": {
+                    "name": "Side"
+                  }
+                }
+              },
+              {
+                "name": "price_in_ticks",
+                "type": {
+                  "defined": {
+                    "name": "Ticks"
+                  }
+                }
+              },
+              {
+                "name": "num_base_lots",
+                "type": {
+                  "defined": {
+                    "name": "BaseLots"
+                  }
+                }
+              },
+              {
+                "name": "client_order_id",
+                "type": {
+                  "array": [
+                    "u8",
+                    16
+                  ]
+                }
+              },
+              {
+                "name": "slide",
+                "type": "bool"
+              },
+              {
+                "name": "last_valid_slot",
+                "type": {
+                  "option": "u64"
+                }
+              },
+              {
+                "name": "order_flags",
+                "type": {
+                  "defined": {
+                    "name": "OrderFlags"
+                  }
+                }
+              },
+              {
+                "name": "cancel_existing",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "Limit",
+            "fields": [
+              {
+                "name": "side",
+                "type": {
+                  "defined": {
+                    "name": "Side"
+                  }
+                }
+              },
+              {
+                "name": "price_in_ticks",
+                "type": {
+                  "defined": {
+                    "name": "Ticks"
+                  }
+                }
+              },
+              {
+                "name": "num_base_lots",
+                "type": {
+                  "defined": {
+                    "name": "BaseLots"
+                  }
+                }
+              },
+              {
+                "name": "self_trade_behavior",
+                "type": {
+                  "defined": {
+                    "name": "SelfTradeBehavior"
+                  }
+                }
+              },
+              {
+                "name": "match_limit",
+                "type": {
+                  "option": "u64"
+                }
+              },
+              {
+                "name": "client_order_id",
+                "type": {
+                  "array": [
+                    "u8",
+                    16
+                  ]
+                }
+              },
+              {
+                "name": "last_valid_slot",
+                "type": {
+                  "option": "u64"
+                }
+              },
+              {
+                "name": "order_flags",
+                "type": {
+                  "defined": {
+                    "name": "OrderFlags"
+                  }
+                }
+              },
+              {
+                "name": "cancel_existing",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "ImmediateOrCancel",
+            "fields": [
+              {
+                "name": "side",
+                "type": {
+                  "defined": {
+                    "name": "Side"
+                  }
+                }
+              },
+              {
+                "name": "price_in_ticks",
+                "type": {
+                  "option": {
+                    "defined": {
+                      "name": "Ticks"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "num_base_lots",
+                "type": {
+                  "defined": {
+                    "name": "BaseLots"
+                  }
+                }
+              },
+              {
+                "name": "num_quote_lots",
+                "type": {
+                  "option": {
+                    "defined": {
+                      "name": "QuoteLots"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "min_base_lots_to_fill",
+                "type": {
+                  "defined": {
+                    "name": "BaseLots"
+                  }
+                }
+              },
+              {
+                "name": "min_quote_lots_to_fill",
+                "type": {
+                  "defined": {
+                    "name": "QuoteLots"
+                  }
+                }
+              },
+              {
+                "name": "self_trade_behavior",
+                "type": {
+                  "defined": {
+                    "name": "SelfTradeBehavior"
+                  }
+                }
+              },
+              {
+                "name": "match_limit",
+                "type": {
+                  "option": "u64"
+                }
+              },
+              {
+                "name": "client_order_id",
+                "type": {
+                  "array": [
+                    "u8",
+                    16
+                  ]
+                }
+              },
+              {
+                "name": "last_valid_slot",
+                "type": {
+                  "option": "u64"
+                }
+              },
+              {
+                "name": "order_flags",
+                "type": {
+                  "defined": {
+                    "name": "OrderFlags"
+                  }
+                }
+              },
+              {
+                "name": "cancel_existing",
+                "type": "bool"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "PerformanceFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_rate_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_type",
+            "type": {
+              "defined": {
+                "name": "HurdleType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PhoenixPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "markets_allowlist",
+            "docs": [
+              "Phoenix markets the vault is allowed to trade on. Any order routed to a",
+              "market outside this list is rejected with `MarketNotAllowed`. Capped at",
+              "`MAX_PHOENIX_MARKETS_ALLOWLIST` entries; duplicates and the default",
+              "pubkey are rejected by `validate_for_set`. An empty list disables all",
+              "trading."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "allowed_order_types",
+            "docs": [
+              "Allowed Phoenix `OrderPacketKind` discriminants. Current values are:",
+              "`0 = PostOnly`, `1 = Limit`, and `2 = ImmediateOrCancel`. An empty list",
+              "disables all order placement."
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "require_reduce_only_orders",
+            "docs": [
+              "When `true`, every order must have the reduce-only flag set; orders",
+              "without it are rejected with `ReduceOnlyRequired`. Use this to lock the",
+              "vault into pure position-unwinding mode."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "max_price_deviation_bps",
+            "docs": [
+              "Maximum allowed deviation in basis points. Retained in policy state for",
+              "future enforcement; currently not checked by order placement."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "max_reference_price_age_secs",
+            "docs": [
+              "Maximum reference price age in seconds. Retained in policy state for",
+              "future enforcement; currently not checked by order placement."
+            ],
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PricedProtocol",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "rent",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "i128"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "last_updated_slot",
+            "type": "u64"
+          },
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "base_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "flow_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPermissions",
+      "docs": [
+        "Represents a delegate's permissions for a specific protocol"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "permissions_bitmask",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPolicy",
+      "docs": [
+        "Stores policy data for an integrated protocol.",
+        "Integration programs serialize/deserialize this data."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "data",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "QuoteLots",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "inner",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RegisterTraderParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_positions",
+            "type": "u64"
+          },
+          {
+            "name": "trader_pda_index",
+            "type": "u8"
+          },
+          {
+            "name": "trader_subaccount_index",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SelfTradeBehavior",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Abort"
+          },
+          {
+            "name": "CancelProvide"
+          },
+          {
+            "name": "DecrementTake"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Side",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Bid"
+          },
+          {
+            "name": "Ask"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StateAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "account_type",
+            "type": {
+              "defined": {
+                "name": "AccountType"
+              }
+            }
+          },
+          {
+            "name": "enabled",
+            "type": "bool"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "portfolio_manager_name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "created",
+            "type": {
+              "defined": {
+                "name": "CreatedModel"
+              }
+            }
+          },
+          {
+            "name": "base_asset_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_asset_decimals",
+            "type": "u8"
+          },
+          {
+            "name": "base_asset_token_program",
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timelock_duration",
+            "type": "u32"
+          },
+          {
+            "name": "timelock_expires_at",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "assets",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "integration_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "delegate_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "DelegateAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "external_positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "priced_protocols",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "PricedProtocol"
+                }
+              }
+            }
+          },
+          {
+            "name": "params",
+            "type": {
+              "vec": {
+                "vec": {
+                  "defined": {
+                    "name": "EngineField"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Ticks",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "inner",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TimeUnit",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Second"
+          },
+          {
+            "name": "Slot"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferCollateralChildToParentInstruction",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferCollateralInstruction",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ValuationModel",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Continuous"
+          },
+          {
+            "name": "Periodic"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawFundsInstruction",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": {
+              "option": "u64"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "PHOENIX_PERM_CANCEL_ORDERS",
+      "type": "u64",
+      "value": "16"
+    },
+    {
+      "name": "PHOENIX_PERM_CREATE_MODIFY_ORDERS",
+      "type": "u64",
+      "value": "8"
+    },
+    {
+      "name": "PHOENIX_PERM_DEPOSIT",
+      "type": "u64",
+      "value": "2"
+    },
+    {
+      "name": "PHOENIX_PERM_INIT_TRADER",
+      "type": "u64",
+      "value": "1"
+    },
+    {
+      "name": "PHOENIX_PERM_TRANSFER_COLLATERAL",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "PHOENIX_PERM_UPDATE_TRADER_STATE",
+      "type": "u64",
+      "value": "64"
+    },
+    {
+      "name": "PHOENIX_PERM_WITHDRAW",
+      "type": "u64",
+      "value": "4"
+    },
+    {
+      "name": "PROTO_PHOENIX",
+      "type": "u16",
+      "value": "1"
+    }
+  ]
+}

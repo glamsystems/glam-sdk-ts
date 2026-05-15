@@ -6,6 +6,7 @@ import {
   getExtKaminoProgramId,
   getExtLoopscaleProgramId,
   getExtMarinadeProgramId,
+  getExtPhoenixProgramId,
   getExtSplProgramId,
   getExtStakePoolProgramId,
   getGlamMintProgramId,
@@ -101,6 +102,26 @@ export const MESSAGE_TRANSMITTER_V2 = new PublicKey(
 export const LOOPSCALE_PROGRAM_ID = new PublicKey(
   "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78",
 );
+export const PHOENIX_PROGRAM_ID = new PublicKey(
+  "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih",
+);
+export const EMBER_PROGRAM_ID = new PublicKey(
+  "EMBERpYNE6ehWmXymZZS2skiFmCa9V5dp14e1iduM5qy",
+);
+
+/**
+ * Protocol bitmask values for ext_phoenix integration.
+ * Mirror `SupportedProtocols` in anchor/programs/ext_phoenix/src/state/access.rs.
+ */
+export const PHOENIX_PROTOCOL = 1 << 0;
+
+/**
+ * Phoenix OrderPacketKind discriminants.
+ * Mirror `OrderPacketKind` variant order in anchor/deps/phoenix/phoenix.json.
+ */
+export const PHOENIX_ORDER_PACKET_KIND_POST_ONLY = 0;
+export const PHOENIX_ORDER_PACKET_KIND_LIMIT = 1;
+export const PHOENIX_ORDER_PACKET_KIND_IMMEDIATE_OR_CANCEL = 2;
 
 /**
  * Token ACL (sRFC-37)
@@ -369,6 +390,23 @@ export const getProtocolsAndPermissions = (
         [1 << 3]: "DepositStakeAny",
         [1 << 4]: "WithdrawSol",
         [1 << 5]: "WithdrawStake",
+      },
+    },
+  },
+  // Phoenix integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_phoenix/src/state/access.rs
+  [getExtPhoenixProgramId(staging).toBase58()]: {
+    "0000000000000001": {
+      name: "Phoenix",
+      staging: true,
+      permissions: {
+        [1 << 0]: "InitTrader",
+        [1 << 1]: "Deposit",
+        [1 << 2]: "Withdraw",
+        [1 << 3]: "CreateModifyOrders",
+        [1 << 4]: "CancelOrders",
+        [1 << 5]: "TransferCollateral",
+        [1 << 6]: "UpdateTraderState",
       },
     },
   },

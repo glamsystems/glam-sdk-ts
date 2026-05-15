@@ -21,6 +21,7 @@ import { CctpClient } from "./client/cctp";
 import { BridgeClient } from "./client/bridge";
 import { EpiClient } from "./client/epi";
 import { LoopscaleClient } from "./client/loopscale";
+import { PhoenixClient } from "./client/phoenix";
 
 /**
  * Main entrypoint for the GLAM SDK
@@ -47,6 +48,7 @@ export class GlamClient extends BaseClient {
   private _bridge?: BridgeClient;
   private _epi?: EpiClient;
   private _loopscale?: LoopscaleClient;
+  private _phoenix?: PhoenixClient;
 
   public constructor(config?: GlamClientConfig) {
     super(config);
@@ -194,5 +196,12 @@ export class GlamClient extends BaseClient {
       this._loopscale = new LoopscaleClient(this);
     }
     return this._loopscale;
+  }
+
+  get phoenix(): PhoenixClient {
+    if (!this._phoenix) {
+      this._phoenix = new PhoenixClient(this);
+    }
+    return this._phoenix;
   }
 }

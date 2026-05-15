@@ -269,6 +269,84 @@ export class LoopscalePolicy {
   }
 }
 
+export class PhoenixPolicy {
+  marketsAllowlist: PublicKey[];
+  allowedOrderTypes: number[];
+  requireReduceOnlyOrders: boolean;
+  maxPriceDeviationBps: number;
+  maxReferencePriceAgeSecs: number;
+
+  constructor(
+    marketsAllowlist: PublicKey[],
+    allowedOrderTypes: number[],
+    requireReduceOnlyOrders: boolean,
+    maxPriceDeviationBps: number,
+    maxReferencePriceAgeSecs = 0,
+  ) {
+    this.marketsAllowlist = marketsAllowlist;
+    this.allowedOrderTypes = allowedOrderTypes;
+    this.requireReduceOnlyOrders = requireReduceOnlyOrders;
+    this.maxPriceDeviationBps = maxPriceDeviationBps;
+    this.maxReferencePriceAgeSecs = maxReferencePriceAgeSecs;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): PhoenixPolicy {
+    let offset = 0;
+    const len = buffer.readUInt32LE(offset);
+    offset += 4;
+    const marketsAllowlist: PublicKey[] = [];
+    for (let i = 0; i < len; i++) {
+      marketsAllowlist.push(
+        new PublicKey(buffer.subarray(offset, offset + 32)),
+      );
+      offset += 32;
+    }
+    const allowedOrderTypesLen = buffer.readUInt32LE(offset);
+    offset += 4;
+    const allowedOrderTypes: number[] = [];
+    for (let i = 0; i < allowedOrderTypesLen; i++) {
+      allowedOrderTypes.push(buffer.readUInt8(offset));
+      offset += 1;
+    }
+    const requireReduceOnlyOrders = buffer.readUInt8(offset) !== 0;
+    offset += 1;
+    const maxPriceDeviationBps = buffer.readUInt16LE(offset);
+    offset += 2;
+    const maxReferencePriceAgeSecs =
+      buffer.length >= offset + 4 ? buffer.readUInt32LE(offset) : 0;
+    return new PhoenixPolicy(
+      marketsAllowlist,
+      allowedOrderTypes,
+      requireReduceOnlyOrders,
+      maxPriceDeviationBps,
+      maxReferencePriceAgeSecs,
+    );
+  }
+
+  public encode(): Buffer {
+    const allowlistHeader = Buffer.alloc(4);
+    allowlistHeader.writeUInt32LE(this.marketsAllowlist.length, 0);
+    const allowlistBody = Buffer.alloc(this.marketsAllowlist.length * 32);
+    for (let i = 0; i < this.marketsAllowlist.length; i++) {
+      this.marketsAllowlist[i].toBuffer().copy(allowlistBody, i * 32);
+    }
+    const tail = Buffer.alloc(2 + 1 + 4 + 4 + this.allowedOrderTypes.length);
+    let off = 0;
+    tail.writeUInt32LE(this.allowedOrderTypes.length, off);
+    off += 4;
+    for (const orderType of this.allowedOrderTypes) {
+      tail.writeUInt8(orderType, off);
+      off += 1;
+    }
+    tail.writeUInt8(this.requireReduceOnlyOrders ? 1 : 0, off);
+    off += 1;
+    tail.writeUInt16LE(this.maxPriceDeviationBps, off);
+    off += 2;
+    tail.writeUInt32LE(this.maxReferencePriceAgeSecs, off);
+    return Buffer.concat([allowlistHeader, allowlistBody, tail]);
+  }
+}
+
 export class CctpPolicy {
   allowedDestinations: { domain: number; address: PublicKey }[];
 

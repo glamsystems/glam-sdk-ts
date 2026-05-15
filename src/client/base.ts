@@ -44,6 +44,7 @@ import {
   ExtKaminoProgram,
   ExtMarinadeProgram,
   ExtLoopscaleProgram,
+  ExtPhoenixProgram,
   ExtSplProgram,
   ExtStakePoolProgram,
   GlamMintProgram,
@@ -54,6 +55,7 @@ import {
   getExtKaminoProgram,
   getExtLoopscaleProgram,
   getExtMarinadeProgram,
+  getExtPhoenixProgram,
   getExtSplProgram,
   getExtStakePoolProgram,
   getGlamMintProgramId,
@@ -83,7 +85,7 @@ import {
   getVaultPda,
 } from "../utils/glamPDAs";
 import { TokenMetadata, unpack } from "@solana/spl-token-metadata";
-import { JupiterApiClient, PkMap } from "../utils";
+import { JupiterApiClient, PhoenixApiClient, PkMap } from "../utils";
 import { WSOL } from "../constants";
 import { AssetMeta, ASSETS_MAINNET } from "../assets";
 
@@ -121,6 +123,8 @@ export class BaseClient {
   blockhashWithCache: BlockhashWithCache;
   jupiterApiKey?: string;
   jupiterApiClient?: JupiterApiClient;
+  phoenixApiUrl?: string;
+  phoenixApiClient?: PhoenixApiClient;
   public onSentListeners = new Set<(sig: string) => void>();
   readonly staging: boolean;
 
@@ -134,6 +138,7 @@ export class BaseClient {
   private _extBridgeProgram?: ExtBridgeProgram;
   private _extEpiProgram?: ExtEpiProgram;
   private _extLoopscaleProgram?: ExtLoopscaleProgram;
+  private _extPhoenixProgram?: ExtPhoenixProgram;
 
   private _statePda?: PublicKey;
   private _globalConfig?: GlobalConfig;
@@ -174,6 +179,8 @@ export class BaseClient {
     this.staging = resolveStaging(config?.useStaging);
     this.jupiterApiKey = config?.jupiterApiKey;
     this.jupiterApiClient = config?.jupiterApiClient;
+    this.phoenixApiUrl = config?.phoenixApiUrl;
+    this.phoenixApiClient = config?.phoenixApiClient;
     this.blockhashWithCache = new BlockhashWithCache(this.provider);
   }
 
@@ -257,6 +264,16 @@ export class BaseClient {
       );
     }
     return this._extLoopscaleProgram;
+  }
+
+  get extPhoenixProgram(): ExtPhoenixProgram {
+    if (!this._extPhoenixProgram) {
+      this._extPhoenixProgram = getExtPhoenixProgram(
+        this.provider,
+        this.staging,
+      );
+    }
+    return this._extPhoenixProgram;
   }
 
   get isVaultConnected(): boolean {

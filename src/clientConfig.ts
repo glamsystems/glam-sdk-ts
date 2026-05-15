@@ -1,6 +1,7 @@
 import { Provider, Wallet } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { JupiterApiClient } from "./utils";
+import { PhoenixApiClient } from "./utils/phoenixApi";
 
 export enum ClusterNetwork {
   Mainnet = "mainnet-beta",
@@ -56,5 +57,7 @@ export type GlamClientConfig = {
   statePda?: PublicKey;
   jupiterApiKey?: string;
   jupiterApiClient?: JupiterApiClient;
+  phoenixApiUrl?: string;
+  phoenixApiClient?: PhoenixApiClient;
   useStaging?: boolean;
 };

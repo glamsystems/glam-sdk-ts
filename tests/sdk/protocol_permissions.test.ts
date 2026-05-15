@@ -2,6 +2,7 @@ import {
   getExtBridgeProgramId,
   getExtKaminoProgramId,
   getExtLoopscaleProgramId,
+  getExtPhoenixProgramId,
   getGlamMintProgramId,
   getGlamProtocolProgramId,
 } from "../../src/glamExports";
@@ -89,6 +90,21 @@ describe("getProtocolsAndPermissions", () => {
         "ClaimVaultRewards",
       ]);
 
+      expect(
+        getPermissionNames(
+          staging,
+          getExtPhoenixProgramId(staging).toBase58(),
+          "0000000000000001",
+        ),
+      ).toEqual([
+        "InitTrader",
+        "Deposit",
+        "Withdraw",
+        "CreateModifyOrders",
+        "CancelOrders",
+        "TransferCollateral",
+        "UpdateTraderState",
+      ]);
       expect(
         getPermissionNames(
           staging,
