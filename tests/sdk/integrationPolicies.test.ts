@@ -2,6 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import {
   JupiterSwapPolicy,
   LoopscalePolicy,
+  PhoenixPolicy,
 } from "../../src/deser/integrationPolicies";
 
 describe("JupiterSwapPolicy", () => {
@@ -107,5 +108,43 @@ describe("LoopscalePolicy", () => {
     const recovered = LoopscalePolicy.decode(policy.encode());
 
     expect(recovered.strategiesAllowlist).toEqual([]);
+  });
+});
+
+describe("PhoenixPolicy", () => {
+  const market1 = new PublicKey("11111111111111111111111111111112");
+  const market2 = new PublicKey("11111111111111111111111111111113");
+
+  it("round-trips all Phoenix policy fields", () => {
+    const policy = new PhoenixPolicy(
+      [market1, market2],
+      [0, 1, 2],
+      true,
+      250,
+      60,
+    );
+
+    const recovered = PhoenixPolicy.decode(policy.encode());
+
+    expect(recovered.marketsAllowlist.map((m) => m.toBase58())).toEqual([
+      market1.toBase58(),
+      market2.toBase58(),
+    ]);
+    expect(recovered.allowedOrderTypes).toEqual([0, 1, 2]);
+    expect(recovered.maxPriceDeviationBps).toBe(250);
+    expect(recovered.requireReduceOnlyOrders).toBe(true);
+    expect(recovered.maxReferencePriceAgeSecs).toBe(60);
+  });
+
+  it("round-trips default Phoenix policy values", () => {
+    const policy = new PhoenixPolicy([], [], false, 0);
+
+    const recovered = PhoenixPolicy.decode(policy.encode());
+
+    expect(recovered.marketsAllowlist).toEqual([]);
+    expect(recovered.allowedOrderTypes).toEqual([]);
+    expect(recovered.maxPriceDeviationBps).toBe(0);
+    expect(recovered.requireReduceOnlyOrders).toBe(false);
+    expect(recovered.maxReferencePriceAgeSecs).toBe(0);
   });
 });
