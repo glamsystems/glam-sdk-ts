@@ -1,7 +1,18 @@
-import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import {
+  ComputeBudgetProgram,
+  PublicKey,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { PriceClient } from "../../src/client/price";
-import { KAMINO_LENDING_PROGRAM, WSOL } from "../../src/constants";
+import {
+  KAMINO_LENDING_PROGRAM,
+  PHOENIX_GLOBAL_CONFIG,
+  PHOENIX_PROGRAM_ID,
+  PHOENIX_PROTOCOL,
+  USDC,
+  WSOL,
+} from "../../src/constants";
 import { StateAccountType } from "../../src/models";
 import { PkMap } from "../../src/utils";
 
@@ -10,6 +21,7 @@ const STATE = new PublicKey("3XYX3QvpHQ7TqvjhZcoBBmykNDruV9PtrGXRxJFzsiCF");
 const EXT_KAMINO = PublicKey.unique();
 const EXT_BRIDGE = PublicKey.unique();
 const EXT_EPI = PublicKey.unique();
+const EXT_PHOENIX = PublicKey.unique();
 const OBLIGATION = new PublicKey(
   "65iwhmFa5mRSmeBGNGEzSfG6y66Pk6r5eksYDMFSMRb6",
 );
@@ -18,6 +30,14 @@ const RESERVE_A = new PublicKey("D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59");
 const RESERVE_B = new PublicKey("Atj6UREVWa7WxbF2EMKNyfmYUY1U1txughe2gjhcPDCo");
 const RESERVE_C = new PublicKey("d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q");
 const PRIME = new PublicKey("3b8X44fLF9ooXaUm3hhSgjpmVs6rZZ3pPoGnGahc3Uu7");
+const PHOENIX_TRADER = new PublicKey(
+  "9T3f2Qsmucy63CiqVGMFMSuuh7qs68cc26DpRXGRXN48",
+);
+const PHOENIX_PERP_ASSET_MAP = new PublicKey(
+  "Fe1oM7qbtp6bFUrE1qFjCcqpUEEUrYdw7qkhjUZBjA8s",
+);
+const SOL_USD_ORACLE = PublicKey.unique();
+const USDC_ORACLE = PublicKey.unique();
 
 function ix(data: number): TransactionInstruction {
   return new TransactionInstruction({
@@ -50,6 +70,29 @@ function expectPubkeys(actual: PublicKey[], expected: PublicKey[]) {
   );
 }
 
+function accountInfo(owner: PublicKey, data: Buffer = Buffer.alloc(0)) {
+  return {
+    data,
+    executable: false,
+    lamports: 0,
+    owner,
+    rentEpoch: 0,
+  };
+}
+
+function phoenixTraderAccountInfo() {
+  return accountInfo(
+    PHOENIX_PROGRAM_ID,
+    Buffer.from([41, 97, 73, 105, 110, 214, 112, 9]),
+  );
+}
+
+function phoenixGlobalConfigAccountInfo(perpAssetMap: PublicKey) {
+  const data = Buffer.alloc(392);
+  perpAssetMap.toBuffer().copy(data, 360);
+  return accountInfo(PHOENIX_PROGRAM_ID, data);
+}
+
 const KAMINO_LENDING_ACL = {
   integrationProgram: EXT_KAMINO,
   protocolsBitmask: 0b01,
@@ -61,6 +104,10 @@ const BRIDGE_ACL = {
 const EPI_ACL = {
   integrationProgram: EXT_EPI,
   protocolsBitmask: 0b01,
+};
+const PHOENIX_ACL = {
+  integrationProgram: EXT_PHOENIX,
+  protocolsBitmask: PHOENIX_PROTOCOL,
 };
 
 function makeClient(
@@ -91,6 +138,7 @@ function makeClient(
       extKaminoProgram: { programId: EXT_KAMINO },
       extBridgeProgram: { programId: EXT_BRIDGE },
       extEpiProgram: { programId: EXT_EPI },
+      extPhoenixProgram: { programId: EXT_PHOENIX },
       fetchStateModel: jest.fn(async () => ({
         accountType: StateAccountType.VAULT,
         baseAssetMint: PublicKey.default,
@@ -287,6 +335,126 @@ describe("PriceClient Kamino reserve refresh planning", () => {
 
     expect(priceEpiSpy).toHaveBeenCalledTimes(1);
     expect(ixs).toContain(epiIx);
+  });
+
+  it("skips Phoenix trader pricing when ext_phoenix is not enabled", async () => {
+    const phoenixIx = ix(5);
+    const { client } = makeClient([RESERVE_A, RESERVE_C]);
+    const pricePhoenixSpy = jest
+      .spyOn(client, "pricePhoenixTradersIxs")
+      .mockResolvedValue({ ixs: [phoenixIx], kaminoReserves: [] });
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(pricePhoenixSpy).not.toHaveBeenCalled();
+    expect(ixs).not.toContain(phoenixIx);
+  });
+
+  it("prices Phoenix traders when ext_phoenix is enabled", async () => {
+    const phoenixIx = ix(5);
+    const { client } = makeClient(
+      [RESERVE_A, RESERVE_C],
+      [KAMINO_LENDING_ACL, PHOENIX_ACL],
+    );
+    const pricePhoenixSpy = jest
+      .spyOn(client, "pricePhoenixTradersIxs")
+      .mockResolvedValue({ ixs: [phoenixIx], kaminoReserves: [] });
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(pricePhoenixSpy).toHaveBeenCalledTimes(1);
+    expect(ixs).toContain(phoenixIx);
+  });
+
+  it("builds Phoenix trader pricing remaining accounts from registered external positions", async () => {
+    const phoenixPriceIx = ix(5);
+    const pricePhoenixBuilder = methodBuilder(phoenixPriceIx);
+    const getAssetMeta = jest.fn(async (mint: PublicKey) => {
+      if (mint.equals(USDC)) {
+        return {
+          asset: USDC,
+          decimals: 6,
+          oracle: USDC_ORACLE,
+          programId: TOKEN_PROGRAM_ID,
+          oracleSource: "Pyth",
+        };
+      }
+      throw new Error(`Unexpected asset meta lookup: ${mint.toBase58()}`);
+    });
+    const client = new PriceClient(
+      {
+        vaultPda: VAULT,
+        statePda: STATE,
+        fetchStateModel: jest.fn(async () => ({
+          accountType: StateAccountType.VAULT,
+          baseAssetMint: USDC,
+          baseAssetTokenProgramId: TOKEN_PROGRAM_ID,
+          externalPositions: [OBLIGATION, PHOENIX_TRADER],
+          integrationAcls: [PHOENIX_ACL],
+        })),
+        fetchAssetMetas: jest.fn(async () => new PkMap()),
+        getSolOracle: jest.fn(async () => SOL_USD_ORACLE),
+        getAssetMeta,
+        connection: {
+          getMultipleAccountsInfo: jest.fn(async () => [
+            accountInfo(PublicKey.unique()),
+            phoenixTraderAccountInfo(),
+          ]),
+          getAccountInfo: jest.fn(async (pubkey: PublicKey) =>
+            pubkey.equals(PHOENIX_GLOBAL_CONFIG)
+              ? phoenixGlobalConfigAccountInfo(PHOENIX_PERP_ASSET_MAP)
+              : null,
+          ),
+        },
+        mintProgram: {
+          methods: {
+            pricePhoenixTraders: jest.fn(() => pricePhoenixBuilder),
+          },
+        },
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => undefined) as any,
+    );
+
+    const chunk = await client.pricePhoenixTradersIxs();
+
+    expect(chunk).toBeTruthy();
+    expect(chunk?.ixs).toHaveLength(2);
+    expect(chunk?.ixs[0].programId.equals(ComputeBudgetProgram.programId)).toBe(
+      true,
+    );
+    expect(
+      chunk?.ixs[0].data.equals(
+        ComputeBudgetProgram.requestHeapFrame({ bytes: 256 * 1024 }).data,
+      ),
+    ).toBe(true);
+    expect(chunk?.ixs[1]).toBe(phoenixPriceIx);
+    expect(getAssetMeta).toHaveBeenCalledWith(USDC);
+    expect(pricePhoenixBuilder.accounts).toHaveBeenCalledWith({
+      glamState: STATE,
+      solUsdOracle: SOL_USD_ORACLE,
+      baseAssetOracle: USDC_ORACLE,
+    });
+    expect(pricePhoenixBuilder.remainingAccounts).toHaveBeenCalledWith([
+      {
+        pubkey: PHOENIX_GLOBAL_CONFIG,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: PHOENIX_PERP_ASSET_MAP,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: PHOENIX_TRADER,
+        isSigner: false,
+        isWritable: false,
+      },
+    ]);
   });
 
   it("skips bridge managed transfer pricing when ext_bridge is not enabled", async () => {

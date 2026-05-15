@@ -14,6 +14,8 @@ import {
 
 import {
   EMBER_PROGRAM_ID,
+  PHOENIX_GLOBAL_CONFIG,
+  PHOENIX_LOG_AUTHORITY,
   PHOENIX_PROGRAM_ID,
   PHOENIX_PROTOCOL,
 } from "../constants";
@@ -22,13 +24,6 @@ import type { ExtPhoenix } from "../glamExports";
 import { getIntegrationAuthorityPda } from "../utils/glamPDAs";
 import { PhoenixApiClient, PhoenixSnapshot } from "../utils/phoenixApi";
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
-
-export const PHOENIX_LOG_AUTHORITY = new PublicKey(
-  "GdxfTLSsdSY37G6fZoYtdGDSfgFnbT2EmRpuePZxWShS",
-);
-export const PHOENIX_GLOBAL_CONFIG = new PublicKey(
-  "2zskx2iyCvb6Stg7RBZkt1f6MrF4dpYtMG3yMvKwqtUZ",
-);
 
 export type PhoenixIdlTypes = IdlTypes<ExtPhoenix>;
 export type PhoenixBaseLots = PhoenixIdlTypes["baseLots"];

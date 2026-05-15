@@ -105,6 +105,15 @@ export const LOOPSCALE_PROGRAM_ID = new PublicKey(
 export const PHOENIX_PROGRAM_ID = new PublicKey(
   "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih",
 );
+export const PHOENIX_LOG_AUTHORITY = new PublicKey(
+  "GdxfTLSsdSY37G6fZoYtdGDSfgFnbT2EmRpuePZxWShS",
+);
+export const PHOENIX_GLOBAL_CONFIG = new PublicKey(
+  "2zskx2iyCvb6Stg7RBZkt1f6MrF4dpYtMG3yMvKwqtUZ",
+);
+export const PHOENIX_WITHDRAW_QUEUE = new PublicKey(
+  "3c3NTwpg7yW91FxijkHBXwVH1xUifun3Z8TC5eW5Si3K",
+);
 export const EMBER_PROGRAM_ID = new PublicKey(
   "EMBERpYNE6ehWmXymZZS2skiFmCa9V5dp14e1iduM5qy",
 );

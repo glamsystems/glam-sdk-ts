@@ -2,6 +2,7 @@ import {
   AccountMeta,
   AddressLookupTableAccount,
   Commitment,
+  ComputeBudgetProgram,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
   TransactionInstruction,
@@ -32,13 +33,24 @@ import {
 } from "@solana/spl-token";
 import { KVaultState, Obligation, Reserve } from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
-import { WSOL } from "../constants";
+import {
+  PHOENIX_GLOBAL_CONFIG,
+  PHOENIX_PROGRAM_ID,
+  PHOENIX_PROTOCOL,
+  USDC,
+  WSOL,
+} from "../constants";
 import {
   BridgeClient,
   LAYERZERO_OFT_PROTOCOL,
   getActiveRegistryTransfers,
 } from "./bridge";
 import { EpiClient } from "./epi";
+
+const PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET = 360;
+const PUBKEY_LEN = 32;
+const PHOENIX_TRADER_DISCRIMINATOR = [41, 97, 73, 105, 110, 214, 112, 9];
+const PHOENIX_REQUEST_HEAP_FRAME_BYTES = 256 * 1024;
 
 /**
  * Represents a single asset holding within a vault.
@@ -959,6 +971,151 @@ export class PriceClient {
     return priceStakesIx;
   }
 
+  private async findPhoenixTraderAccounts(
+    externalPositions: PublicKey[],
+  ): Promise<PublicKey[]> {
+    if (externalPositions.length === 0) {
+      return [];
+    }
+
+    const chunks: PublicKey[][] = [];
+    for (let i = 0; i < externalPositions.length; i += 100) {
+      chunks.push(externalPositions.slice(i, i + 100));
+    }
+    const accountsInfo = (
+      await Promise.all(
+        chunks.map((chunk) =>
+          this.base.connection.getMultipleAccountsInfo(chunk),
+        ),
+      )
+    ).flat();
+
+    return externalPositions.filter((_, i) => {
+      const accountInfo = accountsInfo[i];
+      if (!accountInfo || !accountInfo.owner.equals(PHOENIX_PROGRAM_ID)) {
+        return false;
+      }
+
+      return PHOENIX_TRADER_DISCRIMINATOR.every(
+        (byte, offset) => accountInfo.data[offset] === byte,
+      );
+    });
+  }
+
+  private async getPhoenixPerpAssetMap(): Promise<PublicKey> {
+    const accountInfo = await this.base.connection.getAccountInfo(
+      PHOENIX_GLOBAL_CONFIG,
+    );
+    if (!accountInfo) {
+      throw new Error(
+        `Phoenix global config not found: ${PHOENIX_GLOBAL_CONFIG.toBase58()}`,
+      );
+    }
+    if (!accountInfo.owner.equals(PHOENIX_PROGRAM_ID)) {
+      throw new Error("Phoenix global config has unexpected owner");
+    }
+
+    const offset = PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET;
+    if (accountInfo.data.length < offset + PUBKEY_LEN) {
+      throw new Error("Phoenix global config account data is too short");
+    }
+
+    return new PublicKey(
+      accountInfo.data.subarray(offset, offset + PUBKEY_LEN),
+    );
+  }
+
+  /**
+   * Returns the program instruction that prices Phoenix trader external positions.
+   * If there are no registered Phoenix trader accounts, returns null.
+   */
+  public async pricePhoenixTradersIx(
+    stateModel: StateModel | null = this.cachedStateModel,
+  ): Promise<TransactionInstruction | null> {
+    const methods = this.base.mintProgram.methods as any;
+    if (typeof methods.pricePhoenixTraders !== "function") {
+      return null;
+    }
+
+    const model = stateModel || (await this.base.fetchStateModel());
+    const traderAccounts = await this.findPhoenixTraderAccounts(
+      model.externalPositions || [],
+    );
+    if (traderAccounts.length === 0) {
+      return null;
+    }
+
+    const [solUsdOracle, baseAssetMeta, phoenixPerpAssetMap] =
+      await Promise.all([
+        this.base.getSolOracle(),
+        this.base.getAssetMeta(model.baseAssetMint),
+        this.getPhoenixPerpAssetMap(),
+      ]);
+
+    const remainingAccounts: AccountMeta[] = [
+      {
+        pubkey: PHOENIX_GLOBAL_CONFIG,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: phoenixPerpAssetMap,
+        isSigner: false,
+        isWritable: false,
+      },
+      ...traderAccounts.map(
+        (pubkey) =>
+          ({
+            pubkey,
+            isSigner: false,
+            isWritable: false,
+          }) satisfies AccountMeta,
+      ),
+    ];
+
+    if (!model.baseAssetMint.equals(USDC)) {
+      const usdcAssetMeta = await this.base.getAssetMeta(USDC);
+      remainingAccounts.push({
+        pubkey: usdcAssetMeta.oracle,
+        isSigner: false,
+        isWritable: false,
+      });
+    }
+
+    return await methods
+      .pricePhoenixTraders()
+      .accounts({
+        glamState: this.base.statePda,
+        solUsdOracle,
+        baseAssetOracle: baseAssetMeta.oracle,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  /**
+   * Returns Phoenix trader pricing instructions with required compute budget pre-instructions.
+   * If there are no registered Phoenix trader accounts, returns null.
+   */
+  public async pricePhoenixTradersIxs(
+    stateModel: StateModel | null = this.cachedStateModel,
+  ): Promise<PricingChunk | null> {
+    const priceIx = await this.pricePhoenixTradersIx(stateModel);
+    if (!priceIx) {
+      return null;
+    }
+
+    return {
+      ixs: [
+        ComputeBudgetProgram.requestHeapFrame({
+          bytes: PHOENIX_REQUEST_HEAP_FRAME_BYTES,
+        }),
+        priceIx,
+      ],
+      kaminoReserves: [],
+    };
+  }
+
   public async priceVaultIxs(): Promise<TransactionInstruction[]> {
     return this.enqueuePriceVaultIxs(() => this._priceVaultIxsImpl());
   }
@@ -1123,6 +1280,17 @@ export class PriceClient {
       if (epiIntegrationAcl) {
         const ix = await this.priceEpiValidatedPositionsIx();
         if (ix) chunks.push({ ixs: [ix], kaminoReserves: [] });
+      }
+
+      const phoenixIntegrationAcl = integrationAcls.find(
+        (acl) =>
+          acl.integrationProgram.equals(
+            this.base.extPhoenixProgram.programId,
+          ) && (acl.protocolsBitmask & PHOENIX_PROTOCOL) !== 0,
+      );
+      if (phoenixIntegrationAcl) {
+        const chunk = await this.pricePhoenixTradersIxs(stateModel);
+        if (chunk) chunks.push(chunk);
       }
 
       const bridgeIntegrationAcl = integrationAcls.find(
