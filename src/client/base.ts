@@ -41,6 +41,7 @@ import {
   ExtBridgeProgram,
   ExtEpiProgram,
   ExtCctpProgram,
+  ExtJupiterProgram,
   ExtKaminoProgram,
   ExtMarinadeProgram,
   ExtLoopscaleProgram,
@@ -52,6 +53,7 @@ import {
   getExtBridgeProgram,
   getExtEpiProgram,
   getExtCctpProgram,
+  getExtJupiterProgram,
   getExtKaminoProgram,
   getExtLoopscaleProgram,
   getExtMarinadeProgram,
@@ -139,6 +141,7 @@ export class BaseClient {
   private _extEpiProgram?: ExtEpiProgram;
   private _extLoopscaleProgram?: ExtLoopscaleProgram;
   private _extPhoenixProgram?: ExtPhoenixProgram;
+  private _extJupiterProgram?: ExtJupiterProgram;
 
   private _statePda?: PublicKey;
   private _globalConfig?: GlobalConfig;
@@ -274,6 +277,16 @@ export class BaseClient {
       );
     }
     return this._extPhoenixProgram;
+  }
+
+  get extJupiterProgram(): ExtJupiterProgram {
+    if (!this._extJupiterProgram) {
+      this._extJupiterProgram = getExtJupiterProgram(
+        this.provider,
+        this.staging,
+      );
+    }
+    return this._extJupiterProgram;
   }
 
   get isVaultConnected(): boolean {

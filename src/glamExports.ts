@@ -13,6 +13,7 @@ import type { ExtBridge } from "../target/types/ext_bridge";
 import type { ExtEpi } from "../target/types/ext_epi";
 import type { ExtLoopscale } from "../target/types/ext_loopscale";
 import type { ExtPhoenix } from "../target/types/ext_phoenix";
+import type { ExtJupiter } from "../target/types/ext_jupiter";
 
 import GlamProtocolIdlJson from "../target/idl/glam_protocol.json";
 import GlamConfigIdlJson from "../target/idl/glam_config.json";
@@ -27,6 +28,7 @@ import ExtBridgeIdlJson from "../target/idl/ext_bridge.json";
 import ExtEpiIdlJson from "../target/idl/ext_epi.json";
 import ExtLoopscaleIdlJson from "../target/idl/ext_loopscale.json";
 import ExtPhoenixIdlJson from "../target/idl/ext_phoenix.json";
+import ExtJupiterIdlJson from "../target/idl/ext_jupiter.json";
 
 import GlamProtocolIdlJsonStaging from "../target/idl/glam_protocol-staging.json";
 import GlamMintIdlJsonStaging from "../target/idl/glam_mint-staging.json";
@@ -38,8 +40,16 @@ import ExtBridgeIdlJsonStaging from "../target/idl/ext_bridge-staging.json";
 import ExtEpiIdlJsonStaging from "../target/idl/ext_epi-staging.json";
 import ExtLoopscaleIdlJsonStaging from "../target/idl/ext_loopscale-staging.json";
 import ExtPhoenixIdlJsonStaging from "../target/idl/ext_phoenix-staging.json";
+import ExtJupiterIdlJsonStaging from "../target/idl/ext_jupiter-staging.json";
 
-export { GlamProtocol, GlamMint, GlamConfig, ExtLoopscale, ExtPhoenix };
+export {
+  GlamProtocol,
+  GlamMint,
+  GlamConfig,
+  ExtLoopscale,
+  ExtPhoenix,
+  ExtJupiter,
+};
 
 const EXT_DRIFT_STAGING_PROGRAM_ID =
   "gstgdpMFXKobURsFtStdaMLRSuwdmDUsrndov7kyu9h";
@@ -56,6 +66,7 @@ export type ExtBridgeProgram = Program<ExtBridge>;
 export type ExtEpiProgram = Program<ExtEpi>;
 export type ExtLoopscaleProgram = Program<ExtLoopscale>;
 export type ExtPhoenixProgram = Program<ExtPhoenix>;
+export type ExtJupiterProgram = Program<ExtJupiter>;
 
 const isStaging = () => {
   const s = process.env.NEXT_PUBLIC_GLAM_STAGING || process.env.GLAM_STAGING;
@@ -117,6 +128,10 @@ export function getExtPhoenixIdl(staging: boolean) {
   return staging ? ExtPhoenixIdlJsonStaging : ExtPhoenixIdlJson;
 }
 
+export function getExtJupiterIdl(staging: boolean) {
+  return staging ? ExtJupiterIdlJsonStaging : ExtJupiterIdlJson;
+}
+
 export function getExtMarinadeIdl(staging: boolean) {
   return staging ? ExtMarinadeIdlJsonStaging : ExtMarinadeIdlJson;
 }
@@ -165,6 +180,10 @@ export function getExtLoopscaleProgramId(staging: boolean) {
 
 export function getExtPhoenixProgramId(staging: boolean) {
   return new PublicKey(getExtPhoenixIdl(staging).address);
+}
+
+export function getExtJupiterProgramId(staging: boolean) {
+  return new PublicKey(getExtJupiterIdl(staging).address);
 }
 
 export function getExtMarinadeProgramId(staging: boolean) {
@@ -250,4 +269,11 @@ export function getExtPhoenixProgram(
   staging: boolean,
 ): ExtPhoenixProgram {
   return new Program<ExtPhoenix>(getExtPhoenixIdl(staging), provider);
+}
+
+export function getExtJupiterProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtJupiterProgram {
+  return new Program<ExtJupiter>(getExtJupiterIdl(staging), provider);
 }

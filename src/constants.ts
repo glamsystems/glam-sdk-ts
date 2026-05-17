@@ -3,6 +3,7 @@ import {
   getExtBridgeProgramId,
   getExtCctpProgramId,
   getExtEpiProgramId,
+  getExtJupiterProgramId,
   getExtKaminoProgramId,
   getExtLoopscaleProgramId,
   getExtMarinadeProgramId,
@@ -131,6 +132,21 @@ export const PHOENIX_PROTOCOL = 1 << 0;
 export const PHOENIX_ORDER_PACKET_KIND_POST_ONLY = 0;
 export const PHOENIX_ORDER_PACKET_KIND_LIMIT = 1;
 export const PHOENIX_ORDER_PACKET_KIND_IMMEDIATE_OR_CANCEL = 2;
+export const JUPITER_LENDING_PROGRAM_ID = new PublicKey(
+  "jup3YeL8QhtSx1e253b2FDvsMNC87fDrgQZivbrndc9",
+);
+export const JUPITER_VAULTS_PROGRAM_ID = new PublicKey(
+  "jupr81YtYssSyPt8jbnGuiWon5f6x9TcDEFxYe3Bdzi",
+);
+export const JUPITER_LIQUIDITY_PROGRAM_ID = new PublicKey(
+  "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC",
+);
+export const JUPITER_ORACLE_PROGRAM_ID = new PublicKey(
+  "jupnw4B6Eqs7ft6rxpzYLJZYSnrpRgPcr589n5Kv4oc",
+);
+export const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
+  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
+);
 
 /**
  * Token ACL (sRFC-37)
@@ -321,6 +337,29 @@ export const getProtocolsAndPermissions = (
         [1 << 8]: "StakeUserVaultLp",
         [1 << 9]: "UnstakeUserVaultLp",
         [1 << 10]: "ClaimVaultRewards",
+      },
+    },
+  },
+  // Jupiter Lend integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_jupiter/src/state/access.rs
+  [getExtJupiterProgramId(staging).toBase58()]: {
+    "0000000000000001": {
+      name: "JupiterEarn",
+      staging: true,
+      permissions: {
+        [1 << 0]: "Deposit",
+        [1 << 1]: "Withdraw",
+      },
+    },
+    "0000000000000010": {
+      name: "JupiterBorrow",
+      staging: true,
+      permissions: {
+        [1 << 0]: "InitPosition",
+        [1 << 1]: "DepositCollateral",
+        [1 << 2]: "WithdrawCollateral",
+        [1 << 3]: "Borrow",
+        [1 << 4]: "Repay",
       },
     },
   },

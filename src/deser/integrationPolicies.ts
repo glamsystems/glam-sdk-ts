@@ -245,6 +245,76 @@ export class KaminoVaultsPolicy {
   }
 }
 
+export class JupiterEarnPolicy {
+  mintsAllowlist: PublicKey[];
+
+  static _layout = struct([vec(publicKey(), "mintsAllowlist")]);
+
+  constructor(mintsAllowlist: PublicKey[]) {
+    this.mintsAllowlist = mintsAllowlist;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): JupiterEarnPolicy {
+    const { mintsAllowlist } = JupiterEarnPolicy._layout.decode(
+      buffer,
+    ) as JupiterEarnPolicy;
+    return new JupiterEarnPolicy(mintsAllowlist);
+  }
+
+  public encode(): Buffer {
+    const mintsAllowlistSize = 4 + this.mintsAllowlist.length * 32;
+    const buffer = Buffer.alloc(mintsAllowlistSize);
+    JupiterEarnPolicy._layout.encode(this, buffer);
+    return buffer;
+  }
+}
+
+export class JupiterBorrowPolicy {
+  vaultsAllowlist: PublicKey[];
+  collateralMintsAllowlist: PublicKey[];
+  borrowMintsAllowlist: PublicKey[];
+
+  static _layout = struct([
+    vec(publicKey(), "vaultsAllowlist"),
+    vec(publicKey(), "collateralMintsAllowlist"),
+    vec(publicKey(), "borrowMintsAllowlist"),
+  ]);
+
+  constructor(
+    vaultsAllowlist: PublicKey[],
+    collateralMintsAllowlist: PublicKey[],
+    borrowMintsAllowlist: PublicKey[],
+  ) {
+    this.vaultsAllowlist = vaultsAllowlist;
+    this.collateralMintsAllowlist = collateralMintsAllowlist;
+    this.borrowMintsAllowlist = borrowMintsAllowlist;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): JupiterBorrowPolicy {
+    const { vaultsAllowlist, collateralMintsAllowlist, borrowMintsAllowlist } =
+      JupiterBorrowPolicy._layout.decode(buffer) as JupiterBorrowPolicy;
+    return new JupiterBorrowPolicy(
+      vaultsAllowlist,
+      collateralMintsAllowlist,
+      borrowMintsAllowlist,
+    );
+  }
+
+  public encode(): Buffer {
+    const vaultsAllowlistSize = 4 + this.vaultsAllowlist.length * 32;
+    const collateralMintsAllowlistSize =
+      4 + this.collateralMintsAllowlist.length * 32;
+    const borrowMintsAllowlistSize = 4 + this.borrowMintsAllowlist.length * 32;
+    const buffer = Buffer.alloc(
+      vaultsAllowlistSize +
+        collateralMintsAllowlistSize +
+        borrowMintsAllowlistSize,
+    );
+    JupiterBorrowPolicy._layout.encode(this, buffer);
+    return buffer;
+  }
+}
+
 export class LoopscalePolicy {
   strategiesAllowlist: PublicKey[];
 

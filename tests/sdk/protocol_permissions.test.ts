@@ -1,5 +1,6 @@
 import {
   getExtBridgeProgramId,
+  getExtJupiterProgramId,
   getExtKaminoProgramId,
   getExtLoopscaleProgramId,
   getExtPhoenixProgramId,
@@ -105,6 +106,29 @@ describe("getProtocolsAndPermissions", () => {
         "TransferCollateral",
         "UpdateTraderState",
       ]);
+
+      expect(
+        getPermissionNames(
+          staging,
+          getExtJupiterProgramId(staging).toBase58(),
+          "0000000000000001",
+        ),
+      ).toEqual(["Deposit", "Withdraw"]);
+
+      expect(
+        getPermissionNames(
+          staging,
+          getExtJupiterProgramId(staging).toBase58(),
+          "0000000000000010",
+        ),
+      ).toEqual([
+        "InitPosition",
+        "DepositCollateral",
+        "WithdrawCollateral",
+        "Borrow",
+        "Repay",
+      ]);
+
       expect(
         getPermissionNames(
           staging,

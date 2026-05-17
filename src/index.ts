@@ -9,6 +9,7 @@ export * from "./client/bridge";
 export * from "./client/epi";
 export * from "./client/loopscale";
 export * from "./client/phoenix";
+export * from "./client/jupiter-lend";
 export * from "./client/price";
 export * from "./deser/integrationPolicies";
 export * from "./deser/tokenAclLayouts";

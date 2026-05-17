@@ -1,5 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import {
+  JupiterBorrowPolicy,
+  JupiterEarnPolicy,
   JupiterSwapPolicy,
   LoopscalePolicy,
   PhoenixPolicy,
@@ -146,5 +148,58 @@ describe("PhoenixPolicy", () => {
     expect(recovered.maxPriceDeviationBps).toBe(0);
     expect(recovered.requireReduceOnlyOrders).toBe(false);
     expect(recovered.maxReferencePriceAgeSecs).toBe(0);
+  });
+});
+
+describe("JupiterEarnPolicy", () => {
+  const mint1 = new PublicKey("11111111111111111111111111111112");
+  const mint2 = new PublicKey("11111111111111111111111111111113");
+
+  it("round-trips the mint allowlist", () => {
+    const policy = new JupiterEarnPolicy([mint1, mint2]);
+    const recovered = JupiterEarnPolicy.decode(policy.encode());
+
+    expect(recovered.mintsAllowlist).toHaveLength(2);
+    expect(recovered.mintsAllowlist[0].toBase58()).toBe(mint1.toBase58());
+    expect(recovered.mintsAllowlist[1].toBase58()).toBe(mint2.toBase58());
+  });
+
+  it("round-trips an empty allowlist", () => {
+    const policy = new JupiterEarnPolicy([]);
+    const recovered = JupiterEarnPolicy.decode(policy.encode());
+
+    expect(recovered.mintsAllowlist).toEqual([]);
+  });
+});
+
+describe("JupiterBorrowPolicy", () => {
+  const vault = new PublicKey("11111111111111111111111111111112");
+  const collateralMint = new PublicKey("11111111111111111111111111111113");
+  const borrowMint = new PublicKey("11111111111111111111111111111114");
+
+  it("round-trips vault, collateral mint, and borrow mint allowlists", () => {
+    const policy = new JupiterBorrowPolicy(
+      [vault],
+      [collateralMint],
+      [borrowMint],
+    );
+    const recovered = JupiterBorrowPolicy.decode(policy.encode());
+
+    expect(recovered.vaultsAllowlist[0].toBase58()).toBe(vault.toBase58());
+    expect(recovered.collateralMintsAllowlist[0].toBase58()).toBe(
+      collateralMint.toBase58(),
+    );
+    expect(recovered.borrowMintsAllowlist[0].toBase58()).toBe(
+      borrowMint.toBase58(),
+    );
+  });
+
+  it("round-trips empty allowlists", () => {
+    const policy = new JupiterBorrowPolicy([], [], []);
+    const recovered = JupiterBorrowPolicy.decode(policy.encode());
+
+    expect(recovered.vaultsAllowlist).toEqual([]);
+    expect(recovered.collateralMintsAllowlist).toEqual([]);
+    expect(recovered.borrowMintsAllowlist).toEqual([]);
   });
 });
