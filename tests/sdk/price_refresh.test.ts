@@ -4,9 +4,13 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { OrcaClient } from "../../src/client/orca";
 import { PriceClient } from "../../src/client/price";
 import {
   KAMINO_LENDING_PROGRAM,
+  ORCA_POSITION_DISCRIMINATOR,
+  ORCA_WHIRLPOOLS_PROGRAM_ID,
+  ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_GLOBAL_CONFIG,
   PHOENIX_PROGRAM_ID,
   PHOENIX_PROTOCOL,
@@ -22,9 +26,11 @@ const EXT_KAMINO = PublicKey.unique();
 const EXT_BRIDGE = PublicKey.unique();
 const EXT_EPI = PublicKey.unique();
 const EXT_PHOENIX = PublicKey.unique();
+const EXT_ORCA = PublicKey.unique();
 const OBLIGATION = new PublicKey(
   "65iwhmFa5mRSmeBGNGEzSfG6y66Pk6r5eksYDMFSMRb6",
 );
+const ORCA_POSITION = PublicKey.unique();
 const MARKET = new PublicKey("7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF");
 const RESERVE_A = new PublicKey("D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59");
 const RESERVE_B = new PublicKey("Atj6UREVWa7WxbF2EMKNyfmYUY1U1txughe2gjhcPDCo");
@@ -109,6 +115,10 @@ const PHOENIX_ACL = {
   integrationProgram: EXT_PHOENIX,
   protocolsBitmask: PHOENIX_PROTOCOL,
 };
+const ORCA_ACL = {
+  integrationProgram: EXT_ORCA,
+  protocolsBitmask: ORCA_WHIRLPOOLS_PROTOCOL,
+};
 
 function makeClient(
   activeReservePubkeys: PublicKey[],
@@ -139,6 +149,7 @@ function makeClient(
       extBridgeProgram: { programId: EXT_BRIDGE },
       extEpiProgram: { programId: EXT_EPI },
       extPhoenixProgram: { programId: EXT_PHOENIX },
+      extOrcaProgram: { programId: EXT_ORCA },
       fetchStateModel: jest.fn(async () => ({
         accountType: StateAccountType.VAULT,
         baseAssetMint: PublicKey.default,
@@ -197,6 +208,14 @@ function makeClient(
     fetchAndParseReserves,
     refreshReservesBatchIx,
   };
+}
+
+function orcaPositionAccountInfo() {
+  const data = Buffer.alloc(216);
+  ORCA_POSITION_DISCRIMINATOR.forEach((byte, i) => {
+    data[i] = byte;
+  });
+  return accountInfo(ORCA_WHIRLPOOLS_PROGRAM_ID, data);
 }
 
 describe("PriceClient Kamino reserve refresh planning", () => {
@@ -364,6 +383,99 @@ describe("PriceClient Kamino reserve refresh planning", () => {
 
     expect(pricePhoenixSpy).toHaveBeenCalledTimes(1);
     expect(ixs).toContain(phoenixIx);
+  });
+
+  it("skips Orca Whirlpool position pricing when ext_orca is not enabled", async () => {
+    const orcaIx = ix(6);
+    const { client } = makeClient([RESERVE_A, RESERVE_C]);
+    const priceOrcaSpy = jest
+      .spyOn(client, "priceOrcaWhirlpoolPositionsIxs")
+      .mockResolvedValue({ ixs: [orcaIx], kaminoReserves: [] });
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(priceOrcaSpy).not.toHaveBeenCalled();
+    expect(ixs).not.toContain(orcaIx);
+  });
+
+  it("prices Orca Whirlpool positions when ext_orca Whirlpools is enabled", async () => {
+    const orcaIx = ix(6);
+    const { client } = makeClient(
+      [RESERVE_A, RESERVE_C],
+      [KAMINO_LENDING_ACL, ORCA_ACL],
+    );
+    const priceOrcaSpy = jest
+      .spyOn(client, "priceOrcaWhirlpoolPositionsIxs")
+      .mockResolvedValue({ ixs: [orcaIx], kaminoReserves: [] });
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(priceOrcaSpy).toHaveBeenCalledTimes(1);
+    expect(ixs).toContain(orcaIx);
+  });
+
+  it("fails clearly when an Orca pricing instruction exceeds the account-key budget", async () => {
+    const stateModel = {
+      accountType: StateAccountType.VAULT,
+      baseAssetMint: PublicKey.default,
+      baseAssetTokenProgramId: TOKEN_PROGRAM_ID,
+      externalPositions: [ORCA_POSITION],
+      integrationAcls: [ORCA_ACL],
+    };
+    const priceOrcaBuilder = methodBuilder(
+      new TransactionInstruction({
+        programId: PublicKey.unique(),
+        keys: Array.from({ length: 64 }, () => ({
+          pubkey: PublicKey.unique(),
+          isSigner: false,
+          isWritable: false,
+        })),
+        data: Buffer.from([6]),
+      }),
+    );
+    const client = new PriceClient(
+      {
+        vaultPda: VAULT,
+        statePda: STATE,
+        connection: {
+          getMultipleAccountsInfo: jest.fn(async () => [
+            orcaPositionAccountInfo(),
+          ]),
+        },
+        fetchStateModel: jest.fn(async () => stateModel),
+        fetchAssetMetas: jest.fn(async () => new PkMap()),
+        getSolOracle: jest.fn(async () => SOL_USD_ORACLE),
+        mintProgram: {
+          methods: {
+            priceOrcaWhirlpoolPositions: jest.fn(() => priceOrcaBuilder),
+          },
+        },
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => undefined) as any,
+    );
+    jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(USDC_ORACLE);
+    const remainingAccountsSpy = jest
+      .spyOn(
+        OrcaClient.prototype,
+        "remainingAccountsForPricingWhirlpoolPositions",
+      )
+      .mockResolvedValue({
+        numPositions: 1,
+        remainingAccounts: [],
+        kaminoReserves: [],
+      });
+
+    await expect(
+      client.priceOrcaWhirlpoolPositionsIxs(stateModel as any),
+    ).rejects.toThrow(
+      "oversized Orca pricing cannot be spread across multiple instructions",
+    );
+
+    remainingAccountsSpy.mockRestore();
   });
 
   it("builds Phoenix trader pricing remaining accounts from registered external positions", async () => {

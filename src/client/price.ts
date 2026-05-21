@@ -10,6 +10,7 @@ import {
 import { fetchAddressLookupTableAccounts } from "../utils/lookupTables";
 import { BN } from "@coral-xyz/anchor";
 import { KaminoLendingClient, KaminoVaultsClient } from "./kamino";
+import { OrcaClient } from "./orca";
 
 import { BaseClient } from "./base";
 
@@ -37,6 +38,7 @@ import {
   PHOENIX_GLOBAL_CONFIG,
   PHOENIX_PROGRAM_ID,
   PHOENIX_PROTOCOL,
+  ORCA_WHIRLPOOLS_PROTOCOL,
   USDC,
   WSOL,
 } from "../constants";
@@ -51,6 +53,7 @@ const PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET = 360;
 const PUBKEY_LEN = 32;
 const PHOENIX_TRADER_DISCRIMINATOR = [41, 97, 73, 105, 110, 214, 112, 9];
 const PHOENIX_REQUEST_HEAP_FRAME_BYTES = 256 * 1024;
+const ORCA_PRICING_MAX_ACCOUNT_KEYS = 64;
 
 /**
  * Represents a single asset holding within a vault.
@@ -1116,6 +1119,64 @@ export class PriceClient {
     };
   }
 
+  public async priceOrcaWhirlpoolPositionsIxs(
+    stateModel: StateModel | null = this.cachedStateModel,
+  ): Promise<PricingChunk | null> {
+    const methods = this.base.mintProgram.methods as any;
+    if (typeof methods.priceOrcaWhirlpoolPositions !== "function") {
+      return null;
+    }
+
+    const model = stateModel || (await this.base.fetchStateModel());
+    const categorizer = new PositionCategorizer(this.base.connection);
+    const { orcaWhirlpoolPositions } = await categorizer.categorizePositions(
+      model.externalPositions || [],
+      "confirmed",
+    );
+    if (orcaWhirlpoolPositions.length === 0) {
+      return null;
+    }
+
+    const accounts = await new OrcaClient(
+      this.base,
+    ).remainingAccountsForPricingWhirlpoolPositions(orcaWhirlpoolPositions);
+    if (!accounts) {
+      return null;
+    }
+
+    const [solUsdOracle, baseAssetOracle] = await Promise.all([
+      this.base.getSolOracle(),
+      this.getBaseAssetOracle(),
+    ]);
+
+    const priceIx: TransactionInstruction = await methods
+      .priceOrcaWhirlpoolPositions(accounts.numPositions)
+      .accounts({
+        glamState: this.base.statePda,
+        solUsdOracle,
+        baseAssetOracle,
+      })
+      .remainingAccounts(accounts.remainingAccounts)
+      .instruction();
+
+    const accountKeyCount = new PkSet([
+      priceIx.programId,
+      ...priceIx.keys.map(({ pubkey }) => pubkey),
+    ]).size;
+    if (accountKeyCount > ORCA_PRICING_MAX_ACCOUNT_KEYS) {
+      throw new Error(
+        `Orca Whirlpool pricing instruction needs ${accountKeyCount} account keys, exceeding the ${ORCA_PRICING_MAX_ACCOUNT_KEYS} account-key limit. ` +
+          "GLAM stores one Orca Whirlpools priced-protocol record, so oversized Orca pricing cannot be spread across multiple instructions without replacing earlier positions. " +
+          "Reduce the number of tracked Orca Whirlpool positions or reward assets.",
+      );
+    }
+
+    return {
+      ixs: [priceIx],
+      kaminoReserves: accounts.kaminoReserves,
+    };
+  }
+
   public async priceVaultIxs(): Promise<TransactionInstruction[]> {
     return this.enqueuePriceVaultIxs(() => this._priceVaultIxsImpl());
   }
@@ -1290,6 +1351,19 @@ export class PriceClient {
       );
       if (phoenixIntegrationAcl) {
         const chunk = await this.pricePhoenixTradersIxs(stateModel);
+        if (chunk) chunks.push(chunk);
+      }
+
+      const extOrcaProgramId = this.base.extOrcaProgram?.programId;
+      const orcaIntegrationAcl =
+        extOrcaProgramId &&
+        integrationAcls.find(
+          (acl) =>
+            acl.integrationProgram.equals(extOrcaProgramId) &&
+            (acl.protocolsBitmask & ORCA_WHIRLPOOLS_PROTOCOL) !== 0,
+        );
+      if (orcaIntegrationAcl) {
+        const chunk = await this.priceOrcaWhirlpoolPositionsIxs(stateModel);
         if (chunk) chunks.push(chunk);
       }
 

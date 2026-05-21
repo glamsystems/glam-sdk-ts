@@ -1,6 +1,11 @@
 import { Commitment, Connection, PublicKey } from "@solana/web3.js";
 import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { KAMINO_LENDING_PROGRAM, KAMINO_OBTRIGATION_SIZE } from "../constants";
+import {
+  KAMINO_LENDING_PROGRAM,
+  KAMINO_OBTRIGATION_SIZE,
+  ORCA_POSITION_DISCRIMINATOR,
+  ORCA_WHIRLPOOLS_PROGRAM_ID,
+} from "../constants";
 
 /**
  * Categorized external positions by protocol type.
@@ -10,6 +15,8 @@ export interface CategorizedPositions {
   kaminoObligations: PublicKey[];
   /** Kamino vault share token accounts */
   kaminoVaultShareAtas: PublicKey[];
+  /** Orca Whirlpools position PDA accounts */
+  orcaWhirlpoolPositions: PublicKey[];
   /** Positions that couldn't be categorized */
   unknown: PublicKey[];
 }
@@ -46,6 +53,7 @@ export class PositionCategorizer {
     const result: CategorizedPositions = {
       kaminoObligations: [],
       kaminoVaultShareAtas: [],
+      orcaWhirlpoolPositions: [],
       unknown: [],
     };
 
@@ -88,6 +96,13 @@ export class PositionCategorizer {
         size === KAMINO_OBTRIGATION_SIZE
       ) {
         result.kaminoObligations.push(pubkey);
+      } else if (
+        owner.equals(ORCA_WHIRLPOOLS_PROGRAM_ID) &&
+        ORCA_POSITION_DISCRIMINATOR.every(
+          (byte, offset) => info.data[offset] === byte,
+        )
+      ) {
+        result.orcaWhirlpoolPositions.push(pubkey);
       } else if (
         owner.equals(TOKEN_PROGRAM_ID) ||
         owner.equals(TOKEN_2022_PROGRAM_ID)
