@@ -4,6 +4,7 @@ import {
   getExtKaminoProgramId,
   getExtLoopscaleProgramId,
   getExtPhoenixProgramId,
+  getExtOrcaProgramId,
   getGlamMintProgramId,
   getGlamProtocolProgramId,
 } from "../../src/glamExports";
@@ -127,6 +128,25 @@ describe("getProtocolsAndPermissions", () => {
         "WithdrawCollateral",
         "Borrow",
         "Repay",
+      ]);
+
+      expect(
+        getPermissionNames(
+          staging,
+          getExtOrcaProgramId(staging).toBase58(),
+          "0000000000000001",
+        ),
+      ).toEqual([
+        "OpenPosition",
+        "IncreaseLiquidity",
+        "DecreaseLiquidity",
+        "UpdateFeesAndRewards",
+        "CollectFees",
+        "CollectReward",
+        "ClosePosition",
+        "IncreaseLiquidityByTokenAmounts",
+        "RepositionLiquidity",
+        "InitializeTickArray",
       ]);
 
       expect(

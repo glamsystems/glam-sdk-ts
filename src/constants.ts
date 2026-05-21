@@ -8,6 +8,7 @@ import {
   getExtLoopscaleProgramId,
   getExtMarinadeProgramId,
   getExtPhoenixProgramId,
+  getExtOrcaProgramId,
   getExtSplProgramId,
   getExtStakePoolProgramId,
   getGlamMintProgramId,
@@ -147,6 +148,19 @@ export const JUPITER_ORACLE_PROGRAM_ID = new PublicKey(
 export const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
   "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
 );
+export const ORCA_WHIRLPOOLS_PROGRAM_ID = new PublicKey(
+  "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+);
+export const ORCA_WHIRLPOOLS_PROTOCOL = 1 << 0;
+export const ORCA_POSITION_DISCRIMINATOR = [
+  170, 188, 143, 228, 122, 64, 247, 208,
+] as const;
+export const ORCA_WHIRLPOOL_DISCRIMINATOR = [
+  63, 149, 209, 12, 225, 128, 99, 9,
+] as const;
+export const ORCA_TICK_ARRAY_DISCRIMINATOR = [
+  69, 97, 189, 190, 110, 7, 66, 187,
+] as const;
 
 /**
  * Token ACL (sRFC-37)
@@ -360,6 +374,26 @@ export const getProtocolsAndPermissions = (
         [1 << 2]: "WithdrawCollateral",
         [1 << 3]: "Borrow",
         [1 << 4]: "Repay",
+      },
+    },
+  },
+  // Orca integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_orca/src/state/access.rs
+  [getExtOrcaProgramId(staging).toBase58()]: {
+    "0000000000000001": {
+      name: "OrcaWhirlpools",
+      staging: true,
+      permissions: {
+        [1 << 0]: "OpenPosition",
+        [1 << 1]: "IncreaseLiquidity",
+        [1 << 2]: "DecreaseLiquidity",
+        [1 << 3]: "UpdateFeesAndRewards",
+        [1 << 4]: "CollectFees",
+        [1 << 5]: "CollectReward",
+        [1 << 6]: "ClosePosition",
+        [1 << 7]: "IncreaseLiquidityByTokenAmounts",
+        [1 << 8]: "RepositionLiquidity",
+        [1 << 9]: "InitializeTickArray",
       },
     },
   },

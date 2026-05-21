@@ -1,0 +1,2858 @@
+{
+  "address": "G1NToC9pRj2NUdeAQK33xs72ep2prtDdPkcGZgRHGxmS",
+  "metadata": {
+    "name": "ext_orca",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Orca Whirlpools integration for GLAM Protocol"
+  },
+  "instructions": [
+    {
+      "name": "close_position_with_token_extensions",
+      "docs": [
+        "Close an empty Token-2022 Orca Whirlpools position owned by the GLAM vault.",
+        "",
+        "- Permission: `ClosePosition`.",
+        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+      ],
+      "discriminator": [
+        1,
+        182,
+        135,
+        59,
+        155,
+        25,
+        99,
+        223
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "whirlpool"
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "position_mint",
+          "writable": true
+        },
+        {
+          "name": "position_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "collect_fees_v2",
+      "docs": [
+        "Collect accrued pool fees using Token-2022-aware accounts.",
+        "",
+        "- Permission: `CollectFees`.",
+        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+      ],
+      "discriminator": [
+        207,
+        117,
+        95,
+        191,
+        229,
+        180,
+        226,
+        15
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "whirlpool"
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "position_token_account"
+        },
+        {
+          "name": "token_mint_a"
+        },
+        {
+          "name": "token_mint_b"
+        },
+        {
+          "name": "token_owner_account_a",
+          "writable": true
+        },
+        {
+          "name": "token_vault_a",
+          "writable": true
+        },
+        {
+          "name": "token_owner_account_b",
+          "writable": true
+        },
+        {
+          "name": "token_vault_b",
+          "writable": true
+        },
+        {
+          "name": "token_program_a"
+        },
+        {
+          "name": "token_program_b"
+        },
+        {
+          "name": "memo_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "remaining_accounts_info",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "RemainingAccountsInfo"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "collect_reward_v2",
+      "docs": [
+        "Collect one reward emission using Token-2022-aware accounts.",
+        "",
+        "- Permission: `CollectReward`.",
+        "- Policy: The reward mint is validated against the Whirlpool reward config."
+      ],
+      "discriminator": [
+        177,
+        107,
+        37,
+        180,
+        160,
+        19,
+        49,
+        209
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "whirlpool"
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "position_token_account"
+        },
+        {
+          "name": "reward_owner_account",
+          "writable": true
+        },
+        {
+          "name": "reward_mint"
+        },
+        {
+          "name": "reward_vault",
+          "writable": true
+        },
+        {
+          "name": "reward_token_program"
+        },
+        {
+          "name": "memo_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "reward_index",
+          "type": "u8"
+        },
+        {
+          "name": "remaining_accounts_info",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "RemainingAccountsInfo"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "decrease_liquidity_v2",
+      "docs": [
+        "Decrease liquidity in an Orca Whirlpools position using Token-2022-aware accounts.",
+        "",
+        "- Permission: `DecreaseLiquidity`.",
+        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+      ],
+      "discriminator": [
+        58,
+        127,
+        188,
+        62,
+        79,
+        82,
+        196,
+        96
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "whirlpool",
+          "writable": true
+        },
+        {
+          "name": "token_program_a"
+        },
+        {
+          "name": "token_program_b"
+        },
+        {
+          "name": "memo_program"
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "position_token_account"
+        },
+        {
+          "name": "token_mint_a"
+        },
+        {
+          "name": "token_mint_b"
+        },
+        {
+          "name": "token_owner_account_a",
+          "writable": true
+        },
+        {
+          "name": "token_owner_account_b",
+          "writable": true
+        },
+        {
+          "name": "token_vault_a",
+          "writable": true
+        },
+        {
+          "name": "token_vault_b",
+          "writable": true
+        },
+        {
+          "name": "tick_array_lower",
+          "writable": true
+        },
+        {
+          "name": "tick_array_upper",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidity_amount",
+          "type": "u128"
+        },
+        {
+          "name": "token_min_a",
+          "type": "u64"
+        },
+        {
+          "name": "token_min_b",
+          "type": "u64"
+        },
+        {
+          "name": "remaining_accounts_info",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "RemainingAccountsInfo"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "increase_liquidity_by_token_amounts_v2",
+      "docs": [
+        "Increase liquidity by token amount bounds using Token-2022-aware accounts."
+      ],
+      "discriminator": [
+        239,
+        251,
+        9,
+        124,
+        210,
+        198,
+        53,
+        43
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "whirlpool",
+          "writable": true
+        },
+        {
+          "name": "token_program_a"
+        },
+        {
+          "name": "token_program_b"
+        },
+        {
+          "name": "memo_program"
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "position_token_account"
+        },
+        {
+          "name": "token_mint_a"
+        },
+        {
+          "name": "token_mint_b"
+        },
+        {
+          "name": "token_owner_account_a",
+          "writable": true
+        },
+        {
+          "name": "token_owner_account_b",
+          "writable": true
+        },
+        {
+          "name": "token_vault_a",
+          "writable": true
+        },
+        {
+          "name": "token_vault_b",
+          "writable": true
+        },
+        {
+          "name": "tick_array_lower",
+          "writable": true
+        },
+        {
+          "name": "tick_array_upper",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "method",
+          "type": {
+            "defined": {
+              "name": "IncreaseLiquidityMethod"
+            }
+          }
+        },
+        {
+          "name": "remaining_accounts_info",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "RemainingAccountsInfo"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "increase_liquidity_v2",
+      "docs": [
+        "Increase liquidity in an Orca Whirlpools position using Token-2022-aware accounts.",
+        "",
+        "- Permission: `IncreaseLiquidity`.",
+        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+      ],
+      "discriminator": [
+        133,
+        29,
+        89,
+        223,
+        69,
+        238,
+        176,
+        10
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "whirlpool",
+          "writable": true
+        },
+        {
+          "name": "token_program_a"
+        },
+        {
+          "name": "token_program_b"
+        },
+        {
+          "name": "memo_program"
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "position_token_account"
+        },
+        {
+          "name": "token_mint_a"
+        },
+        {
+          "name": "token_mint_b"
+        },
+        {
+          "name": "token_owner_account_a",
+          "writable": true
+        },
+        {
+          "name": "token_owner_account_b",
+          "writable": true
+        },
+        {
+          "name": "token_vault_a",
+          "writable": true
+        },
+        {
+          "name": "token_vault_b",
+          "writable": true
+        },
+        {
+          "name": "tick_array_lower",
+          "writable": true
+        },
+        {
+          "name": "tick_array_upper",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidity_amount",
+          "type": "u128"
+        },
+        {
+          "name": "token_max_a",
+          "type": "u64"
+        },
+        {
+          "name": "token_max_b",
+          "type": "u64"
+        },
+        {
+          "name": "remaining_accounts_info",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "RemainingAccountsInfo"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_tick_array",
+      "docs": [
+        "Initialize an Orca fixed tick array for an allowlisted Whirlpool.",
+        "",
+        "- Permission: `InitializeTickArray`.",
+        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+      ],
+      "discriminator": [
+        11,
+        188,
+        193,
+        214,
+        141,
+        91,
+        149,
+        184
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "whirlpool"
+        },
+        {
+          "name": "tick_array",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "start_tick_index",
+          "type": "i32"
+        }
+      ]
+    },
+    {
+      "name": "open_position_with_token_extensions",
+      "docs": [
+        "Open a Token-2022 Orca Whirlpools position owned by the GLAM vault.",
+        "",
+        "- Permission: `OpenPosition`.",
+        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+      ],
+      "discriminator": [
+        212,
+        47,
+        95,
+        92,
+        114,
+        102,
+        131,
+        250
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "position_mint",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "position_token_account",
+          "writable": true
+        },
+        {
+          "name": "whirlpool"
+        },
+        {
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "metadata_update_auth"
+        }
+      ],
+      "args": [
+        {
+          "name": "tick_lower_index",
+          "type": "i32"
+        },
+        {
+          "name": "tick_upper_index",
+          "type": "i32"
+        },
+        {
+          "name": "with_token_metadata_extension",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "reposition_liquidity_v2",
+      "docs": [
+        "Reposition liquidity into a new Orca Whirlpools tick range."
+      ],
+      "discriminator": [
+        191,
+        169,
+        224,
+        11,
+        131,
+        19,
+        158,
+        253
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "whirlpool",
+          "writable": true
+        },
+        {
+          "name": "token_program_a"
+        },
+        {
+          "name": "token_program_b"
+        },
+        {
+          "name": "memo_program"
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "position_token_account"
+        },
+        {
+          "name": "token_mint_a"
+        },
+        {
+          "name": "token_mint_b"
+        },
+        {
+          "name": "token_owner_account_a",
+          "writable": true
+        },
+        {
+          "name": "token_owner_account_b",
+          "writable": true
+        },
+        {
+          "name": "token_vault_a",
+          "writable": true
+        },
+        {
+          "name": "token_vault_b",
+          "writable": true
+        },
+        {
+          "name": "existing_tick_array_lower",
+          "writable": true
+        },
+        {
+          "name": "existing_tick_array_upper",
+          "writable": true
+        },
+        {
+          "name": "new_tick_array_lower",
+          "writable": true
+        },
+        {
+          "name": "new_tick_array_upper",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_tick_lower_index",
+          "type": "i32"
+        },
+        {
+          "name": "new_tick_upper_index",
+          "type": "i32"
+        },
+        {
+          "name": "method",
+          "type": {
+            "defined": {
+              "name": "RepositionLiquidityMethod"
+            }
+          }
+        },
+        {
+          "name": "remaining_accounts_info",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "RemainingAccountsInfo"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_whirlpools_policy",
+      "docs": [
+        "Set the Orca Whirlpools policy for a GLAM vault."
+      ],
+      "discriminator": [
+        87,
+        233,
+        250,
+        82,
+        120,
+        40,
+        212,
+        223
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "WhirlpoolsPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_fees_and_rewards",
+      "docs": [
+        "Update accrued fees and rewards for an Orca Whirlpools position.",
+        "",
+        "- Permission: `UpdateFeesAndRewards`.",
+        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+      ],
+      "discriminator": [
+        154,
+        230,
+        250,
+        13,
+        236,
+        209,
+        75,
+        223
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "whirlpool",
+          "writable": true
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "tick_array_lower"
+        },
+        {
+          "name": "tick_array_upper"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StateAccount",
+      "discriminator": [
+        142,
+        247,
+        54,
+        95,
+        85,
+        133,
+        249,
+        103
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidWhirlpoolAccount",
+      "msg": "Invalid Orca Whirlpool account"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidPositionAccount",
+      "msg": "Invalid Orca position account"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidRewardIndex",
+      "msg": "Invalid Orca reward index"
+    },
+    {
+      "code": 6003,
+      "name": "TokenMintMismatch",
+      "msg": "Orca token account mint does not match the Whirlpool"
+    },
+    {
+      "code": 6004,
+      "name": "TokenVaultMismatch",
+      "msg": "Orca token vault does not match the Whirlpool"
+    },
+    {
+      "code": 6005,
+      "name": "PositionHasLiquidity",
+      "msg": "Orca position is not empty"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidTickArrayAccount",
+      "msg": "Invalid Orca tick array account"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidOracleAccount",
+      "msg": "Invalid Orca oracle account"
+    },
+    {
+      "code": 6008,
+      "name": "GlamStateDisabled",
+      "msg": "GLAM state is disabled"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidIxArgs",
+      "msg": "Invalid instruction arguments"
+    },
+    {
+      "code": 6010,
+      "name": "ProtocolPolicyViolation",
+      "msg": "Protocol policy violation"
+    },
+    {
+      "code": 6011,
+      "name": "PricingError",
+      "msg": "Pricing error"
+    },
+    {
+      "code": 6012,
+      "name": "MissingAccount",
+      "msg": "An account required by the instruction is missing"
+    },
+    {
+      "code": 6013,
+      "name": "UnsupportedOracleSource",
+      "msg": "Oracle source not supported in this context"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidAccountType",
+      "msg": "Invalid account type"
+    },
+    {
+      "code": 6015,
+      "name": "UnexpectedProgramOwner",
+      "msg": "Account is owned by an unexpected program"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidPriceDenom",
+      "msg": "Invalid price denom"
+    },
+    {
+      "code": 6017,
+      "name": "MaxDeviationExceeded",
+      "msg": "Max deviation exceeded"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidTokenAccount",
+      "msg": "Invalid token account"
+    },
+    {
+      "code": 6019,
+      "name": "InvalidVaultTokenAccount",
+      "msg": "Invalid vault ata"
+    }
+  ],
+  "types": [
+    {
+      "name": "AccountType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Vault"
+          },
+          {
+            "name": "TokenizedVault"
+          },
+          {
+            "name": "Mint"
+          },
+          {
+            "name": "SingleAssetVault"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountsType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "TransferHookA"
+          },
+          {
+            "name": "TransferHookB"
+          },
+          {
+            "name": "TransferHookReward"
+          },
+          {
+            "name": "TransferHookInput"
+          },
+          {
+            "name": "TransferHookIntermediate"
+          },
+          {
+            "name": "TransferHookOutput"
+          },
+          {
+            "name": "SupplementalTickArrays"
+          },
+          {
+            "name": "SupplementalTickArraysOne"
+          },
+          {
+            "name": "SupplementalTickArraysTwo"
+          },
+          {
+            "name": "TransferHookDepositA"
+          },
+          {
+            "name": "TransferHookDepositB"
+          },
+          {
+            "name": "TransferHookWithdrawalA"
+          },
+          {
+            "name": "TransferHookWithdrawalB"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccruedFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "vault_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "management_fee",
+            "type": "u128"
+          },
+          {
+            "name": "performance_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_base_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_flow_fee",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatedModel",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "created_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateAcl",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "integration_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationPermissions"
+                }
+              }
+            }
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineField",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": {
+              "defined": {
+                "name": "EngineFieldName"
+              }
+            }
+          },
+          {
+            "name": "value",
+            "type": {
+              "defined": {
+                "name": "EngineFieldValue"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldName",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Owner"
+          },
+          {
+            "name": "PortfolioManagerName"
+          },
+          {
+            "name": "Name"
+          },
+          {
+            "name": "Uri"
+          },
+          {
+            "name": "Assets"
+          },
+          {
+            "name": "DelegateAcls"
+          },
+          {
+            "name": "IntegrationAcls"
+          },
+          {
+            "name": "TimelockDuration"
+          },
+          {
+            "name": "Borrowable"
+          },
+          {
+            "name": "DefaultAccountStateFrozen"
+          },
+          {
+            "name": "PermanentDelegate"
+          },
+          {
+            "name": "NotifyAndSettle"
+          },
+          {
+            "name": "FeeStructure"
+          },
+          {
+            "name": "FeeParams"
+          },
+          {
+            "name": "ClaimableFees"
+          },
+          {
+            "name": "ClaimedFees"
+          },
+          {
+            "name": "OracleConfigs"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldValue",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Boolean",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "U8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u8"
+              }
+            ]
+          },
+          {
+            "name": "U32",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u32"
+              }
+            ]
+          },
+          {
+            "name": "U64",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "String",
+            "fields": [
+              {
+                "name": "val",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "Pubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "VecPubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "pubkey"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecU8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "VecU32",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "u32"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecDelegateAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "DelegateAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecIntegrationAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "IntegrationAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeStructure",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeStructure"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeParams",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeParams"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "AccruedFees",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "AccruedFees"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "NotifyAndSettle",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "NotifyAndSettle"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "OracleConfigs",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "OracleConfigs"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "EntryExitFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subscription_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "redemption_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "year_in_seconds",
+            "type": "u32"
+          },
+          {
+            "name": "pa_high_water_mark",
+            "type": "i128"
+          },
+          {
+            "name": "pa_last_nav",
+            "type": "i128"
+          },
+          {
+            "name": "last_aum",
+            "type": "i128"
+          },
+          {
+            "name": "last_performance_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_management_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_protocol_fee_crystallized",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeStructure",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "manager",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "management",
+            "type": {
+              "defined": {
+                "name": "ManagementFee"
+              }
+            }
+          },
+          {
+            "name": "performance",
+            "type": {
+              "defined": {
+                "name": "PerformanceFee"
+              }
+            }
+          },
+          {
+            "name": "protocol",
+            "type": {
+              "defined": {
+                "name": "ProtocolFees"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "HurdleType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IncreaseLiquidityMethod",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "ByTokenAmounts",
+            "fields": [
+              {
+                "name": "token_max_a",
+                "type": "u64"
+              },
+              {
+                "name": "token_max_b",
+                "type": "u64"
+              },
+              {
+                "name": "min_sqrt_price",
+                "type": "u128"
+              },
+              {
+                "name": "max_sqrt_price",
+                "type": "u128"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationAcl",
+      "docs": [
+        "An integration program can have multiple protocols supported.",
+        "Enabled protocols are stored in a bitmask, and each protocol can have its own policy."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocols_bitmask",
+            "type": "u16"
+          },
+          {
+            "name": "protocol_policies",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPolicy"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationPermissions",
+      "docs": [
+        "Stores delegate permissions for an integration program."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPermissions"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ManagementFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NoticePeriodType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NotifyAndSettle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "model",
+            "type": {
+              "defined": {
+                "name": "ValuationModel"
+              }
+            }
+          },
+          {
+            "name": "permissionless_fulfillment",
+            "type": "bool"
+          },
+          {
+            "name": "subscribe_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "subscribe_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "redeem_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "time_unit",
+            "type": {
+              "defined": {
+                "name": "TimeUnit"
+              }
+            }
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleConfigs",
+      "docs": [
+        "Vault-specific oracle configs. If available, these configs are preferred over the global config."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_ages_seconds",
+            "type": {
+              "vec": {
+                "array": [
+                  "u16",
+                  2
+                ]
+              }
+            }
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                12
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PerformanceFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_rate_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_type",
+            "type": {
+              "defined": {
+                "name": "HurdleType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PricedProtocol",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "rent",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "i128"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "last_updated_slot",
+            "type": "u64"
+          },
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "base_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "flow_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPermissions",
+      "docs": [
+        "Represents a delegate's permissions for a specific protocol"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "permissions_bitmask",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPolicy",
+      "docs": [
+        "Stores policy data for an integrated protocol.",
+        "Integration programs serialize/deserialize this data."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "data",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RemainingAccountsInfo",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "slices",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "RemainingAccountsSlice"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RemainingAccountsSlice",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accounts_type",
+            "type": {
+              "defined": {
+                "name": "AccountsType"
+              }
+            }
+          },
+          {
+            "name": "length",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RepositionLiquidityMethod",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "ByLiquidity",
+            "fields": [
+              {
+                "name": "new_liquidity_amount",
+                "type": "u128"
+              },
+              {
+                "name": "existing_range_token_min_a",
+                "type": "u64"
+              },
+              {
+                "name": "existing_range_token_min_b",
+                "type": "u64"
+              },
+              {
+                "name": "new_range_token_max_a",
+                "type": "u64"
+              },
+              {
+                "name": "new_range_token_max_b",
+                "type": "u64"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "StateAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "account_type",
+            "type": {
+              "defined": {
+                "name": "AccountType"
+              }
+            }
+          },
+          {
+            "name": "enabled",
+            "type": "bool"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "portfolio_manager_name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "created",
+            "type": {
+              "defined": {
+                "name": "CreatedModel"
+              }
+            }
+          },
+          {
+            "name": "base_asset_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_asset_decimals",
+            "type": "u8"
+          },
+          {
+            "name": "base_asset_token_program",
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timelock_duration",
+            "type": "u32"
+          },
+          {
+            "name": "timelock_expires_at",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "assets",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "integration_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "delegate_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "DelegateAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "external_positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "priced_protocols",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "PricedProtocol"
+                }
+              }
+            }
+          },
+          {
+            "name": "params",
+            "type": {
+              "vec": {
+                "vec": {
+                  "defined": {
+                    "name": "EngineField"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TimeUnit",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Second"
+          },
+          {
+            "name": "Slot"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ValuationModel",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Continuous"
+          },
+          {
+            "name": "Periodic"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WhirlpoolsPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "whirlpools_allowlist",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "token_mints_allowlist",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "max_deviation_bps",
+            "docs": [
+              "Signed pool/oracle price threshold in bps, matching Jupiter swap v2 semantics.",
+              "Positive permits pool price below oracle, zero requires at least oracle, negative requires a premium."
+            ],
+            "type": "i16"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS",
+      "type": "u16",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_CLOSE_POSITION",
+      "type": "u64",
+      "value": "64"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_COLLECT_FEES",
+      "type": "u64",
+      "value": "16"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_COLLECT_REWARD",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_DECREASE_LIQUIDITY",
+      "type": "u64",
+      "value": "4"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_INCREASE_LIQUIDITY",
+      "type": "u64",
+      "value": "2"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_INCREASE_LIQUIDITY_BY_TOKEN_AMOUNTS",
+      "type": "u64",
+      "value": "128"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_INITIALIZE_TICK_ARRAY",
+      "type": "u64",
+      "value": "512"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_OPEN_POSITION",
+      "type": "u64",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_REPOSITION_LIQUIDITY",
+      "type": "u64",
+      "value": "256"
+    },
+    {
+      "name": "PROTO_ORCA_WHIRLPOOLS_PERM_UPDATE_FEES_AND_REWARDS",
+      "type": "u64",
+      "value": "8"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import {
   JupiterSwapPolicy,
   LoopscalePolicy,
   PhoenixPolicy,
+  WhirlpoolsPolicy,
 } from "../../src/deser/integrationPolicies";
 
 describe("JupiterSwapPolicy", () => {
@@ -201,5 +202,51 @@ describe("JupiterBorrowPolicy", () => {
     expect(recovered.vaultsAllowlist).toEqual([]);
     expect(recovered.collateralMintsAllowlist).toEqual([]);
     expect(recovered.borrowMintsAllowlist).toEqual([]);
+  });
+});
+
+describe("WhirlpoolsPolicy", () => {
+  const whirlpool1 = new PublicKey("11111111111111111111111111111112");
+  const whirlpool2 = new PublicKey("11111111111111111111111111111113");
+  const mint1 = new PublicKey("11111111111111111111111111111114");
+  const mint2 = new PublicKey("11111111111111111111111111111115");
+
+  it("round-trips the whirlpool and token mint allowlists", () => {
+    const policy = new WhirlpoolsPolicy(
+      [whirlpool1, whirlpool2],
+      [mint1, mint2],
+      -25,
+    );
+    const recovered = WhirlpoolsPolicy.decode(policy.encode());
+
+    expect(recovered.whirlpoolsAllowlist.map((p) => p.toBase58())).toEqual([
+      whirlpool1.toBase58(),
+      whirlpool2.toBase58(),
+    ]);
+    expect(recovered.tokenMintsAllowlist.map((p) => p.toBase58())).toEqual([
+      mint1.toBase58(),
+      mint2.toBase58(),
+    ]);
+    expect(recovered.maxDeviationBps).toBe(-25);
+  });
+
+  it("round-trips empty allowlists", () => {
+    const policy = new WhirlpoolsPolicy([], []);
+    const recovered = WhirlpoolsPolicy.decode(policy.encode());
+
+    expect(recovered.whirlpoolsAllowlist).toEqual([]);
+    expect(recovered.tokenMintsAllowlist).toEqual([]);
+    expect(recovered.maxDeviationBps).toBe(0);
+  });
+
+  it("rejects policies without deviation bounds", () => {
+    const policy = new WhirlpoolsPolicy([whirlpool1], [mint1]);
+    const missingDeviation = policy
+      .encode()
+      .subarray(0, policy.encode().length - 2);
+
+    expect(() => WhirlpoolsPolicy.decode(missingDeviation)).toThrow(
+      "Invalid Whirlpools policy bounds",
+    );
   });
 });

@@ -1,5 +1,14 @@
 import { BN } from "@coral-xyz/anchor";
-import { struct, u8, u32, u64, vec, publicKey, option } from "@coral-xyz/borsh";
+import {
+  struct,
+  i16,
+  u8,
+  u32,
+  u64,
+  vec,
+  publicKey,
+  option,
+} from "@coral-xyz/borsh";
 import { PublicKey } from "@solana/web3.js";
 
 export class MintPolicy {
@@ -414,6 +423,87 @@ export class PhoenixPolicy {
     off += 2;
     tail.writeUInt32LE(this.maxReferencePriceAgeSecs, off);
     return Buffer.concat([allowlistHeader, allowlistBody, tail]);
+  }
+}
+
+export class WhirlpoolsPolicy {
+  whirlpoolsAllowlist: PublicKey[];
+  tokenMintsAllowlist: PublicKey[];
+  maxDeviationBps: number;
+
+  static _layout = struct([
+    vec(publicKey(), "whirlpoolsAllowlist"),
+    vec(publicKey(), "tokenMintsAllowlist"),
+    i16("maxDeviationBps"),
+  ]);
+
+  constructor(
+    whirlpoolsAllowlist: PublicKey[],
+    tokenMintsAllowlist: PublicKey[],
+    maxDeviationBps: number = 0,
+  ) {
+    this.whirlpoolsAllowlist = whirlpoolsAllowlist;
+    this.tokenMintsAllowlist = tokenMintsAllowlist;
+    this.maxDeviationBps = maxDeviationBps;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): WhirlpoolsPolicy {
+    let offset = 0;
+    if (buffer.length < 4) {
+      throw new Error("Invalid Whirlpools policy");
+    }
+
+    const whirlpoolsAllowlistLen = buffer.readUInt32LE(offset);
+    offset += 4;
+    const whirlpoolsAllowlist: PublicKey[] = [];
+    for (let i = 0; i < whirlpoolsAllowlistLen; i++) {
+      const nextOffset = offset + 32;
+      if (buffer.length < nextOffset) {
+        throw new Error("Invalid Whirlpools allowlist entry");
+      }
+      whirlpoolsAllowlist.push(
+        new PublicKey(buffer.subarray(offset, nextOffset)),
+      );
+      offset = nextOffset;
+    }
+
+    if (buffer.length < offset + 4) {
+      throw new Error("Invalid Whirlpools token mint allowlist");
+    }
+    const tokenMintsAllowlistLen = buffer.readUInt32LE(offset);
+    offset += 4;
+    const tokenMintsAllowlist: PublicKey[] = [];
+    for (let i = 0; i < tokenMintsAllowlistLen; i++) {
+      const nextOffset = offset + 32;
+      if (buffer.length < nextOffset) {
+        throw new Error("Invalid Whirlpools token mint allowlist entry");
+      }
+      tokenMintsAllowlist.push(
+        new PublicKey(buffer.subarray(offset, nextOffset)),
+      );
+      offset = nextOffset;
+    }
+
+    if (buffer.length - offset !== 2) {
+      throw new Error("Invalid Whirlpools policy bounds");
+    }
+    const maxDeviationBps = buffer.readInt16LE(offset);
+
+    return new WhirlpoolsPolicy(
+      whirlpoolsAllowlist,
+      tokenMintsAllowlist,
+      maxDeviationBps,
+    );
+  }
+
+  public encode(): Buffer {
+    const whirlpoolsAllowlistSize = 4 + this.whirlpoolsAllowlist.length * 32;
+    const tokenMintsAllowlistSize = 4 + this.tokenMintsAllowlist.length * 32;
+    const buffer = Buffer.alloc(
+      whirlpoolsAllowlistSize + tokenMintsAllowlistSize + 2,
+    );
+    WhirlpoolsPolicy._layout.encode(this, buffer);
+    return buffer;
   }
 }
 
