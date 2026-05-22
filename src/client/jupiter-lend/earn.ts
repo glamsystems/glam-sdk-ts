@@ -19,6 +19,7 @@ import {
 } from "../../constants";
 import { JupiterEarnPolicy } from "../../deser/integrationPolicies";
 import { getIntegrationAuthorityPda } from "../../utils/glamPDAs";
+import { toBn } from "../../utils/common";
 import {
   LENDING_DISCRIMINATOR,
   LENDING_REWARDS_RATE_MODEL_OFFSET,
@@ -34,7 +35,6 @@ import {
   getLendingPda,
   getLiquidityPda,
   getRateModelPda,
-  toBn,
 } from "./shared";
 
 export type JupiterEarnDepositAccounts = {
@@ -78,7 +78,7 @@ export type JupiterEarnWithdrawAccounts = {
 
 export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
   async depositIx(
-    assets: BN | bigint | number,
+    amount: BN | bigint | number,
     minAmountOut: BN | bigint | number,
     accounts: JupiterEarnDepositAccounts,
     signer?: PublicKey,
@@ -87,7 +87,7 @@ export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
     const fTokenProgram = accounts.fTokenProgram || tokenProgram;
 
     return await this.client.base.extJupiterProgram.methods
-      .earnDeposit(toBn(assets), toBn(minAmountOut))
+      .earnDeposit(toBn(amount), toBn(minAmountOut))
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamVault: this.client.base.vaultPda,
@@ -132,7 +132,7 @@ export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
   }
 
   async depositTx(
-    assets: BN | bigint | number,
+    amount: BN | bigint | number,
     minAmountOut: BN | bigint | number,
     accounts: JupiterEarnDepositAccounts,
     txOptions: TxOptions = {},
@@ -151,7 +151,7 @@ export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
         accounts.fTokenMint,
         fTokenProgram,
       );
-    const ix = await this.depositIx(assets, minAmountOut, accounts, signer);
+    const ix = await this.depositIx(amount, minAmountOut, accounts, signer);
     return await this.buildVersionedTx([createRecipientAtaIx, ix], txOptions);
   }
 
@@ -301,13 +301,13 @@ export class JupiterEarnClient {
 
   async deposit(
     mint: PublicKey,
-    assets: BN | bigint | number,
+    amount: BN | bigint | number,
     minAmountOut: BN | bigint | number = new BN(0),
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const accounts = await this.resolveAccounts(mint);
     const tx = await this.txBuilder.depositTx(
-      assets,
+      amount,
       minAmountOut,
       accounts,
       txOptions,

@@ -30,6 +30,7 @@ import {
 } from "../../constants";
 import { JupiterBorrowPolicy } from "../../deser/integrationPolicies";
 import { fetchMintAndTokenProgram } from "../../utils/accounts";
+import { toBn } from "../../utils/common";
 import { getIntegrationAuthorityPda } from "../../utils/glamPDAs";
 import { getProgramAccounts } from "../../utils/rpc";
 import {
@@ -75,7 +76,6 @@ import {
   POSITION_VAULT_ID_OFFSET,
   resolveLookupTableAccounts,
   resolveOracleRemainingAccounts,
-  toBn,
   toU8Buffer,
   u16LeBytes,
 } from "./shared";

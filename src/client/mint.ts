@@ -43,7 +43,7 @@ import {
 } from "../utils/glamPDAs";
 import { TOKEN_ACL_GATE_PROGRAM, TOKEN_ACL_PROGRAM } from "../constants";
 import { ClusterNetwork } from "../clientConfig";
-import { sha256First8Bytes, toBnAmount, toUiAmount } from "../utils/common";
+import { sha256First8Bytes, toBn, toUiAmount } from "../utils/common";
 import { UpdateStateParams } from "./state";
 
 export type InitMintParams = {
@@ -1206,7 +1206,7 @@ export class MintClient {
   ) {
     const vTx = await this.txBuilder.mintTx(
       to,
-      toBnAmount(amount),
+      toBn(amount),
       unfreeze,
       txOptions,
     );
@@ -1221,7 +1221,7 @@ export class MintClient {
   ) {
     const vTx = await this.txBuilder.burnTx(
       from,
-      toBnAmount(amount),
+      toBn(amount),
       unfreeze,
       txOptions,
     );
@@ -1272,7 +1272,7 @@ export class MintClient {
     const vTx = await this.txBuilder.forceTransferTx(
       from,
       to,
-      toBnAmount(amount),
+      toBn(amount),
       unfreeze,
       txOptions,
     );

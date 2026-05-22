@@ -30,7 +30,7 @@ import {
   getGlobalConfigPda,
   getIntegrationAuthorityPda,
 } from "../utils/glamPDAs";
-import { fetchMintAndTokenProgram, PkMap, PkSet } from "../utils";
+import { fetchMintAndTokenProgram, PkMap, PkSet, toBn } from "../utils";
 
 type Numeric = BN | bigint | number;
 
@@ -278,16 +278,6 @@ export type OrcaWhirlpoolPricingAccounts = {
   remainingAccounts: AccountMeta[];
   kaminoReserves: PublicKey[];
 };
-
-function toBn(value: Numeric | undefined, fallback = 0): BN {
-  if (value === undefined) {
-    return new BN(fallback);
-  }
-  if (BN.isBN(value)) {
-    return value;
-  }
-  return new BN(value.toString());
-}
 
 function normalizeIncreaseMethod(
   method: IncreaseOrcaLiquidityByTokenAmountsMethod,

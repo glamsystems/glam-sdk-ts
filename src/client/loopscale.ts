@@ -16,6 +16,7 @@ import {
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 import { getIntegrationAuthorityPda } from "../utils/glamPDAs";
 import { LOOPSCALE_PROGRAM_ID } from "../constants";
+import { toBn } from "../utils/common";
 
 export const LOOPSCALE_BS_AUTH = new PublicKey(
   "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs",
@@ -81,14 +82,6 @@ export type BorrowPrincipalAccounts = {
   associatedTokenProgram?: PublicKey;
   remainingAccounts?: AccountMeta[];
 };
-
-function toBn(value: BN | bigint | number): BN {
-  if (BN.isBN(value)) {
-    return value;
-  }
-
-  return new BN(value.toString());
-}
 
 export function getLoopscaleEventAuthorityPda(
   programId: PublicKey = LOOPSCALE_PROGRAM_ID,

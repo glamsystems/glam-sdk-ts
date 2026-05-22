@@ -9,7 +9,9 @@ export function charsToString(chars: number[] | Buffer): string {
     .trim();
 }
 
-// Backward-compatible alias kept for existing tests/examples and SDK consumers.
+/**
+ * @deprecated Use `charsToString` instead.
+ */
 export function charsToName(chars: number[] | Buffer): string {
   return charsToString(chars);
 }
@@ -21,7 +23,9 @@ export function stringToChars(name: string, length: number = 32): number[] {
   return Array.from(Buffer.from(name).subarray(0, length));
 }
 
-// Backward-compatible alias kept for existing tests/examples and SDK consumers.
+/**
+ * @deprecated Use `stringToChars` instead.
+ */
 export function nameToChars(name: string, length: number = 32): number[] {
   return stringToChars(name, length);
 }
@@ -36,10 +40,24 @@ export async function sha256First8Bytes(chars: number[]): Promise<number[]> {
 }
 
 /**
- * Normalizes a base-unit amount into a BN while preserving existing BN values.
+ * Values accepted by helpers that normalize integer/base-unit values into BN.
  */
-export function toBnAmount(amount: BN | number | string): BN {
-  return BN.isBN(amount) ? amount : new BN(amount);
+export type BnInput = BN | bigint | number | string;
+
+/**
+ * Normalizes an integer/base-unit value into a BN while preserving existing BN values.
+ */
+export function toBn(value: BnInput): BN {
+  return BN.isBN(value) ? value : new BN(value.toString());
+}
+
+/**
+ * Backward-compatible alias for amount-oriented call sites.
+ *
+ * @deprecated Use `toBn` instead.
+ */
+export function toBnAmount(amount: BnInput): BN {
+  return toBn(amount);
 }
 
 /**

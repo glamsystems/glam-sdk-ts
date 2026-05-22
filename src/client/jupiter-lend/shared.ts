@@ -212,13 +212,6 @@ export function memcmpFilter(offset: number, data: Buffer) {
   };
 }
 
-export function toBn(value: BN | bigint | number): BN {
-  if (BN.isBN(value)) {
-    return value;
-  }
-  return new BN(value.toString());
-}
-
 export function toU8Buffer(value: Buffer | Uint8Array | number[]): Buffer {
   return Buffer.isBuffer(value) ? value : Buffer.from(value);
 }
