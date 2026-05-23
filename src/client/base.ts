@@ -1037,10 +1037,8 @@ export class BaseClient {
         mintPubkey,
       );
 
-      // fetch request queue only if state account is a tokenized vault
-      const requestQueue = StateAccountType.equals(
+      const requestQueue = StateAccountType.hasRequestQueue(
         stateAccount.accountType,
-        StateAccountType.TOKENIZED_VAULT,
       )
         ? await this.fetchRequestQueue(requestQueuePda, mintProgram)
         : undefined;

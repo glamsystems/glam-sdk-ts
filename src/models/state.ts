@@ -350,4 +350,11 @@ export const StateAccountType = {
 
     throw new Error(`Invalid state account type: ${s}`);
   },
+
+  hasRequestQueue(accountType: StateAccountType) {
+    return (
+      StateAccountType.equals(accountType, StateAccountType.TOKENIZED_VAULT) ||
+      StateAccountType.equals(accountType, StateAccountType.SINGLE_ASSET_VAULT)
+    );
+  },
 };
