@@ -3,7 +3,6 @@ import {
   JupiterBorrowPolicy,
   JupiterEarnPolicy,
   JupiterSwapPolicy,
-  LoopscalePolicy,
   PhoenixPolicy,
   WhirlpoolsPolicy,
 } from "../../src/deser/integrationPolicies";
@@ -86,31 +85,6 @@ describe("JupiterSwapPolicy", () => {
     expect(encoded.readUInt8(2)).toBe(1);
     expect(encoded.readUInt32LE(3)).toBe(2);
     expect(encoded.readInt16LE(71)).toBe(-50);
-  });
-});
-
-describe("LoopscalePolicy", () => {
-  const strategy1 = new PublicKey("11111111111111111111111111111112");
-  const strategy2 = new PublicKey("11111111111111111111111111111113");
-
-  it("round-trips the strategy allowlist", () => {
-    const policy = new LoopscalePolicy([strategy1, strategy2]);
-    const recovered = LoopscalePolicy.decode(policy.encode());
-
-    expect(recovered.strategiesAllowlist).toHaveLength(2);
-    expect(recovered.strategiesAllowlist[0].toBase58()).toBe(
-      strategy1.toBase58(),
-    );
-    expect(recovered.strategiesAllowlist[1].toBase58()).toBe(
-      strategy2.toBase58(),
-    );
-  });
-
-  it("round-trips an empty allowlist", () => {
-    const policy = new LoopscalePolicy([]);
-    const recovered = LoopscalePolicy.decode(policy.encode());
-
-    expect(recovered.strategiesAllowlist).toEqual([]);
   });
 });
 

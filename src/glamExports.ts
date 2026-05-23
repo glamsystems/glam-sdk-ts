@@ -11,7 +11,6 @@ import type { ExtStakePool } from "../target/types/ext_stake_pool";
 import type { ExtCctp } from "../target/types/ext_cctp";
 import type { ExtBridge } from "../target/types/ext_bridge";
 import type { ExtEpi } from "../target/types/ext_epi";
-import type { ExtLoopscale } from "../target/types/ext_loopscale";
 import type { ExtPhoenix } from "../target/types/ext_phoenix";
 import type { ExtJupiter } from "../target/types/ext_jupiter";
 import type { ExtOrca } from "../target/types/ext_orca";
@@ -27,7 +26,6 @@ import ExtStakePoolIdlJson from "../target/idl/ext_stake_pool.json";
 import ExtCctpIdlJson from "../target/idl/ext_cctp.json";
 import ExtBridgeIdlJson from "../target/idl/ext_bridge.json";
 import ExtEpiIdlJson from "../target/idl/ext_epi.json";
-import ExtLoopscaleIdlJson from "../target/idl/ext_loopscale.json";
 import ExtPhoenixIdlJson from "../target/idl/ext_phoenix.json";
 import ExtJupiterIdlJson from "../target/idl/ext_jupiter.json";
 import ExtOrcaIdlJson from "../target/idl/ext_orca.json";
@@ -40,20 +38,11 @@ import ExtStakePoolIdlJsonStaging from "../target/idl/ext_stake_pool-staging.jso
 import ExtMarinadeIdlJsonStaging from "../target/idl/ext_marinade-staging.json";
 import ExtBridgeIdlJsonStaging from "../target/idl/ext_bridge-staging.json";
 import ExtEpiIdlJsonStaging from "../target/idl/ext_epi-staging.json";
-import ExtLoopscaleIdlJsonStaging from "../target/idl/ext_loopscale-staging.json";
 import ExtPhoenixIdlJsonStaging from "../target/idl/ext_phoenix-staging.json";
 import ExtJupiterIdlJsonStaging from "../target/idl/ext_jupiter-staging.json";
 import ExtOrcaIdlJsonStaging from "../target/idl/ext_orca-staging.json";
 
-export {
-  GlamProtocol,
-  GlamMint,
-  GlamConfig,
-  ExtLoopscale,
-  ExtPhoenix,
-  ExtJupiter,
-  ExtOrca,
-};
+export { GlamProtocol, GlamMint, GlamConfig, ExtPhoenix, ExtJupiter, ExtOrca };
 
 const EXT_DRIFT_STAGING_PROGRAM_ID =
   "gstgdpMFXKobURsFtStdaMLRSuwdmDUsrndov7kyu9h";
@@ -68,7 +57,6 @@ export type ExtStakePoolProgram = Program<ExtStakePool>;
 export type ExtCctpProgram = Program<ExtCctp>;
 export type ExtBridgeProgram = Program<ExtBridge>;
 export type ExtEpiProgram = Program<ExtEpi>;
-export type ExtLoopscaleProgram = Program<ExtLoopscale>;
 export type ExtPhoenixProgram = Program<ExtPhoenix>;
 export type ExtJupiterProgram = Program<ExtJupiter>;
 export type ExtOrcaProgram = Program<ExtOrca>;
@@ -125,10 +113,6 @@ export function getExtEpiIdl(staging: boolean) {
   return staging ? ExtEpiIdlJsonStaging : ExtEpiIdlJson;
 }
 
-export function getExtLoopscaleIdl(staging: boolean) {
-  return staging ? ExtLoopscaleIdlJsonStaging : ExtLoopscaleIdlJson;
-}
-
 export function getExtPhoenixIdl(staging: boolean) {
   return staging ? ExtPhoenixIdlJsonStaging : ExtPhoenixIdlJson;
 }
@@ -181,10 +165,6 @@ export function getExtBridgeProgramId(staging: boolean) {
 
 export function getExtEpiProgramId(staging: boolean) {
   return new PublicKey(getExtEpiIdl(staging).address);
-}
-
-export function getExtLoopscaleProgramId(staging: boolean) {
-  return new PublicKey(getExtLoopscaleIdl(staging).address);
 }
 
 export function getExtPhoenixProgramId(staging: boolean) {
@@ -268,13 +248,6 @@ export function getExtEpiProgram(
   staging: boolean,
 ): ExtEpiProgram {
   return new Program<ExtEpi>(getExtEpiIdl(staging), provider);
-}
-
-export function getExtLoopscaleProgram(
-  provider: Provider,
-  staging: boolean,
-): ExtLoopscaleProgram {
-  return new Program<ExtLoopscale>(getExtLoopscaleIdl(staging), provider);
 }
 
 export function getExtPhoenixProgram(

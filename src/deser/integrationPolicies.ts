@@ -324,30 +324,6 @@ export class JupiterBorrowPolicy {
   }
 }
 
-export class LoopscalePolicy {
-  strategiesAllowlist: PublicKey[];
-
-  static _layout = struct([vec(publicKey(), "strategiesAllowlist")]);
-
-  constructor(strategiesAllowlist: PublicKey[]) {
-    this.strategiesAllowlist = strategiesAllowlist;
-  }
-
-  public static decode(buffer: Buffer<ArrayBufferLike>): LoopscalePolicy {
-    const { strategiesAllowlist } = LoopscalePolicy._layout.decode(
-      buffer,
-    ) as LoopscalePolicy;
-    return new LoopscalePolicy(strategiesAllowlist);
-  }
-
-  public encode(): Buffer {
-    const strategiesAllowlistSize = 4 + this.strategiesAllowlist.length * 32;
-    const buffer = Buffer.alloc(strategiesAllowlistSize);
-    LoopscalePolicy._layout.encode(this, buffer);
-    return buffer;
-  }
-}
-
 export class PhoenixPolicy {
   marketsAllowlist: PublicKey[];
   allowedOrderTypes: number[];

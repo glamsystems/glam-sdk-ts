@@ -5,7 +5,6 @@ import {
   getExtEpiProgramId,
   getExtJupiterProgramId,
   getExtKaminoProgramId,
-  getExtLoopscaleProgramId,
   getExtMarinadeProgramId,
   getExtPhoenixProgramId,
   getExtOrcaProgramId,
@@ -100,9 +99,6 @@ export const TOKEN_MESSENGER_MINTER_V2 = new PublicKey(
 );
 export const MESSAGE_TRANSMITTER_V2 = new PublicKey(
   "CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC",
-);
-export const LOOPSCALE_PROGRAM_ID = new PublicKey(
-  "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78",
 );
 export const PHOENIX_PROGRAM_ID = new PublicKey(
   "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih",
@@ -330,27 +326,6 @@ export const getProtocolsAndPermissions = (
       staging: false,
       permissions: {
         [1 << 0]: "Transfer",
-      },
-    },
-  },
-  // Loopscale integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_loopscale/src/state/access.rs
-  [getExtLoopscaleProgramId(staging).toBase58()]: {
-    "0000000000000001": {
-      name: "Loopscale",
-      staging: true,
-      permissions: {
-        [1 << 0]: "ManageLoan",
-        [1 << 1]: "DepositCollateral",
-        [1 << 2]: "WithdrawCollateral",
-        [1 << 3]: "BorrowPrincipal",
-        [1 << 4]: "RepayPrincipal",
-        [1 << 5]: "RefinanceLedger",
-        [1 << 6]: "DepositUserVault",
-        [1 << 7]: "WithdrawUserVault",
-        [1 << 8]: "StakeUserVaultLp",
-        [1 << 9]: "UnstakeUserVaultLp",
-        [1 << 10]: "ClaimVaultRewards",
       },
     },
   },

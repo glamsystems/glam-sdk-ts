@@ -2,7 +2,6 @@ import {
   getExtBridgeProgramId,
   getExtJupiterProgramId,
   getExtKaminoProgramId,
-  getExtLoopscaleProgramId,
   getExtPhoenixProgramId,
   getExtOrcaProgramId,
   getGlamMintProgramId,
@@ -70,26 +69,6 @@ describe("getProtocolsAndPermissions", () => {
         "Borrow",
         "Repay",
         "Liquidate",
-      ]);
-
-      expect(
-        getPermissionNames(
-          staging,
-          getExtLoopscaleProgramId(staging).toBase58(),
-          "0000000000000001",
-        ),
-      ).toEqual([
-        "ManageLoan",
-        "DepositCollateral",
-        "WithdrawCollateral",
-        "BorrowPrincipal",
-        "RepayPrincipal",
-        "RefinanceLedger",
-        "DepositUserVault",
-        "WithdrawUserVault",
-        "StakeUserVaultLp",
-        "UnstakeUserVaultLp",
-        "ClaimVaultRewards",
       ]);
 
       expect(

@@ -10,7 +10,6 @@ import {
   getExtBridgeIdl,
   getExtEpiIdl,
   getExtJupiterIdl,
-  getExtLoopscaleIdl,
   getExtOrcaIdl,
   resolveStaging,
 } from "./glamExports";
@@ -99,7 +98,6 @@ export function resolveErrorCode(
     getExtCctpIdl(isStaging),
     getExtBridgeIdl(isStaging),
     getExtEpiIdl(isStaging),
-    getExtLoopscaleIdl(isStaging),
     getExtJupiterIdl(isStaging),
     getExtOrcaIdl(isStaging),
   ];
