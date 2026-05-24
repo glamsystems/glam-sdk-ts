@@ -888,114 +888,6 @@
       ]
     },
     {
-      "name": "place_post_only_order",
-      "docs": [
-        "Places a maker-only limit order; rejected if it would cross the book."
-      ],
-      "discriminator": [
-        253,
-        171,
-        187,
-        207,
-        158,
-        181,
-        93,
-        176
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glam_protocol_program"
-            }
-          }
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpi_program",
-          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "packet",
-          "type": {
-            "defined": {
-              "name": "OrderPacket"
-            }
-          }
-        }
-      ]
-    },
-    {
       "name": "register_trader",
       "docs": [
         "Initializes a Phoenix trader account (parent or child subaccount) owned by the vault."
@@ -1088,6 +980,10 @@
           "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
         },
         {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
           "name": "log_authority"
         },
         {
@@ -1096,10 +992,6 @@
         {
           "name": "trader_account",
           "writable": true
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -1913,8 +1805,8 @@
     },
     {
       "code": 6017,
-      "name": "InvalidSide",
-      "msg": "Invalid Phoenix side"
+      "name": "InvalidOrderType",
+      "msg": "Invalid Phoenix order type"
     },
     {
       "code": 6018,

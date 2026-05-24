@@ -894,114 +894,6 @@ export type ExtPhoenix = {
       ]
     },
     {
-      "name": "placePostOnlyOrder",
-      "docs": [
-        "Places a maker-only limit order; rejected if it would cross the book."
-      ],
-      "discriminator": [
-        253,
-        171,
-        187,
-        207,
-        158,
-        181,
-        93,
-        176
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glamProtocolProgram"
-            }
-          }
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpiProgram",
-          "address": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih"
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "packet",
-          "type": {
-            "defined": {
-              "name": "orderPacket"
-            }
-          }
-        }
-      ]
-    },
-    {
       "name": "registerTrader",
       "docs": [
         "Initializes a Phoenix trader account (parent or child subaccount) owned by the vault."
@@ -1094,6 +986,10 @@ export type ExtPhoenix = {
           "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
         },
         {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
           "name": "logAuthority"
         },
         {
@@ -1102,10 +998,6 @@ export type ExtPhoenix = {
         {
           "name": "traderAccount",
           "writable": true
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -1919,8 +1811,8 @@ export type ExtPhoenix = {
     },
     {
       "code": 6017,
-      "name": "invalidSide",
-      "msg": "Invalid Phoenix side"
+      "name": "invalidOrderType",
+      "msg": "Invalid Phoenix order type"
     },
     {
       "code": 6018,

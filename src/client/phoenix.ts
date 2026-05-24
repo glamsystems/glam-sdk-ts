@@ -285,18 +285,6 @@ class TxBuilder extends BaseTxBuilder<PhoenixClient> {
       .instruction();
   }
 
-  async placePostOnlyOrderIx(
-    packet: PhoenixOrderPacket,
-    accounts: PhoenixRemainingAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    return await this.client.base.extPhoenixProgram.methods
-      .placePostOnlyOrder(packet)
-      .accounts(this.getPhoenixCpiAccounts(signer))
-      .remainingAccounts(accounts.remainingAccounts)
-      .instruction();
-  }
-
   async cancelAllIx(
     accounts: PhoenixRemainingAccounts,
     signer?: PublicKey,
@@ -509,19 +497,6 @@ class TxBuilder extends BaseTxBuilder<PhoenixClient> {
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const ix = await this.placeMarketOrderIx(
-      packet,
-      accounts,
-      txOptions.signer,
-    );
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
-  async placePostOnlyOrderTx(
-    packet: PhoenixOrderPacket,
-    accounts: PhoenixRemainingAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.placePostOnlyOrderIx(
       packet,
       accounts,
       txOptions.signer,
@@ -794,20 +769,6 @@ export class PhoenixClient {
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const tx = await this.txBuilder.placeMarketOrderTx(
-      packet,
-      accounts,
-      txOptions,
-    );
-    return await this.base.sendAndConfirm(tx);
-  }
-
-  /** Places a post-only (maker-only) order; rejected if it would cross. */
-  async placePostOnlyOrder(
-    packet: PhoenixOrderPacket,
-    accounts: PhoenixRemainingAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.placePostOnlyOrderTx(
       packet,
       accounts,
       txOptions,
