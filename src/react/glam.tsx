@@ -21,7 +21,7 @@ import { atomWithStorage } from "jotai/utils";
 import type { DelegateAcl, StateModel, IntegrationAcl } from "../models";
 import { GlamClient } from "../client";
 import { useAtomValue, useSetAtom } from "jotai";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { TokenAccount } from "../client/base";
 import { useCluster } from "./cluster-provider";
 import { JupiterApiClient, JupTokenList } from "../utils/jupiterApi";
@@ -47,6 +47,8 @@ interface GlamProviderContext {
   delegateAcls: DelegateAcl[];
   integrationAcls: IntegrationAcl[];
   allGlamStates: StateModel[];
+  isGlamStatesLoading: boolean;
+  glamStatesError: Error | null;
   jupTokenList?: JupTokenList;
   wsConnected: boolean;
   setActiveGlamState: (f: GlamStateCache) => void;
@@ -110,6 +112,27 @@ const toStateCache = (s: StateModel) => {
   } as GlamStateCache;
 };
 
+const areStateCacheListsEqual = (
+  a: GlamStateCache[],
+  b: GlamStateCache[],
+): boolean =>
+  a.length === b.length &&
+  a.every((state, index) => state.address === b[index]?.address);
+
+const disconnectedWallet: AnchorWallet = {
+  publicKey: PublicKey.default,
+  signTransaction: async <T extends Transaction | VersionedTransaction>(
+    _tx: T,
+  ): Promise<T> => {
+    throw new Error("Wallet not connected");
+  },
+  signAllTransactions: async <T extends Transaction | VersionedTransaction>(
+    _txs: T[],
+  ): Promise<T[]> => {
+    throw new Error("Wallet not connected");
+  },
+};
+
 export function GlamProvider({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -124,10 +147,17 @@ export function GlamProvider({
   const activeGlamState = deserializeGlamStateCache(
     useAtomValue(activeGlamStateAtom),
   ) as GlamStateCache;
+  const glamStatesList = useAtomValue(glamStatesListAtom);
+  const walletPk = wallet.publicKey?.toBase58() ?? "";
+
+  const clusterKey = `${cluster.network ?? cluster.name}:${cluster.endpoint}`;
+  const providerWallet = wallet.publicKey
+    ? (wallet as AnchorWallet)
+    : disconnectedWallet;
 
   const glamClient = useMemo(() => {
     const glamClient = new GlamClient({
-      provider: new AnchorProvider(connection, wallet as AnchorWallet, {
+      provider: new AnchorProvider(connection, providerWallet, {
         commitment: "confirmed",
       }),
       cluster: cluster.network,
@@ -139,7 +169,7 @@ export function GlamProvider({
       window.BN = BN;
     }
     return glamClient;
-  }, [connection, wallet?.publicKey, cluster, activeGlamState?.pubkey]);
+  }, [connection, providerWallet, cluster.network, activeGlamState?.pubkey]);
 
   const pk = activeGlamState?.pubkey?.toBase58() ?? "";
   const [wsConnected, setWsConnected] = useState(false);
@@ -147,53 +177,76 @@ export function GlamProvider({
   //
   // Fetch all glam states
   //
-  const { data: glamStateModels, refetch: refetchGlamStates } = useQuery({
-    queryKey: queryKeys.global.allStates(cluster.network ?? ""),
+  const {
+    data: glamStateModels,
+    refetch: refetchGlamStates,
+    isLoading: isGlamStatesLoading,
+    error: glamStatesError,
+  } = useQuery({
+    queryKey: queryKeys.global.allStates(clusterKey),
     queryFn: () => glamClient.fetchGlamStates(),
   });
   useEffect(() => {
-    if (!glamStateModels || !wallet?.publicKey) return;
+    if (!glamStateModels) return;
 
     if (process.env.NODE_ENV === "development") {
       console.log(`[${cluster.network}] all glam states:`, glamStateModels);
     }
 
+    if (!wallet?.publicKey) {
+      if (glamStatesList.length > 0) {
+        setGlamStatesList([]);
+      }
+      return;
+    }
+
     // Find a list of glam states that the wallet has access to
-    const glamStatesList = [] as GlamStateCache[];
+    const nextGlamStatesList = [] as GlamStateCache[];
     glamStateModels.forEach((s: StateModel) => {
       const isOwner = s.owner && wallet?.publicKey?.equals(s.owner);
       const isDelegate = (s.delegateAcls || []).some((acl) =>
         wallet?.publicKey?.equals(acl.pubkey),
       );
       if (isOwner || isDelegate) {
-        glamStatesList.push(toStateCache(s));
+        nextGlamStatesList.push(toStateCache(s));
       }
     });
-    setGlamStatesList(glamStatesList);
 
-    if (glamStatesList.length > 0) {
+    if (!areStateCacheListsEqual(glamStatesList, nextGlamStatesList)) {
+      setGlamStatesList(nextGlamStatesList);
+    }
+
+    if (nextGlamStatesList.length > 0) {
       // If no active glam state, or the cached active glam state is not in the list, set the first one
       if (
         !activeGlamState ||
-        !glamStatesList.find(
+        !nextGlamStatesList.find(
           (state) =>
             state.pubkey &&
             activeGlamState.pubkey &&
             state.pubkey.equals(activeGlamState.pubkey),
         )
       ) {
-        setActiveGlamState(glamStatesList[0]);
+        setActiveGlamState(nextGlamStatesList[0]);
       }
-    } else {
+    } else if (activeGlamState?.pubkey) {
       setActiveGlamState({} as GlamStateCache);
     }
-  }, [glamStateModels, wallet?.publicKey, cluster]);
+  }, [
+    glamStateModels,
+    walletPk,
+    cluster.network,
+    glamStatesList,
+    activeGlamState?.address,
+    activeGlamState?.pubkey,
+    wallet?.publicKey,
+    setActiveGlamState,
+    setGlamStatesList,
+  ]);
 
   //
   // Vault balances (SOL + token accounts)
   //
-  const clusterKey = cluster.network ?? "";
-
   const { data: vaultBalancesData } = useQuery({
     queryKey: queryKeys.vault.balances(pk, clusterKey),
     queryFn: () => glamClient.getSolAndTokenBalances(glamClient.vaultPda),
@@ -270,8 +323,6 @@ export function GlamProvider({
   const integrationAcls = vaultAclsData?.integrationAcls ?? [];
   const allGlamStates = glamStateModels ?? [];
 
-  const glamStatesList = useAtomValue(glamStatesListAtom);
-
   // Invalidates all vault-scoped queries (["vault", pk, ...] prefix match),
   // triggering background refetches for balances, holdings, and ACLs.
   const refresh = useCallback(async () => {
@@ -313,6 +364,9 @@ export function GlamProvider({
       delegateAcls,
       integrationAcls,
       allGlamStates,
+      isGlamStatesLoading,
+      glamStatesError:
+        glamStatesError instanceof Error ? glamStatesError : null,
       jupTokenList,
       wsConnected,
       setActiveGlamState,
@@ -328,6 +382,8 @@ export function GlamProvider({
       delegateAcls,
       integrationAcls,
       allGlamStates,
+      isGlamStatesLoading,
+      glamStatesError,
       jupTokenList,
       wsConnected,
       setActiveGlamState,
