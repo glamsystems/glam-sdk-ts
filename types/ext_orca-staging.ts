@@ -18,8 +18,7 @@ export type ExtOrca = {
       "docs": [
         "Close an empty Token-2022 Orca Whirlpools position owned by the GLAM vault.",
         "",
-        "- Permission: `ClosePosition`.",
-        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+        "- Permission: `ClosePosition`."
       ],
       "discriminator": [
         1,
@@ -139,8 +138,7 @@ export type ExtOrca = {
       "docs": [
         "Collect accrued pool fees using Token-2022-aware accounts.",
         "",
-        "- Permission: `CollectFees`.",
-        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+        "- Permission: `CollectFees`."
       ],
       "discriminator": [
         207,
@@ -293,8 +291,7 @@ export type ExtOrca = {
       "docs": [
         "Collect one reward emission using Token-2022-aware accounts.",
         "",
-        "- Permission: `CollectReward`.",
-        "- Policy: The reward mint is validated against the Whirlpool reward config."
+        "- Permission: `CollectReward`."
       ],
       "discriminator": [
         177,
@@ -437,8 +434,7 @@ export type ExtOrca = {
       "docs": [
         "Decrease liquidity in an Orca Whirlpools position using Token-2022-aware accounts.",
         "",
-        "- Permission: `DecreaseLiquidity`.",
-        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+        "- Permission: `DecreaseLiquidity`."
       ],
       "discriminator": [
         58,
@@ -1436,8 +1432,7 @@ export type ExtOrca = {
       "docs": [
         "Update accrued fees and rewards for an Orca Whirlpools position.",
         "",
-        "- Permission: `UpdateFeesAndRewards`.",
-        "- Policy: Whirlpool and both pool token mints must be allowlisted."
+        "- Permission: `UpdateFeesAndRewards`."
       ],
       "discriminator": [
         154,
@@ -1586,81 +1581,61 @@ export type ExtOrca = {
     },
     {
       "code": 6004,
-      "name": "tokenVaultMismatch",
-      "msg": "Orca token vault does not match the Whirlpool"
-    },
-    {
-      "code": 6005,
-      "name": "positionHasLiquidity",
-      "msg": "Orca position is not empty"
-    },
-    {
-      "code": 6006,
-      "name": "invalidTickArrayAccount",
-      "msg": "Invalid Orca tick array account"
-    },
-    {
-      "code": 6007,
-      "name": "invalidOracleAccount",
-      "msg": "Invalid Orca oracle account"
-    },
-    {
-      "code": 6008,
       "name": "glamStateDisabled",
       "msg": "GLAM state is disabled"
     },
     {
-      "code": 6009,
+      "code": 6005,
       "name": "invalidIxArgs",
       "msg": "Invalid instruction arguments"
     },
     {
-      "code": 6010,
+      "code": 6006,
       "name": "protocolPolicyViolation",
       "msg": "Protocol policy violation"
     },
     {
-      "code": 6011,
+      "code": 6007,
       "name": "pricingError",
       "msg": "Pricing error"
     },
     {
-      "code": 6012,
+      "code": 6008,
       "name": "missingAccount",
       "msg": "An account required by the instruction is missing"
     },
     {
-      "code": 6013,
+      "code": 6009,
       "name": "unsupportedOracleSource",
       "msg": "Oracle source not supported in this context"
     },
     {
-      "code": 6014,
+      "code": 6010,
       "name": "invalidAccountType",
       "msg": "Invalid account type"
     },
     {
-      "code": 6015,
+      "code": 6011,
       "name": "unexpectedProgramOwner",
       "msg": "Account is owned by an unexpected program"
     },
     {
-      "code": 6016,
+      "code": 6012,
       "name": "invalidPriceDenom",
       "msg": "Invalid price denom"
     },
     {
-      "code": 6017,
+      "code": 6013,
       "name": "maxDeviationExceeded",
       "msg": "Max deviation exceeded"
     },
     {
-      "code": 6018,
+      "code": 6014,
       "name": "invalidTokenAccount",
       "msg": "Invalid token account"
     },
     {
-      "code": 6019,
+      "code": 6015,
       "name": "invalidVaultTokenAccount",
       "msg": "Invalid vault ata"
     }
