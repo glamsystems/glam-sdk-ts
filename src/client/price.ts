@@ -10,7 +10,7 @@ import {
 import { fetchAddressLookupTableAccounts } from "../utils/lookupTables";
 import { BN } from "@coral-xyz/anchor";
 import { KaminoLendingClient, KaminoVaultsClient } from "./kamino";
-import { OrcaClient } from "./orca";
+import { OrcaWhirlpoolsClient } from "./orca";
 
 import { BaseClient } from "./base";
 
@@ -37,17 +37,20 @@ import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
 import {
   PHOENIX_GLOBAL_CONFIG,
   PHOENIX_PROGRAM_ID,
-  PHOENIX_PROTOCOL,
-  ORCA_WHIRLPOOLS_PROTOCOL,
   USDC,
   WSOL,
 } from "../constants";
-import {
-  BridgeClient,
-  LAYERZERO_OFT_PROTOCOL,
-  getActiveRegistryTransfers,
-} from "./bridge";
+import { BridgeClient, getActiveRegistryTransfers } from "./bridge";
 import { EpiClient } from "./epi";
+import {
+  EPI_PROTOCOL,
+  KAMINO_LENDING_PROTOCOL,
+  KAMINO_VAULTS_PROTOCOL,
+  LAYERZERO_OFT_PROTOCOL,
+  ORCA_WHIRLPOOLS_PROTOCOL,
+  PHOENIX_PROTOCOL,
+  STAKE_PROTOCOL,
+} from "../protocols";
 
 const PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET = 360;
 const PUBKEY_LEN = 32;
@@ -1137,7 +1140,7 @@ export class PriceClient {
       return null;
     }
 
-    const accounts = await new OrcaClient(
+    const accounts = await new OrcaWhirlpoolsClient(
       this.base,
     ).remainingAccountsForPricingWhirlpoolPositions(orcaWhirlpoolPositions);
     if (!accounts) {
@@ -1312,11 +1315,17 @@ export class PriceClient {
       );
       if (kaminoIntegrationAcl) {
         // kamino lending
-        if ((kaminoIntegrationAcl.protocolsBitmask & 0b01) !== 0) {
+        if (
+          (kaminoIntegrationAcl.protocolsBitmask & KAMINO_LENDING_PROTOCOL) !==
+          0
+        ) {
           chunks.push(await this.priceKaminoObligationsIxs());
         }
         // kamino vaults
-        if ((kaminoIntegrationAcl.protocolsBitmask & 0b10) !== 0) {
+        if (
+          (kaminoIntegrationAcl.protocolsBitmask & KAMINO_VAULTS_PROTOCOL) !==
+          0
+        ) {
           const chunk = await this.priceKaminoVaultSharesIx();
           if (chunk) chunks.push(chunk);
         }
@@ -1327,7 +1336,7 @@ export class PriceClient {
       );
       if (
         nativeIntegrationAcl &&
-        (nativeIntegrationAcl.protocolsBitmask & 0b10) !== 0
+        (nativeIntegrationAcl.protocolsBitmask & STAKE_PROTOCOL) !== 0
       ) {
         const ix = await this.priceStakeAccountsIx();
         if (ix) chunks.push({ ixs: [ix], kaminoReserves: [] });
@@ -1336,7 +1345,7 @@ export class PriceClient {
       const epiIntegrationAcl = integrationAcls.find(
         (acl) =>
           acl.integrationProgram.equals(this.base.extEpiProgram.programId) &&
-          (acl.protocolsBitmask & 0b01) !== 0,
+          (acl.protocolsBitmask & EPI_PROTOCOL) !== 0,
       );
       if (epiIntegrationAcl) {
         const ix = await this.priceEpiValidatedPositionsIx();

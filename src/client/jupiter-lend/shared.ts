@@ -17,8 +17,10 @@ import { findGlamLookupTables } from "../../utils/accounts";
 import { fetchAddressLookupTableAccounts } from "../../utils/lookupTables";
 import { getProgramAccounts } from "../../utils/rpc";
 
-export const JUPITER_EARN_PROTOCOL = 1 << 0;
-export const JUPITER_BORROW_PROTOCOL = 1 << 1;
+export {
+  JUPITER_BORROW_PROTOCOL,
+  JUPITER_EARN_PROTOCOL,
+} from "../../protocols";
 
 export type JupiterTransferType =
   | { skip: Record<string, never> }

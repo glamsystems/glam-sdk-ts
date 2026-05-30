@@ -17,13 +17,19 @@ import {
   PHOENIX_GLOBAL_CONFIG,
   PHOENIX_LOG_AUTHORITY,
   PHOENIX_PROGRAM_ID,
-  PHOENIX_PROTOCOL,
 } from "../constants";
+import { PHOENIX_PROTOCOL } from "../protocols";
 import { PhoenixPolicy } from "../deser/integrationPolicies";
 import type { ExtPhoenix } from "../glamExports";
 import { getIntegrationAuthorityPda } from "../utils/glamPDAs";
 import { PhoenixApiClient, PhoenixSnapshot } from "../utils/phoenixApi";
-import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  type ProtocolPolicyClient,
+  type ProtocolPolicyTxBuilder,
+  type TxOptions,
+} from "./base";
 
 export type PhoenixIdlTypes = IdlTypes<ExtPhoenix>;
 export type PhoenixBaseLots = PhoenixIdlTypes["baseLots"];
@@ -118,7 +124,10 @@ export function getEmberVaultPda(): PublicKey {
   )[0];
 }
 
-class TxBuilder extends BaseTxBuilder<PhoenixClient> {
+class TxBuilder
+  extends BaseTxBuilder<PhoenixClient>
+  implements ProtocolPolicyTxBuilder<PhoenixPolicy>
+{
   getEmberCpiAccounts(accounts: PhoenixEmberAccounts, signer?: PublicKey) {
     return {
       glamState: this.client.base.statePda,
@@ -160,27 +169,6 @@ class TxBuilder extends BaseTxBuilder<PhoenixClient> {
       glamProtocolProgram: this.client.base.protocolProgram.programId,
       systemProgram: SystemProgram.programId,
     };
-  }
-
-  async setPolicyIx(
-    policy: PhoenixPolicy,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const policyInput: PhoenixPolicyInput = {
-      marketsAllowlist: policy.marketsAllowlist,
-      allowedOrderTypes: Buffer.from(policy.allowedOrderTypes),
-      maxPriceDeviationBps: policy.maxPriceDeviationBps,
-      requireReduceOnlyOrders: policy.requireReduceOnlyOrders,
-      maxReferencePriceAgeSecs: policy.maxReferencePriceAgeSecs,
-    };
-
-    return await this.client.base.extPhoenixProgram.methods
-      .setPhoenixPolicy(policyInput)
-      .accounts({
-        glamState: this.client.base.statePda,
-        glamSigner: signer || this.client.base.signer,
-      })
-      .instruction();
   }
 
   async registerTraderIx(
@@ -320,12 +308,51 @@ class TxBuilder extends BaseTxBuilder<PhoenixClient> {
       .instruction();
   }
 
+  async setPolicyIx(
+    policy: PhoenixPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const policyInput: PhoenixPolicyInput = {
+      marketsAllowlist: policy.marketsAllowlist,
+      allowedOrderTypes: Buffer.from(policy.allowedOrderTypes),
+      maxPriceDeviationBps: policy.maxPriceDeviationBps,
+      requireReduceOnlyOrders: policy.requireReduceOnlyOrders,
+      maxReferencePriceAgeSecs: policy.maxReferencePriceAgeSecs,
+    };
+
+    return await this.client.base.extPhoenixProgram.methods
+      .setPhoenixPolicy(policyInput)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+      })
+      .instruction();
+  }
+
   async setPolicyTx(
     policy: PhoenixPolicy,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const ix = await this.setPolicyIx(policy, txOptions.signer);
     return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.programId,
+      PHOENIX_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.programId,
+      PHOENIX_PROTOCOL,
+      txOptions,
+    );
   }
 
   async registerTraderTx(
@@ -535,7 +562,7 @@ class TxBuilder extends BaseTxBuilder<PhoenixClient> {
   }
 }
 
-export class PhoenixClient {
+export class PhoenixClient implements ProtocolPolicyClient<PhoenixPolicy> {
   readonly txBuilder: TxBuilder;
   readonly phoenixApi: PhoenixApiClient;
 
@@ -667,6 +694,12 @@ export class PhoenixClient {
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  /** Deletes the stored PhoenixPolicy. Future Phoenix policy checks fail closed. */
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 

@@ -2,6 +2,7 @@ import { BN } from "@coral-xyz/anchor";
 import {
   PublicKey,
   SystemProgram,
+  AccountMeta,
   TransactionInstruction,
   TransactionSignature,
   VersionedTransaction,
@@ -11,6 +12,7 @@ import {
   SEED_INTEGRATION_AUTHORITY,
   SEED_OBSERVATION_STATE,
 } from "../constants";
+import { getGlobalConfigPda } from "../utils/glamPDAs";
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 
 type BufferLike32 = Uint8Array | number[] | Buffer;
@@ -59,6 +61,17 @@ export type SubmitExternalObservationParams = {
   reserved?: Uint8Array | number[] | Buffer;
 };
 
+export type ValidateExternalObservationOracleAccounts = {
+  glamConfig?: PublicKey | null;
+  solUsdOracle?: PublicKey | null;
+  baseAssetOracle?: PublicKey | null;
+  observedMintOracle?: PublicKey | null;
+};
+
+export type ValidateExternalObservationParams = {
+  positionId: BufferLike32;
+} & ValidateExternalObservationOracleAccounts;
+
 function toFixedArray32(value: BufferLike32, label: string): number[] {
   const bytes = Array.from(Buffer.from(value));
   if (bytes.length !== 32) {
@@ -73,6 +86,33 @@ function toReservedBytes(value?: Uint8Array | number[] | Buffer): number[] {
     throw new Error("reserved must be exactly 128 bytes");
   }
   return bytes;
+}
+
+function validateParams(
+  value: BufferLike32 | ValidateExternalObservationParams,
+): ValidateExternalObservationParams {
+  if (
+    typeof value === "object" &&
+    !Buffer.isBuffer(value) &&
+    !(value instanceof Uint8Array) &&
+    "positionId" in value
+  ) {
+    return value;
+  }
+
+  return { positionId: value };
+}
+
+function isUsdDenomination(denomination: any): boolean {
+  return !!denomination?.denom?.usd;
+}
+
+function isMintDenomination(denomination: any): boolean {
+  return !!denomination?.denom?.mint;
+}
+
+function positionIdToPubkey(positionId: number[]): PublicKey {
+  return new PublicKey(Uint8Array.from(positionId));
 }
 
 class TxBuilder extends BaseTxBuilder<EpiClient> {
@@ -125,20 +165,24 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
   }
 
   async validateExternalObservationIx(
-    positionId: BufferLike32,
-    normalizedBaseAssetAmount: BN | null,
+    paramsOrPositionId: BufferLike32 | ValidateExternalObservationParams,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
+    const params = validateParams(paramsOrPositionId);
+    const accounts =
+      await this.client.resolveValidateExternalObservationAccounts(params);
+
     return await this.client.base.extEpiProgram.methods
-      .validateExternalObservation(
-        toFixedArray32(positionId, "positionId"),
-        normalizedBaseAssetAmount,
-      )
+      .validateExternalObservation(toFixedArray32(params.positionId, "positionId"))
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
+        glamConfig: accounts.glamConfig,
+        solUsdOracle: accounts.solUsdOracle,
+        baseAssetOracle: accounts.baseAssetOracle,
         glamProtocolProgram: this.client.base.protocolProgram.programId,
       })
+      .remainingAccounts(accounts.remainingAccounts)
       .instruction();
   }
 
@@ -172,13 +216,11 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
   }
 
   async validateExternalObservationTx(
-    positionId: BufferLike32,
-    normalizedBaseAssetAmount: BN | null,
+    paramsOrPositionId: BufferLike32 | ValidateExternalObservationParams,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const ix = await this.validateExternalObservationIx(
-      positionId,
-      normalizedBaseAssetAmount,
+      paramsOrPositionId,
       txOptions.signer,
     );
     return await this.buildVersionedTx([ix], txOptions);
@@ -239,16 +281,88 @@ export class EpiClient {
   }
 
   async validateExternalObservation(
-    positionId: BufferLike32,
-    normalizedBaseAssetAmount: BN | null,
+    paramsOrPositionId: BufferLike32 | ValidateExternalObservationParams,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const tx = await this.txBuilder.validateExternalObservationTx(
-      positionId,
-      normalizedBaseAssetAmount,
+      paramsOrPositionId,
       txOptions,
     );
     return await this.base.sendAndConfirm(tx);
+  }
+
+  async resolveValidateExternalObservationAccounts(
+    params: ValidateExternalObservationParams,
+  ): Promise<
+    Required<Omit<ValidateExternalObservationOracleAccounts, "observedMintOracle">> & {
+      remainingAccounts: AccountMeta[];
+    }
+  > {
+    const overrides: ValidateExternalObservationOracleAccounts = params;
+    const nullAccounts = {
+      glamConfig: overrides.glamConfig ?? null,
+      solUsdOracle: overrides.solUsdOracle ?? null,
+      baseAssetOracle: overrides.baseAssetOracle ?? null,
+      remainingAccounts: [] as AccountMeta[],
+    };
+
+    const observationState = await this.fetchObservationState();
+    const positionId = toFixedArray32(params.positionId, "positionId");
+    const positionObservation = observationState?.positions
+      .slice(0, observationState.positionsLen)
+      .find((candidate: any) =>
+        positionIdToPubkey(candidate.positionId).equals(
+          positionIdToPubkey(positionId),
+        ),
+      );
+
+    const pendingObservation = positionObservation?.hasPending
+      ? positionObservation.pendingObservation
+      : null;
+
+    if (!pendingObservation) {
+      return nullAccounts;
+    }
+
+    const stateAccount = await this.base.fetchStateAccount();
+    const observedMint = pendingObservation.denomination.mint as PublicKey;
+    const isBaseMintObservation =
+      isMintDenomination(pendingObservation.denomination) &&
+      observedMint.equals(stateAccount.baseAssetMint);
+
+    if (isBaseMintObservation) {
+      return nullAccounts;
+    }
+
+    const [solUsdOracle, baseAssetMeta] = await Promise.all([
+      overrides.solUsdOracle
+        ? Promise.resolve(overrides.solUsdOracle)
+        : this.base.getSolOracle(),
+      overrides.baseAssetOracle
+        ? Promise.resolve({ oracle: overrides.baseAssetOracle })
+        : this.base.getAssetMeta(stateAccount.baseAssetMint),
+    ]);
+
+    const remainingAccounts: AccountMeta[] = [];
+    if (isMintDenomination(pendingObservation.denomination)) {
+      const observedMintOracle =
+        overrides.observedMintOracle ||
+        (await this.base.getAssetMeta(observedMint)).oracle;
+      remainingAccounts.push({
+        pubkey: observedMintOracle,
+        isSigner: false,
+        isWritable: false,
+      });
+    } else if (!isUsdDenomination(pendingObservation.denomination)) {
+      return nullAccounts;
+    }
+
+    return {
+      glamConfig: overrides.glamConfig ?? getGlobalConfigPda(),
+      solUsdOracle,
+      baseAssetOracle: baseAssetMeta.oracle,
+      remainingAccounts,
+    };
   }
 
   async refreshPricedProtocol(

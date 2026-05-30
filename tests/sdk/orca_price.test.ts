@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   deriveTickArrayForPosition,
-  OrcaClient,
+  OrcaWhirlpoolsClient,
   parseOrcaPosition,
   parseOrcaWhirlpool,
 } from "../../src/client/orca";
@@ -270,7 +270,7 @@ describe("Orca Whirlpool pricing SDK helpers", () => {
           }),
         ),
       ]);
-    const orca = new OrcaClient({
+    const orca = new OrcaWhirlpoolsClient({
       vaultPda: VAULT,
       connection: { getMultipleAccountsInfo },
       fetchAssetMetas: jest.fn(async () => assetMetas),
@@ -353,7 +353,7 @@ describe("Orca Whirlpool pricing SDK helpers", () => {
           }),
         ),
       ]);
-    const orca = new OrcaClient({
+    const orca = new OrcaWhirlpoolsClient({
       vaultPda: VAULT,
       connection: { getMultipleAccountsInfo },
       fetchAssetMetas: jest.fn(async () => assetMetas),
@@ -381,7 +381,7 @@ describe("Orca Whirlpool pricing SDK helpers", () => {
 
   it("rejects duplicate Orca positions before fetching account data", async () => {
     const getMultipleAccountsInfo = jest.fn();
-    const orca = new OrcaClient({
+    const orca = new OrcaWhirlpoolsClient({
       vaultPda: VAULT,
       connection: { getMultipleAccountsInfo },
       fetchAssetMetas: jest.fn(),

@@ -1,5 +1,12 @@
 import { createGlamStateForTest, sleep, defaultInitStateParams } from "./setup";
-import { charsToName, GlamClient, nameToChars } from "../../src";
+import {
+  charsToName,
+  GlamClient,
+  JUPITER_SWAP_PROTOCOL,
+  nameToChars,
+  STAKE_PROTOCOL,
+  SYSTEM_PROTOCOL,
+} from "../../src";
 import { PublicKey } from "@solana/web3.js";
 
 const txOptions = {
@@ -77,7 +84,7 @@ describe("state_timelock", () => {
     try {
       const txSig = await glamClient.access.enableProtocols(
         glamClient.protocolProgram.programId,
-        0b0000111,
+        SYSTEM_PROTOCOL | STAKE_PROTOCOL | JUPITER_SWAP_PROTOCOL,
         txOptions,
       );
       console.log("Update integration ACL", txSig);

@@ -10,8 +10,10 @@ import {
   GlamClient,
   JupiterSwapPolicy,
   JupiterApiClient,
+  JUPITER_SWAP_PROTOCOL,
   MSOL,
   nameToChars,
+  SYSTEM_PROTOCOL,
   USDC,
   WSOL,
 } from "../../src";
@@ -55,7 +57,7 @@ describe("jupiter_swap", () => {
     try {
       const txSig = await glamClient.access.enableProtocols(
         glamClient.protocolProgram.programId, // native integration
-        0b0000101, // Jupiter Swap + System Program
+        JUPITER_SWAP_PROTOCOL | SYSTEM_PROTOCOL,
         txOptions,
       );
       console.log("Enable all natively supported protocols", txSig);
@@ -86,7 +88,7 @@ describe("jupiter_swap", () => {
     try {
       const txSig = await glamClient.access.setProtocolPolicy(
         glamClient.protocolProgram.programId,
-        0b0000100,
+        JUPITER_SWAP_PROTOCOL,
         new JupiterSwapPolicy(50, [USDC, MSOL], 0).encode(),
       );
       console.log("Update jupiter swap policy", txSig);
@@ -111,7 +113,7 @@ describe("jupiter_swap", () => {
           "confirmed",
         );
         expect(tokenAccount).toBeUndefined();
-      } catch (e) {
+      } catch (e: any) {
         expect(e.name).toEqual("TokenAccountNotFoundError");
       }
     });
@@ -177,6 +179,7 @@ describe("jupiter_swap", () => {
           amount,
           swapMode: "ExactIn",
           onlyDirectRoutes: true,
+          instructionVersion: "V1",
           maxAccounts: 8,
         },
         swapInstructions: mSolToSolSwapInstructions(
@@ -213,7 +216,7 @@ describe("jupiter_swap", () => {
       const txSig = await glamClient.access.grantDelegatePermissions(
         delegate.publicKey,
         glamClient.protocolProgram.programId,
-        0b100, // Jupiter Swap
+        JUPITER_SWAP_PROTOCOL,
         new BN(0b100), // SWAP_ALLOWLISTED
       );
       console.log("Update delegate acl", txSig);
@@ -245,7 +248,7 @@ describe("jupiter_swap", () => {
         txOptions,
       );
       expect(txSig).toBeUndefined();
-    } catch (e) {
+    } catch (e: any) {
       expect(e.message).toBe("Signer is not authorized");
     }
 
@@ -254,7 +257,7 @@ describe("jupiter_swap", () => {
       const txSig = await glamClient.access.grantDelegatePermissions(
         delegate.publicKey,
         glamClient.protocolProgram.programId,
-        0b001, // System Program
+        SYSTEM_PROTOCOL,
         new BN(0b01), // WSOL
       );
       console.log("Grant delegate WSOL permission:", txSig);
@@ -262,7 +265,7 @@ describe("jupiter_swap", () => {
       const txSig2 = await glamClient.access.grantDelegatePermissions(
         delegate.publicKey,
         glamClient.protocolProgram.programId,
-        0b100, // Jupiter Swap
+        JUPITER_SWAP_PROTOCOL,
         new BN(0b110), // SWAP_ALLOWLISTED + SWAP_LST
       );
       console.log("Grant delegate SWAP_ALLOWLISTED permission:", txSig2);

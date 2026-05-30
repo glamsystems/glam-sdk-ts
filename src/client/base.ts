@@ -107,6 +107,28 @@ export type TxOptions = {
   simulate?: boolean;
 };
 
+export interface ProtocolPolicyTxBuilder<TPolicy> {
+  setPolicyIx(
+    policy: TPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction>;
+  setPolicyTx(
+    policy: TPolicy,
+    txOptions?: TxOptions,
+  ): Promise<VersionedTransaction>;
+  clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction>;
+  clearPolicyTx(txOptions?: TxOptions): Promise<VersionedTransaction>;
+}
+
+export interface ProtocolPolicyClient<TPolicy> {
+  fetchPolicy(): Promise<TPolicy | null>;
+  setPolicy(
+    policy: TPolicy,
+    txOptions?: TxOptions,
+  ): Promise<TransactionSignature>;
+  clearPolicy(txOptions?: TxOptions): Promise<TransactionSignature>;
+}
+
 export type TokenAccount = {
   owner: PublicKey;
   pubkey: PublicKey; // ata
@@ -1135,6 +1157,33 @@ export class BaseClient {
  */
 export class BaseTxBuilder<T extends { base: BaseClient }> {
   constructor(readonly client: T) {}
+
+  async clearProtocolPolicyIx(
+    integrationProgram: PublicKey,
+    protocolBitflag: number,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.protocolProgram.methods
+      .setProtocolPolicy(integrationProgram, protocolBitflag, Buffer.alloc(0))
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+      })
+      .instruction();
+  }
+
+  async clearProtocolPolicyTx(
+    integrationProgram: PublicKey,
+    protocolBitflag: number,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.clearProtocolPolicyIx(
+      integrationProgram,
+      protocolBitflag,
+      txOptions.signer,
+    );
+    return await this.buildVersionedTx([ix], txOptions);
+  }
 
   /**
    * Build a legacy transaction with the given instructions.

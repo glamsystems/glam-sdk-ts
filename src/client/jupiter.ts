@@ -10,8 +10,16 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
 
-import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  type ProtocolPolicyClient,
+  type ProtocolPolicyTxBuilder,
+  type TxOptions,
+} from "./base";
 import { WSOL } from "../constants";
+import { JUPITER_SWAP_PROTOCOL } from "../protocols";
+import { JupiterSwapPolicy } from "../deser/integrationPolicies";
 import { AssetMeta, STAKE_POOLS_MAP } from "../assets";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
 import { VaultClient } from "./vault";
@@ -43,7 +51,10 @@ export type JupiterSwapV2Options = JupiterSwapOptions & {
   skipQuotePriceCheck?: boolean;
 };
 
-class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
+class TxBuilder
+  extends BaseTxBuilder<JupiterSwapClient>
+  implements ProtocolPolicyTxBuilder<JupiterSwapPolicy>
+{
   private async resolveSwapInstructionContext(
     options: JupiterSwapOptions,
   ): Promise<{
@@ -277,6 +288,45 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
     return await this.buildVersionedTx(ixs, { lookupTables, ...txOptions });
   }
 
+  async setPolicyIx(
+    policy: JupiterSwapPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.protocolProgram.methods
+      .setJupiterSwapPolicy(policy)
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+      })
+      .instruction();
+  }
+
+  async setPolicyTx(
+    policy: JupiterSwapPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.protocolProgram.programId,
+      JUPITER_SWAP_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.base.protocolProgram.programId,
+      JUPITER_SWAP_PROTOCOL,
+      txOptions,
+    );
+  }
+
   async getPreInstructions(
     signer: PublicKey,
     inputMint: PublicKey,
@@ -320,7 +370,9 @@ class TxBuilder extends BaseTxBuilder<JupiterSwapClient> {
   };
 }
 
-export class JupiterSwapClient {
+export class JupiterSwapClient
+  implements ProtocolPolicyClient<JupiterSwapPolicy>
+{
   public readonly txBuilder: TxBuilder;
   public readonly jupApi: JupiterApiClient;
 
@@ -348,6 +400,27 @@ export class JupiterSwapClient {
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const tx = await this.txBuilder.swapV2Tx(options, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async fetchPolicy(): Promise<JupiterSwapPolicy | null> {
+    return await this.base.fetchProtocolPolicy(
+      this.base.protocolProgram.programId,
+      JUPITER_SWAP_PROTOCOL,
+      JupiterSwapPolicy,
+    );
+  }
+
+  async setPolicy(
+    policy: JupiterSwapPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 }

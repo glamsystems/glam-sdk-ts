@@ -5,7 +5,14 @@ import {
   createGlamStateForTest,
   defaultInitStateParams,
 } from "../glam_protocol/setup";
-import { GlamClient, nameToChars } from "../../src";
+import {
+  GlamClient,
+  KAMINO_FARMS_PROTOCOL,
+  KAMINO_LENDING_PROTOCOL,
+  KAMINO_VAULTS_PROTOCOL,
+  nameToChars,
+  SYSTEM_PROTOCOL,
+} from "../../src";
 import { PublicKey } from "@solana/web3.js";
 import { createAssociatedTokenAccountIdempotentInstruction } from "@solana/spl-token";
 
@@ -23,12 +30,15 @@ describe("kamino_farms", () => {
       integrationAcls: [
         {
           integrationProgram: glamClient.extKaminoProgram.programId,
-          protocolsBitmask: 0b111, // lending, vaults, farms
+          protocolsBitmask:
+            KAMINO_LENDING_PROTOCOL |
+            KAMINO_VAULTS_PROTOCOL |
+            KAMINO_FARMS_PROTOCOL,
           protocolPolicies: [],
         },
         {
           integrationProgram: glamClient.protocolProgram.programId,
-          protocolsBitmask: 0b01, // system program
+          protocolsBitmask: SYSTEM_PROTOCOL,
           protocolPolicies: [],
         },
       ],

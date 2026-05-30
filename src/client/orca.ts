@@ -15,7 +15,13 @@ import {
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 
-import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  type ProtocolPolicyClient,
+  type ProtocolPolicyTxBuilder,
+  type TxOptions,
+} from "./base";
 import {
   KAMINO_LENDING_PROGRAM,
   MEMO_PROGRAM,
@@ -24,6 +30,7 @@ import {
   ORCA_WHIRLPOOL_DISCRIMINATOR,
   ORCA_WHIRLPOOLS_PROGRAM_ID,
 } from "../constants";
+import { ORCA_WHIRLPOOLS_PROTOCOL } from "../protocols";
 import { Reserve } from "../deser";
 import { WhirlpoolsPolicy } from "../deser/integrationPolicies";
 import {
@@ -572,8 +579,11 @@ export function deriveTickArrayForPosition(
   )[0];
 }
 
-class TxBuilder extends BaseTxBuilder<OrcaClient> {
-  async setWhirlpoolsPolicyIx(
+class TxBuilder
+  extends BaseTxBuilder<OrcaWhirlpoolsClient>
+  implements ProtocolPolicyTxBuilder<WhirlpoolsPolicy>
+{
+  async setPolicyIx(
     policy: WhirlpoolsPolicy,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
@@ -587,12 +597,30 @@ class TxBuilder extends BaseTxBuilder<OrcaClient> {
       .instruction();
   }
 
-  async setWhirlpoolsPolicyTx(
+  async setPolicyTx(
     policy: WhirlpoolsPolicy,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.setWhirlpoolsPolicyIx(policy, txOptions.signer);
+    const ix = await this.setPolicyIx(policy, txOptions.signer);
     return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.extOrcaProgram.programId,
+      ORCA_WHIRLPOOLS_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.base.extOrcaProgram.programId,
+      ORCA_WHIRLPOOLS_PROTOCOL,
+      txOptions,
+    );
   }
 
   async openPositionWithTokenExtensionsIx(
@@ -1220,7 +1248,9 @@ class TxBuilder extends BaseTxBuilder<OrcaClient> {
   }
 }
 
-export class OrcaClient {
+export class OrcaWhirlpoolsClient
+  implements ProtocolPolicyClient<WhirlpoolsPolicy>
+{
   readonly txBuilder: TxBuilder;
 
   public constructor(readonly base: BaseClient) {
@@ -1429,11 +1459,24 @@ export class OrcaClient {
     };
   }
 
-  async setWhirlpoolsPolicy(
+  async fetchPolicy(): Promise<WhirlpoolsPolicy | null> {
+    return await this.base.fetchProtocolPolicy(
+      this.base.extOrcaProgram.programId,
+      ORCA_WHIRLPOOLS_PROTOCOL,
+      WhirlpoolsPolicy,
+    );
+  }
+
+  async setPolicy(
     policy: WhirlpoolsPolicy,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.setWhirlpoolsPolicyTx(policy, txOptions);
+    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 

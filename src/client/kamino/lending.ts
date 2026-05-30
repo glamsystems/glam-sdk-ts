@@ -10,7 +10,13 @@ import {
   SYSVAR_INSTRUCTIONS_PUBKEY,
 } from "@solana/web3.js";
 
-import { BaseClient, BaseTxBuilder, TxOptions } from "../base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  type ProtocolPolicyClient,
+  type ProtocolPolicyTxBuilder,
+  type TxOptions,
+} from "../base";
 import * as borsh from "@coral-xyz/borsh";
 import { fetchMintAndTokenProgram } from "../../utils/accounts";
 import {
@@ -24,6 +30,8 @@ import {
   KAMINO_RESERVE_SIZE,
   WSOL,
 } from "../../constants";
+import { KAMINO_LENDING_PROTOCOL } from "../../protocols";
+import { KaminoLendingPolicy } from "../../deser/integrationPolicies";
 import { Reserve, Obligation } from "../../deser/kaminoLayouts";
 import { VaultClient } from "../vault";
 import { PkSet, PkMap, getProgramAccounts } from "../../utils";
@@ -35,7 +43,10 @@ import {
   RefreshObligationFarmsForReserveAccounts,
 } from "./types";
 
-class TxBuilder extends BaseTxBuilder<KaminoLendingClient> {
+class TxBuilder
+  extends BaseTxBuilder<KaminoLendingClient>
+  implements ProtocolPolicyTxBuilder<KaminoLendingPolicy>
+{
   refreshObligationIx(accounts: RefreshObligationAccounts) {
     const keys: Array<AccountMeta> = [
       { pubkey: accounts.lendingMarket, isSigner: false, isWritable: false },
@@ -832,9 +843,51 @@ class TxBuilder extends BaseTxBuilder<KaminoLendingClient> {
     const tx = this.build(ixs, txOptions);
     return await this.client.base.intoVersionedTransaction(tx, txOptions);
   }
+
+  async setPolicyIx(
+    policy: KaminoLendingPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.extKaminoProgram.methods
+      .setLendingPolicy(policy)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+      })
+      .instruction();
+  }
+
+  async setPolicyTx(
+    policy: KaminoLendingPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.extKaminoProgram.programId,
+      KAMINO_LENDING_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.base.extKaminoProgram.programId,
+      KAMINO_LENDING_PROTOCOL,
+      txOptions,
+    );
+  }
 }
 
-export class KaminoLendingClient {
+export class KaminoLendingClient
+  implements ProtocolPolicyClient<KaminoLendingPolicy>
+{
   private reserves: PkMap<Reserve> = new PkMap();
   private obligations: PkMap<Obligation> = new PkMap();
   txBuilder: TxBuilder;
@@ -947,6 +1000,27 @@ export class KaminoLendingClient {
       new BN(amount),
       txOptions,
     );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async fetchPolicy(): Promise<KaminoLendingPolicy | null> {
+    return await this.base.fetchProtocolPolicy(
+      this.base.extKaminoProgram.programId,
+      KAMINO_LENDING_PROTOCOL,
+      KaminoLendingPolicy,
+    );
+  }
+
+  async setPolicy(
+    policy: KaminoLendingPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 

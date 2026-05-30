@@ -8,6 +8,20 @@ import {
   getGlamProtocolProgramId,
 } from "../../src/glamExports";
 import { getProtocolsAndPermissions } from "../../src/constants";
+import {
+  GLAM_MINT_PROTOCOL,
+  JUPITER_BORROW_PROTOCOL,
+  JUPITER_EARN_PROTOCOL,
+  JUPITER_SWAP_PROTOCOL,
+  KAMINO_LENDING_PROTOCOL,
+  LAYERZERO_OFT_PROTOCOL,
+  ORCA_WHIRLPOOLS_PROTOCOL,
+  PHOENIX_PROTOCOL,
+  SYSTEM_PROTOCOL,
+} from "../../src/protocols";
+
+const protocolBitflagKey = (bitflag: number) =>
+  bitflag.toString(2).padStart(16, "0");
 
 const getPermissionNames = (
   staging: boolean,
@@ -25,10 +39,18 @@ describe("getProtocolsAndPermissions", () => {
       const glamProtocolProgramId =
         getGlamProtocolProgramId(staging).toBase58();
       expect(
-        getPermissionNames(staging, glamProtocolProgramId, "0000000000000001"),
+        getPermissionNames(
+          staging,
+          glamProtocolProgramId,
+          protocolBitflagKey(SYSTEM_PROTOCOL),
+        ),
       ).toEqual(["WSOL", "Transfer"]);
       expect(
-        getPermissionNames(staging, glamProtocolProgramId, "0000000000000100"),
+        getPermissionNames(
+          staging,
+          glamProtocolProgramId,
+          protocolBitflagKey(JUPITER_SWAP_PROTOCOL),
+        ),
       ).toEqual([
         "SwapToAny",
         "SwapLST",
@@ -42,7 +64,7 @@ describe("getProtocolsAndPermissions", () => {
         getPermissionNames(
           staging,
           getGlamMintProgramId(staging).toBase58(),
-          "0000000000000001",
+          protocolBitflagKey(GLAM_MINT_PROTOCOL),
         ),
       ).toEqual([
         "MintTokens",
@@ -60,7 +82,7 @@ describe("getProtocolsAndPermissions", () => {
         getPermissionNames(
           staging,
           getExtKaminoProgramId(staging).toBase58(),
-          "0000000000000001",
+          protocolBitflagKey(KAMINO_LENDING_PROTOCOL),
         ),
       ).toEqual([
         "Init",
@@ -75,7 +97,7 @@ describe("getProtocolsAndPermissions", () => {
         getPermissionNames(
           staging,
           getExtPhoenixProgramId(staging).toBase58(),
-          "0000000000000001",
+          protocolBitflagKey(PHOENIX_PROTOCOL),
         ),
       ).toEqual([
         "InitTrader",
@@ -91,7 +113,7 @@ describe("getProtocolsAndPermissions", () => {
         getPermissionNames(
           staging,
           getExtJupiterProgramId(staging).toBase58(),
-          "0000000000000001",
+          protocolBitflagKey(JUPITER_EARN_PROTOCOL),
         ),
       ).toEqual(["Deposit", "Withdraw"]);
 
@@ -99,7 +121,7 @@ describe("getProtocolsAndPermissions", () => {
         getPermissionNames(
           staging,
           getExtJupiterProgramId(staging).toBase58(),
-          "0000000000000010",
+          protocolBitflagKey(JUPITER_BORROW_PROTOCOL),
         ),
       ).toEqual([
         "InitPosition",
@@ -113,7 +135,7 @@ describe("getProtocolsAndPermissions", () => {
         getPermissionNames(
           staging,
           getExtOrcaProgramId(staging).toBase58(),
-          "0000000000000001",
+          protocolBitflagKey(ORCA_WHIRLPOOLS_PROTOCOL),
         ),
       ).toEqual([
         "OpenPosition",
@@ -132,7 +154,7 @@ describe("getProtocolsAndPermissions", () => {
         getPermissionNames(
           staging,
           getExtBridgeProgramId(staging).toBase58(),
-          "0000000000000100",
+          protocolBitflagKey(LAYERZERO_OFT_PROTOCOL),
         ),
       ).toEqual(["Send", "Validate", "Settle"]);
     },

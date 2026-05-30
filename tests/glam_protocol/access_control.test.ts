@@ -2,7 +2,14 @@ import { Keypair } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 
 import { airdrop, createGlamStateForTest, str2seed } from "./setup";
-import { GlamClient, WSOL } from "../../src";
+import {
+  GlamClient,
+  KAMINO_FARMS_PROTOCOL,
+  KAMINO_LENDING_PROTOCOL,
+  KAMINO_VAULTS_PROTOCOL,
+  SPL_TOKEN_PROTOCOL,
+  WSOL,
+} from "../../src";
 
 const key1 = Keypair.fromSeed(str2seed("acl_test_key1"));
 const key2 = Keypair.fromSeed(str2seed("acl_test_key2"));
@@ -47,7 +54,9 @@ describe("access_control", () => {
     try {
       const txSig = await glamClient.access.enableProtocols(
         glamClient.extKaminoProgram.programId,
-        0b111,
+        KAMINO_LENDING_PROTOCOL |
+          KAMINO_VAULTS_PROTOCOL |
+          KAMINO_FARMS_PROTOCOL,
         txOptions,
       );
       console.log("Enable kamino integration and protocols", txSig);
@@ -62,7 +71,7 @@ describe("access_control", () => {
     try {
       const txSig = await glamClient.access.enableProtocols(
         glamClient.extSplProgram.programId,
-        0b001,
+        SPL_TOKEN_PROTOCOL,
         txOptions,
       );
       console.log("Enable token integration and protocols", txSig);
@@ -82,7 +91,9 @@ describe("access_control", () => {
     try {
       const txSig = await glamClient.access.disableProtocols(
         glamClient.extKaminoProgram.programId,
-        0b111,
+        KAMINO_LENDING_PROTOCOL |
+          KAMINO_VAULTS_PROTOCOL |
+          KAMINO_FARMS_PROTOCOL,
         txOptions,
       );
       console.log("Disable kamino integration and protocols", txSig);
@@ -95,7 +106,7 @@ describe("access_control", () => {
     try {
       const txSig = await glamClient.access.disableProtocols(
         glamClient.extSplProgram.programId,
-        0b001,
+        SPL_TOKEN_PROTOCOL,
         txOptions,
       );
       console.log("Disable token integration and protocols", txSig);
@@ -116,7 +127,7 @@ describe("access_control", () => {
       const txSig = await glamClient.access.grantDelegatePermissions(
         key1.publicKey,
         glamClient.extKaminoProgram.programId,
-        0b001,
+        KAMINO_LENDING_PROTOCOL,
         new BN(0b1111),
         txOptions,
       );
@@ -131,7 +142,7 @@ describe("access_control", () => {
       const txSig = await glamClient.access.grantDelegatePermissions(
         key2.publicKey,
         glamClient.extSplProgram.programId,
-        0b001,
+        SPL_TOKEN_PROTOCOL,
         new BN(0b1111),
         txOptions,
       );
@@ -154,7 +165,7 @@ describe("access_control", () => {
       const txSig = await glamClient.access.revokeDelegatePermissions(
         key1.publicKey,
         glamClient.extKaminoProgram.programId,
-        0b001,
+        KAMINO_LENDING_PROTOCOL,
         new BN(0b1111),
         txOptions,
       );
@@ -169,7 +180,7 @@ describe("access_control", () => {
       const txSig = await glamClient.access.revokeDelegatePermissions(
         key2.publicKey,
         glamClient.extSplProgram.programId,
-        0b001,
+        SPL_TOKEN_PROTOCOL,
         new BN(0b1111),
         txOptions,
       );

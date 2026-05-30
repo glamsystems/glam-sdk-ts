@@ -1,7 +1,7 @@
 import { BN, Wallet } from "@coral-xyz/anchor";
 import { Keypair, PublicKey } from "@solana/web3.js";
 
-import { GlamClient, USDC, WSOL, nameToChars } from "../../src";
+import { EPI_PROTOCOL, GlamClient, USDC, WSOL, nameToChars } from "../../src";
 import {
   airdrop,
   createGlamStateForTest,
@@ -13,11 +13,17 @@ import { expectPublicKeyArrayEqual } from "../test-utils";
 const txOptions = { simulate: true };
 const delegate = Keypair.fromSeed(str2seed("ext_epi_delegate"));
 const valuedPosition = Keypair.generate().publicKey;
+const usdPosition = Keypair.generate().publicKey;
 const tokenizedPosition = Keypair.generate().publicKey;
-const valuedNormalizedBaseAmount = new BN(2_000_000_000);
-const tokenizedNormalizedBaseAmount = new BN(3_000_000_000);
+const valuedBaseAmount = new BN(2_000_000_000);
+const usdObservationAmount = new BN(125_000_000);
+const tokenizedObservationAmount = new BN(50_000_000);
 const tokenizedExternalShares = new BN(42);
 
+const baseAssetDenomination = {
+  denom: { mint: {} },
+  mint: WSOL,
+} as const;
 const usdDenomination = {
   denom: { usd: {} },
   mint: PublicKey.default,
@@ -72,8 +78,18 @@ const buildValuedConfig = () => ({
   positionId: valuedPosition.toBytes(),
   positionType: { valued: {} },
   sourceType: { trusted: {} },
-  denomination: usdDenomination,
+  denomination: baseAssetDenomination,
   submitAllowlist: [delegate.publicKey],
+  validateAllowlist: [],
+  configureAllowlist: [],
+});
+
+const buildUsdConfig = () => ({
+  positionId: usdPosition.toBytes(),
+  positionType: { valued: {} },
+  sourceType: { trusted: {} },
+  denomination: usdDenomination,
+  submitAllowlist: [],
   validateAllowlist: [],
   configureAllowlist: [],
 });
@@ -105,7 +121,7 @@ describe("ext_epi", () => {
     const integrationAcls = [
       {
         integrationProgram: glamClient.extEpiProgram.programId,
-        protocolsBitmask: 0b00000001,
+        protocolsBitmask: EPI_PROTOCOL,
         protocolPolicies: [],
       },
     ];
@@ -122,7 +138,7 @@ describe("ext_epi", () => {
     await glamClient.access.grantDelegatePermissions(
       delegate.publicKey,
       glamClient.extEpiProgram.programId,
-      0b00000001,
+      EPI_PROTOCOL,
       new BN(0b00000110),
       txOptions,
     );
@@ -138,6 +154,7 @@ describe("ext_epi", () => {
 
   it("Upserts tracked positions and initializes the observation PDA", async () => {
     await glamClient.epi.upsertExternalPosition(buildValuedConfig(), txOptions);
+    await glamClient.epi.upsertExternalPosition(buildUsdConfig(), txOptions);
     await glamClient.epi.upsertExternalPosition(
       buildTokenizedConfig(),
       txOptions,
@@ -146,13 +163,14 @@ describe("ext_epi", () => {
     const stateModel = await glamClient.fetchStateModel();
     expectPublicKeyArrayEqual(stateModel.externalPositions, [
       valuedPosition,
+      usdPosition,
       tokenizedPosition,
     ]);
 
     const observationState = await glamClient.epi.fetchObservationState();
     expect(observationState).not.toBeNull();
     expect(observationState?.glamState.equals(glamClient.statePda)).toBe(true);
-    expect(observationState?.positionsLen).toBe(2);
+    expect(observationState?.positionsLen).toBe(3);
 
     const valuedObservation = findPositionObservation(
       observationState,
@@ -167,14 +185,21 @@ describe("ext_epi", () => {
     );
     expect(tokenizedObservation.hasPending).toBe(false);
     expect(tokenizedObservation.hasValidated).toBe(false);
+
+    const usdObservation = findPositionObservation(
+      observationState,
+      usdPosition,
+    );
+    expect(usdObservation.hasPending).toBe(false);
+    expect(usdObservation.hasValidated).toBe(false);
   });
 
   it("Restricts submission using the configured position allowlist", async () => {
     await glamClientDelegate.epi.submitExternalObservation(
       {
         positionId: valuedPosition.toBytes(),
-        amount: new BN(125_000_000),
-        denomination: usdDenomination,
+        amount: valuedBaseAmount,
+        denomination: baseAssetDenomination,
         observationTimestamp: new BN(Math.floor(Date.now() / 1000) - 5),
       },
       txOptions,
@@ -184,8 +209,8 @@ describe("ext_epi", () => {
       const txSig = await glamClient.epi.submitExternalObservation(
         {
           positionId: valuedPosition.toBytes(),
-          amount: new BN(126_000_000),
-          denomination: usdDenomination,
+          amount: valuedBaseAmount.addn(1),
+          denomination: baseAssetDenomination,
           observationTimestamp: new BN(Math.floor(Date.now() / 1000) - 5),
         },
         txOptions,
@@ -215,14 +240,28 @@ describe("ext_epi", () => {
   it("Validates observations and publishes the EPI priced protocol", async () => {
     await glamClientDelegate.epi.validateExternalObservation(
       valuedPosition.toBytes(),
-      valuedNormalizedBaseAmount,
+      txOptions,
+    );
+
+    await glamClient.epi.submitExternalObservation(
+      {
+        positionId: usdPosition.toBytes(),
+        amount: usdObservationAmount,
+        denomination: usdDenomination,
+        observationTimestamp: new BN(Math.floor(Date.now() / 1000) - 5),
+      },
+      txOptions,
+    );
+
+    await glamClient.epi.validateExternalObservation(
+      usdPosition.toBytes(),
       txOptions,
     );
 
     await glamClient.epi.submitExternalObservation(
       {
         positionId: tokenizedPosition.toBytes(),
-        amount: new BN(50_000_000),
+        amount: tokenizedObservationAmount,
         denomination: usdcDenomination,
         observationTimestamp: new BN(Math.floor(Date.now() / 1000) - 5),
         externalShares: tokenizedExternalShares,
@@ -230,9 +269,21 @@ describe("ext_epi", () => {
       txOptions,
     );
 
+    try {
+      const txSig = await glamClient.epi.validateExternalObservation(
+        {
+          positionId: tokenizedPosition.toBytes(),
+          observedMintOracle: await glamClient.base.getSolOracle(),
+        },
+        txOptions,
+      );
+      expect(txSig).toBeUndefined();
+    } catch (error: any) {
+      expect(error.message).toContain("Invalid pricing oracle");
+    }
+
     await glamClient.epi.validateExternalObservation(
       tokenizedPosition.toBytes(),
-      tokenizedNormalizedBaseAmount,
       txOptions,
     );
 
@@ -245,8 +296,20 @@ describe("ext_epi", () => {
     expect(valuedObservation.hasValidated).toBe(true);
     expect(valuedObservation.validatedBy.equals(delegate.publicKey)).toBe(true);
     expect(storedI128ToString(valuedObservation.validatedBaseAssetAmount)).toBe(
-      valuedNormalizedBaseAmount.toString(),
+      valuedBaseAmount.toString(),
     );
+
+    const usdObservation = findPositionObservation(
+      observationState,
+      usdPosition,
+    );
+    expect(usdObservation.hasPending).toBe(false);
+    expect(usdObservation.hasValidated).toBe(true);
+    const usdBaseAssetAmount = storedI128ToString(
+      usdObservation.validatedBaseAssetAmount,
+    );
+    expect(new BN(usdBaseAssetAmount).gt(new BN(0))).toBe(true);
+    expect(usdBaseAssetAmount).not.toBe(usdObservationAmount.toString());
 
     const tokenizedObservation = findPositionObservation(
       observationState,
@@ -257,26 +320,32 @@ describe("ext_epi", () => {
     expect(
       tokenizedObservation.lastValidatedObservation.externalShares.toString(),
     ).toBe(tokenizedExternalShares.toString());
-    expect(
-      storedI128ToString(tokenizedObservation.validatedBaseAssetAmount),
-    ).toBe(tokenizedNormalizedBaseAmount.toString());
+    const tokenizedBaseAssetAmount = storedI128ToString(
+      tokenizedObservation.validatedBaseAssetAmount,
+    );
+    expect(new BN(tokenizedBaseAssetAmount).gt(new BN(0))).toBe(true);
+    expect(tokenizedBaseAssetAmount).not.toBe(
+      tokenizedObservationAmount.toString(),
+    );
 
     const stateAccount = await glamClient.fetchStateAccount();
     const pricedProtocol = stateAccount.pricedProtocols.find(
       (protocol) =>
         protocol.integrationProgram.equals(
           glamClient.extEpiProgram.programId,
-        ) && protocol.protocolBitflag === 0b00000001,
+        ) && protocol.protocolBitflag === EPI_PROTOCOL,
     );
 
     expect(pricedProtocol).toBeDefined();
     expect(pricedProtocol?.amount.toString()).toBe(
-      new BN(valuedNormalizedBaseAmount)
-        .add(tokenizedNormalizedBaseAmount)
+      new BN(valuedBaseAmount)
+        .add(new BN(usdBaseAssetAmount))
+        .add(new BN(tokenizedBaseAssetAmount))
         .toString(),
     );
     expectPublicKeyArrayEqual(pricedProtocol?.positions || [], [
       valuedPosition,
+      usdPosition,
       tokenizedPosition,
     ]);
   });
@@ -288,7 +357,10 @@ describe("ext_epi", () => {
     );
 
     const stateModel = await glamClient.fetchStateModel();
-    expectPublicKeyArrayEqual(stateModel.externalPositions, [valuedPosition]);
+    expectPublicKeyArrayEqual(stateModel.externalPositions, [
+      valuedPosition,
+      usdPosition,
+    ]);
 
     let observationState = await glamClient.epi.fetchObservationState();
     const tokenizedObservation = findPositionObservation(
@@ -309,21 +381,29 @@ describe("ext_epi", () => {
       valuedPosition,
     );
     expect(valuedObservation.hasValidated).toBe(true);
+    const usdObservation = findPositionObservation(
+      observationState,
+      usdPosition,
+    );
+    expect(usdObservation.hasValidated).toBe(true);
 
     const stateAccount = await glamClient.fetchStateAccount();
     const pricedProtocol = stateAccount.pricedProtocols.find(
       (protocol) =>
         protocol.integrationProgram.equals(
           glamClient.extEpiProgram.programId,
-        ) && protocol.protocolBitflag === 0b00000001,
+        ) && protocol.protocolBitflag === EPI_PROTOCOL,
     );
 
     expect(pricedProtocol).toBeDefined();
     expect(pricedProtocol?.amount.toString()).toBe(
-      valuedNormalizedBaseAmount.toString(),
+      new BN(valuedBaseAmount)
+        .add(new BN(storedI128ToString(usdObservation.validatedBaseAssetAmount)))
+        .toString(),
     );
     expectPublicKeyArrayEqual(pricedProtocol?.positions || [], [
       valuedPosition,
+      usdPosition,
     ]);
   });
 });

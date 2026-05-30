@@ -13,6 +13,7 @@ import { TokenMetadata, unpack } from "@solana/spl-token-metadata";
 import { BN } from "@coral-xyz/anchor";
 import { charsToString, stringToChars } from "../utils/common";
 import { MintPolicy } from "../deser/integrationPolicies";
+import { GLAM_MINT_PROTOCOL } from "../protocols";
 import { MintModel } from "./mint";
 import type { RequestQueue } from "./types";
 import type { IntegrationAcl, DelegateAcl } from "./acl";
@@ -284,7 +285,7 @@ export class StateModel extends StateIdlModel {
         ),
       );
       const mintPolicyData = mintIntegrationPolicy?.protocolPolicies?.find(
-        (policy: any) => policy.protocolBitflag === 1,
+        (policy: any) => policy.protocolBitflag === GLAM_MINT_PROTOCOL,
       )?.data;
       if (mintPolicyData) {
         const mintPolicy = MintPolicy.decode(mintPolicyData);

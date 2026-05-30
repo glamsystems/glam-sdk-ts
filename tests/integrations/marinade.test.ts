@@ -5,7 +5,13 @@ import {
   createGlamStateForTest,
   defaultInitStateParams,
 } from "../glam_protocol/setup";
-import { GlamClient, nameToChars } from "../../src";
+import {
+  GlamClient,
+  MARINADE_PROTOCOL,
+  nameToChars,
+  STAKE_PROTOCOL,
+  SYSTEM_PROTOCOL,
+} from "../../src";
 import { getStakeAccountsWithStates } from "../../src/utils/accounts";
 import { PublicKey } from "@solana/web3.js";
 
@@ -16,12 +22,12 @@ describe("marinade", () => {
     const integrationAcls = [
       {
         integrationProgram: glamClient.extMarinadeProgram.programId,
-        protocolsBitmask: 0b0000001,
+        protocolsBitmask: MARINADE_PROTOCOL,
         protocolPolicies: [],
       },
       {
         integrationProgram: glamClient.protocolProgram.programId,
-        protocolsBitmask: 0b0000011, // system program + stake program
+        protocolsBitmask: SYSTEM_PROTOCOL | STAKE_PROTOCOL,
         protocolPolicies: [],
       },
     ];

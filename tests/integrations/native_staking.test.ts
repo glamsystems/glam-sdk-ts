@@ -6,7 +6,13 @@ import {
   sleep,
   defaultInitStateParams,
 } from "../glam_protocol/setup";
-import { GlamClient, nameToChars, STAKE_ACCOUNT_SIZE } from "../../src";
+import {
+  GlamClient,
+  nameToChars,
+  STAKE_ACCOUNT_SIZE,
+  STAKE_PROTOCOL,
+  SYSTEM_PROTOCOL,
+} from "../../src";
 import { getStakeAccountsWithStates } from "../../src/utils/accounts";
 import { PublicKey } from "@solana/web3.js";
 
@@ -32,7 +38,7 @@ describe("native_staking", () => {
     const integrationAcls = [
       {
         integrationProgram: glamClient.protocolProgram.programId,
-        protocolsBitmask: 0b0000011, // system program + stake program
+        protocolsBitmask: SYSTEM_PROTOCOL | STAKE_PROTOCOL,
         protocolPolicies: [],
       },
     ];

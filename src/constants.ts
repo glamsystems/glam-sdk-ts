@@ -13,6 +13,30 @@ import {
   getGlamMintProgramId,
   getGlamProtocolProgramId,
 } from "./glamExports";
+import {
+  CCTP_PROTOCOL,
+  EPI_PROTOCOL,
+  GLAM_MINT_PROTOCOL,
+  JUPITER_BORROW_PROTOCOL,
+  JUPITER_EARN_PROTOCOL,
+  JUPITER_SWAP_PROTOCOL,
+  KAMINO_FARMS_PROTOCOL,
+  KAMINO_LENDING_PROTOCOL,
+  KAMINO_VAULTS_PROTOCOL,
+  LAYERZERO_OFT_PROTOCOL,
+  MARINADE_PROTOCOL,
+  ORCA_WHIRLPOOLS_PROTOCOL,
+  PHOENIX_PROTOCOL,
+  SANCTUM_MULTI_VALIDATOR_STAKE_POOL_PROTOCOL,
+  SANCTUM_SINGLE_VALIDATOR_STAKE_POOL_PROTOCOL,
+  SPL_TOKEN_PROTOCOL,
+  STAKE_POOL_PROTOCOL,
+  STAKE_PROTOCOL,
+  SYSTEM_PROTOCOL,
+} from "./protocols";
+
+const protocolBitflagKey = (bitflag: number) =>
+  bitflag.toString(2).padStart(16, "0");
 
 export const SEED_STATE = "state"; // protocol program
 export const SEED_VAULT = "vault"; // protocol program
@@ -117,12 +141,6 @@ export const EMBER_PROGRAM_ID = new PublicKey(
 );
 
 /**
- * Protocol bitmask values for ext_phoenix integration.
- * Mirror `SupportedProtocols` in anchor/programs/ext_phoenix/src/state/access.rs.
- */
-export const PHOENIX_PROTOCOL = 1 << 0;
-
-/**
  * Phoenix OrderPacketKind discriminants.
  * Mirror `OrderPacketKind` variant order in anchor/deps/phoenix/phoenix.json.
  */
@@ -147,7 +165,6 @@ export const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
 export const ORCA_WHIRLPOOLS_PROGRAM_ID = new PublicKey(
   "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
 );
-export const ORCA_WHIRLPOOLS_PROTOCOL = 1 << 0;
 export const ORCA_POSITION_DISCRIMINATOR = [
   170, 188, 143, 228, 122, 64, 247, 208,
 ] as const;
@@ -226,7 +243,7 @@ export const getProtocolsAndPermissions = (
   // Supported protocols and permissions are defined in:
   // @anchor/programs/glam_protocol/src/state/acl.rs
   [getGlamProtocolProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(SYSTEM_PROTOCOL)]: {
       name: "SystemProgram",
       staging: false,
       permissions: {
@@ -234,7 +251,7 @@ export const getProtocolsAndPermissions = (
         [1 << 1]: "Transfer",
       },
     },
-    "0000000000000010": {
+    [protocolBitflagKey(STAKE_PROTOCOL)]: {
       name: "StakeProgram",
       staging: true,
       permissions: {
@@ -242,7 +259,7 @@ export const getProtocolsAndPermissions = (
         [1 << 1]: "Unstake",
       },
     },
-    "0000000000000100": {
+    [protocolBitflagKey(JUPITER_SWAP_PROTOCOL)]: {
       name: "JupiterSwap",
       staging: false,
       permissions: {
@@ -258,7 +275,7 @@ export const getProtocolsAndPermissions = (
   // GLAM mint protocols and permissions are defined in:
   // @anchor/programs/glam_mint/src/state/acl.rs
   [getGlamMintProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(GLAM_MINT_PROTOCOL)]: {
       name: "GlamMint",
       staging: false,
       permissions: {
@@ -277,7 +294,7 @@ export const getProtocolsAndPermissions = (
   // Kamino integration program protocols and permissions are defined in:
   // @anchor/programs/ext_kamino/src/state/access.rs
   [getExtKaminoProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(KAMINO_LENDING_PROTOCOL)]: {
       name: "KaminoLend",
       staging: false,
       permissions: {
@@ -289,7 +306,7 @@ export const getProtocolsAndPermissions = (
         [1 << 5]: "Liquidate",
       },
     },
-    "0000000000000010": {
+    [protocolBitflagKey(KAMINO_VAULTS_PROTOCOL)]: {
       name: "KaminoVaults",
       staging: false,
       permissions: {
@@ -297,7 +314,7 @@ export const getProtocolsAndPermissions = (
         [1 << 1]: "Withdraw",
       },
     },
-    "0000000000000100": {
+    [protocolBitflagKey(KAMINO_FARMS_PROTOCOL)]: {
       name: "KaminoFarms",
       staging: false,
       permissions: {
@@ -310,7 +327,7 @@ export const getProtocolsAndPermissions = (
   // Token integration program protocols and permissions are defined in:
   // @anchor/programs/ext_spl/src/state/acl.rs
   [getExtSplProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(SPL_TOKEN_PROTOCOL)]: {
       name: "SplToken",
       staging: false,
       permissions: {
@@ -321,7 +338,7 @@ export const getProtocolsAndPermissions = (
   // CCTP integration program protocols and permissions are defined in:
   // @anchor/programs/ext_cctp/src/state/acl.rs
   [getExtCctpProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(CCTP_PROTOCOL)]: {
       name: "CCTP",
       staging: false,
       permissions: {
@@ -332,7 +349,7 @@ export const getProtocolsAndPermissions = (
   // Jupiter Lend integration program protocols and permissions are defined in:
   // @anchor/programs/ext_jupiter/src/state/access.rs
   [getExtJupiterProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(JUPITER_EARN_PROTOCOL)]: {
       name: "JupiterEarn",
       staging: true,
       permissions: {
@@ -340,7 +357,7 @@ export const getProtocolsAndPermissions = (
         [1 << 1]: "Withdraw",
       },
     },
-    "0000000000000010": {
+    [protocolBitflagKey(JUPITER_BORROW_PROTOCOL)]: {
       name: "JupiterBorrow",
       staging: true,
       permissions: {
@@ -355,7 +372,7 @@ export const getProtocolsAndPermissions = (
   // Orca integration program protocols and permissions are defined in:
   // @anchor/programs/ext_orca/src/state/access.rs
   [getExtOrcaProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(ORCA_WHIRLPOOLS_PROTOCOL)]: {
       name: "OrcaWhirlpools",
       staging: true,
       permissions: {
@@ -375,7 +392,7 @@ export const getProtocolsAndPermissions = (
   // Bridge integration program protocols and permissions are defined in:
   // @anchor/programs/ext_bridge/src/state/access.rs
   [getExtBridgeProgramId(staging).toBase58()]: {
-    "0000000000000100": {
+    [protocolBitflagKey(LAYERZERO_OFT_PROTOCOL)]: {
       name: "LayerZeroOft",
       staging: true,
       permissions: {
@@ -388,7 +405,7 @@ export const getProtocolsAndPermissions = (
   // EPI integration program protocols and permissions are defined in:
   // @anchor/programs/ext_epi/src/state/access.rs
   [getExtEpiProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(EPI_PROTOCOL)]: {
       name: "Epi",
       staging: true,
       permissions: {
@@ -401,7 +418,7 @@ export const getProtocolsAndPermissions = (
   // Marinade integration program protocols and permissions are defined in:
   // @anchor/programs/ext_marinade/src/state/access.rs
   [getExtMarinadeProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(MARINADE_PROTOCOL)]: {
       name: "Marinade",
       staging: true,
       permissions: {
@@ -413,7 +430,7 @@ export const getProtocolsAndPermissions = (
   // Stake pool integration program protocols and permissions are defined in:
   // @anchor/programs/ext_stake_pool/src/state/access.rs
   [getExtStakePoolProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(STAKE_POOL_PROTOCOL)]: {
       name: "StakePool",
       staging: true,
       permissions: {
@@ -425,7 +442,7 @@ export const getProtocolsAndPermissions = (
         [1 << 5]: "WithdrawStake",
       },
     },
-    "0000000000000010": {
+    [protocolBitflagKey(SANCTUM_SINGLE_VALIDATOR_STAKE_POOL_PROTOCOL)]: {
       name: "SanctumSingle",
       staging: true,
       permissions: {
@@ -437,7 +454,7 @@ export const getProtocolsAndPermissions = (
         [1 << 5]: "WithdrawStake",
       },
     },
-    "0000000000000100": {
+    [protocolBitflagKey(SANCTUM_MULTI_VALIDATOR_STAKE_POOL_PROTOCOL)]: {
       name: "SanctumMulti",
       staging: true,
       permissions: {
@@ -453,7 +470,7 @@ export const getProtocolsAndPermissions = (
   // Phoenix integration program protocols and permissions are defined in:
   // @anchor/programs/ext_phoenix/src/state/access.rs
   [getExtPhoenixProgramId(staging).toBase58()]: {
-    "0000000000000001": {
+    [protocolBitflagKey(PHOENIX_PROTOCOL)]: {
       name: "Phoenix",
       staging: true,
       permissions: {

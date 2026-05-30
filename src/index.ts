@@ -17,5 +17,6 @@ export * from "./client/base";
 export * from "./assets";
 export * from "./globalConfig";
 export * from "./constants";
+export * from "./protocols";
 export * from "./error";
 export * from "./utils";

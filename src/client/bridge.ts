@@ -12,7 +12,13 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 
-import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  ProtocolPolicyClient,
+  ProtocolPolicyTxBuilder,
+  TxOptions,
+} from "./base";
 import {
   LayerzeroOftRouteProfile,
   SerializableRouteAccountMeta,
@@ -27,8 +33,7 @@ import {
 } from "../deser/integrationPolicies";
 import { getIntegrationAuthorityPda } from "../utils/glamPDAs";
 import { SEED_BRIDGE_REGISTRY, SEED_BRIDGE_SESSION } from "../constants";
-
-export const LAYERZERO_OFT_PROTOCOL = 1 << 2;
+import { LAYERZERO_OFT_PROTOCOL } from "../protocols";
 
 type BufferLike = Uint8Array | number[] | Buffer;
 
@@ -390,7 +395,53 @@ function resolveRouteAccountPubkey(
   throw new Error("Unsupported LayerZero OFT route account placeholder");
 }
 
-class TxBuilder extends BaseTxBuilder<BridgeClient> {
+class TxBuilder
+  extends BaseTxBuilder<BridgeClient>
+  implements ProtocolPolicyTxBuilder<LayerzeroOftPolicy>
+{
+  async setPolicyIx(
+    policy: LayerzeroOftPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.protocolProgram.methods
+      .setProtocolPolicy(
+        this.client.base.extBridgeProgram.programId,
+        LAYERZERO_OFT_PROTOCOL,
+        policy.encode(),
+      )
+      .accounts({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+      })
+      .instruction();
+  }
+
+  async setPolicyTx(
+    policy: LayerzeroOftPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.extBridgeProgram.programId,
+      LAYERZERO_OFT_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.base.extBridgeProgram.programId,
+      LAYERZERO_OFT_PROTOCOL,
+      txOptions,
+    );
+  }
+
   async addLayerzeroOftRouteIx(
     route: LayerzeroOftRouteInput,
     signer?: PublicKey,
@@ -573,7 +624,7 @@ class LayerzeroOftBridgeProtocolClient {
   }
 }
 
-export class BridgeClient {
+export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
   readonly txBuilder: TxBuilder;
   readonly oft: LayerzeroOftBridgeProtocolClient;
 
@@ -805,12 +856,29 @@ export class BridgeClient {
     };
   }
 
-  async fetchLayerzeroOftPolicy() {
+  async fetchPolicy(): Promise<LayerzeroOftPolicy | null> {
     return await this.base.fetchProtocolPolicy(
       this.base.extBridgeProgram.programId,
       LAYERZERO_OFT_PROTOCOL,
       LayerzeroOftPolicy,
     );
+  }
+
+  async fetchLayerzeroOftPolicy(): Promise<LayerzeroOftPolicy | null> {
+    return await this.fetchPolicy();
+  }
+
+  async setPolicy(
+    policy: LayerzeroOftPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
+    return await this.base.sendAndConfirm(tx);
   }
 
   async fetchRegistry() {
@@ -846,19 +914,12 @@ export class BridgeClient {
     const glamSigner = txOptions.signer || this.base.signer;
     const ixs: TransactionInstruction[] = [];
 
-    if (!(await this.fetchLayerzeroOftPolicy())) {
+    if (!(await this.fetchPolicy())) {
       ixs.push(
-        await this.base.protocolProgram.methods
-          .setProtocolPolicy(
-            this.base.extBridgeProgram.programId,
-            LAYERZERO_OFT_PROTOCOL,
-            new LayerzeroOftPolicy([]).encode(),
-          )
-          .accounts({
-            glamState: this.base.statePda,
-            glamSigner,
-          })
-          .instruction(),
+        await this.txBuilder.setPolicyIx(
+          new LayerzeroOftPolicy([]),
+          glamSigner,
+        ),
       );
     }
 

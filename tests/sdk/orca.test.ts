@@ -7,7 +7,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
-import { OrcaClient } from "../../src/client/orca";
+import { OrcaWhirlpoolsClient } from "../../src/client/orca";
 
 const GLAM_STATE = PublicKey.unique();
 const GLAM_VAULT = PublicKey.unique();
@@ -43,7 +43,11 @@ function mintAccountInfo(owner: PublicKey) {
 }
 
 function methodBuilder(programId: PublicKey = EXT_ORCA) {
-  const builder = {
+  const builder: {
+    accountsPartial: jest.Mock;
+    remainingAccounts: jest.Mock;
+    instruction: jest.Mock;
+  } = {
     accountsPartial: jest.fn(() => builder),
     remainingAccounts: jest.fn(() => builder),
     instruction: jest.fn(
@@ -84,7 +88,11 @@ function makeOrcaClient(mintOwners: Map<string, PublicKey>) {
       getAssociatedTokenAddressSync(mint, GLAM_VAULT, true, tokenProgram),
   };
 
-  return { client: new OrcaClient(base as any), builders, getAccountInfo };
+  return {
+    client: new OrcaWhirlpoolsClient(base as any),
+    builders,
+    getAccountInfo,
+  };
 }
 
 describe("Orca SDK instruction builders", () => {

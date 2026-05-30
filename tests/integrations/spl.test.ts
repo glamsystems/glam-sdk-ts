@@ -6,7 +6,14 @@ import {
   defaultInitStateParams,
   str2seed,
 } from "../glam_protocol/setup";
-import { GlamClient, MSOL, nameToChars, WSOL } from "../../src";
+import {
+  GlamClient,
+  MSOL,
+  nameToChars,
+  SPL_TOKEN_PROTOCOL,
+  SYSTEM_PROTOCOL,
+  WSOL,
+} from "../../src";
 import { createAssociatedTokenAccountIdempotentInstruction } from "@solana/spl-token";
 import { Keypair, Transaction } from "@solana/web3.js";
 import { TransferPolicy } from "../../src/deser/integrationPolicies";
@@ -35,12 +42,12 @@ describe("spl", () => {
       integrationAcls: [
         {
           integrationProgram: glamClient.protocolProgram.programId,
-          protocolsBitmask: 0b00000001, // system program
+          protocolsBitmask: SYSTEM_PROTOCOL,
           protocolPolicies: [],
         },
         {
           integrationProgram: glamClient.extSplProgram.programId,
-          protocolsBitmask: 0b00000001, // token program
+          protocolsBitmask: SPL_TOKEN_PROTOCOL,
           protocolPolicies: [],
         },
       ],
@@ -122,7 +129,7 @@ describe("spl", () => {
       const txSig = await glamClient.access.grantDelegatePermissions(
         delegate.publicKey,
         glamClient.protocolProgram.programId,
-        0b01, // system program
+        SYSTEM_PROTOCOL,
         new BN(0b10), // TRANSFER_TO_ALLOWLISTED
       );
       console.log(
@@ -133,7 +140,7 @@ describe("spl", () => {
       const txSig2 = await glamClient.access.grantDelegatePermissions(
         delegate.publicKey,
         glamClient.extSplProgram.programId,
-        0b01, // token program
+        SPL_TOKEN_PROTOCOL,
         new BN(0b01), // TRANSFER_TO_ALLOWLISTED
       );
       console.log(
@@ -150,14 +157,14 @@ describe("spl", () => {
 
       const txSig = await glamClient.access.setProtocolPolicy(
         glamClient.protocolProgram.programId,
-        0b01, // system program
+        SYSTEM_PROTOCOL,
         transferPolicyData,
       );
       console.log("Update system transfer allowlist:", txSig);
 
       const txSig2 = await glamClient.access.setProtocolPolicy(
         glamClient.extSplProgram.programId,
-        0b01, // token program
+        SPL_TOKEN_PROTOCOL,
         transferPolicyData,
       );
       console.log("Update token transfer allowlist:", txSig2);
@@ -227,7 +234,7 @@ describe("spl", () => {
         txOptions,
       );
       expect(txSig).toBeUndefined();
-    } catch (error) {
+    } catch (error: any) {
       expect(error.message).toBe("Signer is not authorized");
     }
 
@@ -238,7 +245,7 @@ describe("spl", () => {
         txOptions,
       );
       expect(txSig).toBeUndefined();
-    } catch (error) {
+    } catch (error: any) {
       expect(error.message).toBe("Signer is not authorized");
     }
   });

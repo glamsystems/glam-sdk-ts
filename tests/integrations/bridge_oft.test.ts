@@ -7,7 +7,14 @@ import {
 } from "@solana/spl-token";
 import { Keypair, SystemProgram } from "@solana/web3.js";
 
-import { GlamClient, RouteManagementMode, USDC, nameToChars } from "../../src";
+import {
+  BRIDGE_MANAGED_TRANSFERS_PROTOCOL,
+  GlamClient,
+  LAYERZERO_OFT_PROTOCOL,
+  RouteManagementMode,
+  USDC,
+  nameToChars,
+} from "../../src";
 import {
   airdrop,
   createGlamStateForTest,
@@ -50,7 +57,7 @@ const createCommittedOftTransfer = async (
     integrationAcls: [
       {
         integrationProgram: glamClient.extBridgeProgram.programId,
-        protocolsBitmask: 1 << 2,
+        protocolsBitmask: LAYERZERO_OFT_PROTOCOL,
         protocolPolicies: [],
       },
     ],
@@ -241,7 +248,7 @@ describe("bridge_oft", () => {
       (protocol) =>
         protocol.integrationProgram.equals(
           glamClient.extBridgeProgram.programId,
-        ) && protocol.protocolBitflag === 0,
+        ) && protocol.protocolBitflag === BRIDGE_MANAGED_TRANSFERS_PROTOCOL,
     );
     expect(pricedProtocol).toBeDefined();
     expect(pricedProtocol?.amount.gt(new BN(0))).toBe(true);

@@ -7,9 +7,17 @@ import {
   SystemProgram,
 } from "@solana/web3.js";
 
-import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  ProtocolPolicyClient,
+  ProtocolPolicyTxBuilder,
+  TxOptions,
+} from "./base";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
 import { WSOL } from "../constants";
+import { TransferPolicy } from "../deser/integrationPolicies";
+import { SPL_TOKEN_PROTOCOL } from "../protocols";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createSyncNativeInstruction,
@@ -19,7 +27,50 @@ import {
 } from "@solana/spl-token";
 import { PkMap } from "../utils";
 
-class TxBuilder extends BaseTxBuilder<VaultClient> {
+class TxBuilder
+  extends BaseTxBuilder<VaultClient>
+  implements ProtocolPolicyTxBuilder<TransferPolicy>
+{
+  async setPolicyIx(
+    policy: TransferPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.extSplProgram.methods
+      .setTokenTransferPolicy(policy)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+      })
+      .instruction();
+  }
+
+  async setPolicyTx(
+    policy: TransferPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.extSplProgram.programId,
+      SPL_TOKEN_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.base.extSplProgram.programId,
+      SPL_TOKEN_PROTOCOL,
+      txOptions,
+    );
+  }
+
   public async wrapIxs(
     amount: BN,
     glamSigner: PublicKey,
@@ -307,11 +358,32 @@ class TxBuilder extends BaseTxBuilder<VaultClient> {
   }
 }
 
-export class VaultClient {
+export class VaultClient implements ProtocolPolicyClient<TransferPolicy> {
   readonly txBuilder: TxBuilder;
 
   public constructor(readonly base: BaseClient) {
     this.txBuilder = new TxBuilder(this);
+  }
+
+  async fetchPolicy(): Promise<TransferPolicy | null> {
+    return await this.base.fetchProtocolPolicy(
+      this.base.extSplProgram.programId,
+      SPL_TOKEN_PROTOCOL,
+      TransferPolicy,
+    );
+  }
+
+  async setPolicy(
+    policy: TransferPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
+    return await this.base.sendAndConfirm(tx);
   }
 
   /**

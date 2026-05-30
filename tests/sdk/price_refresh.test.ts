@@ -4,19 +4,24 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { OrcaClient } from "../../src/client/orca";
+import { OrcaWhirlpoolsClient } from "../../src/client/orca";
 import { PriceClient } from "../../src/client/price";
 import {
   KAMINO_LENDING_PROGRAM,
   ORCA_POSITION_DISCRIMINATOR,
   ORCA_WHIRLPOOLS_PROGRAM_ID,
-  ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_GLOBAL_CONFIG,
   PHOENIX_PROGRAM_ID,
-  PHOENIX_PROTOCOL,
   USDC,
   WSOL,
 } from "../../src/constants";
+import {
+  EPI_PROTOCOL,
+  KAMINO_LENDING_PROTOCOL,
+  LAYERZERO_OFT_PROTOCOL,
+  ORCA_WHIRLPOOLS_PROTOCOL,
+  PHOENIX_PROTOCOL,
+} from "../../src/protocols";
 import { StateAccountType } from "../../src/models";
 import { PkMap } from "../../src/utils";
 
@@ -54,7 +59,11 @@ function ix(data: number): TransactionInstruction {
 }
 
 function methodBuilder(instruction: TransactionInstruction) {
-  const builder = {
+  const builder: {
+    accounts: jest.Mock;
+    remainingAccounts: jest.Mock;
+    instruction: jest.Mock;
+  } = {
     accounts: jest.fn(() => builder),
     remainingAccounts: jest.fn(() => builder),
     instruction: jest.fn(async () => instruction),
@@ -101,15 +110,15 @@ function phoenixGlobalConfigAccountInfo(perpAssetMap: PublicKey) {
 
 const KAMINO_LENDING_ACL = {
   integrationProgram: EXT_KAMINO,
-  protocolsBitmask: 0b01,
+  protocolsBitmask: KAMINO_LENDING_PROTOCOL,
 };
 const BRIDGE_ACL = {
   integrationProgram: EXT_BRIDGE,
-  protocolsBitmask: 0b100,
+  protocolsBitmask: LAYERZERO_OFT_PROTOCOL,
 };
 const EPI_ACL = {
   integrationProgram: EXT_EPI,
-  protocolsBitmask: 0b01,
+  protocolsBitmask: EPI_PROTOCOL,
 };
 const PHOENIX_ACL = {
   integrationProgram: EXT_PHOENIX,
@@ -460,7 +469,7 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(USDC_ORACLE);
     const remainingAccountsSpy = jest
       .spyOn(
-        OrcaClient.prototype,
+        OrcaWhirlpoolsClient.prototype,
         "remainingAccountsForPricingWhirlpoolPositions",
       )
       .mockResolvedValue({

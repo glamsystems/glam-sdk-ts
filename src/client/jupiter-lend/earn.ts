@@ -12,7 +12,13 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
 
-import { BaseClient, BaseTxBuilder, TxOptions } from "../base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  type ProtocolPolicyClient,
+  type ProtocolPolicyTxBuilder,
+  type TxOptions,
+} from "../base";
 import {
   JUPITER_LENDING_PROGRAM_ID,
   JUPITER_LIQUIDITY_PROGRAM_ID,
@@ -25,6 +31,7 @@ import {
   LENDING_REWARDS_RATE_MODEL_OFFSET,
   LENDING_SUPPLY_POSITION_OFFSET,
   LENDING_TOKEN_RESERVES_LIQUIDITY_OFFSET,
+  JUPITER_EARN_PROTOCOL,
   PUBKEY_BYTES,
   U64_MAX,
   fetchAndValidate,
@@ -76,7 +83,10 @@ export type JupiterEarnWithdrawAccounts = {
   associatedTokenProgram?: PublicKey;
 };
 
-export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
+class TxBuilder
+  extends BaseTxBuilder<JupiterEarnClient>
+  implements ProtocolPolicyTxBuilder<JupiterEarnPolicy>
+{
   async depositIx(
     amount: BN | bigint | number,
     minAmountOut: BN | bigint | number,
@@ -122,15 +132,6 @@ export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
       .instruction();
   }
 
-  async earnDepositIx(
-    assets: BN | bigint | number,
-    minAmountOut: BN | bigint | number,
-    accounts: JupiterEarnDepositAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    return await this.depositIx(assets, minAmountOut, accounts, signer);
-  }
-
   async depositTx(
     amount: BN | bigint | number,
     minAmountOut: BN | bigint | number,
@@ -153,15 +154,6 @@ export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
       );
     const ix = await this.depositIx(amount, minAmountOut, accounts, signer);
     return await this.buildVersionedTx([createRecipientAtaIx, ix], txOptions);
-  }
-
-  async earnDepositTx(
-    assets: BN | bigint | number,
-    minAmountOut: BN | bigint | number,
-    accounts: JupiterEarnDepositAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    return await this.depositTx(assets, minAmountOut, accounts, txOptions);
   }
 
   async withdrawIx(
@@ -210,15 +202,6 @@ export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
       .instruction();
   }
 
-  async earnWithdrawIx(
-    amount: BN | bigint | number,
-    maxSharesBurn: BN | bigint | number,
-    accounts: JupiterEarnWithdrawAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    return await this.withdrawIx(amount, maxSharesBurn, accounts, signer);
-  }
-
   async withdrawTx(
     amount: BN | bigint | number,
     maxSharesBurn: BN | bigint | number,
@@ -242,15 +225,6 @@ export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
     return await this.buildVersionedTx([createRecipientAtaIx, ix], txOptions);
   }
 
-  async earnWithdrawTx(
-    amount: BN | bigint | number,
-    maxSharesBurn: BN | bigint | number,
-    accounts: JupiterEarnWithdrawAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    return await this.withdrawTx(amount, maxSharesBurn, accounts, txOptions);
-  }
-
   async setPolicyIx(
     policy: JupiterEarnPolicy,
     signer?: PublicKey,
@@ -265,13 +239,6 @@ export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
       .instruction();
   }
 
-  async setEarnPolicyIx(
-    policy: JupiterEarnPolicy,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    return await this.setPolicyIx(policy, signer);
-  }
-
   async setPolicyTx(
     policy: JupiterEarnPolicy,
     txOptions: TxOptions = {},
@@ -280,19 +247,32 @@ export class JupiterEarnTxBuilder extends BaseTxBuilder<JupiterEarnClient> {
     return await this.buildVersionedTx([ix], txOptions);
   }
 
-  async setEarnPolicyTx(
-    policy: JupiterEarnPolicy,
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.extJupiterProgram.programId,
+      JUPITER_EARN_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    return await this.setPolicyTx(policy, txOptions);
+    return await this.clearProtocolPolicyTx(
+      this.client.base.extJupiterProgram.programId,
+      JUPITER_EARN_PROTOCOL,
+      txOptions,
+    );
   }
 }
 
-export class JupiterEarnClient {
-  readonly txBuilder: JupiterEarnTxBuilder;
+export class JupiterEarnClient
+  implements ProtocolPolicyClient<JupiterEarnPolicy>
+{
+  readonly txBuilder: TxBuilder;
 
   public constructor(readonly base: BaseClient) {
-    this.txBuilder = new JupiterEarnTxBuilder(this);
+    this.txBuilder = new TxBuilder(this);
   }
 
   getIntegrationAuthorityPda(): PublicKey {
@@ -315,15 +295,6 @@ export class JupiterEarnClient {
     return await this.base.sendAndConfirm(tx);
   }
 
-  async earnDeposit(
-    mint: PublicKey,
-    assets: BN | bigint | number,
-    minAmountOut: BN | bigint | number = new BN(0),
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    return await this.deposit(mint, assets, minAmountOut, txOptions);
-  }
-
   async withdraw(
     mint: PublicKey,
     amount: BN | bigint | number,
@@ -341,13 +312,12 @@ export class JupiterEarnClient {
     return await this.base.sendAndConfirm(tx);
   }
 
-  async earnWithdraw(
-    mint: PublicKey,
-    amount: BN | bigint | number,
-    maxSharesBurn: BN | bigint | number = U64_MAX,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    return await this.withdraw(mint, amount, maxSharesBurn, txOptions);
+  async fetchPolicy(): Promise<JupiterEarnPolicy | null> {
+    return await this.base.fetchProtocolPolicy(
+      this.base.extJupiterProgram.programId,
+      JUPITER_EARN_PROTOCOL,
+      JupiterEarnPolicy,
+    );
   }
 
   async setPolicy(
@@ -358,11 +328,9 @@ export class JupiterEarnClient {
     return await this.base.sendAndConfirm(tx);
   }
 
-  async setEarnPolicy(
-    policy: JupiterEarnPolicy,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    return await this.setPolicy(policy, txOptions);
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
+    return await this.base.sendAndConfirm(tx);
   }
 
   private async resolveAccounts(mint: PublicKey): Promise<

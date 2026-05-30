@@ -12,13 +12,21 @@ import {
   VersionedTransactionResponse,
 } from "@solana/web3.js";
 
-import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  type ProtocolPolicyClient,
+  type ProtocolPolicyTxBuilder,
+  type TxOptions,
+} from "./base";
 import {
   MESSAGE_TRANSMITTER_V2,
   TOKEN_MESSENGER_MINTER_V2,
   USDC,
   USDC_DEVNET,
 } from "../constants";
+import { CCTP_PROTOCOL } from "../protocols";
+import { CctpPolicy } from "../deser/integrationPolicies";
 import {
   hexToBytes,
   toUiAmount,
@@ -64,7 +72,10 @@ export class CctpBridgeEvent {
   }
 }
 
-class TxBuilder extends BaseTxBuilder<CctpClient> {
+class TxBuilder
+  extends BaseTxBuilder<CctpClient>
+  implements ProtocolPolicyTxBuilder<CctpPolicy>
+{
   /**
    * Returns a transaction that calls CCTP's `depositForBurn` instruction that bridges USDC to another chain.
    * A keypair is generated for the message sent event account, which must be included as a transaction signer.
@@ -317,9 +328,49 @@ class TxBuilder extends BaseTxBuilder<CctpClient> {
       txOptions,
     );
   }
+
+  async setPolicyIx(
+    policy: CctpPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.extCctpProgram.methods
+      .setCctpPolicy(policy)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+      })
+      .instruction();
+  }
+
+  async setPolicyTx(
+    policy: CctpPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.extCctpProgram.programId,
+      CCTP_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.base.extCctpProgram.programId,
+      CCTP_PROTOCOL,
+      txOptions,
+    );
+  }
 }
 
-export class CctpClient {
+export class CctpClient implements ProtocolPolicyClient<CctpPolicy> {
   txBuilder: TxBuilder;
 
   public constructor(readonly base: BaseClient) {
@@ -377,6 +428,27 @@ export class CctpClient {
       txOptions,
     );
     return await this.base.sendAndConfirm(vTx);
+  }
+
+  async fetchPolicy(): Promise<CctpPolicy | null> {
+    return await this.base.fetchProtocolPolicy(
+      this.base.extCctpProgram.programId,
+      CCTP_PROTOCOL,
+      CctpPolicy,
+    );
+  }
+
+  async setPolicy(
+    policy: CctpPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
+    return await this.base.sendAndConfirm(tx);
   }
 
   async getReceiveMessagePdas(

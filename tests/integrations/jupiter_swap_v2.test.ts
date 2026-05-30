@@ -9,8 +9,10 @@ import {
 import {
   GlamClient,
   JupiterSwapPolicy,
+  JUPITER_SWAP_PROTOCOL,
   MSOL,
   nameToChars,
+  SYSTEM_PROTOCOL,
   USDC,
   WSOL,
 } from "../../src";
@@ -48,7 +50,7 @@ describe("jupiter_swap_v2", () => {
     try {
       const txSig = await glamClient.access.enableProtocols(
         glamClient.protocolProgram.programId, // native integration
-        0b0000101, // Jupiter Swap + System Program
+        JUPITER_SWAP_PROTOCOL | SYSTEM_PROTOCOL,
         txOptions,
       );
       console.log("Enable all natively supported protocols", txSig);
@@ -76,7 +78,7 @@ describe("jupiter_swap_v2", () => {
     try {
       const txSig = await glamClient.access.setProtocolPolicy(
         glamClient.protocolProgram.programId,
-        0b0000100,
+        JUPITER_SWAP_PROTOCOL,
         new JupiterSwapPolicy(50, [USDC, MSOL], 500).encode(),
       );
       console.log(
@@ -167,7 +169,7 @@ describe("jupiter_swap_v2", () => {
         txOptions,
       );
       expect(txSig).toBeUndefined();
-    } catch (e) {
+    } catch (e: any) {
       // Expected to fail: missing oracle accounts when quote price check is required
       expect(e.message).toMatch(/missing|MissingAccount|Account/i);
     }
@@ -230,7 +232,7 @@ describe("jupiter_swap_v2", () => {
       const txSig = await glamClient.access.grantDelegatePermissions(
         delegate.publicKey,
         glamClient.protocolProgram.programId,
-        0b001, // System Program
+        SYSTEM_PROTOCOL,
         new BN(0b01), // WSOL
       );
       console.log("Grant delegate WSOL permission:", txSig);
@@ -238,7 +240,7 @@ describe("jupiter_swap_v2", () => {
       const txSig2 = await glamClient.access.grantDelegatePermissions(
         delegate.publicKey,
         glamClient.protocolProgram.programId,
-        0b100, // Jupiter Swap
+        JUPITER_SWAP_PROTOCOL,
         new BN(0b010), // SWAP_LST only
       );
       console.log("Grant delegate SWAP_LST permission:", txSig2);
@@ -268,7 +270,7 @@ describe("jupiter_swap_v2", () => {
         txOptions,
       );
       expect(txSig).toBeUndefined();
-    } catch (e) {
+    } catch (e: any) {
       expect(e.message).toMatch(/missing|MissingAccount|Account|unauthorized/i);
     }
   }, 30_000);
@@ -279,7 +281,7 @@ describe("jupiter_swap_v2", () => {
       const txSig = await glamClient.access.grantDelegatePermissions(
         delegate.publicKey,
         glamClient.protocolProgram.programId,
-        0b100, // Jupiter Swap
+        JUPITER_SWAP_PROTOCOL,
         new BN(0b100010), // SWAP_LST + SkipQuotePriceCheck
       );
       console.log(
@@ -322,7 +324,7 @@ describe("jupiter_swap_v2", () => {
     try {
       const txSig = await glamClient.access.setProtocolPolicy(
         glamClient.protocolProgram.programId,
-        0b0000100,
+        JUPITER_SWAP_PROTOCOL,
         new JupiterSwapPolicy(100, [USDC, MSOL], -200).encode(),
       );
       console.log(

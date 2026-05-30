@@ -5,9 +5,17 @@ import {
   PublicKey,
   SystemProgram,
   TransactionInstruction,
+  TransactionSignature,
   VersionedTransaction,
 } from "@solana/web3.js";
-import { BaseClient, BaseTxBuilder, TokenAccount, TxOptions } from "./base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  type ProtocolPolicyClient,
+  type ProtocolPolicyTxBuilder,
+  TokenAccount,
+  type TxOptions,
+} from "./base";
 import { PriceClient } from "./price";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
@@ -22,6 +30,8 @@ import {
   StateIdlModel,
 } from "../models";
 import { TRANSFER_HOOK_PROGRAM } from "../constants";
+import { GLAM_MINT_PROTOCOL } from "../protocols";
+import { MintPolicy } from "../deser/integrationPolicies";
 import {
   fetchMintAndTokenProgram,
   getHeliusApiKey,
@@ -172,7 +182,10 @@ export function buildThawPermissionlessIx(
   });
 }
 
-class TxBuilder extends BaseTxBuilder<MintClient> {
+class TxBuilder
+  extends BaseTxBuilder<MintClient>
+  implements ProtocolPolicyTxBuilder<MintPolicy>
+{
   public async setTokenAccountsStatesIx(
     tokenAccounts: PublicKey[],
     frozen: boolean,
@@ -1042,9 +1055,73 @@ class TxBuilder extends BaseTxBuilder<MintClient> {
     const ix = this.thawPermissionlessIx(wallet, listAndWalletPairs, signer);
     return this.buildVersionedTx([createAtaIx, ix], txOptions);
   }
+
+  async setPolicyIx(
+    policy: MintPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.mintProgram.methods
+      .setMintPolicy(policy)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+      })
+      .instruction();
+  }
+
+  async setMintPolicyIx(
+    policy: MintPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.setPolicyIx(policy, signer);
+  }
+
+  async setPolicyTx(
+    policy: MintPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async setMintPolicyTx(
+    policy: MintPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.setPolicyTx(policy, txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.mintProgram.programId,
+      GLAM_MINT_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearMintPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearPolicyIx(signer);
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.base.mintProgram.programId,
+      GLAM_MINT_PROTOCOL,
+      txOptions,
+    );
+  }
+
+  async clearMintPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearPolicyTx(txOptions);
+  }
 }
 
-export class MintClient {
+export class MintClient implements ProtocolPolicyClient<MintPolicy> {
   readonly txBuilder: TxBuilder;
 
   public constructor(
@@ -1059,6 +1136,44 @@ export class MintClient {
       throw new Error("PriceClient not available");
     }
     return this.getPrice();
+  }
+
+  async fetchPolicy(): Promise<MintPolicy | null> {
+    return await this.base.fetchProtocolPolicy(
+      this.base.mintProgram.programId,
+      GLAM_MINT_PROTOCOL,
+      MintPolicy,
+    );
+  }
+
+  async fetchMintPolicy(): Promise<MintPolicy | null> {
+    return await this.fetchPolicy();
+  }
+
+  async setPolicy(
+    policy: MintPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async setMintPolicy(
+    policy: MintPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    return await this.setPolicy(policy, txOptions);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearMintPolicy(
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    return await this.clearPolicy(txOptions);
   }
 
   /**

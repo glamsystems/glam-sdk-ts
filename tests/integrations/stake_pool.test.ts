@@ -4,7 +4,12 @@ import {
   getStakeAccountsWithStates,
   GlamClient,
   nameToChars,
+  SANCTUM_MULTI_VALIDATOR_STAKE_POOL_PROTOCOL,
+  SANCTUM_SINGLE_VALIDATOR_STAKE_POOL_PROTOCOL,
   STAKE_ACCOUNT_SIZE,
+  STAKE_POOL_PROTOCOL,
+  STAKE_PROTOCOL,
+  SYSTEM_PROTOCOL,
 } from "../../src";
 import { PublicKey } from "@solana/web3.js";
 import {
@@ -34,12 +39,15 @@ describe("stake_pool", () => {
     const integrationAcls = [
       {
         integrationProgram: glamClient.protocolProgram.programId,
-        protocolsBitmask: 0b0000011, // system program + stake program
+        protocolsBitmask: SYSTEM_PROTOCOL | STAKE_PROTOCOL,
         protocolPolicies: [],
       },
       {
         integrationProgram: glamClient.extStakePoolProgram.programId,
-        protocolsBitmask: 0b0000111, // spl-stake-pool + sanctum + sanctum-multi
+        protocolsBitmask:
+          STAKE_POOL_PROTOCOL |
+          SANCTUM_SINGLE_VALIDATOR_STAKE_POOL_PROTOCOL |
+          SANCTUM_MULTI_VALIDATOR_STAKE_POOL_PROTOCOL,
         protocolPolicies: [],
       },
     ];

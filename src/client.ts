@@ -22,7 +22,7 @@ import { BridgeClient } from "./client/bridge";
 import { EpiClient } from "./client/epi";
 import { PhoenixClient } from "./client/phoenix";
 import { JupiterBorrowClient, JupiterEarnClient } from "./client/jupiter-lend";
-import { OrcaClient } from "./client/orca";
+import { OrcaWhirlpoolsClient } from "./client/orca";
 
 /**
  * Main entrypoint for the GLAM SDK
@@ -51,7 +51,7 @@ export class GlamClient extends BaseClient {
   private _phoenix?: PhoenixClient;
   private _jupiterEarn?: JupiterEarnClient;
   private _jupiterBorrow?: JupiterBorrowClient;
-  private _orca?: OrcaClient;
+  private _orca?: OrcaWhirlpoolsClient;
 
   public constructor(config?: GlamClientConfig) {
     super(config);
@@ -215,9 +215,9 @@ export class GlamClient extends BaseClient {
     return this._jupiterBorrow;
   }
 
-  get orca(): OrcaClient {
+  get orca(): OrcaWhirlpoolsClient {
     if (!this._orca) {
-      this._orca = new OrcaClient(this);
+      this._orca = new OrcaWhirlpoolsClient(this);
     }
     return this._orca;
   }

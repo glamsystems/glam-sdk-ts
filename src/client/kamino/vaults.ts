@@ -1,6 +1,7 @@
 import { BN } from "@coral-xyz/anchor";
 import {
   PublicKey,
+  TransactionInstruction,
   VersionedTransaction,
   TransactionSignature,
   AccountMeta,
@@ -8,7 +9,13 @@ import {
   Commitment,
 } from "@solana/web3.js";
 
-import { BaseClient, BaseTxBuilder, TxOptions } from "../base";
+import {
+  BaseClient,
+  BaseTxBuilder,
+  type ProtocolPolicyClient,
+  type ProtocolPolicyTxBuilder,
+  type TxOptions,
+} from "../base";
 import { fetchMintAndTokenProgram, getProgramAccounts } from "../../utils";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
@@ -19,12 +26,17 @@ import {
   KAMINO_VAULT_STATE_SIZE,
   KAMINO_VAULTS_PROGRAM,
 } from "../../constants";
+import { KAMINO_VAULTS_PROTOCOL } from "../../protocols";
 import { KVaultAllocation, KVaultState } from "../../deser/kaminoLayouts";
+import { KaminoVaultsPolicy } from "../../deser/integrationPolicies";
 import { PkMap } from "../../utils";
 import { KaminoLendingClient } from "./lending";
 import { KAMINO_VAULTS_EVENT_AUTHORITY } from "./types";
 
-class TxBuilder extends BaseTxBuilder<KaminoVaultsClient> {
+class TxBuilder
+  extends BaseTxBuilder<KaminoVaultsClient>
+  implements ProtocolPolicyTxBuilder<KaminoVaultsPolicy>
+{
   public async depositTx(
     vault: PublicKey,
     amount: BN,
@@ -175,9 +187,51 @@ class TxBuilder extends BaseTxBuilder<KaminoVaultsClient> {
 
     return await this.client.base.intoVersionedTransaction(tx, txOptions);
   }
+
+  async setPolicyIx(
+    policy: KaminoVaultsPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.extKaminoProgram.methods
+      .setVaultsPolicy(policy)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+      })
+      .instruction();
+  }
+
+  async setPolicyTx(
+    policy: KaminoVaultsPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.extKaminoProgram.programId,
+      KAMINO_VAULTS_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.base.extKaminoProgram.programId,
+      KAMINO_VAULTS_PROTOCOL,
+      txOptions,
+    );
+  }
 }
 
-export class KaminoVaultsClient {
+export class KaminoVaultsClient
+  implements ProtocolPolicyClient<KaminoVaultsPolicy>
+{
   private vaultStates = new PkMap<KVaultState>();
   private shareMintToVaultPdaMap = new PkMap<PublicKey>();
   txBuilder: TxBuilder;
@@ -214,6 +268,27 @@ export class KaminoVaultsClient {
       new BN(amount),
       txOptions,
     );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async fetchPolicy(): Promise<KaminoVaultsPolicy | null> {
+    return await this.base.fetchProtocolPolicy(
+      this.base.extKaminoProgram.programId,
+      KAMINO_VAULTS_PROTOCOL,
+      KaminoVaultsPolicy,
+    );
+  }
+
+  async setPolicy(
+    policy: KaminoVaultsPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearPolicyTx(txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 
@@ -269,8 +344,7 @@ export class KaminoVaultsClient {
   }
 
   async fetchAndParseVaultState(vault: PublicKey) {
-    const vaultAccount =
-      await this.base.connection.getAccountInfo(vault);
+    const vaultAccount = await this.base.connection.getAccountInfo(vault);
     if (!vaultAccount) {
       throw new Error(`Kamino vault account not found:, ${vault}`);
     }
