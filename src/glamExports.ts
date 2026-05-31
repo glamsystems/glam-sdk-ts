@@ -35,6 +35,7 @@ import GlamMintIdlJsonStaging from "../target/idl/glam_mint-staging.json";
 import ExtSplIdlJsonStaging from "../target/idl/ext_spl-staging.json";
 import ExtKaminoIdlJsonStaging from "../target/idl/ext_kamino-staging.json";
 import ExtStakePoolIdlJsonStaging from "../target/idl/ext_stake_pool-staging.json";
+import ExtCctpIdlJsonStaging from "../target/idl/ext_cctp-staging.json";
 import ExtMarinadeIdlJsonStaging from "../target/idl/ext_marinade-staging.json";
 import ExtBridgeIdlJsonStaging from "../target/idl/ext_bridge-staging.json";
 import ExtEpiIdlJsonStaging from "../target/idl/ext_epi-staging.json";
@@ -94,8 +95,7 @@ export function getExtStakePoolIdl(staging: boolean) {
 }
 
 export function getExtCctpIdl(staging: boolean) {
-  // TODO: Update pubkey after ext_cctp staging program is deployed
-  return staging ? ExtCctpIdlJson : ExtCctpIdlJson;
+  return staging ? ExtCctpIdlJsonStaging : ExtCctpIdlJson;
 }
 
 export function getExtBridgeIdl(staging: boolean) {

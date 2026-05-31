@@ -1,5 +1,6 @@
 import {
   getExtBridgeProgramId,
+  getExtCctpProgramId,
   getExtJupiterProgramId,
   getExtKaminoProgramId,
   getExtPhoenixProgramId,
@@ -10,6 +11,7 @@ import {
 import { getProtocolsAndPermissions } from "../../src/constants";
 import {
   GLAM_MINT_PROTOCOL,
+  CCTP_PROTOCOL,
   JUPITER_BORROW_PROTOCOL,
   JUPITER_EARN_PROTOCOL,
   JUPITER_SWAP_PROTOCOL,
@@ -149,6 +151,14 @@ describe("getProtocolsAndPermissions", () => {
         "RepositionLiquidity",
         "InitializeTickArray",
       ]);
+
+      expect(
+        getPermissionNames(
+          staging,
+          getExtCctpProgramId(staging).toBase58(),
+          protocolBitflagKey(CCTP_PROTOCOL),
+        ),
+      ).toEqual(["Transfer"]);
 
       expect(
         getPermissionNames(
