@@ -5,6 +5,7 @@ import {
   getExtEpiProgramId,
   getExtJupiterProgramId,
   getExtKaminoProgramId,
+  getExtLoopscaleProgramId,
   getExtMarinadeProgramId,
   getExtPhoenixProgramId,
   getExtOrcaProgramId,
@@ -24,6 +25,7 @@ import {
   KAMINO_LENDING_PROTOCOL,
   KAMINO_VAULTS_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
+  LOOPSCALE_PROTOCOL,
   MARINADE_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
@@ -399,6 +401,27 @@ export const getProtocolsAndPermissions = (
         [1 << 7]: "IncreaseLiquidityByTokenAmounts",
         [1 << 8]: "RepositionLiquidity",
         [1 << 9]: "InitializeTickArray",
+      },
+    },
+  },
+  // Loopscale integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_loopscale/src/state/access.rs
+  [getExtLoopscaleProgramId(staging).toBase58()]: {
+    [protocolBitflagKey(LOOPSCALE_PROTOCOL)]: {
+      name: "Loopscale",
+      staging: true,
+      permissions: {
+        [1 << 0]: "ManageLoan",
+        [1 << 1]: "DepositCollateral",
+        [1 << 2]: "WithdrawCollateral",
+        [1 << 3]: "BorrowPrincipal",
+        [1 << 4]: "RepayPrincipal",
+        [1 << 5]: "RefinanceLedger",
+        [1 << 6]: "DepositUserVault",
+        [1 << 7]: "WithdrawUserVault",
+        [1 << 8]: "StakeUserVaultLp",
+        [1 << 9]: "UnstakeUserVaultLp",
+        [1 << 10]: "ClaimVaultRewards",
       },
     },
   },
