@@ -273,7 +273,7 @@ describe("ext_epi", () => {
       const txSig = await glamClient.epi.validateExternalObservation(
         {
           positionId: tokenizedPosition.toBytes(),
-          observedMintOracle: await glamClient.base.getSolOracle(),
+          observedMintOracle: await glamClient.getSolOracle(),
         },
         txOptions,
       );

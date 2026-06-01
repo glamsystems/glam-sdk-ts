@@ -322,6 +322,145 @@ export type ExtEpi = {
       ]
     },
     {
+      "name": "submitExternalObservationWormhole",
+      "docs": [
+        "Submit a Wormhole Guardian-verified external observation.",
+        "The caller only relays a VAA body whose signatures have already been",
+        "posted to the Wormhole Verification Shim."
+      ],
+      "discriminator": [
+        124,
+        238,
+        191,
+        242,
+        222,
+        175,
+        91,
+        148
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "observationState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wormholeConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  109,
+                  104,
+                  111,
+                  108,
+                  101,
+                  45,
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "positionId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "guardianSet"
+        },
+        {
+          "name": "guardianSignatures"
+        },
+        {
+          "name": "wormholeVerifyVaaShim",
+          "address": "EFaNWErqAtVWufdNb7yofSHHfWFos843DFpu4JBw24at"
+        }
+      ],
+      "args": [
+        {
+          "name": "positionId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "guardianSetBump",
+          "type": "u8"
+        },
+        {
+          "name": "vaaBody",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
       "name": "upsertExternalPosition",
       "docs": [
         "Create or update an external position configuration.",
@@ -461,9 +600,237 @@ export type ExtEpi = {
       ]
     },
     {
+      "name": "upsertExternalPositionWormholeConfig",
+      "docs": [
+        "Create or update Wormhole verification config for a Wormhole-sourced",
+        "external position."
+      ],
+      "discriminator": [
+        173,
+        64,
+        201,
+        39,
+        54,
+        49,
+        192,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wormholeConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  109,
+                  104,
+                  111,
+                  108,
+                  101,
+                  45,
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "input.position_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "defined": {
+              "name": "wormholeObservationConfigInput"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "upsertExternalPositionWormholeHyperliquidConfig",
+      "docs": [
+        "Create or update Hyperliquid-specific payload config for a",
+        "Wormhole-sourced external position."
+      ],
+      "discriminator": [
+        42,
+        13,
+        175,
+        7,
+        34,
+        137,
+        176,
+        108
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wormholeConfig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  109,
+                  104,
+                  111,
+                  108,
+                  101,
+                  45,
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "input.position_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "hyperliquidConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  109,
+                  104,
+                  111,
+                  108,
+                  101,
+                  45,
+                  104,
+                  108,
+                  45,
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "input.position_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "defined": {
+              "name": "wormholeHyperliquidObservationConfigInput"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "validateExternalObservation",
       "docs": [
-        "Validate a pending observation, promote it to active, and publish",
+        "Validate a pending observation, promote to active, and publish",
         "the full aggregate priced protocol for ext_epi.",
         "",
         "Remaining accounts:",
@@ -680,6 +1047,32 @@ export type ExtEpi = {
         133,
         249,
         103
+      ]
+    },
+    {
+      "name": "wormholeHyperliquidObservationConfig",
+      "discriminator": [
+        34,
+        225,
+        134,
+        14,
+        86,
+        66,
+        4,
+        53
+      ]
+    },
+    {
+      "name": "wormholeObservationConfig",
+      "discriminator": [
+        64,
+        123,
+        229,
+        21,
+        82,
+        252,
+        177,
+        166
       ]
     }
   ],
@@ -1291,6 +1684,9 @@ export type ExtEpi = {
           },
           {
             "name": "native"
+          },
+          {
+            "name": "wormhole"
           }
         ]
       }
@@ -2221,6 +2617,227 @@ export type ExtEpi = {
           },
           {
             "name": "periodic"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wormholeHyperliquidObservationConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glamState",
+            "type": "pubkey"
+          },
+          {
+            "name": "positionId",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "hyperliquidAccount",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "accountMarginSummaryPrecompile",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "spotBalancePrecompile",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "perpDexIndex",
+            "type": "u32"
+          },
+          {
+            "name": "usdcSpotToken",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wormholeHyperliquidObservationConfigInput",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "positionId",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "hyperliquidAccount",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "accountMarginSummaryPrecompile",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "spotBalancePrecompile",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "perpDexIndex",
+            "type": "u32"
+          },
+          {
+            "name": "usdcSpotToken",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wormholeObservationConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glamState",
+            "type": "pubkey"
+          },
+          {
+            "name": "positionId",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "emitterChain",
+            "type": "u16"
+          },
+          {
+            "name": "emitterAddress",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "payloadVersion",
+            "type": "u8"
+          },
+          {
+            "name": "payloadType",
+            "type": "u8"
+          },
+          {
+            "name": "maxAgeSeconds",
+            "type": "u32"
+          },
+          {
+            "name": "hasLastSequence",
+            "type": "bool"
+          },
+          {
+            "name": "lastSequence",
+            "type": "u64"
+          },
+          {
+            "name": "lastVaaHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wormholeObservationConfigInput",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "positionId",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "emitterChain",
+            "type": "u16"
+          },
+          {
+            "name": "emitterAddress",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "payloadVersion",
+            "type": "u8"
+          },
+          {
+            "name": "payloadType",
+            "type": "u8"
+          },
+          {
+            "name": "maxAgeSeconds",
+            "type": "u32"
           }
         ]
       }

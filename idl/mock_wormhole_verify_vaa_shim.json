@@ -1,0 +1,58 @@
+{
+  "address": "EFaNWErqAtVWufdNb7yofSHHfWFos843DFpu4JBw24at",
+  "metadata": {
+    "name": "mock_wormhole_verify_vaa_shim",
+    "version": "1.0.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "verify_hash",
+      "discriminator": [
+        22,
+        152,
+        160,
+        69,
+        241,
+        148,
+        14,
+        124
+      ],
+      "accounts": [
+        {
+          "name": "guardian_set"
+        },
+        {
+          "name": "guardian_signatures"
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian_set_bump",
+          "type": "u8"
+        },
+        {
+          "name": "digest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidGuardianSetBump",
+      "msg": "guardian set bump must be non-zero"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidDigest",
+      "msg": "digest must be non-zero"
+    }
+  ]
+}

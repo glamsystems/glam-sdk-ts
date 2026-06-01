@@ -316,6 +316,145 @@
       ]
     },
     {
+      "name": "submit_external_observation_wormhole",
+      "docs": [
+        "Submit a Wormhole Guardian-verified external observation.",
+        "The caller only relays a VAA body whose signatures have already been",
+        "posted to the Wormhole Verification Shim."
+      ],
+      "discriminator": [
+        124,
+        238,
+        191,
+        242,
+        222,
+        175,
+        91,
+        148
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "observation_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wormhole_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  109,
+                  104,
+                  111,
+                  108,
+                  101,
+                  45,
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "position_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "guardian_set"
+        },
+        {
+          "name": "guardian_signatures"
+        },
+        {
+          "name": "wormhole_verify_vaa_shim",
+          "address": "EFaNWErqAtVWufdNb7yofSHHfWFos843DFpu4JBw24at"
+        }
+      ],
+      "args": [
+        {
+          "name": "position_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "guardian_set_bump",
+          "type": "u8"
+        },
+        {
+          "name": "vaa_body",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
       "name": "upsert_external_position",
       "docs": [
         "Create or update an external position configuration.",
@@ -455,9 +594,237 @@
       ]
     },
     {
+      "name": "upsert_external_position_wormhole_config",
+      "docs": [
+        "Create or update Wormhole verification config for a Wormhole-sourced",
+        "external position."
+      ],
+      "discriminator": [
+        173,
+        64,
+        201,
+        39,
+        54,
+        49,
+        192,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wormhole_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  109,
+                  104,
+                  111,
+                  108,
+                  101,
+                  45,
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "input.position_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "defined": {
+              "name": "WormholeObservationConfigInput"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "upsert_external_position_wormhole_hyperliquid_config",
+      "docs": [
+        "Create or update Hyperliquid-specific payload config for a",
+        "Wormhole-sourced external position."
+      ],
+      "discriminator": [
+        42,
+        13,
+        175,
+        7,
+        34,
+        137,
+        176,
+        108
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wormhole_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  109,
+                  104,
+                  111,
+                  108,
+                  101,
+                  45,
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "input.position_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "hyperliquid_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  109,
+                  104,
+                  111,
+                  108,
+                  101,
+                  45,
+                  104,
+                  108,
+                  45,
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "input.position_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "defined": {
+              "name": "WormholeHyperliquidObservationConfigInput"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "validate_external_observation",
       "docs": [
-        "Validate a pending observation, promote it to active, and publish",
+        "Validate a pending observation, promote to active, and publish",
         "the full aggregate priced protocol for ext_epi.",
         "",
         "Remaining accounts:",
@@ -674,6 +1041,32 @@
         133,
         249,
         103
+      ]
+    },
+    {
+      "name": "WormholeHyperliquidObservationConfig",
+      "discriminator": [
+        34,
+        225,
+        134,
+        14,
+        86,
+        66,
+        4,
+        53
+      ]
+    },
+    {
+      "name": "WormholeObservationConfig",
+      "discriminator": [
+        64,
+        123,
+        229,
+        21,
+        82,
+        252,
+        177,
+        166
       ]
     }
   ],
@@ -1285,6 +1678,9 @@
           },
           {
             "name": "Native"
+          },
+          {
+            "name": "Wormhole"
           }
         ]
       }
@@ -2215,6 +2611,227 @@
           },
           {
             "name": "Periodic"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WormholeHyperliquidObservationConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glam_state",
+            "type": "pubkey"
+          },
+          {
+            "name": "position_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "hyperliquid_account",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "account_margin_summary_precompile",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "spot_balance_precompile",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "perp_dex_index",
+            "type": "u32"
+          },
+          {
+            "name": "usdc_spot_token",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WormholeHyperliquidObservationConfigInput",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "position_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "hyperliquid_account",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "account_margin_summary_precompile",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "spot_balance_precompile",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "perp_dex_index",
+            "type": "u32"
+          },
+          {
+            "name": "usdc_spot_token",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WormholeObservationConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glam_state",
+            "type": "pubkey"
+          },
+          {
+            "name": "position_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "emitter_chain",
+            "type": "u16"
+          },
+          {
+            "name": "emitter_address",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "payload_version",
+            "type": "u8"
+          },
+          {
+            "name": "payload_type",
+            "type": "u8"
+          },
+          {
+            "name": "max_age_seconds",
+            "type": "u32"
+          },
+          {
+            "name": "has_last_sequence",
+            "type": "bool"
+          },
+          {
+            "name": "last_sequence",
+            "type": "u64"
+          },
+          {
+            "name": "last_vaa_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WormholeObservationConfigInput",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "position_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "emitter_chain",
+            "type": "u16"
+          },
+          {
+            "name": "emitter_address",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "payload_version",
+            "type": "u8"
+          },
+          {
+            "name": "payload_type",
+            "type": "u8"
+          },
+          {
+            "name": "max_age_seconds",
+            "type": "u32"
           }
         ]
       }

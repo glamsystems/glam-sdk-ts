@@ -49,6 +49,9 @@ export const SEED_EXTRA_ACCOUNT_METAS = "extra-account-metas"; // policies progr
 export const SEED_GLOBAL_CONFIG = "global-config";
 export const SEED_INTEGRATION_AUTHORITY = "integration-authority";
 export const SEED_OBSERVATION_STATE = "observation-state";
+export const SEED_WORMHOLE_OBSERVATION_CONFIG = "wormhole-observation-config";
+export const SEED_WORMHOLE_HYPERLIQUID_OBSERVATION_CONFIG =
+  "wormhole-hl-observation-config";
 export const SEED_BRIDGE_REGISTRY = "bridge-registry";
 export const SEED_BRIDGE_SESSION = "bridge-session";
 export const SEED_BRIDGE_TRANSFER_RECORD = "bridge-transfer-record";
@@ -124,6 +127,16 @@ export const TOKEN_MESSENGER_MINTER_V2 = new PublicKey(
 export const MESSAGE_TRANSMITTER_V2 = new PublicKey(
   "CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC",
 );
+export const WORMHOLE_CORE_BRIDGE_PROGRAM = new PublicKey(
+  "worm2ZoG2kUd4vFXhvjh93UUH596ayRfgQ2MgjNMTth",
+);
+export const WORMHOLE_VERIFY_VAA_SHIM_PROGRAM = new PublicKey(
+  "EFaNWErqAtVWufdNb7yofSHHfWFos843DFpu4JBw24at",
+);
+export const HYPEREVM_NAV_ADAPTER_V2 =
+  "0x8e3d311e3f5814d2b4c1a9fc56d28d379abd1a86";
+export const HYPEREVM_NAV_ADAPTER_V2_EMITTER =
+  "0x0000000000000000000000008e3d311e3f5814d2b4c1a9fc56d28d379abd1a86";
 export const PHOENIX_PROGRAM_ID = new PublicKey(
   "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih",
 );
