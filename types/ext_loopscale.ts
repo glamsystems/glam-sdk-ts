@@ -116,8 +116,7 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
@@ -149,6 +148,9 @@ export type ExtLoopscale = {
           "name": "tokenProgram"
         },
         {
+          "name": "protocolAdminState"
+        },
+        {
           "name": "eventAuthority"
         }
       ],
@@ -159,140 +161,6 @@ export type ExtLoopscale = {
             "defined": {
               "name": "borrowPrincipalParams"
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "claimVaultRewards",
-      "docs": [
-        "Claim accrued rewards on staked user-vault LP positions.",
-        "",
-        "- Permission: `ClaimVaultRewards`."
-      ],
-      "discriminator": [
-        0,
-        152,
-        75,
-        29,
-        195,
-        223,
-        12,
-        101
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glamProtocolProgram"
-            }
-          }
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpiProgram",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "vault"
-        },
-        {
-          "name": "vaultRewardsInfo",
-          "writable": true
-        },
-        {
-          "name": "userRewardsInfo",
-          "writable": true
-        },
-        {
-          "name": "stakeAccount",
-          "writable": true
-        },
-        {
-          "name": "associatedTokenProgram"
-        },
-        {
-          "name": "eventAuthority"
-        }
-      ],
-      "args": [
-        {
-          "name": "mints",
-          "type": {
-            "vec": "pubkey"
           }
         }
       ]
@@ -397,12 +265,138 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
           "writable": true
+        },
+        {
+          "name": "protocolAdminState"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "closeStrategy",
+      "docs": [
+        "Close a Loopscale lender strategy account.",
+        "",
+        "- Permission: `CloseStrategy`."
+      ],
+      "discriminator": [
+        56,
+        247,
+        170,
+        246,
+        89,
+        221,
+        134,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bsAuth",
+          "signer": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "principalMint"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram"
+        },
+        {
+          "name": "protocolAdminState"
         },
         {
           "name": "eventAuthority"
@@ -510,12 +504,14 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
           "writable": true
+        },
+        {
+          "name": "protocolAdminState"
         },
         {
           "name": "eventAuthority"
@@ -527,6 +523,141 @@ export type ExtLoopscale = {
           "type": {
             "defined": {
               "name": "createLoanParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "createStrategy",
+      "docs": [
+        "Create a new Loopscale lender strategy owned by the GLAM vault.",
+        "",
+        "- Permission: `CreateStrategy`.",
+        "- `params.lender` must equal the GLAM vault."
+      ],
+      "discriminator": [
+        152,
+        160,
+        107,
+        148,
+        245,
+        190,
+        127,
+        224
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bsAuth",
+          "signer": true
+        },
+        {
+          "name": "nonce",
+          "signer": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "marketInformation"
+        },
+        {
+          "name": "principalMint"
+        },
+        {
+          "name": "protocolAdminState"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "createStrategyParams"
             }
           }
         }
@@ -633,8 +764,7 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
@@ -661,6 +791,9 @@ export type ExtLoopscale = {
           "name": "associatedTokenProgram"
         },
         {
+          "name": "protocolAdminState"
+        },
+        {
           "name": "eventAuthority"
         }
       ],
@@ -676,21 +809,21 @@ export type ExtLoopscale = {
       ]
     },
     {
-      "name": "depositUserVault",
+      "name": "depositStrategy",
       "docs": [
-        "Deposit principal into a Loopscale user vault and mint LP tokens to the GLAM vault.",
+        "Deposit principal liquidity into a Loopscale lender strategy.",
         "",
-        "- Permission: `DepositUserVault`."
+        "- Permission: `DepositStrategy`."
       ],
       "discriminator": [
-        204,
-        190,
-        182,
-        224,
-        15,
-        219,
-        247,
-        121
+        246,
+        82,
+        57,
+        226,
+        131,
+        222,
+        253,
+        249
       ],
       "accounts": [
         {
@@ -775,321 +908,25 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "vault",
-          "writable": true
+          "signer": true
         },
         {
           "name": "strategy",
           "writable": true
         },
         {
+          "name": "principalMint"
+        },
+        {
           "name": "marketInformation"
         },
         {
-          "name": "lpMint",
+          "name": "lenderTa",
           "writable": true
         },
         {
-          "name": "userLpTa",
+          "name": "strategyTa",
           "writable": true
-        },
-        {
-          "name": "userPrincipalTa",
-          "writable": true
-        },
-        {
-          "name": "strategyPrincipalTa",
-          "writable": true
-        },
-        {
-          "name": "principalMint"
-        },
-        {
-          "name": "principalTokenProgram"
-        },
-        {
-          "name": "token2022Program"
-        },
-        {
-          "name": "associatedTokenProgram"
-        },
-        {
-          "name": "eventAuthority"
-        }
-      ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "lpParams"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "lockLoan",
-      "docs": [
-        "Lock a loan to commit borrowed principal and collateral.",
-        "",
-        "- Permission: `ManageLoan`."
-      ],
-      "discriminator": [
-        28,
-        101,
-        52,
-        240,
-        146,
-        230,
-        95,
-        22
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glamProtocolProgram"
-            }
-          }
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpiProgram",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "loan",
-          "writable": true
-        },
-        {
-          "name": "instructionsSysvar",
-          "address": "Sysvar1nstructions1111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "lockLoanParams"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "refinanceLedger",
-      "docs": [
-        "Refinance a loan ledger from one strategy to another.",
-        "",
-        "- Permission: `RefinanceLedger`.",
-        "- Policy",
-        "- `principal_mint` must be present in `LoopscalePolicy::borrow_allowlist`.",
-        "- `new_strategy_market_information` must be present in `LoopscalePolicy::market_allowlist`."
-      ],
-      "discriminator": [
-        103,
-        41,
-        134,
-        43,
-        140,
-        152,
-        253,
-        74
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glamProtocolProgram"
-            }
-          }
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpiProgram",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bsAuth",
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "loan",
-          "writable": true
-        },
-        {
-          "name": "oldStrategy",
-          "writable": true
-        },
-        {
-          "name": "newStrategy",
-          "writable": true
-        },
-        {
-          "name": "oldStrategyTa",
-          "writable": true
-        },
-        {
-          "name": "newStrategyTa",
-          "writable": true
-        },
-        {
-          "name": "oldStrategyMarketInformation",
-          "writable": true
-        },
-        {
-          "name": "newStrategyMarketInformation",
-          "writable": true
-        },
-        {
-          "name": "principalMint"
         },
         {
           "name": "tokenProgram"
@@ -1098,20 +935,16 @@ export type ExtLoopscale = {
           "name": "associatedTokenProgram"
         },
         {
-          "name": "eventAuthority"
+          "name": "protocolAdminState"
         },
         {
-          "name": "program"
+          "name": "eventAuthority"
         }
       ],
       "args": [
         {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "refinanceLedgerParams"
-            }
-          }
+          "name": "amount",
+          "type": "u64"
         }
       ]
     },
@@ -1215,8 +1048,7 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
@@ -1248,6 +1080,9 @@ export type ExtLoopscale = {
           "name": "tokenProgram"
         },
         {
+          "name": "protocolAdminState"
+        },
+        {
           "name": "eventAuthority"
         }
       ],
@@ -1257,6 +1092,169 @@ export type ExtLoopscale = {
           "type": {
             "defined": {
               "name": "repayPrincipalParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "sellLedger",
+      "docs": [
+        "Sell a loan ledger from one strategy to another.",
+        "",
+        "- Permission: `SellLedger`."
+      ],
+      "discriminator": [
+        55,
+        17,
+        153,
+        148,
+        120,
+        242,
+        80,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bsAuth",
+          "signer": true
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "newStrategyTa",
+          "writable": true
+        },
+        {
+          "name": "lenderAuthTa",
+          "writable": true
+        },
+        {
+          "name": "oldStrategy",
+          "writable": true
+        },
+        {
+          "name": "newStrategy",
+          "writable": true
+        },
+        {
+          "name": "oldStrategyMarketInformation",
+          "writable": true
+        },
+        {
+          "name": "newStrategyMarketInformation",
+          "writable": true
+        },
+        {
+          "name": "principalMint"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram"
+        },
+        {
+          "name": "userVault"
+        },
+        {
+          "name": "oldStrategyTa"
+        },
+        {
+          "name": "protocolAdminState"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "sellLedgerParams"
             }
           }
         }
@@ -1304,21 +1302,21 @@ export type ExtLoopscale = {
       ]
     },
     {
-      "name": "stakeUserVaultLp",
+      "name": "updateStrategy",
       "docs": [
-        "Stake user-vault LP tokens to earn rewards.",
+        "Update a Loopscale lender strategy's terms, caps, and collateral terms.",
         "",
-        "- Permission: `StakeUserVaultLp`."
+        "- Permission: `UpdateStrategy`."
       ],
       "discriminator": [
-        114,
-        132,
-        194,
-        209,
-        208,
-        149,
-        43,
-        136
+        16,
+        76,
+        138,
+        179,
+        171,
+        112,
+        196,
+        21
       ],
       "accounts": [
         {
@@ -1403,45 +1401,27 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "nonce",
           "signer": true
         },
         {
-          "name": "vault",
+          "name": "strategy",
           "writable": true
         },
         {
-          "name": "vaultStake",
+          "name": "principalMint"
+        },
+        {
+          "name": "strategyTa",
           "writable": true
         },
         {
-          "name": "lpMint"
-        },
-        {
-          "name": "userLpTa",
-          "writable": true
-        },
-        {
-          "name": "vaultStakeLpTa",
-          "writable": true
-        },
-        {
-          "name": "vaultRewardsInfo",
-          "writable": true
-        },
-        {
-          "name": "userRewardsInfo",
-          "writable": true
+          "name": "associatedTokenProgram"
         },
         {
           "name": "tokenProgram"
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "protocolAdminState"
         },
         {
           "name": "eventAuthority"
@@ -1449,281 +1429,22 @@ export type ExtLoopscale = {
       ],
       "args": [
         {
-          "name": "params",
+          "name": "collateralTerms",
           "type": {
-            "defined": {
-              "name": "vaultStakeParams"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "unlockLoan",
-      "docs": [
-        "Unlock a previously locked loan.",
-        "",
-        "- Permission: `ManageLoan`."
-      ],
-      "discriminator": [
-        121,
-        226,
-        178,
-        98,
-        215,
-        209,
-        240,
-        38
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
+            "vec": {
+              "defined": {
+                "name": "multiCollateralTermsUpdateParams"
               }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glamProtocolProgram"
             }
           }
         },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpiProgram",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "loan",
-          "writable": true
-        }
-      ],
-      "args": [
         {
           "name": "params",
           "type": {
-            "defined": {
-              "name": "loanUnlockParams"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "unstakeUserVaultLp",
-      "docs": [
-        "Unstake user-vault LP tokens.",
-        "",
-        "- Permission: `UnstakeUserVaultLp`."
-      ],
-      "discriminator": [
-        83,
-        78,
-        230,
-        123,
-        226,
-        40,
-        158,
-        97
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
+            "option": {
+              "defined": {
+                "name": "updateStrategyParams"
               }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glamProtocolProgram"
-            }
-          }
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpiProgram",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "vault",
-          "writable": true
-        },
-        {
-          "name": "lpMint",
-          "writable": true
-        },
-        {
-          "name": "vaultStake",
-          "writable": true
-        },
-        {
-          "name": "userLpTa",
-          "writable": true
-        },
-        {
-          "name": "vaultStakeLpTa",
-          "writable": true
-        },
-        {
-          "name": "vaultRewardsInfo",
-          "writable": true
-        },
-        {
-          "name": "userRewardsInfo",
-          "writable": true
-        },
-        {
-          "name": "tokenProgram"
-        },
-        {
-          "name": "associatedTokenProgram"
-        },
-        {
-          "name": "eventAuthority"
-        }
-      ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "vaultUnstakeParams"
             }
           }
         }
@@ -1829,12 +1550,14 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
           "writable": true
+        },
+        {
+          "name": "protocolAdminState"
         }
       ],
       "args": [
@@ -1948,8 +1671,7 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
@@ -1973,6 +1695,9 @@ export type ExtLoopscale = {
           "name": "associatedTokenProgram"
         },
         {
+          "name": "protocolAdminState"
+        },
+        {
           "name": "eventAuthority"
         }
       ],
@@ -1988,21 +1713,21 @@ export type ExtLoopscale = {
       ]
     },
     {
-      "name": "withdrawUserVault",
+      "name": "withdrawStrategy",
       "docs": [
-        "Withdraw principal from a Loopscale user vault by redeeming LP tokens.",
+        "Withdraw undeployed principal from a Loopscale lender strategy.",
         "",
-        "- Permission: `WithdrawUserVault`."
+        "- Permission: `WithdrawStrategy`."
       ],
       "discriminator": [
-        9,
-        80,
+        31,
+        45,
+        162,
+        5,
+        193,
+        217,
         134,
-        138,
-        212,
-        20,
-        61,
-        42
+        188
       ],
       "accounts": [
         {
@@ -2087,47 +1812,34 @@ export type ExtLoopscale = {
         },
         {
           "name": "bsAuth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "vault",
-          "writable": true
+          "signer": true
         },
         {
           "name": "strategy",
           "writable": true
         },
         {
-          "name": "marketInformation"
-        },
-        {
-          "name": "lpMint",
-          "writable": true
-        },
-        {
-          "name": "userLpTa",
-          "writable": true
-        },
-        {
-          "name": "userPrincipalTa",
-          "writable": true
-        },
-        {
-          "name": "strategyPrincipalTa",
-          "writable": true
-        },
-        {
           "name": "principalMint"
         },
         {
-          "name": "principalTokenProgram"
+          "name": "marketInformation"
         },
         {
-          "name": "token2022Program"
+          "name": "lenderTa",
+          "writable": true
+        },
+        {
+          "name": "strategyTa",
+          "writable": true
         },
         {
           "name": "associatedTokenProgram"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "protocolAdminState"
         },
         {
           "name": "eventAuthority"
@@ -2135,12 +1847,12 @@ export type ExtLoopscale = {
       ],
       "args": [
         {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "lpParams"
-            }
-          }
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "withdrawAll",
+          "type": "bool"
         }
       ]
     }
@@ -2254,6 +1966,22 @@ export type ExtLoopscale = {
       }
     },
     {
+      "name": "collateralTermsIndices",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "collateralIndex",
+            "type": "u8"
+          },
+          {
+            "name": "durationIndex",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "createLoanParams",
       "type": {
         "kind": "struct",
@@ -2261,6 +1989,52 @@ export type ExtLoopscale = {
           {
             "name": "nonce",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createStrategyParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "lender",
+            "type": "pubkey"
+          },
+          {
+            "name": "originationCap",
+            "type": "u64"
+          },
+          {
+            "name": "liquidityBuffer",
+            "type": "u64"
+          },
+          {
+            "name": "interestFee",
+            "type": "u64"
+          },
+          {
+            "name": "originationFee",
+            "type": "u64"
+          },
+          {
+            "name": "principalFee",
+            "type": "u64"
+          },
+          {
+            "name": "originationsEnabled",
+            "type": "bool"
+          },
+          {
+            "name": "externalYieldSourceArgs",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "externalYieldSourceArgs"
+                }
+              }
+            }
           }
         ]
       }
@@ -2628,38 +2402,6 @@ export type ExtLoopscale = {
       }
     },
     {
-      "name": "exactInParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "amountIn",
-            "type": "u64"
-          },
-          {
-            "name": "minAmountOut",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "exactOutParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "amountOut",
-            "type": "u64"
-          },
-          {
-            "name": "maxAmountIn",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "expectedLoanValues",
       "type": {
         "kind": "struct",
@@ -2676,6 +2418,22 @@ export type ExtLoopscale = {
                 5
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "externalYieldSourceArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "newExternalYieldSource",
+            "type": "u8"
+          },
+          {
+            "name": "externalYieldVault",
+            "type": "pubkey"
           }
         ]
       }
@@ -2834,30 +2592,6 @@ export type ExtLoopscale = {
       }
     },
     {
-      "name": "loanUnlockParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "assetIndexGuidance",
-            "type": "bytes"
-          }
-        ]
-      }
-    },
-    {
-      "name": "lockLoanParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "unlockIdx",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
       "name": "loopscalePolicy",
       "type": {
         "kind": "struct",
@@ -2884,34 +2618,6 @@ export type ExtLoopscale = {
       }
     },
     {
-      "name": "lpParams",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "exactIn",
-            "fields": [
-              {
-                "defined": {
-                  "name": "exactInParams"
-                }
-              }
-            ]
-          },
-          {
-            "name": "exactOut",
-            "fields": [
-              {
-                "defined": {
-                  "name": "exactOutParams"
-                }
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
       "name": "managementFee",
       "type": {
         "kind": "struct",
@@ -2919,6 +2625,28 @@ export type ExtLoopscale = {
           {
             "name": "feeBps",
             "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "multiCollateralTermsUpdateParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "apy",
+            "type": "u64"
+          },
+          {
+            "name": "indices",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "collateralTermsIndices"
+                }
+              }
+            }
           }
         ]
       }
@@ -3163,26 +2891,6 @@ export type ExtLoopscale = {
       }
     },
     {
-      "name": "refinanceLedgerParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "ledgerIndex",
-            "type": "u8"
-          },
-          {
-            "name": "durationIndex",
-            "type": "u8"
-          },
-          {
-            "name": "assetIndexGuidance",
-            "type": "bytes"
-          }
-        ]
-      }
-    },
-    {
       "name": "repayPrincipalParams",
       "type": {
         "kind": "struct",
@@ -3198,6 +2906,26 @@ export type ExtLoopscale = {
           {
             "name": "repayAll",
             "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sellLedgerParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ledgerIndex",
+            "type": "u8"
+          },
+          {
+            "name": "expectedSalePrice",
+            "type": "u64"
+          },
+          {
+            "name": "assetIndexGuidance",
+            "type": "bytes"
           }
         ]
       }
@@ -3349,6 +3077,66 @@ export type ExtLoopscale = {
       }
     },
     {
+      "name": "updateStrategyParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "originationsEnabled",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "liquidityBuffer",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "interestFee",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "originationFee",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "principalFee",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "originationCap",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "marketInformation",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "externalYieldSourceArgs",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "externalYieldSourceArgs"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "updateWeightMatrixParams",
       "type": {
         "kind": "struct",
@@ -3391,56 +3179,6 @@ export type ExtLoopscale = {
           },
           {
             "name": "periodic"
-          }
-        ]
-      }
-    },
-    {
-      "name": "vaultStakeParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "principalAmount",
-            "type": "u64"
-          },
-          {
-            "name": "stakeAll",
-            "type": {
-              "option": "bool"
-            }
-          },
-          {
-            "name": "duration",
-            "type": "u32"
-          },
-          {
-            "name": "durationType",
-            "type": "u8"
-          },
-          {
-            "name": "actionType",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "vaultUnstakeParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "actionType",
-            "type": "u8"
-          },
-          {
-            "name": "principalAmount",
-            "type": "u64"
           }
         ]
       }
@@ -3494,9 +3232,14 @@ export type ExtLoopscale = {
       "value": "8"
     },
     {
-      "name": "protoLoopscalePermClaimVaultRewards",
+      "name": "protoLoopscalePermCloseStrategy",
       "type": "u64",
-      "value": "1024"
+      "value": "32768"
+    },
+    {
+      "name": "protoLoopscalePermCreateStrategy",
+      "type": "u64",
+      "value": "2048"
     },
     {
       "name": "protoLoopscalePermDepositCollateral",
@@ -3504,9 +3247,9 @@ export type ExtLoopscale = {
       "value": "2"
     },
     {
-      "name": "protoLoopscalePermDepositUserVault",
+      "name": "protoLoopscalePermDepositStrategy",
       "type": "u64",
-      "value": "64"
+      "value": "8192"
     },
     {
       "name": "protoLoopscalePermManageLoan",
@@ -3514,24 +3257,19 @@ export type ExtLoopscale = {
       "value": "1"
     },
     {
-      "name": "protoLoopscalePermRefinanceLedger",
-      "type": "u64",
-      "value": "32"
-    },
-    {
       "name": "protoLoopscalePermRepayPrincipal",
       "type": "u64",
       "value": "16"
     },
     {
-      "name": "protoLoopscalePermStakeUserVaultLp",
+      "name": "protoLoopscalePermSellLedger",
       "type": "u64",
-      "value": "256"
+      "value": "65536"
     },
     {
-      "name": "protoLoopscalePermUnstakeUserVaultLp",
+      "name": "protoLoopscalePermUpdateStrategy",
       "type": "u64",
-      "value": "512"
+      "value": "4096"
     },
     {
       "name": "protoLoopscalePermWithdrawCollateral",
@@ -3539,9 +3277,9 @@ export type ExtLoopscale = {
       "value": "4"
     },
     {
-      "name": "protoLoopscalePermWithdrawUserVault",
+      "name": "protoLoopscalePermWithdrawStrategy",
       "type": "u64",
-      "value": "128"
+      "value": "16384"
     }
   ]
 };

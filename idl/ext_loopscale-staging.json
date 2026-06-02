@@ -110,8 +110,7 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
@@ -143,6 +142,9 @@
           "name": "token_program"
         },
         {
+          "name": "protocol_admin_state"
+        },
+        {
           "name": "event_authority"
         }
       ],
@@ -153,140 +155,6 @@
             "defined": {
               "name": "BorrowPrincipalParams"
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "claim_vault_rewards",
-      "docs": [
-        "Claim accrued rewards on staked user-vault LP positions.",
-        "",
-        "- Permission: `ClaimVaultRewards`."
-      ],
-      "discriminator": [
-        0,
-        152,
-        75,
-        29,
-        195,
-        223,
-        12,
-        101
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glam_protocol_program"
-            }
-          }
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpi_program",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "vault"
-        },
-        {
-          "name": "vault_rewards_info",
-          "writable": true
-        },
-        {
-          "name": "user_rewards_info",
-          "writable": true
-        },
-        {
-          "name": "stake_account",
-          "writable": true
-        },
-        {
-          "name": "associated_token_program"
-        },
-        {
-          "name": "event_authority"
-        }
-      ],
-      "args": [
-        {
-          "name": "mints",
-          "type": {
-            "vec": "pubkey"
           }
         }
       ]
@@ -391,12 +259,138 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
           "writable": true
+        },
+        {
+          "name": "protocol_admin_state"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_strategy",
+      "docs": [
+        "Close a Loopscale lender strategy account.",
+        "",
+        "- Permission: `CloseStrategy`."
+      ],
+      "discriminator": [
+        56,
+        247,
+        170,
+        246,
+        89,
+        221,
+        134,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "protocol_admin_state"
         },
         {
           "name": "event_authority"
@@ -504,12 +498,14 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
           "writable": true
+        },
+        {
+          "name": "protocol_admin_state"
         },
         {
           "name": "event_authority"
@@ -521,6 +517,141 @@
           "type": {
             "defined": {
               "name": "CreateLoanParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_strategy",
+      "docs": [
+        "Create a new Loopscale lender strategy owned by the GLAM vault.",
+        "",
+        "- Permission: `CreateStrategy`.",
+        "- `params.lender` must equal the GLAM vault."
+      ],
+      "discriminator": [
+        152,
+        160,
+        107,
+        148,
+        245,
+        190,
+        127,
+        224
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true
+        },
+        {
+          "name": "nonce",
+          "signer": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "market_information"
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "protocol_admin_state"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "CreateStrategyParams"
             }
           }
         }
@@ -627,8 +758,7 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
@@ -655,6 +785,9 @@
           "name": "associated_token_program"
         },
         {
+          "name": "protocol_admin_state"
+        },
+        {
           "name": "event_authority"
         }
       ],
@@ -670,21 +803,21 @@
       ]
     },
     {
-      "name": "deposit_user_vault",
+      "name": "deposit_strategy",
       "docs": [
-        "Deposit principal into a Loopscale user vault and mint LP tokens to the GLAM vault.",
+        "Deposit principal liquidity into a Loopscale lender strategy.",
         "",
-        "- Permission: `DepositUserVault`."
+        "- Permission: `DepositStrategy`."
       ],
       "discriminator": [
-        204,
-        190,
-        182,
-        224,
-        15,
-        219,
-        247,
-        121
+        246,
+        82,
+        57,
+        226,
+        131,
+        222,
+        253,
+        249
       ],
       "accounts": [
         {
@@ -769,321 +902,25 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "vault",
-          "writable": true
+          "signer": true
         },
         {
           "name": "strategy",
           "writable": true
         },
         {
+          "name": "principal_mint"
+        },
+        {
           "name": "market_information"
         },
         {
-          "name": "lp_mint",
+          "name": "lender_ta",
           "writable": true
         },
         {
-          "name": "user_lp_ta",
+          "name": "strategy_ta",
           "writable": true
-        },
-        {
-          "name": "user_principal_ta",
-          "writable": true
-        },
-        {
-          "name": "strategy_principal_ta",
-          "writable": true
-        },
-        {
-          "name": "principal_mint"
-        },
-        {
-          "name": "principal_token_program"
-        },
-        {
-          "name": "token_2022_program"
-        },
-        {
-          "name": "associated_token_program"
-        },
-        {
-          "name": "event_authority"
-        }
-      ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "LpParams"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "lock_loan",
-      "docs": [
-        "Lock a loan to commit borrowed principal and collateral.",
-        "",
-        "- Permission: `ManageLoan`."
-      ],
-      "discriminator": [
-        28,
-        101,
-        52,
-        240,
-        146,
-        230,
-        95,
-        22
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glam_protocol_program"
-            }
-          }
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpi_program",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "loan",
-          "writable": true
-        },
-        {
-          "name": "instructions_sysvar",
-          "address": "Sysvar1nstructions1111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "LockLoanParams"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "refinance_ledger",
-      "docs": [
-        "Refinance a loan ledger from one strategy to another.",
-        "",
-        "- Permission: `RefinanceLedger`.",
-        "- Policy",
-        "- `principal_mint` must be present in `LoopscalePolicy::borrow_allowlist`.",
-        "- `new_strategy_market_information` must be present in `LoopscalePolicy::market_allowlist`."
-      ],
-      "discriminator": [
-        103,
-        41,
-        134,
-        43,
-        140,
-        152,
-        253,
-        74
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glam_protocol_program"
-            }
-          }
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpi_program",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bs_auth",
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "loan",
-          "writable": true
-        },
-        {
-          "name": "old_strategy",
-          "writable": true
-        },
-        {
-          "name": "new_strategy",
-          "writable": true
-        },
-        {
-          "name": "old_strategy_ta",
-          "writable": true
-        },
-        {
-          "name": "new_strategy_ta",
-          "writable": true
-        },
-        {
-          "name": "old_strategy_market_information",
-          "writable": true
-        },
-        {
-          "name": "new_strategy_market_information",
-          "writable": true
-        },
-        {
-          "name": "principal_mint"
         },
         {
           "name": "token_program"
@@ -1092,20 +929,16 @@
           "name": "associated_token_program"
         },
         {
-          "name": "event_authority"
+          "name": "protocol_admin_state"
         },
         {
-          "name": "program"
+          "name": "event_authority"
         }
       ],
       "args": [
         {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "RefinanceLedgerParams"
-            }
-          }
+          "name": "amount",
+          "type": "u64"
         }
       ]
     },
@@ -1209,8 +1042,7 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
@@ -1242,6 +1074,9 @@
           "name": "token_program"
         },
         {
+          "name": "protocol_admin_state"
+        },
+        {
           "name": "event_authority"
         }
       ],
@@ -1251,6 +1086,169 @@
           "type": {
             "defined": {
               "name": "RepayPrincipalParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "sell_ledger",
+      "docs": [
+        "Sell a loan ledger from one strategy to another.",
+        "",
+        "- Permission: `SellLedger`."
+      ],
+      "discriminator": [
+        55,
+        17,
+        153,
+        148,
+        120,
+        242,
+        80,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true
+        },
+        {
+          "name": "loan",
+          "writable": true
+        },
+        {
+          "name": "new_strategy_ta",
+          "writable": true
+        },
+        {
+          "name": "lender_auth_ta",
+          "writable": true
+        },
+        {
+          "name": "old_strategy",
+          "writable": true
+        },
+        {
+          "name": "new_strategy",
+          "writable": true
+        },
+        {
+          "name": "old_strategy_market_information",
+          "writable": true
+        },
+        {
+          "name": "new_strategy_market_information",
+          "writable": true
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "user_vault"
+        },
+        {
+          "name": "old_strategy_ta"
+        },
+        {
+          "name": "protocol_admin_state"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "SellLedgerParams"
             }
           }
         }
@@ -1298,21 +1296,21 @@
       ]
     },
     {
-      "name": "stake_user_vault_lp",
+      "name": "update_strategy",
       "docs": [
-        "Stake user-vault LP tokens to earn rewards.",
+        "Update a Loopscale lender strategy's terms, caps, and collateral terms.",
         "",
-        "- Permission: `StakeUserVaultLp`."
+        "- Permission: `UpdateStrategy`."
       ],
       "discriminator": [
-        114,
-        132,
-        194,
-        209,
-        208,
-        149,
-        43,
-        136
+        16,
+        76,
+        138,
+        179,
+        171,
+        112,
+        196,
+        21
       ],
       "accounts": [
         {
@@ -1397,45 +1395,27 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "nonce",
           "signer": true
         },
         {
-          "name": "vault",
+          "name": "strategy",
           "writable": true
         },
         {
-          "name": "vault_stake",
+          "name": "principal_mint"
+        },
+        {
+          "name": "strategy_ta",
           "writable": true
         },
         {
-          "name": "lp_mint"
-        },
-        {
-          "name": "user_lp_ta",
-          "writable": true
-        },
-        {
-          "name": "vault_stake_lp_ta",
-          "writable": true
-        },
-        {
-          "name": "vault_rewards_info",
-          "writable": true
-        },
-        {
-          "name": "user_rewards_info",
-          "writable": true
+          "name": "associated_token_program"
         },
         {
           "name": "token_program"
         },
         {
-          "name": "associated_token_program"
+          "name": "protocol_admin_state"
         },
         {
           "name": "event_authority"
@@ -1443,281 +1423,22 @@
       ],
       "args": [
         {
-          "name": "params",
+          "name": "collateral_terms",
           "type": {
-            "defined": {
-              "name": "VaultStakeParams"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "unlock_loan",
-      "docs": [
-        "Unlock a previously locked loan.",
-        "",
-        "- Permission: `ManageLoan`."
-      ],
-      "discriminator": [
-        121,
-        226,
-        178,
-        98,
-        215,
-        209,
-        240,
-        38
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
+            "vec": {
+              "defined": {
+                "name": "MultiCollateralTermsUpdateParams"
               }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glam_protocol_program"
             }
           }
         },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpi_program",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "loan",
-          "writable": true
-        }
-      ],
-      "args": [
         {
           "name": "params",
           "type": {
-            "defined": {
-              "name": "LoanUnlockParams"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "unstake_user_vault_lp",
-      "docs": [
-        "Unstake user-vault LP tokens.",
-        "",
-        "- Permission: `UnstakeUserVaultLp`."
-      ],
-      "discriminator": [
-        83,
-        78,
-        230,
-        123,
-        226,
-        40,
-        158,
-        97
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
+            "option": {
+              "defined": {
+                "name": "UpdateStrategyParams"
               }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "glam_protocol_program"
-            }
-          }
-        },
-        {
-          "name": "glam_signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "cpi_program",
-          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "vault",
-          "writable": true
-        },
-        {
-          "name": "lp_mint",
-          "writable": true
-        },
-        {
-          "name": "vault_stake",
-          "writable": true
-        },
-        {
-          "name": "user_lp_ta",
-          "writable": true
-        },
-        {
-          "name": "vault_stake_lp_ta",
-          "writable": true
-        },
-        {
-          "name": "vault_rewards_info",
-          "writable": true
-        },
-        {
-          "name": "user_rewards_info",
-          "writable": true
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "associated_token_program"
-        },
-        {
-          "name": "event_authority"
-        }
-      ],
-      "args": [
-        {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "VaultUnstakeParams"
             }
           }
         }
@@ -1823,12 +1544,14 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
           "writable": true
+        },
+        {
+          "name": "protocol_admin_state"
         }
       ],
       "args": [
@@ -1942,8 +1665,7 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
+          "signer": true
         },
         {
           "name": "loan",
@@ -1967,6 +1689,9 @@
           "name": "associated_token_program"
         },
         {
+          "name": "protocol_admin_state"
+        },
+        {
           "name": "event_authority"
         }
       ],
@@ -1982,21 +1707,21 @@
       ]
     },
     {
-      "name": "withdraw_user_vault",
+      "name": "withdraw_strategy",
       "docs": [
-        "Withdraw principal from a Loopscale user vault by redeeming LP tokens.",
+        "Withdraw undeployed principal from a Loopscale lender strategy.",
         "",
-        "- Permission: `WithdrawUserVault`."
+        "- Permission: `WithdrawStrategy`."
       ],
       "discriminator": [
-        9,
-        80,
+        31,
+        45,
+        162,
+        5,
+        193,
+        217,
         134,
-        138,
-        212,
-        20,
-        61,
-        42
+        188
       ],
       "accounts": [
         {
@@ -2081,47 +1806,34 @@
         },
         {
           "name": "bs_auth",
-          "signer": true,
-          "address": "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs"
-        },
-        {
-          "name": "vault",
-          "writable": true
+          "signer": true
         },
         {
           "name": "strategy",
           "writable": true
         },
         {
-          "name": "market_information"
-        },
-        {
-          "name": "lp_mint",
-          "writable": true
-        },
-        {
-          "name": "user_lp_ta",
-          "writable": true
-        },
-        {
-          "name": "user_principal_ta",
-          "writable": true
-        },
-        {
-          "name": "strategy_principal_ta",
-          "writable": true
-        },
-        {
           "name": "principal_mint"
         },
         {
-          "name": "principal_token_program"
+          "name": "market_information"
         },
         {
-          "name": "token_2022_program"
+          "name": "lender_ta",
+          "writable": true
+        },
+        {
+          "name": "strategy_ta",
+          "writable": true
         },
         {
           "name": "associated_token_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "protocol_admin_state"
         },
         {
           "name": "event_authority"
@@ -2129,12 +1841,12 @@
       ],
       "args": [
         {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "LpParams"
-            }
-          }
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "withdraw_all",
+          "type": "bool"
         }
       ]
     }
@@ -2248,6 +1960,22 @@
       }
     },
     {
+      "name": "CollateralTermsIndices",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "collateral_index",
+            "type": "u8"
+          },
+          {
+            "name": "duration_index",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "CreateLoanParams",
       "type": {
         "kind": "struct",
@@ -2255,6 +1983,52 @@
           {
             "name": "nonce",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateStrategyParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "lender",
+            "type": "pubkey"
+          },
+          {
+            "name": "origination_cap",
+            "type": "u64"
+          },
+          {
+            "name": "liquidity_buffer",
+            "type": "u64"
+          },
+          {
+            "name": "interest_fee",
+            "type": "u64"
+          },
+          {
+            "name": "origination_fee",
+            "type": "u64"
+          },
+          {
+            "name": "principal_fee",
+            "type": "u64"
+          },
+          {
+            "name": "originations_enabled",
+            "type": "bool"
+          },
+          {
+            "name": "external_yield_source_args",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "ExternalYieldSourceArgs"
+                }
+              }
+            }
           }
         ]
       }
@@ -2622,38 +2396,6 @@
       }
     },
     {
-      "name": "ExactInParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "amount_in",
-            "type": "u64"
-          },
-          {
-            "name": "min_amount_out",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "ExactOutParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "amount_out",
-            "type": "u64"
-          },
-          {
-            "name": "max_amount_in",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "ExpectedLoanValues",
       "type": {
         "kind": "struct",
@@ -2670,6 +2412,22 @@
                 5
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExternalYieldSourceArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_external_yield_source",
+            "type": "u8"
+          },
+          {
+            "name": "external_yield_vault",
+            "type": "pubkey"
           }
         ]
       }
@@ -2828,30 +2586,6 @@
       }
     },
     {
-      "name": "LoanUnlockParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "asset_index_guidance",
-            "type": "bytes"
-          }
-        ]
-      }
-    },
-    {
-      "name": "LockLoanParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "unlock_idx",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
       "name": "LoopscalePolicy",
       "type": {
         "kind": "struct",
@@ -2878,34 +2612,6 @@
       }
     },
     {
-      "name": "LpParams",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "ExactIn",
-            "fields": [
-              {
-                "defined": {
-                  "name": "ExactInParams"
-                }
-              }
-            ]
-          },
-          {
-            "name": "ExactOut",
-            "fields": [
-              {
-                "defined": {
-                  "name": "ExactOutParams"
-                }
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
       "name": "ManagementFee",
       "type": {
         "kind": "struct",
@@ -2913,6 +2619,28 @@
           {
             "name": "fee_bps",
             "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MultiCollateralTermsUpdateParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "apy",
+            "type": "u64"
+          },
+          {
+            "name": "indices",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "CollateralTermsIndices"
+                }
+              }
+            }
           }
         ]
       }
@@ -3157,26 +2885,6 @@
       }
     },
     {
-      "name": "RefinanceLedgerParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "ledger_index",
-            "type": "u8"
-          },
-          {
-            "name": "duration_index",
-            "type": "u8"
-          },
-          {
-            "name": "asset_index_guidance",
-            "type": "bytes"
-          }
-        ]
-      }
-    },
-    {
       "name": "RepayPrincipalParams",
       "type": {
         "kind": "struct",
@@ -3192,6 +2900,26 @@
           {
             "name": "repay_all",
             "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SellLedgerParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ledger_index",
+            "type": "u8"
+          },
+          {
+            "name": "expected_sale_price",
+            "type": "u64"
+          },
+          {
+            "name": "asset_index_guidance",
+            "type": "bytes"
           }
         ]
       }
@@ -3343,6 +3071,66 @@
       }
     },
     {
+      "name": "UpdateStrategyParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "originations_enabled",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "liquidity_buffer",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "interest_fee",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "origination_fee",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "principal_fee",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "origination_cap",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "market_information",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "external_yield_source_args",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "ExternalYieldSourceArgs"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "UpdateWeightMatrixParams",
       "type": {
         "kind": "struct",
@@ -3385,56 +3173,6 @@
           },
           {
             "name": "Periodic"
-          }
-        ]
-      }
-    },
-    {
-      "name": "VaultStakeParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "principal_amount",
-            "type": "u64"
-          },
-          {
-            "name": "stake_all",
-            "type": {
-              "option": "bool"
-            }
-          },
-          {
-            "name": "duration",
-            "type": "u32"
-          },
-          {
-            "name": "duration_type",
-            "type": "u8"
-          },
-          {
-            "name": "action_type",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "VaultUnstakeParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "action_type",
-            "type": "u8"
-          },
-          {
-            "name": "principal_amount",
-            "type": "u64"
           }
         ]
       }
@@ -3488,9 +3226,14 @@
       "value": "8"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_CLAIM_VAULT_REWARDS",
+      "name": "PROTO_LOOPSCALE_PERM_CLOSE_STRATEGY",
       "type": "u64",
-      "value": "1024"
+      "value": "32768"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_PERM_CREATE_STRATEGY",
+      "type": "u64",
+      "value": "2048"
     },
     {
       "name": "PROTO_LOOPSCALE_PERM_DEPOSIT_COLLATERAL",
@@ -3498,9 +3241,9 @@
       "value": "2"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_DEPOSIT_USER_VAULT",
+      "name": "PROTO_LOOPSCALE_PERM_DEPOSIT_STRATEGY",
       "type": "u64",
-      "value": "64"
+      "value": "8192"
     },
     {
       "name": "PROTO_LOOPSCALE_PERM_MANAGE_LOAN",
@@ -3508,24 +3251,19 @@
       "value": "1"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_REFINANCE_LEDGER",
-      "type": "u64",
-      "value": "32"
-    },
-    {
       "name": "PROTO_LOOPSCALE_PERM_REPAY_PRINCIPAL",
       "type": "u64",
       "value": "16"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_STAKE_USER_VAULT_LP",
+      "name": "PROTO_LOOPSCALE_PERM_SELL_LEDGER",
       "type": "u64",
-      "value": "256"
+      "value": "65536"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_UNSTAKE_USER_VAULT_LP",
+      "name": "PROTO_LOOPSCALE_PERM_UPDATE_STRATEGY",
       "type": "u64",
-      "value": "512"
+      "value": "4096"
     },
     {
       "name": "PROTO_LOOPSCALE_PERM_WITHDRAW_COLLATERAL",
@@ -3533,9 +3271,9 @@
       "value": "4"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_WITHDRAW_USER_VAULT",
+      "name": "PROTO_LOOPSCALE_PERM_WITHDRAW_STRATEGY",
       "type": "u64",
-      "value": "128"
+      "value": "16384"
     }
   ]
 }
