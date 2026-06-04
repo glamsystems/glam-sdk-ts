@@ -142,7 +142,8 @@ export type ExtLoopscale = {
           "writable": true
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "tokenProgram"
@@ -393,7 +394,8 @@ export type ExtLoopscale = {
           "name": "tokenProgram"
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "protocolAdminState"
@@ -788,7 +790,8 @@ export type ExtLoopscale = {
           "name": "tokenProgram"
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "protocolAdminState"
@@ -932,7 +935,8 @@ export type ExtLoopscale = {
           "name": "tokenProgram"
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "protocolAdminState"
@@ -1074,7 +1078,8 @@ export type ExtLoopscale = {
           "writable": true
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "tokenProgram"
@@ -1234,7 +1239,8 @@ export type ExtLoopscale = {
           "name": "tokenProgram"
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "userVault"
@@ -1415,7 +1421,8 @@ export type ExtLoopscale = {
           "writable": true
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "tokenProgram"
@@ -1692,7 +1699,8 @@ export type ExtLoopscale = {
           "name": "tokenProgram"
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "protocolAdminState"
@@ -1833,7 +1841,8 @@ export type ExtLoopscale = {
           "writable": true
         },
         {
-          "name": "associatedTokenProgram"
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "tokenProgram"
@@ -1870,6 +1879,18 @@ export type ExtLoopscale = {
         249,
         103
       ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "autoCloseLoanNotSupported",
+      "msg": "Auto-close loan not supported"
+    },
+    {
+      "code": 6001,
+      "name": "invalidVaultTokenAccount",
+      "msg": "Vault token account must be the GLAM vault ATA for the expected mint"
     }
   ],
   "types": [

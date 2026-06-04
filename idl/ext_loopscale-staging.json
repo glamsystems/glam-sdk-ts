@@ -136,7 +136,8 @@
           "writable": true
         },
         {
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "token_program"
@@ -387,7 +388,8 @@
           "name": "token_program"
         },
         {
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "protocol_admin_state"
@@ -782,7 +784,8 @@
           "name": "token_program"
         },
         {
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "protocol_admin_state"
@@ -926,7 +929,8 @@
           "name": "token_program"
         },
         {
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "protocol_admin_state"
@@ -1068,7 +1072,8 @@
           "writable": true
         },
         {
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "token_program"
@@ -1228,7 +1233,8 @@
           "name": "token_program"
         },
         {
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "user_vault"
@@ -1409,7 +1415,8 @@
           "writable": true
         },
         {
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "token_program"
@@ -1686,7 +1693,8 @@
           "name": "token_program"
         },
         {
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "protocol_admin_state"
@@ -1827,7 +1835,8 @@
           "writable": true
         },
         {
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "token_program"
@@ -1864,6 +1873,18 @@
         249,
         103
       ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AutoCloseLoanNotSupported",
+      "msg": "Auto-close loan not supported"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidVaultTokenAccount",
+      "msg": "Vault token account must be the GLAM vault ATA for the expected mint"
     }
   ],
   "types": [
