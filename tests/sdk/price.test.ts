@@ -1,8 +1,10 @@
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { AccountLayout } from "@solana/spl-token";
 
 import { PriceClient } from "../../src/client/price";
 import { LOOPSCALE_PROTOCOL } from "../../src/protocols";
 import { StateAccountType } from "../../src/models";
+import { PkMap } from "../../src/utils";
 
 function pk(seed: number): PublicKey {
   const bytes = new Uint8Array(32);
@@ -14,9 +16,31 @@ function ix(programId: PublicKey): TransactionInstruction {
   return new TransactionInstruction({ keys: [], programId });
 }
 
+function tokenAccountData(mint: PublicKey, amount: bigint): Buffer {
+  const data = Buffer.alloc(AccountLayout.span);
+  AccountLayout.encode(
+    {
+      mint,
+      owner: pk(1),
+      amount,
+      delegateOption: 0,
+      delegate: PublicKey.default,
+      state: 1,
+      isNativeOption: 0,
+      isNative: 0n,
+      delegatedAmount: 0n,
+      closeAuthorityOption: 0,
+      closeAuthority: PublicKey.default,
+    },
+    data,
+  );
+  return data;
+}
+
 function createPriceClient(params: {
   externalPositions?: PublicKey[];
   loopscaleProtocolsBitmask?: number;
+  jupiterApi?: any;
 }) {
   const extLoopscaleProgramId = pk(41);
   const base = {
@@ -57,7 +81,7 @@ function createPriceClient(params: {
     bridge,
     {} as any,
     loopscale,
-    () => ({}) as any,
+    () => params.jupiterApi ?? ({} as any),
   );
 
   return { client, base, loopscale, bridge };
@@ -301,5 +325,37 @@ describe("PriceClient", () => {
 
     expect(await client.priceLoopscaleStrategiesIx()).toBeNull();
     expect(priceLoopscaleStrategies).not.toHaveBeenCalled();
+  });
+
+  it("uses mint account decimals when token price fallback is unavailable", async () => {
+    const mint = pk(131);
+    const tokenAccount = pk(132);
+    const { client } = createPriceClient({
+      jupiterApi: {
+        fetchTokenPrices: jest
+          .fn()
+          .mockRejectedValue(new Error("network down")),
+      },
+    });
+
+    const accountsDataMap = new PkMap<Buffer>([
+      [tokenAccount, tokenAccountData(mint, 123_456_789n)],
+    ]);
+    const tokenPricesMap = new PkMap<any>();
+    const tokenMintDecimalsMap = new PkMap<number>([[mint, 6]]);
+
+    const holdings = await client.getTokenHoldings(
+      [tokenAccount],
+      accountsDataMap,
+      tokenPricesMap,
+      tokenMintDecimalsMap,
+      "Jupiter",
+    );
+
+    expect(holdings).toHaveLength(1);
+    expect(holdings[0].mintAddress.equals(mint)).toBe(true);
+    expect(holdings[0].decimals).toBe(6);
+    expect(holdings[0].uiAmount).toBe(123.456789);
+    expect(holdings[0].price).toBe(0);
   });
 });

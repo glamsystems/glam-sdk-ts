@@ -262,7 +262,7 @@ export function GlamProvider({
     queryFn: () =>
       glamClient.price.getVaultHoldings("confirmed").catch((err) => {
         console.warn("Failed to fetch vault holdings:", err);
-        return undefined;
+        throw err;
       }),
     enabled: !!activeGlamState?.pubkey && !!wallet?.publicKey,
   });

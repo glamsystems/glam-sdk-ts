@@ -85,7 +85,7 @@ export const JUPITER_API_DEFAULT = "https://api.jup.ag";
 
 // Zod schemas for runtime validation
 const PriceDataSchema = z.object({
-  usdPrice: z.number(),
+  usdPrice: z.number().optional(),
   decimals: z.number(),
   blockId: z.number(),
 });
@@ -163,7 +163,7 @@ export class JupiterApiClient {
     return Object.entries(validated).map(
       ([key, { usdPrice, decimals, blockId }]) => ({
         mint: key,
-        usdPrice,
+        usdPrice: usdPrice ?? 0,
         decimals,
         blockId,
       }),

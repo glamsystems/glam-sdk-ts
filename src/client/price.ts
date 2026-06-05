@@ -31,6 +31,7 @@ import {
   AccountLayout,
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
+  unpackMint,
 } from "@solana/spl-token";
 import { KVaultState, Obligation, Reserve } from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
@@ -303,12 +304,19 @@ export class PriceClient {
       tokenPricesMap.set(tokenMint, item);
     });
 
+    const tokenMintDecimalsMap = await this.getTokenMintDecimals(
+      tokenPubkeys,
+      accountsDataMap,
+      commitment,
+    );
+
     const [tokenHoldings, kaminoLendHoldings, kaminoVaultsHoldings] =
       await Promise.all([
         this.getTokenHoldings(
           tokenPubkeys,
           accountsDataMap,
           tokenPricesMap,
+          tokenMintDecimalsMap,
           "Jupiter",
         ),
         this.getKaminoLendHoldings(
@@ -511,10 +519,59 @@ export class PriceClient {
     };
   }
 
+  private async getHoldingTokenPrice(
+    mint: PublicKey,
+    decimals: number,
+    tokenPricesMap: PkMap<TokenListItem>,
+  ): Promise<{ usdPrice: number; decimals: number; slot?: number }> {
+    try {
+      return await this.getTokenPrice(mint, tokenPricesMap);
+    } catch {
+      return { usdPrice: 0, decimals };
+    }
+  }
+
+  private async getTokenMintDecimals(
+    tokenAccountPubkeys: PublicKey[],
+    accountsDataMap: PkMap<Buffer>,
+    commitment: Commitment,
+  ): Promise<PkMap<number>> {
+    const mintSet = new PkSet();
+    for (const pubkey of tokenAccountPubkeys) {
+      const data = accountsDataMap.get(pubkey);
+      if (!data) {
+        continue;
+      }
+      const { mint } = AccountLayout.decode(data);
+      mintSet.add(mint);
+    }
+
+    const mints = Array.from(mintSet.pkValues());
+    const decimalsMap = new PkMap<number>();
+    const batchSize = 100;
+
+    for (let i = 0; i < mints.length; i += batchSize) {
+      const batch = mints.slice(i, i + batchSize);
+      const mintAccountsInfo =
+        await this.base.connection.getMultipleAccountsInfo(batch, commitment);
+
+      mintAccountsInfo.forEach((accountInfo, index) => {
+        if (!accountInfo) {
+          return;
+        }
+        const mint = unpackMint(batch[index], accountInfo, accountInfo.owner);
+        decimalsMap.set(batch[index], mint.decimals);
+      });
+    }
+
+    return decimalsMap;
+  }
+
   async getTokenHoldings(
     tokenAccountPubkeys: PublicKey[],
     accountsDataMap: PkMap<Buffer>,
     tokenPricesMap: PkMap<TokenListItem>,
+    tokenMintDecimalsMap: PkMap<number>,
     priceSource: string,
   ): Promise<Holding[]> {
     const holdings: Holding[] = [];
@@ -527,8 +584,9 @@ export class PriceClient {
 
       const { amount, mint } = AccountLayout.decode(data);
 
-      const { usdPrice, decimals, slot } = await this.getTokenPrice(
+      const { usdPrice, decimals, slot } = await this.getHoldingTokenPrice(
         mint,
+        tokenMintDecimalsMap.get(mint) ?? 0,
         tokenPricesMap,
       );
       const holding = new Holding(
@@ -573,8 +631,9 @@ export class PriceClient {
           .floor();
         const amount = new BN(supplyAmount.toString());
 
-        const { usdPrice, slot } = await this.getTokenPrice(
+        const { usdPrice, slot } = await this.getHoldingTokenPrice(
           liquidity.mintPubkey,
+          liquidity.mintDecimals.toNumber(),
           tokenPricesMap,
         );
         const holding = new Holding(
@@ -613,8 +672,9 @@ export class PriceClient {
 
         const amount = new BN(borrowAmount.toString());
 
-        const { usdPrice, slot } = await this.getTokenPrice(
+        const { usdPrice, slot } = await this.getHoldingTokenPrice(
           liquidity.mintPubkey,
+          liquidity.mintDecimals.toNumber(),
           tokenPricesMap,
         );
         const holding = new Holding(
@@ -715,8 +775,9 @@ export class PriceClient {
         .div(sharesIssued)
         .floor();
 
-      const { usdPrice, slot } = await this.getTokenPrice(
+      const { usdPrice, slot } = await this.getHoldingTokenPrice(
         kvaultState.tokenMint,
+        kvaultState.tokenMintDecimals.toNumber(),
         tokenPricesMap,
       );
       const holding = new Holding(

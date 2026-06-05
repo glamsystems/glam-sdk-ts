@@ -32,6 +32,31 @@ export type StakeAccountInfo = {
   voter?: PublicKey; // if undefined, the stake account is not delegated
 };
 
+export const getStakeDelegationState = (
+  activationEpoch: string | number,
+  deactivationEpoch: string | number,
+  currentEpoch: string | number,
+): "active" | "inactive" | "activating" | "deactivating" => {
+  const activation = BigInt(activationEpoch);
+  const deactivation = BigInt(deactivationEpoch);
+  const current = BigInt(currentEpoch);
+
+  if (activation === current) {
+    return "activating";
+  }
+  if (deactivation === current) {
+    return "deactivating";
+  }
+  if (current > deactivation) {
+    return "inactive";
+  }
+  if (current > activation) {
+    return "active";
+  }
+
+  return "inactive";
+};
+
 /**
  * Fetches all the token accounts owned by the specified pubkey.
  */
@@ -183,15 +208,11 @@ export const getStakeAccountsWithStates = async (
 
       // possible state if delegated: active, inactive, activating, deactivating
       const { activationEpoch, deactivationEpoch, voter } = delegation;
-      if (activationEpoch === epochInfo.epoch) {
-        state = "activating";
-      } else if (deactivationEpoch === epochInfo.epoch) {
-        state = "deactivating";
-      } else if (epochInfo.epoch > deactivationEpoch) {
-        state = "inactive";
-      } else if (epochInfo.epoch > activationEpoch) {
-        state = "active";
-      }
+      state = getStakeDelegationState(
+        activationEpoch,
+        deactivationEpoch,
+        epochInfo.epoch,
+      );
 
       return {
         address: account.pubkey,
