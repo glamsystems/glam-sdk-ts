@@ -324,6 +324,51 @@ export class JupiterBorrowPolicy {
   }
 }
 
+export class LoopscalePolicy {
+  depositAllowlist: PublicKey[];
+  borrowAllowlist: PublicKey[];
+  marketsAllowlist: PublicKey[];
+
+  static _layout = struct([
+    vec(publicKey(), "depositAllowlist"),
+    vec(publicKey(), "borrowAllowlist"),
+    vec(publicKey(), "marketsAllowlist"),
+  ]);
+
+  constructor(
+    depositAllowlist: PublicKey[] = [],
+    borrowAllowlist: PublicKey[] = [],
+    marketsAllowlist: PublicKey[] = [],
+  ) {
+    this.depositAllowlist = depositAllowlist;
+    this.borrowAllowlist = borrowAllowlist;
+    this.marketsAllowlist = marketsAllowlist;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): LoopscalePolicy {
+    const { depositAllowlist, borrowAllowlist, marketsAllowlist } =
+      LoopscalePolicy._layout.decode(buffer) as LoopscalePolicy;
+    return new LoopscalePolicy(
+      depositAllowlist,
+      borrowAllowlist,
+      marketsAllowlist,
+    );
+  }
+
+  public encode(): Buffer {
+    const policySize =
+      4 +
+      this.depositAllowlist.length * 32 +
+      4 +
+      this.borrowAllowlist.length * 32 +
+      4 +
+      this.marketsAllowlist.length * 32;
+    const buffer = Buffer.alloc(policySize);
+    LoopscalePolicy._layout.encode(this, buffer);
+    return buffer;
+  }
+}
+
 export class PhoenixPolicy {
   marketsAllowlist: PublicKey[];
   allowedOrderTypes: number[];

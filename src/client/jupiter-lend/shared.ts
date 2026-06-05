@@ -1,4 +1,3 @@
-import { BN } from "@coral-xyz/anchor";
 import {
   AccountMeta,
   AddressLookupTableAccount,
@@ -14,6 +13,12 @@ import {
   TOKEN_METADATA_PROGRAM_ID,
 } from "../../constants";
 import { findGlamLookupTables } from "../../utils/accounts";
+import {
+  U8_MAX,
+  U16_MAX,
+  U32_MAX,
+  U64_MAX_BN as U64_MAX,
+} from "../../utils/common";
 import { fetchAddressLookupTableAccounts } from "../../utils/lookupTables";
 import { getProgramAccounts } from "../../utils/rpc";
 
@@ -28,7 +33,7 @@ export type JupiterTransferType =
   | { claim: Record<string, never> };
 
 export const PUBKEY_BYTES = 32;
-export const U64_MAX = new BN("18446744073709551615");
+export { U64_MAX };
 
 // Account discriminators for Jupiter Lending/Liquidity/Vaults/Oracle programs.
 export const LENDING_DISCRIMINATOR = Buffer.from([
@@ -178,7 +183,7 @@ export function decodePositionInfo(
 }
 
 export function u16LeBytes(value: number): Buffer {
-  if (value < 0 || value > 0xffff || !Number.isInteger(value)) {
+  if (value < 0 || value > U16_MAX || !Number.isInteger(value)) {
     throw new Error(`vault_id must be a u16, got ${value}`);
   }
   const buf = Buffer.alloc(2);
@@ -187,7 +192,7 @@ export function u16LeBytes(value: number): Buffer {
 }
 
 export function u32LeBytes(value: number): Buffer {
-  if (value < 0 || value > 0xffffffff || !Number.isInteger(value)) {
+  if (value < 0 || value > U32_MAX || !Number.isInteger(value)) {
     throw new Error(`position_id must be a u32, got ${value}`);
   }
   const buf = Buffer.alloc(4);
@@ -330,7 +335,7 @@ export function getBranchPda(vaultId: number, branchId: number): PublicKey {
 }
 
 export function getTickHasDebtPda(vaultId: number, index: number): PublicKey {
-  if (index < 0 || index > 0xff || !Number.isInteger(index)) {
+  if (index < 0 || index > U8_MAX || !Number.isInteger(index)) {
     throw new Error(`tick_has_debt index must be a u8, got ${index}`);
   }
   return PublicKey.findProgramAddressSync(
@@ -643,7 +648,7 @@ export async function resolveOracleRemainingAccounts(
   }
   const sourceCount = data.readUInt32LE(offset);
   offset += 4;
-  if (sourceCount > 0xff) {
+  if (sourceCount > U8_MAX) {
     throw new Error(
       `Oracle ${oracle.toBase58()} has ${sourceCount} sources; borrow operate supports at most 255`,
     );
@@ -686,7 +691,7 @@ export function buildBorrowOperateRemainingAccounts(
     });
   }
 
-  if (oracleAccounts.length > 0xff || tickHasDebtAccounts.length > 0xff) {
+  if (oracleAccounts.length > U8_MAX || tickHasDebtAccounts.length > U8_MAX) {
     throw new Error(`Too many Jupiter Vaults remaining accounts`);
   }
 

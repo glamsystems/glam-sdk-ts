@@ -40,6 +40,7 @@
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
     "@coral-xyz/borsh": "^0.31.1",
+    "@glamsystems/ix-mapper": "0.2.3",
     "@glamsystems/sanctum-lst-list": "^0.2.54",
     "@marinade.finance/marinade-ts-sdk": "^5.0.15",
     "@solana/spl-stake-pool": "^1.1.5",

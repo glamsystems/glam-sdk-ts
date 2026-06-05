@@ -21,7 +21,7 @@ export type ExtLoopscale = {
         "- Permission: `BorrowPrincipal`.",
         "- Policy",
         "- `principal_mint` must be present in `LoopscalePolicy::borrow_allowlist`.",
-        "- `market_information` must be present in `LoopscalePolicy::market_allowlist`."
+        "- `market_information` must be present in `LoopscalePolicy::markets_allowlist`."
       ],
       "discriminator": [
         106,
@@ -1269,7 +1269,7 @@ export type ExtLoopscale = {
     {
       "name": "setLoopscalePolicy",
       "docs": [
-        "Set the `LoopscalePolicy` (deposit, borrow, and market allowlists) on the GLAM state."
+        "Set the `LoopscalePolicy` (deposit, borrow, and markets allowlists) on the GLAM state."
       ],
       "discriminator": [
         216,
@@ -3301,6 +3301,11 @@ export type ExtLoopscale = {
       "name": "protoLoopscalePermWithdrawStrategy",
       "type": "u64",
       "value": "16384"
+    },
+    {
+      "name": "protoLoopscaleStrategy",
+      "type": "u16",
+      "value": "2"
     }
   ]
 };

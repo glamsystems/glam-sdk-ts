@@ -1,5 +1,14 @@
 import { BN } from "@coral-xyz/anchor";
 
+export const MAX_SAFE_INTEGER_BN = new BN(Number.MAX_SAFE_INTEGER.toString());
+export const U8_MAX = 0xff;
+export const U16_MAX = 0xffff;
+export const U32_MAX = 0xffffffff;
+export const U64_MAX_BIGINT = (1n << 64n) - 1n;
+export const U128_MAX_BIGINT = (1n << 128n) - 1n;
+export const U64_MAX_BN = new BN(U64_MAX_BIGINT.toString());
+export const U128_MAX_BN = new BN(U128_MAX_BIGINT.toString());
+
 /**
  * Converts a buffer or array of character codes to a string
  */
@@ -58,6 +67,18 @@ export function toBn(value: BnInput): BN {
  */
 export function toBnAmount(amount: BnInput): BN {
   return toBn(amount);
+}
+
+/**
+ * Converts a BN to a JavaScript number when it is known to fit safely.
+ */
+export function bnToSafeNumber(value: BN, label: string = "value"): number {
+  if (value.gt(MAX_SAFE_INTEGER_BN)) {
+    throw new Error(
+      `${label} ${value.toString()} exceeds JavaScript's safe integer range`,
+    );
+  }
+  return value.toNumber();
 }
 
 /**

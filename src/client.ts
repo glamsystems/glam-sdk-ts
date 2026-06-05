@@ -20,6 +20,7 @@ import { StakePoolClient } from "./client/stake-pool";
 import { CctpClient } from "./client/cctp";
 import { BridgeClient } from "./client/bridge";
 import { EpiClient } from "./client/epi";
+import { LoopscaleClient } from "./client/loopscale";
 import { PhoenixClient } from "./client/phoenix";
 import { JupiterBorrowClient, JupiterEarnClient } from "./client/jupiter-lend";
 import { OrcaWhirlpoolsClient } from "./client/orca";
@@ -48,6 +49,7 @@ export class GlamClient extends BaseClient {
   private _cctp?: CctpClient;
   private _bridge?: BridgeClient;
   private _epi?: EpiClient;
+  private _loopscale?: LoopscaleClient;
   private _phoenix?: PhoenixClient;
   private _jupiterEarn?: JupiterEarnClient;
   private _jupiterBorrow?: JupiterBorrowClient;
@@ -118,6 +120,7 @@ export class GlamClient extends BaseClient {
         this.kaminoVaults,
         this.bridge,
         this.epi,
+        this.loopscale,
         () => this.jupiterSwap.jupApi,
       );
     }
@@ -192,6 +195,13 @@ export class GlamClient extends BaseClient {
       this._epi = new EpiClient(this);
     }
     return this._epi;
+  }
+
+  get loopscale(): LoopscaleClient {
+    if (!this._loopscale) {
+      this._loopscale = new LoopscaleClient(this);
+    }
+    return this._loopscale;
   }
 
   get phoenix(): PhoenixClient {

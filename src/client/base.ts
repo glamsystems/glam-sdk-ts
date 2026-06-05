@@ -44,6 +44,7 @@ import {
   ExtJupiterProgram,
   ExtKaminoProgram,
   ExtMarinadeProgram,
+  ExtLoopscaleProgram,
   ExtPhoenixProgram,
   ExtOrcaProgram,
   ExtSplProgram,
@@ -55,6 +56,7 @@ import {
   getExtCctpProgram,
   getExtJupiterProgram,
   getExtKaminoProgram,
+  getExtLoopscaleProgram,
   getExtOrcaProgram,
   getExtMarinadeProgram,
   getExtPhoenixProgram,
@@ -93,6 +95,7 @@ import { AssetMeta, ASSETS_MAINNET } from "../assets";
 
 const LOOKUP_TABLES = [
   new PublicKey("284iwGtA9X9aLy3KsyV8uT2pXLARhYbiSi5SiM2g47M2"), // kamino lending
+  new PublicKey("HGmknUTUmeovMc9ryERNWG6UFZDFDVr9xrum3ZhyL4fC"), // loopscale
 ];
 
 export type TxOptions = {
@@ -160,6 +163,7 @@ export class BaseClient {
   private _extCctpProgram?: ExtCctpProgram;
   private _extBridgeProgram?: ExtBridgeProgram;
   private _extEpiProgram?: ExtEpiProgram;
+  private _extLoopscaleProgram?: ExtLoopscaleProgram;
   private _extPhoenixProgram?: ExtPhoenixProgram;
   private _extJupiterProgram?: ExtJupiterProgram;
   private _extOrcaProgram?: ExtOrcaProgram;
@@ -280,6 +284,16 @@ export class BaseClient {
     return this._extEpiProgram;
   }
 
+  get extLoopscaleProgram(): ExtLoopscaleProgram {
+    if (!this._extLoopscaleProgram) {
+      this._extLoopscaleProgram = getExtLoopscaleProgram(
+        this.provider,
+        this.staging,
+      );
+    }
+    return this._extLoopscaleProgram;
+  }
+
   get extPhoenixProgram(): ExtPhoenixProgram {
     if (!this._extPhoenixProgram) {
       this._extPhoenixProgram = getExtPhoenixProgram(
@@ -327,7 +341,7 @@ export class BaseClient {
   }
 
   /**
-   * Mainnet-only default lookup tables (Kamino lending).
+   * Mainnet-only default lookup tables (Kamino lending, Loopscale).
    * Cached for the session; safe to assume static contents.
    */
   private getDefaultLookupTables(): Promise<AddressLookupTableAccount[]> {

@@ -3,6 +3,7 @@ import {
   getExtCctpProgramId,
   getExtJupiterProgramId,
   getExtKaminoProgramId,
+  getExtLoopscaleProgramId,
   getExtPhoenixProgramId,
   getExtOrcaProgramId,
   getGlamMintProgramId,
@@ -93,6 +94,26 @@ describe("getProtocolsAndPermissions", () => {
         "Borrow",
         "Repay",
         "Liquidate",
+      ]);
+
+      expect(
+        getPermissionNames(
+          staging,
+          getExtLoopscaleProgramId(staging).toBase58(),
+          "0000000000000001",
+        ),
+      ).toEqual([
+        "ManageLoan",
+        "DepositCollateral",
+        "WithdrawCollateral",
+        "BorrowPrincipal",
+        "RepayPrincipal",
+        "CreateStrategy",
+        "UpdateStrategy",
+        "DepositStrategy",
+        "WithdrawStrategy",
+        "CloseStrategy",
+        "SellLedger",
       ]);
 
       expect(

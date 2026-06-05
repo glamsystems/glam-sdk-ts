@@ -42,11 +42,13 @@ import {
 } from "../constants";
 import { BridgeClient, getActiveRegistryTransfers } from "./bridge";
 import { EpiClient } from "./epi";
+import { LoopscaleClient } from "./loopscale";
 import {
   EPI_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
   KAMINO_VAULTS_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
+  LOOPSCALE_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
   STAKE_PROTOCOL,
@@ -140,6 +142,7 @@ export class PriceClient {
     readonly kvaults: KaminoVaultsClient,
     readonly bridge: BridgeClient,
     readonly epi: EpiClient,
+    readonly loopscale: LoopscaleClient,
     private readonly getJupiterApi: () => JupiterApiClient,
   ) {}
 
@@ -1122,6 +1125,100 @@ export class PriceClient {
     };
   }
 
+  /**
+   * Returns the program instruction that prices Loopscale loan external positions.
+   * If there are no registered Loopscale loans, returns null.
+   *
+   * Remaining accounts are laid out as N loan accounts followed by the oracle
+   * accounts needed to price the loans' collateral and debt.
+   */
+  public async priceLoopscaleLoansIx(): Promise<TransactionInstruction | null> {
+    const methods = this.base.mintProgram.methods as any;
+    if (typeof methods.priceLoopscaleLoans !== "function") {
+      return null;
+    }
+
+    const accounts = await this.loopscale.getPriceLoansAccounts();
+    if (!accounts) {
+      return null;
+    }
+
+    const [solUsdOracle, baseAssetOracle] = await Promise.all([
+      accounts.solUsdOracle
+        ? Promise.resolve(accounts.solUsdOracle)
+        : this.base.getSolOracle(),
+      accounts.baseAssetOracle
+        ? Promise.resolve(accounts.baseAssetOracle)
+        : this.getBaseAssetOracle(),
+    ]);
+
+    const remainingAccounts: AccountMeta[] = [
+      ...accounts.loanAccounts,
+      ...accounts.oracleAccounts,
+    ].map((pubkey) => ({
+      pubkey,
+      isSigner: false,
+      isWritable: false,
+    }));
+
+    return await methods
+      .priceLoopscaleLoans()
+      .accounts({
+        glamState: this.base.statePda,
+        solUsdOracle,
+        baseAssetOracle,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
+  /**
+   * Returns the program instruction that prices Loopscale strategy external positions.
+   * If there are no registered Loopscale strategies, returns null.
+   *
+   * Remaining accounts are laid out as N strategy accounts followed by the
+   * oracle accounts needed to price the strategies' principal mints.
+   */
+  public async priceLoopscaleStrategiesIx(): Promise<TransactionInstruction | null> {
+    const methods = this.base.mintProgram.methods as any;
+    if (typeof methods.priceLoopscaleStrategies !== "function") {
+      return null;
+    }
+
+    const accounts = await this.loopscale.getPriceStrategiesAccounts();
+    if (!accounts) {
+      return null;
+    }
+
+    const [solUsdOracle, baseAssetOracle] = await Promise.all([
+      accounts.solUsdOracle
+        ? Promise.resolve(accounts.solUsdOracle)
+        : this.base.getSolOracle(),
+      accounts.baseAssetOracle
+        ? Promise.resolve(accounts.baseAssetOracle)
+        : this.getBaseAssetOracle(),
+    ]);
+
+    const remainingAccounts: AccountMeta[] = [
+      ...accounts.strategyAccounts,
+      ...accounts.oracleAccounts,
+    ].map((pubkey) => ({
+      pubkey,
+      isSigner: false,
+      isWritable: false,
+    }));
+
+    return await methods
+      .priceLoopscaleStrategies()
+      .accounts({
+        glamState: this.base.statePda,
+        solUsdOracle,
+        baseAssetOracle,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
   public async priceOrcaWhirlpoolPositionsIxs(
     stateModel: StateModel | null = this.cachedStateModel,
   ): Promise<PricingChunk | null> {
@@ -1328,6 +1425,23 @@ export class PriceClient {
         ) {
           const chunk = await this.priceKaminoVaultSharesIx();
           if (chunk) chunks.push(chunk);
+        }
+      }
+
+      const loopscaleIntegrationAcl = integrationAcls.find((acl) =>
+        acl.integrationProgram.equals(this.base.extLoopscaleProgram.programId),
+      );
+      if (
+        loopscaleIntegrationAcl &&
+        (loopscaleIntegrationAcl.protocolsBitmask & LOOPSCALE_PROTOCOL) !== 0
+      ) {
+        const [loansIx, strategiesIx] = await Promise.all([
+          this.priceLoopscaleLoansIx(),
+          this.priceLoopscaleStrategiesIx(),
+        ]);
+        if (loansIx) chunks.push({ ixs: [loansIx], kaminoReserves: [] });
+        if (strategiesIx) {
+          chunks.push({ ixs: [strategiesIx], kaminoReserves: [] });
         }
       }
 

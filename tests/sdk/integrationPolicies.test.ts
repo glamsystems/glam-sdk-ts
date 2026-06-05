@@ -3,6 +3,7 @@ import {
   JupiterBorrowPolicy,
   JupiterEarnPolicy,
   JupiterSwapPolicy,
+  LoopscalePolicy,
   PhoenixPolicy,
   WhirlpoolsPolicy,
 } from "../../src/deser/integrationPolicies";
@@ -85,6 +86,42 @@ describe("JupiterSwapPolicy", () => {
     expect(encoded.readUInt8(2)).toBe(1);
     expect(encoded.readUInt32LE(3)).toBe(2);
     expect(encoded.readInt16LE(71)).toBe(-50);
+  });
+});
+
+describe("LoopscalePolicy", () => {
+  const deposit1 = new PublicKey("11111111111111111111111111111112");
+  const deposit2 = new PublicKey("11111111111111111111111111111113");
+  const borrow1 = new PublicKey("11111111111111111111111111111114");
+  const market1 = new PublicKey("11111111111111111111111111111115");
+
+  it("round-trips the deposit, borrow, and markets allowlists", () => {
+    const policy = new LoopscalePolicy(
+      [deposit1, deposit2],
+      [borrow1],
+      [market1],
+    );
+    const recovered = LoopscalePolicy.decode(policy.encode());
+
+    expect(recovered.depositAllowlist.map((m) => m.toBase58())).toEqual([
+      deposit1.toBase58(),
+      deposit2.toBase58(),
+    ]);
+    expect(recovered.borrowAllowlist.map((m) => m.toBase58())).toEqual([
+      borrow1.toBase58(),
+    ]);
+    expect(recovered.marketsAllowlist.map((m) => m.toBase58())).toEqual([
+      market1.toBase58(),
+    ]);
+  });
+
+  it("round-trips empty allowlists", () => {
+    const policy = new LoopscalePolicy();
+    const recovered = LoopscalePolicy.decode(policy.encode());
+
+    expect(recovered.depositAllowlist).toEqual([]);
+    expect(recovered.borrowAllowlist).toEqual([]);
+    expect(recovered.marketsAllowlist).toEqual([]);
   });
 });
 

@@ -26,6 +26,7 @@ import {
   KAMINO_VAULTS_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
   LOOPSCALE_PROTOCOL,
+  LOOPSCALE_STRATEGY_PROTOCOL,
   MARINADE_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
@@ -129,6 +130,9 @@ export const TOKEN_MESSENGER_MINTER_V2 = new PublicKey(
 export const MESSAGE_TRANSMITTER_V2 = new PublicKey(
   "CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC",
 );
+export const LOOPSCALE_PROGRAM_ID = new PublicKey(
+  "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78",
+);
 export const WORMHOLE_CORE_BRIDGE_PROGRAM = new PublicKey(
   "worm2ZoG2kUd4vFXhvjh93UUH596ayRfgQ2MgjNMTth",
 );
@@ -139,6 +143,9 @@ export const HYPEREVM_NAV_ADAPTER_V2 =
   "0x8e3d311e3f5814d2b4c1a9fc56d28d379abd1a86";
 export const HYPEREVM_NAV_ADAPTER_V2_EMITTER =
   "0x0000000000000000000000008e3d311e3f5814d2b4c1a9fc56d28d379abd1a86";
+export const LOOPSCALE_PROTOCOL_ADMIN_STATE = new PublicKey(
+  "HcgXEnEsgvGowVnSjMmrzSewdx9yGvfXixiuMJPhyW2z",
+);
 export const PHOENIX_PROGRAM_ID = new PublicKey(
   "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih",
 );
@@ -361,6 +368,32 @@ export const getProtocolsAndPermissions = (
       },
     },
   },
+  // Loopscale integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_loopscale/src/state/access.rs
+  [getExtLoopscaleProgramId(staging).toBase58()]: {
+    [protocolBitflagKey(LOOPSCALE_PROTOCOL)]: {
+      name: "Loopscale",
+      staging: true,
+      permissions: {
+        [1 << 0]: "ManageLoan",
+        [1 << 1]: "DepositCollateral",
+        [1 << 2]: "WithdrawCollateral",
+        [1 << 3]: "BorrowPrincipal",
+        [1 << 4]: "RepayPrincipal",
+        [1 << 11]: "CreateStrategy",
+        [1 << 12]: "UpdateStrategy",
+        [1 << 13]: "DepositStrategy",
+        [1 << 14]: "WithdrawStrategy",
+        [1 << 15]: "CloseStrategy",
+        [1 << 16]: "SellLedger",
+      },
+    },
+    [protocolBitflagKey(LOOPSCALE_STRATEGY_PROTOCOL)]: {
+      name: "LoopscaleStrategy",
+      staging: true,
+      permissions: {},
+    },
+  },
   // Jupiter Lend integration program protocols and permissions are defined in:
   // @anchor/programs/ext_jupiter/src/state/access.rs
   [getExtJupiterProgramId(staging).toBase58()]: {
@@ -401,27 +434,6 @@ export const getProtocolsAndPermissions = (
         [1 << 7]: "IncreaseLiquidityByTokenAmounts",
         [1 << 8]: "RepositionLiquidity",
         [1 << 9]: "InitializeTickArray",
-      },
-    },
-  },
-  // Loopscale integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_loopscale/src/state/access.rs
-  [getExtLoopscaleProgramId(staging).toBase58()]: {
-    [protocolBitflagKey(LOOPSCALE_PROTOCOL)]: {
-      name: "Loopscale",
-      staging: true,
-      permissions: {
-        [1 << 0]: "ManageLoan",
-        [1 << 1]: "DepositCollateral",
-        [1 << 2]: "WithdrawCollateral",
-        [1 << 3]: "BorrowPrincipal",
-        [1 << 4]: "RepayPrincipal",
-        [1 << 5]: "RefinanceLedger",
-        [1 << 6]: "DepositUserVault",
-        [1 << 7]: "WithdrawUserVault",
-        [1 << 8]: "StakeUserVaultLp",
-        [1 << 9]: "UnstakeUserVaultLp",
-        [1 << 10]: "ClaimVaultRewards",
       },
     },
   },

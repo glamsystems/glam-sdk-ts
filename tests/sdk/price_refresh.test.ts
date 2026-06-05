@@ -32,6 +32,7 @@ const EXT_BRIDGE = PublicKey.unique();
 const EXT_EPI = PublicKey.unique();
 const EXT_PHOENIX = PublicKey.unique();
 const EXT_ORCA = PublicKey.unique();
+const EXT_LOOPSCALE = PublicKey.unique();
 const OBLIGATION = new PublicKey(
   "65iwhmFa5mRSmeBGNGEzSfG6y66Pk6r5eksYDMFSMRb6",
 );
@@ -159,6 +160,7 @@ function makeClient(
       extEpiProgram: { programId: EXT_EPI },
       extPhoenixProgram: { programId: EXT_PHOENIX },
       extOrcaProgram: { programId: EXT_ORCA },
+      extLoopscaleProgram: { programId: EXT_LOOPSCALE },
       fetchStateModel: jest.fn(async () => ({
         accountType: StateAccountType.VAULT,
         baseAssetMint: PublicKey.default,
@@ -201,6 +203,7 @@ function makeClient(
         ),
       },
     } as any,
+    {} as any,
     {} as any,
     {} as any,
     {} as any,

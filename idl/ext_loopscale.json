@@ -15,7 +15,7 @@
         "- Permission: `BorrowPrincipal`.",
         "- Policy",
         "- `principal_mint` must be present in `LoopscalePolicy::borrow_allowlist`.",
-        "- `market_information` must be present in `LoopscalePolicy::market_allowlist`."
+        "- `market_information` must be present in `LoopscalePolicy::markets_allowlist`."
       ],
       "discriminator": [
         106,
@@ -1263,7 +1263,7 @@
     {
       "name": "set_loopscale_policy",
       "docs": [
-        "Set the `LoopscalePolicy` (deposit, borrow, and market allowlists) on the GLAM state."
+        "Set the `LoopscalePolicy` (deposit, borrow, and markets allowlists) on the GLAM state."
       ],
       "discriminator": [
         216,
@@ -3295,6 +3295,11 @@
       "name": "PROTO_LOOPSCALE_PERM_WITHDRAW_STRATEGY",
       "type": "u64",
       "value": "16384"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_STRATEGY",
+      "type": "u16",
+      "value": "2"
     }
   ]
 }
