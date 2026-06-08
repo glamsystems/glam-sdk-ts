@@ -568,38 +568,50 @@ export class BaseClient {
     );
   }
 
+  /**
+   * Signs, sends, and confirms a transaction.
+   *
+   * Legacy transactions receive missing fee-payer/blockhash values here and
+   * extra signers are applied with `partialSign` before wallet signing.
+   * Versioned transactions are expected to be fully built by the caller; extra
+   * signers are applied after wallet signing so this remains compatible with
+   * transactions created by another `@solana/web3.js` package instance.
+   *
+   * Transactions are sent with preflight disabled because callers commonly
+   * simulate while building compute-budget instructions.
+   */
   public async sendAndConfirm(
     tx: VersionedTransaction | Transaction,
     additionalSigners: Keypair[] = [],
   ): Promise<TransactionSignature> {
-    // Mainnet only: use dedicated connection for sending transactions if available
+    const { rpcEndpoint: connRpcUrl, commitment } = this.connection;
+    const txRpcUrl =
+      process.env.NEXT_PUBLIC_TX_RPC || process.env.TX_RPC || connRpcUrl;
+
+    // Mainnet only: use dedicated connection for sending transactions
     const txConnection =
-      this.cluster === ClusterNetwork.Mainnet
-        ? new Connection(
-            process.env.NEXT_PUBLIC_TX_RPC ||
-              process.env.TX_RPC ||
-              this.connection.rpcEndpoint,
-            { commitment: this.connection.commitment },
-          )
+      this.cluster === ClusterNetwork.Mainnet && txRpcUrl !== connRpcUrl
+        ? new Connection(txRpcUrl, { commitment })
         : this.connection;
+
+    const isLegacyTx = typeof (tx as Transaction).partialSign === "function";
 
     // Anchor provider.sendAndConfirm forces a signature with the wallet, which we don't want
     // https://github.com/coral-xyz/anchor/blob/v0.30.0/ts/packages/anchor/src/provider.ts#L159
-    if (tx instanceof Transaction) {
-      tx.feePayer = tx.feePayer || this.signer;
-      tx.recentBlockhash =
-        tx.recentBlockhash || (await this.blockhashWithCache.get()).blockhash;
+    if (isLegacyTx) {
+      const legacyTx = tx as Transaction;
+      legacyTx.feePayer ??= this.signer;
+      legacyTx.recentBlockhash ??= (
+        await this.blockhashWithCache.get()
+      ).blockhash;
       if (additionalSigners.length > 0) {
-        tx.partialSign(...additionalSigners);
+        legacyTx.partialSign(...additionalSigners);
       }
     }
 
     const signedTx = await this.wallet.signTransaction(tx);
-    if (
-      signedTx instanceof VersionedTransaction &&
-      additionalSigners.length > 0
-    ) {
-      signedTx.sign(additionalSigners);
+    if (additionalSigners.length > 0 && !isLegacyTx) {
+      (signedTx as VersionedTransaction).sign(additionalSigners);
     }
     const serializedTx = signedTx.serialize();
 
@@ -609,7 +621,14 @@ export class BaseClient {
     const txSig = await txConnection.sendRawTransaction(serializedTx, {
       skipPreflight: true,
     });
-    this.onSentListeners.forEach((fn) => fn(txSig));
+    this.onSentListeners.forEach((fn) => {
+      try {
+        fn(txSig);
+      } catch (e) {
+        // exceptions raised from callbacks are fail-open
+        console.warn("Error in onSent listener:", e);
+      }
+    });
 
     if (process.env.NODE_ENV === "development") {
       console.log("Confirming tx:", txSig);
