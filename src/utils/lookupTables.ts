@@ -15,7 +15,50 @@ import {
 import { GLAM_CONFIG_PROGRAM, TRANSFER_HOOK_PROGRAM } from "../constants";
 import { getGlobalConfigPda } from "./glamPDAs";
 import { fetchMintsAndTokenPrograms } from "./accounts";
+import { PkMap } from "./pkmap";
 import { PkSet } from "./pkset";
+
+export type LookupTableInput = string | PublicKey | AddressLookupTableAccount;
+
+/**
+ * Returns the public key for an address lookup table input.
+ *
+ * @param lookupTable Lookup table account, public key, or base58 address
+ * @returns Lookup table public key
+ */
+export function getLookupTableKey(lookupTable: LookupTableInput): PublicKey {
+  return lookupTable instanceof AddressLookupTableAccount
+    ? lookupTable.key
+    : new PublicKey(lookupTable);
+}
+
+/**
+ * Merges lookup table inputs while preserving the first occurrence of each key.
+ *
+ * Accepts one or more lookup table arrays as separate arguments. Passing a
+ * single array merges and deduplicates that one group.
+ *
+ * @param lookupTableGroups Lookup table arrays to merge, in priority order
+ * @returns Deduplicated lookup table inputs
+ */
+export function mergeLookupTables(
+  ...lookupTableGroups: LookupTableInput[][]
+): LookupTableInput[] {
+  const merged: LookupTableInput[] = [];
+  const seen = new PkSet();
+
+  for (const lookupTables of lookupTableGroups) {
+    for (const lookupTable of lookupTables) {
+      const key = getLookupTableKey(lookupTable);
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(lookupTable);
+      }
+    }
+  }
+
+  return merged;
+}
 
 /**
  * Fetches multiple address lookup table accounts
@@ -48,6 +91,57 @@ export async function fetchAddressLookupTableAccounts(
     }
     return acc;
   }, new Array<AddressLookupTableAccount>());
+}
+
+/**
+ * Resolves lookup table inputs to address lookup table accounts.
+ *
+ * Already-resolved accounts are preserved, while public keys and base58
+ * addresses are fetched from the provided connection. Missing accounts are
+ * omitted from the result.
+ *
+ * @param connection Solana connection
+ * @param lookupTables Lookup table accounts, public keys, or base58 addresses
+ * @returns Resolved address lookup table accounts
+ */
+export async function resolveAddressLookupTableAccounts(
+  connection: Connection,
+  lookupTables: LookupTableInput[],
+): Promise<AddressLookupTableAccount[]> {
+  const dedupedLookupTables = mergeLookupTables(lookupTables);
+  const unresolvedKeys = dedupedLookupTables
+    .filter(
+      (lookupTable) => !(lookupTable instanceof AddressLookupTableAccount),
+    )
+    .map(getLookupTableKey);
+  const fetchedLookupTables = await fetchAddressLookupTableAccounts(
+    connection,
+    unresolvedKeys,
+  );
+  const fetchedByKey = new PkMap<AddressLookupTableAccount>(
+    fetchedLookupTables.map((lookupTable) => [
+      lookupTable.key,
+      lookupTable,
+    ]),
+  );
+
+  return dedupedLookupTables.reduce<AddressLookupTableAccount[]>(
+    (accounts, lookupTable) => {
+      if (lookupTable instanceof AddressLookupTableAccount) {
+        accounts.push(lookupTable);
+        return accounts;
+      }
+
+      const fetchedLookupTable = fetchedByKey.get(
+        getLookupTableKey(lookupTable),
+      );
+      if (fetchedLookupTable) {
+        accounts.push(fetchedLookupTable);
+      }
+      return accounts;
+    },
+    [],
+  );
 }
 
 export interface VaultAccountsInfo {

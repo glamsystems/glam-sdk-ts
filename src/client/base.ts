@@ -18,7 +18,12 @@ import {
   buildComputeBudgetInstructions,
   ComputeBudgetOptions,
 } from "../utils/computeBudget";
-import { fetchAddressLookupTableAccounts } from "../utils/lookupTables";
+import {
+  fetchAddressLookupTableAccounts,
+  mergeLookupTables,
+  resolveAddressLookupTableAccounts,
+  type LookupTableInput,
+} from "../utils/lookupTables";
 import {
   fetchMintAndTokenProgram,
   fetchMintsAndTokenPrograms,
@@ -98,6 +103,35 @@ const LOOKUP_TABLES = [
   new PublicKey("HGmknUTUmeovMc9ryERNWG6UFZDFDVr9xrum3ZhyL4fC"), // loopscale
 ];
 
+const GLAM_LOOKUP_TABLES_TIMEOUT_MS = 5_000;
+
+class TimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TimeoutError";
+  }
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorMessage: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new TimeoutError(errorMessage)),
+      timeoutMs,
+    );
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  });
+}
+
 export type TxOptions = {
   signer?: PublicKey;
   computeUnitLimit?: number;
@@ -106,7 +140,7 @@ export type TxOptions = {
   useMaxFee?: boolean;
   preInstructions?: TransactionInstruction[];
   postInstructions?: TransactionInstruction[];
-  lookupTables?: PublicKey[] | AddressLookupTableAccount[];
+  lookupTables?: LookupTableInput[];
   simulate?: boolean;
 };
 
@@ -197,10 +231,6 @@ export class BaseClient {
       anchor.setProvider(this.provider);
     }
 
-    if (config?.statePda) {
-      this.statePda = config.statePda;
-    }
-
     this.cluster =
       config?.cluster ||
       ClusterNetwork.fromUrl(this.provider.connection.rpcEndpoint);
@@ -210,6 +240,10 @@ export class BaseClient {
     this.phoenixApiUrl = config?.phoenixApiUrl;
     this.phoenixApiClient = config?.phoenixApiClient;
     this.blockhashWithCache = new BlockhashWithCache(this.provider);
+
+    if (config?.statePda) {
+      this.statePda = config.statePda;
+    }
   }
 
   get protocolProgram(): GlamProtocolProgram {
@@ -338,6 +372,7 @@ export class BaseClient {
       this._glamLookupTablesCacheKey = undefined;
     }
     this._statePda = statePda;
+    this.warmupGlamLookupTables();
   }
 
   /**
@@ -376,13 +411,18 @@ export class BaseClient {
       return this._glamLookupTablesPromise;
     }
     this._glamLookupTablesCacheKey = key;
-    this._glamLookupTablesPromise = findGlamLookupTables(
-      this.statePda,
-      this.vaultPda,
-      this.connection,
+    this._glamLookupTablesPromise = withTimeout(
+      findGlamLookupTables(this.statePda, this.vaultPda, this.connection),
+      GLAM_LOOKUP_TABLES_TIMEOUT_MS,
+      `Timed out discovering GLAM address lookup tables after ${GLAM_LOOKUP_TABLES_TIMEOUT_MS}ms`,
     ).catch((error) => {
-      this._glamLookupTablesPromise = undefined;
-      this._glamLookupTablesCacheKey = undefined;
+      this.invalidateGlamLookupTablesCache();
+
+      if (error instanceof TimeoutError) {
+        console.warn(`${error.message}; continuing without GLAM lookup tables`);
+        return [];
+      }
+
       throw error;
     });
     return this._glamLookupTablesPromise;
@@ -391,6 +431,19 @@ export class BaseClient {
   public invalidateGlamLookupTablesCache(): void {
     this._glamLookupTablesPromise = undefined;
     this._glamLookupTablesCacheKey = undefined;
+  }
+
+  private warmupGlamLookupTables(): void {
+    if (!this.isVaultConnected) {
+      return;
+    }
+
+    void this.getGlamLookupTablesCached().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `Failed to warm up GLAM address lookup tables for ${this.statePda.toBase58()}: ${message}`,
+      );
+    });
   }
 
   get isMainnet(): boolean {
@@ -415,14 +468,9 @@ export class BaseClient {
     signer = signer || this.signer;
 
     const instructions = tx.instructions;
-    const lookupTableAccounts: AddressLookupTableAccount[] = [];
-
     // Default (mainnet-only) lookup tables are cached for the session. Start
-    // the fetch in parallel with caller-provided lookups; swallow failures so
-    // an RPC hiccup doesn't fail tx building (same fallback policy used for
-    // GLAM ALT discovery below). Attaching `.catch` also keeps the cached
-    // promise from surfacing as an unhandled rejection if caller-key fetch
-    // throws first.
+    // the fetch in parallel with caller-provided lookups and GLAM ALT discovery;
+    // swallow failures so an RPC hiccup doesn't fail tx building.
     const defaultLookupTablesPromise = this.getDefaultLookupTables().catch(
       (error) => {
         const message = error instanceof Error ? error.message : String(error);
@@ -433,34 +481,29 @@ export class BaseClient {
       },
     );
 
-    // Fetch caller-provided lookup tables. If already resolved, use as-is;
-    // otherwise batch-fetch their account data.
-    if (lookupTables.every((t) => t instanceof AddressLookupTableAccount)) {
-      lookupTableAccounts.push(...lookupTables);
-    } else if (lookupTables.length > 0) {
-      const accounts = await fetchAddressLookupTableAccounts(
-        this.connection,
-        lookupTables as PublicKey[] | string[],
-      );
-      lookupTableAccounts.push(...accounts);
-    }
-
-    lookupTableAccounts.push(...(await defaultLookupTablesPromise));
-
     // Fetch GLAM specific lookup tables only if vault state has been set.
     // Discovery is cached per-statePda for the session; if it fails (e.g., RPC
     // deprioritization) we fall back to an empty list so tx building continues.
-    if (this.isVaultConnected) {
-      try {
-        const glamLookupTableAccounts = await this.getGlamLookupTablesCached();
-        lookupTableAccounts.push(...glamLookupTableAccounts);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.warn(
-          `Failed to discover GLAM address lookup tables for ${this.statePda.toBase58()}. Continuing without them: ${message}`,
-        );
-      }
-    }
+    const glamLookupTablesPromise = this.isVaultConnected
+      ? this.getGlamLookupTablesCached().catch((error) => {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          console.warn(
+            `Failed to discover GLAM address lookup tables for ${this.statePda.toBase58()}. Continuing without them: ${message}`,
+          );
+          return [] as AddressLookupTableAccount[];
+        })
+      : Promise.resolve([] as AddressLookupTableAccount[]);
+
+    const callerLookupTableAccounts = await resolveAddressLookupTableAccounts(
+      this.connection,
+      lookupTables,
+    );
+    const lookupTableAccounts = mergeLookupTables(
+      callerLookupTableAccounts,
+      await defaultLookupTablesPromise,
+      await glamLookupTablesPromise,
+    ) as AddressLookupTableAccount[];
 
     if (process.env.NODE_ENV === "development") {
       console.log(

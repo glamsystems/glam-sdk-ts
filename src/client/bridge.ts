@@ -2,7 +2,6 @@ import { BN } from "@coral-xyz/anchor";
 import { createHash } from "crypto";
 import {
   AccountMeta,
-  AddressLookupTableAccount,
   Keypair,
   PublicKey,
   SYSVAR_INSTRUCTIONS_PUBKEY,
@@ -25,7 +24,7 @@ import {
   resolveCanonicalLayerzeroOftRouteProfile,
 } from "./bridgeRegistry";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
-import { fetchAddressLookupTableAccounts } from "../utils/lookupTables";
+import { mergeLookupTables } from "../utils/lookupTables";
 import {
   LayerzeroOftPolicy,
   LayerzeroOftRoute,
@@ -1031,29 +1030,12 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
       return txOptions;
     }
 
-    const existingTables = txOptions.lookupTables || [];
-    if (existingTables.length === 0) {
-      return { ...txOptions, lookupTables };
-    }
-
-    if (
-      existingTables.every(
-        (table) => table instanceof AddressLookupTableAccount,
-      )
-    ) {
-      const fetchedTables = await fetchAddressLookupTableAccounts(
-        this.base.connection,
-        lookupTables,
-      );
-      return {
-        ...txOptions,
-        lookupTables: [...existingTables, ...fetchedTables],
-      };
-    }
-
     return {
       ...txOptions,
-      lookupTables: [...existingTables, ...lookupTables],
+      lookupTables: mergeLookupTables(
+        lookupTables,
+        txOptions.lookupTables ?? [],
+      ),
     };
   }
 

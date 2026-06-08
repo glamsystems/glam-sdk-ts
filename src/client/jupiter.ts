@@ -22,6 +22,7 @@ import { JUPITER_SWAP_PROTOCOL } from "../protocols";
 import { JupiterSwapPolicy } from "../deser/integrationPolicies";
 import { AssetMeta, STAKE_POOLS_MAP } from "../assets";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
+import { mergeLookupTables } from "../utils/lookupTables";
 import { VaultClient } from "./vault";
 import {
   JupiterApiClient,
@@ -276,7 +277,13 @@ class TxBuilder
   ): Promise<VersionedTransaction> {
     const glamSigner = txOptions.signer || this.client.base.signer;
     const [ixs, lookupTables] = await this.swapIxs(options, glamSigner);
-    return await this.buildVersionedTx(ixs, { lookupTables, ...txOptions });
+    return await this.buildVersionedTx(ixs, {
+      ...txOptions,
+      lookupTables: mergeLookupTables(
+        txOptions.lookupTables ?? [],
+        lookupTables,
+      ),
+    });
   }
 
   async swapV2Tx(
@@ -285,7 +292,13 @@ class TxBuilder
   ): Promise<VersionedTransaction> {
     const glamSigner = txOptions.signer || this.client.base.signer;
     const [ixs, lookupTables] = await this.swapV2Ixs(options, glamSigner);
-    return await this.buildVersionedTx(ixs, { lookupTables, ...txOptions });
+    return await this.buildVersionedTx(ixs, {
+      ...txOptions,
+      lookupTables: mergeLookupTables(
+        txOptions.lookupTables ?? [],
+        lookupTables,
+      ),
+    });
   }
 
   async setPolicyIx(

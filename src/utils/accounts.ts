@@ -308,9 +308,7 @@ export async function isTokenAclEnabled(
 /**
  * Finds all Address Lookup Tables (ALTs) associated with the current vault.
  *
- * First attempts to fetch lookup tables from the GLAM API if configured.
- * Falls back to querying the ALT program directly using `getProgramAccounts`
- * with filters.
+ * Queries the ALT program directly using `getProgramAccounts` with filters.
  *
  * @returns Array of AddressLookupTableAccount objects for the vault
  * @throws RPC errors from `getProgramAccounts`. Callers that only use the

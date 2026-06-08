@@ -38,6 +38,7 @@ import { JupiterBorrowPolicy } from "../../deser/integrationPolicies";
 import { fetchMintAndTokenProgram } from "../../utils/accounts";
 import { toBn } from "../../utils/common";
 import { getIntegrationAuthorityPda } from "../../utils/glamPDAs";
+import { mergeLookupTables } from "../../utils/lookupTables";
 import { getProgramAccounts } from "../../utils/rpc";
 import {
   BORROW_OPERATE_EXPECTED_TICK_RE,
@@ -839,7 +840,13 @@ export class JupiterBorrowClient
     );
 
     const effectiveTxOptions = metadataLookupTable
-      ? { ...txOptions, lookupTables: [metadataLookupTable] }
+      ? {
+          ...txOptions,
+          lookupTables: mergeLookupTables(
+            [metadataLookupTable],
+            txOptions.lookupTables ?? [],
+          ),
+        }
       : txOptions;
 
     return await this.operate(
