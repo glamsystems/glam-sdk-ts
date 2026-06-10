@@ -1565,71 +1565,61 @@
     },
     {
       "code": 6002,
-      "name": "InvalidRewardIndex",
-      "msg": "Invalid Orca reward index"
-    },
-    {
-      "code": 6003,
       "name": "TokenMintMismatch",
       "msg": "Orca token account mint does not match the Whirlpool"
     },
     {
-      "code": 6004,
-      "name": "GlamStateDisabled",
-      "msg": "GLAM state is disabled"
-    },
-    {
-      "code": 6005,
+      "code": 6003,
       "name": "InvalidIxArgs",
       "msg": "Invalid instruction arguments"
     },
     {
-      "code": 6006,
+      "code": 6004,
       "name": "ProtocolPolicyViolation",
       "msg": "Protocol policy violation"
     },
     {
-      "code": 6007,
+      "code": 6005,
       "name": "PricingError",
       "msg": "Pricing error"
     },
     {
-      "code": 6008,
+      "code": 6006,
       "name": "MissingAccount",
       "msg": "An account required by the instruction is missing"
     },
     {
-      "code": 6009,
+      "code": 6007,
       "name": "UnsupportedOracleSource",
       "msg": "Oracle source not supported in this context"
     },
     {
-      "code": 6010,
+      "code": 6008,
       "name": "InvalidAccountType",
       "msg": "Invalid account type"
     },
     {
-      "code": 6011,
+      "code": 6009,
       "name": "UnexpectedProgramOwner",
       "msg": "Account is owned by an unexpected program"
     },
     {
-      "code": 6012,
+      "code": 6010,
       "name": "InvalidPriceDenom",
       "msg": "Invalid price denom"
     },
     {
-      "code": 6013,
+      "code": 6011,
       "name": "MaxDeviationExceeded",
       "msg": "Max deviation exceeded"
     },
     {
-      "code": 6014,
+      "code": 6012,
       "name": "InvalidTokenAccount",
       "msg": "Invalid token account"
     },
     {
-      "code": 6015,
+      "code": 6013,
       "name": "InvalidVaultTokenAccount",
       "msg": "Invalid vault ata"
     }

@@ -9,9 +9,10 @@ import {
 
 import {
   GlamClient,
-  LOOPSCALE_PROTOCOL,
+  LOOPSCALE_BORROW_PROTOCOL,
   LOOPSCALE_SPL_TOKEN_COLLATERAL_ASSET_TYPE,
-  LoopscalePolicy,
+  LoopscaleBorrowMarketPolicy,
+  LoopscaleBorrowPolicy,
   USDC,
   USDT,
   getLoopscaleEventAuthorityPda,
@@ -136,7 +137,7 @@ describe("loopscale sdk", () => {
       integrationAcls: [
         {
           integrationProgram: glamClient.extLoopscaleProgram.programId,
-          protocolsBitmask: LOOPSCALE_PROTOCOL,
+          protocolsBitmask: LOOPSCALE_BORROW_PROTOCOL,
           protocolPolicies: [],
         },
       ],
@@ -149,17 +150,27 @@ describe("loopscale sdk", () => {
     );
     await airdrop(glamClient.connection, glamClient.vaultPda, 10_000_000_000);
 
-    // Deposit requires the collateral mint in the deposit allowlist; borrow
-    // requires the principal mint in the borrow allowlist AND the market in the
-    // markets allowlist. Withdraw and repay only check the permission bitmask.
-    await glamClient.access.setProtocolPolicy(
-      glamClient.extLoopscaleProgram.programId,
-      LOOPSCALE_PROTOCOL,
-      new LoopscalePolicy(
+    // DepositCollateral requires the collateral mint in `collateralAllowlist`.
+    // BorrowPrincipal requires the principal mint in `principalAllowlist`.
+    // BorrowPrincipal applies advanced limits when a `marketPolicies` entry is
+    // configured for the market. The entry below caps per-instruction borrow,
+    // allowed durations (index 0 = 1 day), and max LTV (max_ltv_bps * 100 >=
+    // expected_lqt in cbps).
+    // Withdraw and repay only check the permission bitmask.
+    await glamClient.loopscaleBorrow.setBorrowPolicy(
+      new LoopscaleBorrowPolicy(
         [USDT],
         [USDC],
-        [LOOPSCALE_MARKET_INFORMATION],
-      ).encode(),
+        [
+          new LoopscaleBorrowMarketPolicy(
+            LOOPSCALE_MARKET_INFORMATION,
+            new BN(1_000_000_000), // maxBorrowAmount
+            new BN(1_000_000_000), // maxTotalBorrowAmount
+            10_000, // maxLtvBps (100%); *100 = 1_000_000 cbps >= expectedLqt 980_000
+            [0], // duration index 0 = 1 day
+          ),
+        ],
+      ),
     );
 
     vaultUsdcAta = (
@@ -231,13 +242,14 @@ describe("loopscale sdk", () => {
       Math.min(LOCALNET_BORROW_AMOUNT_CAP, externalYieldAmount - 1),
     );
 
-    const loan = glamClient.loopscale.getLoanPda(fixtureNonce);
-    const createLoanIx = await glamClient.loopscale.txBuilder.createLoanIx(
-      { nonce: fixtureNonce },
-      { loan },
-    );
+    const loan = glamClient.loopscaleBorrow.getLoanPda(fixtureNonce);
+    const createLoanIx =
+      await glamClient.loopscaleBorrow.txBuilder.createLoanIx(
+        { nonce: fixtureNonce },
+        { loan },
+      );
     const depositCollateralIx =
-      await glamClient.loopscale.txBuilder.depositCollateralIx(
+      await glamClient.loopscaleBorrow.txBuilder.depositCollateralIx(
         {
           amount: new BN(5_000_000),
           assetType: LOOPSCALE_SPL_TOKEN_COLLATERAL_ASSET_TYPE,
@@ -250,7 +262,7 @@ describe("loopscale sdk", () => {
         },
       );
     const updateWeightMatrixIx =
-      await glamClient.loopscale.txBuilder.updateWeightMatrixIx(
+      await glamClient.loopscaleBorrow.txBuilder.updateWeightMatrixIx(
         {
           collateralIndex: 0,
           weightMatrix: [1_000_000, 0, 0, 0, 0],
@@ -263,7 +275,7 @@ describe("loopscale sdk", () => {
         { loan },
       );
     const borrowPrincipalIx =
-      await glamClient.loopscale.txBuilder.borrowPrincipalIx(
+      await glamClient.loopscaleBorrow.txBuilder.borrowPrincipalIx(
         {
           amount: borrowAmount,
           assetIndexGuidance: Buffer.from([11, 1, 11]),
@@ -341,8 +353,8 @@ describe("loopscale sdk", () => {
 
   // Loopscale instructions cannot be executed or simulated-to-success on
   // localnet: every instruction requires the Loopscale bs_auth co-signature,
-  // which is only provided by Loopscale's remote MPC service (see
-  // LoopscaleClient.cosignTransaction). On top of that, withdraw_collateral and
+  // which is only provided by Loopscale's remote MPC service (see the
+  // loopscale sub-client cosignTransaction helpers). On top of that, withdraw_collateral and
   // repay_principal require an active ledger that has settled in an earlier slot
   // (running them in the borrow's slot fails with InvalidLedgerStatusForRefinance,
   // and withdraw on a loan with no active term fails with LoanPastEndTime). Since
@@ -351,9 +363,9 @@ describe("loopscale sdk", () => {
   // program, decoded params, and resolved accounts.
   it("builds a withdrawCollateral instruction with the expected accounts and params", async () => {
     const nonce = new BN("1776462798");
-    const loan = glamClient.loopscale.getLoanPda(nonce);
+    const loan = glamClient.loopscaleBorrow.getLoanPda(nonce);
 
-    const ix = await glamClient.loopscale.txBuilder.withdrawCollateralIx(
+    const ix = await glamClient.loopscaleBorrow.txBuilder.withdrawCollateralIx(
       {
         amount: new BN(1_000_000),
         collateralIndex: 2,
@@ -385,7 +397,7 @@ describe("loopscale sdk", () => {
     // borrowerTa defaults to the vault ATA, loanTa to the loan ATA.
     expect(findKey(vaultUsdtAta)).toBeDefined();
     expect(
-      findKey(glamClient.loopscale.getLoanTokenAta(loan, USDT)),
+      findKey(glamClient.loopscaleBorrow.getLoanTokenAta(loan, USDT)),
     ).toBeDefined();
 
     const decoded = glamClient.extLoopscaleProgram.coder.instruction.decode(
@@ -401,9 +413,9 @@ describe("loopscale sdk", () => {
 
   it("builds a repayPrincipal instruction with the expected accounts and params", async () => {
     const nonce = new BN("1776462799");
-    const loan = glamClient.loopscale.getLoanPda(nonce);
+    const loan = glamClient.loopscaleBorrow.getLoanPda(nonce);
 
-    const ix = await glamClient.loopscale.txBuilder.repayPrincipalIx(
+    const ix = await glamClient.loopscaleBorrow.txBuilder.repayPrincipalIx(
       {
         amount: new BN(2_000_000),
         ledgerIndex: 1,
@@ -433,7 +445,7 @@ describe("loopscale sdk", () => {
     expect(findKey(vaultUsdcAta)).toBeDefined();
     expect(
       findKey(
-        glamClient.loopscale.getStrategyTokenAta(LOOPSCALE_STRATEGY, USDC),
+        glamClient.loopscaleLend.getStrategyTokenAta(LOOPSCALE_STRATEGY, USDC),
       ),
     ).toBeDefined();
 

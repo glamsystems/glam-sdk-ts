@@ -25,8 +25,8 @@ import {
   KAMINO_LENDING_PROTOCOL,
   KAMINO_VAULTS_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
-  LOOPSCALE_PROTOCOL,
-  LOOPSCALE_STRATEGY_PROTOCOL,
+  LOOPSCALE_BORROW_PROTOCOL,
+  LOOPSCALE_LENDING_PROTOCOL,
   MARINADE_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
@@ -371,27 +371,32 @@ export const getProtocolsAndPermissions = (
   // Loopscale integration program protocols and permissions are defined in:
   // @anchor/programs/ext_loopscale/src/state/access.rs
   [getExtLoopscaleProgramId(staging).toBase58()]: {
-    [protocolBitflagKey(LOOPSCALE_PROTOCOL)]: {
-      name: "Loopscale",
+    [protocolBitflagKey(LOOPSCALE_BORROW_PROTOCOL)]: {
+      name: "LoopscaleBorrow",
       staging: true,
       permissions: {
-        [1 << 0]: "ManageLoan",
-        [1 << 1]: "DepositCollateral",
-        [1 << 2]: "WithdrawCollateral",
-        [1 << 3]: "BorrowPrincipal",
-        [1 << 4]: "RepayPrincipal",
-        [1 << 11]: "CreateStrategy",
-        [1 << 12]: "UpdateStrategy",
-        [1 << 13]: "DepositStrategy",
-        [1 << 14]: "WithdrawStrategy",
-        [1 << 15]: "CloseStrategy",
-        [1 << 16]: "SellLedger",
+        [1 << 0]: "CreateLoan",
+        [1 << 1]: "CloseLoan",
+        [1 << 2]: "UpdateLoan",
+        [1 << 3]: "DepositCollateral",
+        [1 << 4]: "WithdrawCollateral",
+        [1 << 5]: "BorrowPrincipal",
+        [1 << 6]: "RepayPrincipal",
+        [1 << 7]: "SetPolicy",
       },
     },
-    [protocolBitflagKey(LOOPSCALE_STRATEGY_PROTOCOL)]: {
-      name: "LoopscaleStrategy",
+    [protocolBitflagKey(LOOPSCALE_LENDING_PROTOCOL)]: {
+      name: "LoopscaleLending",
       staging: true,
-      permissions: {},
+      permissions: {
+        [1 << 0]: "CreateStrategy",
+        [1 << 1]: "UpdateStrategy",
+        [1 << 2]: "DepositStrategy",
+        [1 << 3]: "WithdrawStrategy",
+        [1 << 4]: "CloseStrategy",
+        [1 << 5]: "SellLedger",
+        [1 << 6]: "SetPolicy",
+      },
     },
   },
   // Jupiter Lend integration program protocols and permissions are defined in:

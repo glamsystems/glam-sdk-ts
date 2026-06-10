@@ -725,6 +725,76 @@
       ]
     },
     {
+      "name": "set_protocol_policy_by_integration_authority",
+      "discriminator": [
+        225,
+        50,
+        176,
+        197,
+        142,
+        211,
+        77,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "integration_program"
+        },
+        {
+          "name": "integration_authority",
+          "signer": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "integration_program"
+            }
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "protocol_bitflag",
+          "type": "u16"
+        },
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
       "name": "set_system_transfer_policy",
       "discriminator": [
         102,

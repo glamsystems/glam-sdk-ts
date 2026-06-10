@@ -20,7 +20,8 @@ import { StakePoolClient } from "./client/stake-pool";
 import { CctpClient } from "./client/cctp";
 import { BridgeClient } from "./client/bridge";
 import { EpiClient } from "./client/epi";
-import { LoopscaleClient } from "./client/loopscale";
+import { LoopscaleBorrowClient, LoopscaleLendClient } from "./client/loopscale";
+import { LoopscaleCoreClient } from "./client/loopscale/core";
 import { PhoenixClient } from "./client/phoenix";
 import { JupiterBorrowClient, JupiterEarnClient } from "./client/jupiter-lend";
 import { OrcaWhirlpoolsClient } from "./client/orca";
@@ -49,7 +50,9 @@ export class GlamClient extends BaseClient {
   private _cctp?: CctpClient;
   private _bridge?: BridgeClient;
   private _epi?: EpiClient;
-  private _loopscale?: LoopscaleClient;
+  private _loopscaleCore?: LoopscaleCoreClient;
+  private _loopscaleBorrow?: LoopscaleBorrowClient;
+  private _loopscaleLend?: LoopscaleLendClient;
   private _phoenix?: PhoenixClient;
   private _jupiterEarn?: JupiterEarnClient;
   private _jupiterBorrow?: JupiterBorrowClient;
@@ -120,7 +123,8 @@ export class GlamClient extends BaseClient {
         this.kaminoVaults,
         this.bridge,
         this.epi,
-        this.loopscale,
+        this.loopscaleBorrow,
+        this.loopscaleLend,
         () => this.jupiterSwap.jupApi,
       );
     }
@@ -197,11 +201,25 @@ export class GlamClient extends BaseClient {
     return this._epi;
   }
 
-  get loopscale(): LoopscaleClient {
-    if (!this._loopscale) {
-      this._loopscale = new LoopscaleClient(this);
+  private get loopscaleCore(): LoopscaleCoreClient {
+    if (!this._loopscaleCore) {
+      this._loopscaleCore = new LoopscaleCoreClient(this);
     }
-    return this._loopscale;
+    return this._loopscaleCore;
+  }
+
+  get loopscaleBorrow(): LoopscaleBorrowClient {
+    if (!this._loopscaleBorrow) {
+      this._loopscaleBorrow = new LoopscaleBorrowClient(this.loopscaleCore);
+    }
+    return this._loopscaleBorrow;
+  }
+
+  get loopscaleLend(): LoopscaleLendClient {
+    if (!this._loopscaleLend) {
+      this._loopscaleLend = new LoopscaleLendClient(this.loopscaleCore);
+    }
+    return this._loopscaleLend;
   }
 
   get phoenix(): PhoenixClient {

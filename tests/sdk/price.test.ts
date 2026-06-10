@@ -2,9 +2,15 @@ import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import { AccountLayout } from "@solana/spl-token";
 
 import { PriceClient } from "../../src/client/price";
-import { LOOPSCALE_PROTOCOL } from "../../src/protocols";
+import {
+  LOOPSCALE_BORROW_PROTOCOL,
+  LOOPSCALE_LENDING_PROTOCOL,
+} from "../../src/protocols";
 import { StateAccountType } from "../../src/models";
 import { PkMap } from "../../src/utils";
+
+const LOOPSCALE_PROTOCOLS =
+  LOOPSCALE_BORROW_PROTOCOL | LOOPSCALE_LENDING_PROTOCOL;
 
 function pk(seed: number): PublicKey {
   const bytes = new Uint8Array(32);
@@ -64,8 +70,10 @@ function createPriceClient(params: {
     extOrcaProgram: { programId: pk(47) },
   } as any;
 
-  const loopscale = {
+  const loopscaleBorrow = {
     getPriceLoansAccounts: jest.fn().mockResolvedValue(null),
+  } as any;
+  const loopscaleLend = {
     getPriceStrategiesAccounts: jest.fn().mockResolvedValue(null),
   } as any;
   const bridge = {
@@ -80,11 +88,12 @@ function createPriceClient(params: {
     {} as any,
     bridge,
     {} as any,
-    loopscale,
+    loopscaleBorrow,
+    loopscaleLend,
     () => params.jupiterApi ?? ({} as any),
   );
 
-  return { client, base, loopscale, bridge };
+  return { client, base, loopscaleBorrow, loopscaleLend, bridge };
 }
 
 describe("PriceClient", () => {
@@ -93,7 +102,7 @@ describe("PriceClient", () => {
     const priceLoansIx = ix(pk(62));
     const priceStrategiesIx = ix(pk(63));
     const { client } = createPriceClient({
-      loopscaleProtocolsBitmask: LOOPSCALE_PROTOCOL,
+      loopscaleProtocolsBitmask: LOOPSCALE_PROTOCOLS,
     });
 
     jest
@@ -139,7 +148,7 @@ describe("PriceClient", () => {
   it("keeps only vault pricing when loopscale pricing returns no instructions", async () => {
     const priceVaultIx = ix(pk(81));
     const { client } = createPriceClient({
-      loopscaleProtocolsBitmask: LOOPSCALE_PROTOCOL,
+      loopscaleProtocolsBitmask: LOOPSCALE_PROTOCOLS,
     });
 
     jest
@@ -181,7 +190,7 @@ describe("PriceClient", () => {
       mintProgram: { methods: { priceLoopscaleLoans } },
       getSolOracle: jest.fn().mockResolvedValue(solUsdOracle),
     } as any;
-    const loopscale = {
+    const loopscaleBorrow = {
       getPriceLoansAccounts: jest.fn().mockResolvedValue({
         loanAccounts: [loanA, loanB],
         oracleAccounts: [oracleA, oracleB],
@@ -194,7 +203,8 @@ describe("PriceClient", () => {
       {} as any,
       {} as any,
       {} as any,
-      loopscale,
+      loopscaleBorrow,
+      {} as any,
       () => ({}) as any,
     );
     jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(baseAssetOracle);
@@ -202,7 +212,7 @@ describe("PriceClient", () => {
     const result = await client.priceLoopscaleLoansIx();
 
     expect(result).toBe(builtIx);
-    expect(loopscale.getPriceLoansAccounts).toHaveBeenCalled();
+    expect(loopscaleBorrow.getPriceLoansAccounts).toHaveBeenCalled();
     expect(base.getSolOracle).toHaveBeenCalled();
     expect(instructionBuilder.accounts).toHaveBeenCalledWith({
       glamState: statePda,
@@ -224,7 +234,7 @@ describe("PriceClient", () => {
       mintProgram: { methods: { priceLoopscaleLoans } },
       getSolOracle: jest.fn(),
     } as any;
-    const loopscale = {
+    const loopscaleBorrow = {
       getPriceLoansAccounts: jest.fn().mockResolvedValue(null),
     } as any;
 
@@ -234,7 +244,8 @@ describe("PriceClient", () => {
       {} as any,
       {} as any,
       {} as any,
-      loopscale,
+      loopscaleBorrow,
+      {} as any,
       () => ({}) as any,
     );
 
@@ -266,7 +277,7 @@ describe("PriceClient", () => {
       mintProgram: { methods: { priceLoopscaleStrategies } },
       getSolOracle: jest.fn().mockResolvedValue(solUsdOracle),
     } as any;
-    const loopscale = {
+    const loopscaleLend = {
       getPriceStrategiesAccounts: jest.fn().mockResolvedValue({
         strategyAccounts: [strategyA, strategyB],
         oracleAccounts: [oracleA, oracleB],
@@ -279,7 +290,8 @@ describe("PriceClient", () => {
       {} as any,
       {} as any,
       {} as any,
-      loopscale,
+      {} as any,
+      loopscaleLend,
       () => ({}) as any,
     );
     jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(baseAssetOracle);
@@ -287,7 +299,7 @@ describe("PriceClient", () => {
     const result = await client.priceLoopscaleStrategiesIx();
 
     expect(result).toBe(builtIx);
-    expect(loopscale.getPriceStrategiesAccounts).toHaveBeenCalled();
+    expect(loopscaleLend.getPriceStrategiesAccounts).toHaveBeenCalled();
     expect(base.getSolOracle).toHaveBeenCalled();
     expect(instructionBuilder.accounts).toHaveBeenCalledWith({
       glamState: statePda,
@@ -309,7 +321,7 @@ describe("PriceClient", () => {
       mintProgram: { methods: { priceLoopscaleStrategies } },
       getSolOracle: jest.fn(),
     } as any;
-    const loopscale = {
+    const loopscaleLend = {
       getPriceStrategiesAccounts: jest.fn().mockResolvedValue(null),
     } as any;
 
@@ -319,7 +331,8 @@ describe("PriceClient", () => {
       {} as any,
       {} as any,
       {} as any,
-      loopscale,
+      {} as any,
+      loopscaleLend,
       () => ({}) as any,
     );
 

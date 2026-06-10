@@ -1,9 +1,14 @@
+import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import {
   JupiterBorrowPolicy,
   JupiterEarnPolicy,
   JupiterSwapPolicy,
-  LoopscalePolicy,
+  LoopscaleBorrowMarketPolicy,
+  LoopscaleBorrowPolicy,
+  LoopscaleLendingMarketPolicy,
+  LoopscaleLendingPolicy,
+  LoopscaleSellLedgerPolicy,
   PhoenixPolicy,
   WhirlpoolsPolicy,
 } from "../../src/deser/integrationPolicies";
@@ -89,39 +94,198 @@ describe("JupiterSwapPolicy", () => {
   });
 });
 
-describe("LoopscalePolicy", () => {
-  const deposit1 = new PublicKey("11111111111111111111111111111112");
-  const deposit2 = new PublicKey("11111111111111111111111111111113");
-  const borrow1 = new PublicKey("11111111111111111111111111111114");
+describe("LoopscaleBorrowPolicy", () => {
+  const collateral1 = new PublicKey("11111111111111111111111111111112");
+  const collateral2 = new PublicKey("11111111111111111111111111111113");
+  const principal1 = new PublicKey("11111111111111111111111111111114");
   const market1 = new PublicKey("11111111111111111111111111111115");
 
-  it("round-trips the deposit, borrow, and markets allowlists", () => {
-    const policy = new LoopscalePolicy(
-      [deposit1, deposit2],
-      [borrow1],
-      [market1],
+  it("round-trips the deployed borrow policy format", () => {
+    const marketPolicy = new LoopscaleBorrowMarketPolicy(
+      market1,
+      new BN(100),
+      new BN(1_000),
+      7_500,
+      [0, 2, 4],
     );
-    const recovered = LoopscalePolicy.decode(policy.encode());
+    const policy = new LoopscaleBorrowPolicy(
+      [collateral1, collateral2],
+      [principal1],
+      [marketPolicy],
+    );
+    const recovered = LoopscaleBorrowPolicy.decode(policy.encode());
 
-    expect(recovered.depositAllowlist.map((m) => m.toBase58())).toEqual([
-      deposit1.toBase58(),
-      deposit2.toBase58(),
+    expect(recovered.collateralAllowlist.map((m) => m.toBase58())).toEqual([
+      collateral1.toBase58(),
+      collateral2.toBase58(),
     ]);
-    expect(recovered.borrowAllowlist.map((m) => m.toBase58())).toEqual([
-      borrow1.toBase58(),
+    expect(recovered.principalAllowlist.map((m) => m.toBase58())).toEqual([
+      principal1.toBase58(),
     ]);
-    expect(recovered.marketsAllowlist.map((m) => m.toBase58())).toEqual([
+    expect(recovered.marketPolicies.map((p) => p.market.toBase58())).toEqual([
       market1.toBase58(),
+    ]);
+    expect(recovered.marketPolicies[0].maxBorrowAmount.toString()).toBe("100");
+    expect(recovered.marketPolicies[0].maxTotalBorrowAmount.toString()).toBe(
+      "1000",
+    );
+    expect(recovered.marketPolicies[0].maxLtvBps).toBe(7_500);
+    expect(recovered.marketPolicies[0].durationIndexesAllowlist).toEqual([
+      0, 2, 4,
     ]);
   });
 
-  it("round-trips empty allowlists", () => {
-    const policy = new LoopscalePolicy();
-    const recovered = LoopscalePolicy.decode(policy.encode());
+  it("matches the deployed borrow policy byte layout", () => {
+    const policy = new LoopscaleBorrowPolicy(
+      [collateral1],
+      [principal1],
+      [
+        new LoopscaleBorrowMarketPolicy(
+          market1,
+          new BN(100),
+          new BN(1_000),
+          7_500,
+          [0, 2, 4],
+        ),
+      ],
+    );
+    const encoded = policy.encode();
 
-    expect(recovered.depositAllowlist).toEqual([]);
-    expect(recovered.borrowAllowlist).toEqual([]);
-    expect(recovered.marketsAllowlist).toEqual([]);
+    expect(encoded.length).toBe(4 + 32 + 4 + 32 + 4 + 32 + 8 + 8 + 2 + 4 + 3);
+    expect(encoded.readUInt32LE(0)).toBe(1);
+    expect(new PublicKey(encoded.subarray(4, 36)).toBase58()).toBe(
+      collateral1.toBase58(),
+    );
+    expect(encoded.readUInt32LE(36)).toBe(1);
+    expect(new PublicKey(encoded.subarray(40, 72)).toBase58()).toBe(
+      principal1.toBase58(),
+    );
+    expect(encoded.readUInt32LE(72)).toBe(1);
+    expect(new PublicKey(encoded.subarray(76, 108)).toBase58()).toBe(
+      market1.toBase58(),
+    );
+    expect(encoded.readBigUInt64LE(108)).toBe(100n);
+    expect(encoded.readBigUInt64LE(116)).toBe(1_000n);
+    expect(encoded.readUInt16LE(124)).toBe(7_500);
+    expect(encoded.readUInt32LE(126)).toBe(3);
+    expect([...encoded.subarray(130)]).toEqual([0, 2, 4]);
+  });
+
+  it("round-trips empty allowlists", () => {
+    const policy = new LoopscaleBorrowPolicy();
+    const recovered = LoopscaleBorrowPolicy.decode(policy.encode());
+
+    expect(recovered.collateralAllowlist).toEqual([]);
+    expect(recovered.principalAllowlist).toEqual([]);
+    expect(recovered.marketPolicies).toEqual([]);
+  });
+});
+
+describe("LoopscaleLendingPolicy", () => {
+  const principal1 = new PublicKey("11111111111111111111111111111114");
+  const market1 = new PublicKey("11111111111111111111111111111115");
+  const collateralAsset = new PublicKey("11111111111111111111111111111116");
+
+  it("round-trips the deployed lending policy format", () => {
+    const marketPolicy = new LoopscaleLendingMarketPolicy(
+      market1,
+      new BN(200),
+      new BN(2_000),
+      125_000,
+      6_500,
+      [1, 3],
+      [collateralAsset],
+    );
+    const policy = new LoopscaleLendingPolicy(
+      [principal1],
+      [collateralAsset],
+      [marketPolicy],
+      new LoopscaleSellLedgerPolicy(250, 75),
+    );
+    const recovered = LoopscaleLendingPolicy.decode(policy.encode());
+
+    expect(recovered.principalAllowlist.map((m) => m.toBase58())).toEqual([
+      principal1.toBase58(),
+    ]);
+    expect(recovered.collateralAllowlist.map((m) => m.toBase58())).toEqual([
+      collateralAsset.toBase58(),
+    ]);
+    expect(recovered.marketPolicies[0].market.toBase58()).toBe(
+      market1.toBase58(),
+    );
+    expect(recovered.marketPolicies[0].maxDepositAmount.toString()).toBe("200");
+    expect(recovered.marketPolicies[0].maxTotalDepositAmount.toString()).toBe(
+      "2000",
+    );
+    expect(recovered.marketPolicies[0].minLoanApyCbps).toBe(125_000);
+    expect(recovered.marketPolicies[0].maxLtvBps).toBe(6_500);
+    expect(recovered.marketPolicies[0].durationIndexesAllowlist).toEqual([
+      1, 3,
+    ]);
+    expect(
+      recovered.marketPolicies[0].collateralAssetAllowlist[0].toBase58(),
+    ).toBe(collateralAsset.toBase58());
+    expect(recovered.sellLedgerPolicy.maxDiscountBps).toBe(250);
+    expect(recovered.sellLedgerPolicy.maxSlippageBps).toBe(75);
+  });
+
+  it("matches the deployed lending policy byte layout", () => {
+    const policy = new LoopscaleLendingPolicy(
+      [principal1],
+      [collateralAsset],
+      [
+        new LoopscaleLendingMarketPolicy(
+          market1,
+          new BN(200),
+          new BN(2_000),
+          125_000,
+          6_500,
+          [1, 3],
+          [collateralAsset],
+        ),
+      ],
+      new LoopscaleSellLedgerPolicy(250, 75),
+    );
+    const encoded = policy.encode();
+
+    expect(encoded.length).toBe(
+      4 + 32 + 4 + 32 + 4 + 32 + 8 + 8 + 4 + 2 + 4 + 2 + 4 + 32 + 4,
+    );
+    expect(encoded.readUInt32LE(0)).toBe(1);
+    expect(new PublicKey(encoded.subarray(4, 36)).toBase58()).toBe(
+      principal1.toBase58(),
+    );
+    expect(encoded.readUInt32LE(36)).toBe(1);
+    expect(new PublicKey(encoded.subarray(40, 72)).toBase58()).toBe(
+      collateralAsset.toBase58(),
+    );
+    expect(encoded.readUInt32LE(72)).toBe(1);
+    expect(new PublicKey(encoded.subarray(76, 108)).toBase58()).toBe(
+      market1.toBase58(),
+    );
+    expect(encoded.readBigUInt64LE(108)).toBe(200n);
+    expect(encoded.readBigUInt64LE(116)).toBe(2_000n);
+    expect(encoded.readUInt32LE(124)).toBe(125_000);
+    expect(encoded.readUInt16LE(128)).toBe(6_500);
+    expect(encoded.readUInt32LE(130)).toBe(2);
+    expect([...encoded.subarray(134, 136)]).toEqual([1, 3]);
+    expect(encoded.readUInt32LE(136)).toBe(1);
+    expect(new PublicKey(encoded.subarray(140, 172)).toBase58()).toBe(
+      collateralAsset.toBase58(),
+    );
+    expect(encoded.readUInt16LE(172)).toBe(250);
+    expect(encoded.readUInt16LE(174)).toBe(75);
+  });
+
+  it("round-trips empty allowlists", () => {
+    const policy = new LoopscaleLendingPolicy();
+    const recovered = LoopscaleLendingPolicy.decode(policy.encode());
+
+    expect(recovered.principalAllowlist).toEqual([]);
+    expect(recovered.collateralAllowlist).toEqual([]);
+    expect(recovered.marketPolicies).toEqual([]);
+    expect(recovered.sellLedgerPolicy.maxDiscountBps).toBe(0);
+    expect(recovered.sellLedgerPolicy.maxSlippageBps).toBe(0);
   });
 });
 

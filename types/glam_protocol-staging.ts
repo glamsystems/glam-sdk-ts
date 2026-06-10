@@ -781,6 +781,76 @@ export type GlamProtocol = {
       ]
     },
     {
+      "name": "setProtocolPolicyByIntegrationAuthority",
+      "discriminator": [
+        225,
+        50,
+        176,
+        197,
+        142,
+        211,
+        77,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "integrationProgram"
+        },
+        {
+          "name": "integrationAuthority",
+          "signer": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "integrationProgram"
+            }
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "protocolBitflag",
+          "type": "u16"
+        },
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
       "name": "setSystemTransferPolicy",
       "discriminator": [
         102,

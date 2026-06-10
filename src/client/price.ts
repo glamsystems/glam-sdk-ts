@@ -43,13 +43,14 @@ import {
 } from "../constants";
 import { BridgeClient, getActiveRegistryTransfers } from "./bridge";
 import { EpiClient } from "./epi";
-import { LoopscaleClient } from "./loopscale";
+import { LoopscaleBorrowClient, LoopscaleLendClient } from "./loopscale";
 import {
   EPI_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
   KAMINO_VAULTS_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
-  LOOPSCALE_PROTOCOL,
+  LOOPSCALE_BORROW_PROTOCOL,
+  LOOPSCALE_LENDING_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
   STAKE_PROTOCOL,
@@ -143,7 +144,8 @@ export class PriceClient {
     readonly kvaults: KaminoVaultsClient,
     readonly bridge: BridgeClient,
     readonly epi: EpiClient,
-    readonly loopscale: LoopscaleClient,
+    readonly loopscaleBorrow: LoopscaleBorrowClient,
+    readonly loopscaleLend: LoopscaleLendClient,
     private readonly getJupiterApi: () => JupiterApiClient,
   ) {}
 
@@ -1199,7 +1201,7 @@ export class PriceClient {
       return null;
     }
 
-    const accounts = await this.loopscale.getPriceLoansAccounts();
+    const accounts = await this.loopscaleBorrow.getPriceLoansAccounts();
     if (!accounts) {
       return null;
     }
@@ -1246,7 +1248,7 @@ export class PriceClient {
       return null;
     }
 
-    const accounts = await this.loopscale.getPriceStrategiesAccounts();
+    const accounts = await this.loopscaleLend.getPriceStrategiesAccounts();
     if (!accounts) {
       return null;
     }
@@ -1494,11 +1496,24 @@ export class PriceClient {
       );
       if (
         loopscaleIntegrationAcl &&
-        (loopscaleIntegrationAcl.protocolsBitmask & LOOPSCALE_PROTOCOL) !== 0
+        ((loopscaleIntegrationAcl.protocolsBitmask &
+          LOOPSCALE_BORROW_PROTOCOL) !==
+          0 ||
+          (loopscaleIntegrationAcl.protocolsBitmask &
+            LOOPSCALE_LENDING_PROTOCOL) !==
+            0)
       ) {
         const [loansIx, strategiesIx] = await Promise.all([
-          this.priceLoopscaleLoansIx(),
-          this.priceLoopscaleStrategiesIx(),
+          (loopscaleIntegrationAcl.protocolsBitmask &
+            LOOPSCALE_BORROW_PROTOCOL) !==
+          0
+            ? this.priceLoopscaleLoansIx()
+            : null,
+          (loopscaleIntegrationAcl.protocolsBitmask &
+            LOOPSCALE_LENDING_PROTOCOL) !==
+          0
+            ? this.priceLoopscaleStrategiesIx()
+            : null,
         ]);
         if (loansIx) chunks.push({ ixs: [loansIx], kaminoReserves: [] });
         if (strategiesIx) {

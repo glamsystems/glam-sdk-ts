@@ -1,14 +1,22 @@
 import fs from "fs";
 import path from "path";
 import { BN } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 
 import {
+  encodeLoopscaleSellLedgerAssetIndexGuidance,
+  LoopscaleBorrowClient,
+  LoopscaleLendClient,
   LOOPSCALE_STRATEGY_DISCRIMINATOR,
-  LoopscaleClient,
 } from "../../src/client/loopscale";
-import { LOOPSCALE_PROGRAM_ID, USDC, USDT } from "../../src/constants";
-import { LoopscaleStrategy } from "../../src/deser";
+import { LoopscaleCoreClient } from "../../src/client/loopscale/core";
+import { LOOPSCALE_PROGRAM_ID, USDC, USDT, WSOL } from "../../src/constants";
+import { LoopscaleLoan, LoopscaleStrategy } from "../../src/deser";
 import { PkMap } from "../../src/utils";
 
 const LOOPSCALE_LOAN_DISCRIMINATOR = Buffer.from([
@@ -110,7 +118,37 @@ function createLoopscaleStrategyAccountData(params: {
   return data;
 }
 
-describe("LoopscaleClient", () => {
+function createLoopscaleCoreClientForApiIxTests() {
+  const signer = pk(10);
+  const vaultPda = pk(11);
+  const base = {
+    signer,
+    vaultPda,
+    getVaultAta: jest.fn((mint: PublicKey, tokenProgram = TOKEN_PROGRAM_ID) =>
+      // Match BaseClient.getVaultAta, including allowOwnerOffCurve for the PDA.
+      getAssociatedTokenAddressSync(mint, vaultPda, true, tokenProgram),
+    ),
+  } as any;
+  const core = new LoopscaleCoreClient(base);
+  const borrowClient = new LoopscaleBorrowClient(core);
+  const lendClient = new LoopscaleLendClient(core);
+  const mappedIx = new TransactionInstruction({
+    programId: pk(12),
+    keys: [],
+    data: Buffer.from([1]),
+  });
+
+  (core as any).fetchApiTransaction = jest
+    .fn()
+    .mockResolvedValue({ message: "stubbed" });
+  (core as any).mapApiMessagesToGlamIxs = jest
+    .fn()
+    .mockResolvedValue([mappedIx]);
+
+  return { borrowClient, core, lendClient, signer, vaultPda, mappedIx };
+}
+
+describe("LoopscaleCoreClient", () => {
   it("fetches and validates a Loopscale loan account", async () => {
     const fixture = loadLoopscaleFixtureAccount(
       "FbX2zTQ49sSmxDe4HfSowBM6uzWswcwvpVjtQ1aMyME6",
@@ -121,7 +159,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleCoreClient(base);
     const loan = await client.fetchLoan(fixture.pubkey);
 
     expect(loan.getAddress()).toEqual(fixture.pubkey);
@@ -144,7 +182,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleCoreClient(base);
 
     await expect(
       client.fetchOwnedStrategy(fixture.pubkey, decoded.lender),
@@ -154,6 +192,78 @@ describe("LoopscaleClient", () => {
     ).rejects.toThrow(
       `Loopscale strategy ${fixture.pubkey} lender ${decoded.lender} does not match expected lender ${pk(39)}`,
     );
+  });
+
+  it("resolves sell-ledger asset index guidance from loan and strategy state", async () => {
+    const loanAddress = pk(41);
+    const oldStrategy = pk(42);
+    const newStrategy = pk(43);
+    const marketInformation = pk(44);
+    const collateralMint = pk(45);
+    const principalOracle = pk(46);
+    const collateralOracle = pk(47);
+    const client = new LoopscaleCoreClient({} as any);
+    const loan = Object.assign(new LoopscaleLoan(), {
+      _address: loanAddress,
+      ledgers: [
+        {
+          status: 2,
+          strategy: oldStrategy,
+          principalMint: USDC,
+          marketInformation,
+        },
+      ],
+      collateral: [
+        {
+          amount: new BN(1),
+          assetIdentifier: collateralMint,
+        },
+      ],
+      weightMatrix: [[1_000_000]],
+    });
+    const strategy = Object.assign(new LoopscaleStrategy(), {
+      _address: newStrategy,
+      principalMint: USDC,
+      marketInformation,
+    });
+    (client as any).fetchMarketInformation = jest.fn().mockResolvedValue({
+      principalMint: USDC,
+      assetData: {
+        1: { oracleAccount: principalOracle },
+        175: { oracleAccount: collateralOracle },
+      },
+      findAssetIndex: (asset: PublicKey) =>
+        asset.equals(collateralMint) ? 175 : asset.equals(USDC) ? 1 : null,
+    });
+
+    const terms = await client.resolveSellLedgerMarketAccounts({
+      loan,
+      ledgerIndex: 0,
+      newStrategy: strategy,
+    });
+
+    expect(terms).toMatchObject({
+      ledgerIndex: 0,
+      oldStrategy,
+      newStrategy,
+      oldStrategyMarketInformation: marketInformation,
+      newStrategyMarketInformation: marketInformation,
+      principalMint: USDC,
+      guidance: {
+        principalAssetIndex: 1,
+        collateralAssetIndex: 175,
+      },
+    });
+    expect(terms.assetIndexGuidance).toEqual(
+      encodeLoopscaleSellLedgerAssetIndexGuidance({
+        principalAssetIndex: 1,
+        collateralAssetIndex: 175,
+      }),
+    );
+    expect(terms.remainingAccounts).toEqual([
+      { pubkey: principalOracle, isSigner: false, isWritable: false },
+      { pubkey: collateralOracle, isSigner: false, isWritable: false },
+    ]);
   });
 
   it("asserts Loopscale strategy close readiness", () => {
@@ -166,7 +276,7 @@ describe("LoopscaleClient", () => {
       feeClaimable: new BN(0),
       activeLoanCount: new BN(0),
     });
-    const client = new LoopscaleClient({} as any);
+    const client = new LoopscaleCoreClient({} as any);
 
     expect(() => client.assertStrategyClosable(strategy)).not.toThrow();
 
@@ -174,6 +284,36 @@ describe("LoopscaleClient", () => {
     expect(() => client.assertStrategyClosable(strategy)).toThrow(
       `Strategy ${strategy.getAddress()} still has token balance 1; withdraw principal before closing.`,
     );
+  });
+
+  it("asserts Loopscale strategy principal withdraw readiness", () => {
+    const strategy = Object.assign(new LoopscaleStrategy(), {
+      _address: pk(41),
+      tokenBalance: new BN(0),
+      externalYieldAmount: new BN(5),
+    });
+    const client = new LoopscaleCoreClient({} as any);
+
+    expect(() =>
+      client.assertStrategyPrincipalWithdrawable(strategy, new BN(0), true),
+    ).toThrow(
+      `Strategy ${strategy.getAddress()} has no undeployed principal for --all; token balance is 0. Strategy external yield amount is 5; specify an explicit amount to withdraw it.`,
+    );
+
+    expect(() =>
+      client.assertStrategyPrincipalWithdrawable(strategy, new BN(5), false),
+    ).not.toThrow();
+
+    strategy.tokenBalance = new BN(3);
+    expect(() =>
+      client.assertStrategyPrincipalWithdrawable(strategy, new BN(9), false),
+    ).toThrow(
+      `Strategy ${strategy.getAddress()} has only 8 withdrawable amount; requested 9.`,
+    );
+
+    expect(() =>
+      client.assertStrategyPrincipalWithdrawable(strategy, new BN(8), false),
+    ).not.toThrow();
   });
 
   it("fetches registered Loopscale loans from external positions", async () => {
@@ -208,7 +348,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleCoreClient(base);
     const loans = await client.fetchRegisteredLoans();
 
     expect(loans.map((loan) => loan.getAddress())).toEqual([
@@ -248,7 +388,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleCoreClient(base);
     const strategies = await client.fetchRegisteredStrategies();
 
     expect(strategies.map((strategy) => strategy.getAddress())).toEqual([
@@ -297,7 +437,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleBorrowClient(new LoopscaleCoreClient(base));
     const accounts = await client.getPriceLoansAccounts();
 
     expect(accounts).not.toBeNull();
@@ -344,7 +484,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleBorrowClient(new LoopscaleCoreClient(base));
     const accounts = await client.getPriceLoansAccounts();
 
     expect(accounts).not.toBeNull();
@@ -392,7 +532,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleBorrowClient(new LoopscaleCoreClient(base));
     const accounts = await client.getPriceLoansAccounts();
 
     expect(base.connection.getMultipleAccountsInfo).toHaveBeenCalledTimes(2);
@@ -432,7 +572,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleBorrowClient(new LoopscaleCoreClient(base));
     const accounts = await client.getPriceLoansAccounts();
 
     expect(accounts).not.toBeNull();
@@ -466,7 +606,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleBorrowClient(new LoopscaleCoreClient(base));
 
     await expect(client.getPriceLoansAccounts()).rejects.toThrow(
       `Oracle unavailable for asset ${USDT.toBase58()}`,
@@ -507,7 +647,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleLendClient(new LoopscaleCoreClient(base));
     const accounts = await client.getPriceStrategiesAccounts();
 
     expect(accounts).not.toBeNull();
@@ -549,7 +689,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleLendClient(new LoopscaleCoreClient(base));
     const accounts = await client.getPriceStrategiesAccounts();
 
     expect(accounts).not.toBeNull();
@@ -590,7 +730,7 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleLendClient(new LoopscaleCoreClient(base));
     const accounts = await client.getPriceStrategiesAccounts();
 
     expect(accounts).not.toBeNull();
@@ -619,10 +759,122 @@ describe("LoopscaleClient", () => {
       },
     } as any;
 
-    const client = new LoopscaleClient(base);
+    const client = new LoopscaleLendClient(new LoopscaleCoreClient(base));
 
     await expect(client.getPriceStrategiesAccounts()).rejects.toThrow(
       `Oracle unavailable for asset ${principalMint.toBase58()}`,
     );
+  });
+
+  it("prepends vault WSOL ATA creation to API withdraw-collateral instructions", async () => {
+    const { borrowClient, core, signer, vaultPda, mappedIx } =
+      createLoopscaleCoreClientForApiIxTests();
+
+    const ixs = await borrowClient.buildApiWithdrawCollateralIxs({
+      loan: pk(70),
+      collateralMint: WSOL,
+      amount: new BN(1_000_000),
+      collateralIndex: 0,
+      assetIndexGuidance: [],
+      expectedLoanValues: {
+        expectedApy: new BN(0),
+        expectedLqt: [0, 0, 0, 0, 0],
+      },
+    });
+
+    expect(ixs).toHaveLength(2);
+    expect(ixs[0].programId).toEqual(ASSOCIATED_TOKEN_PROGRAM_ID);
+    expect(ixs[0].keys[0].pubkey).toEqual(signer);
+    expect(ixs[0].keys[2].pubkey).toEqual(vaultPda);
+    expect(ixs[0].keys[3].pubkey).toEqual(WSOL);
+    expect(ixs[1]).toBe(mappedIx);
+    const [, init] = (core as any).fetchApiTransaction.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.closeIfEligible).toBeUndefined();
+    expect(body.withdrawAll).toBeUndefined();
+  });
+
+  it("prepends vault token ATA creation to non-SOL API withdraw-collateral instructions", async () => {
+    const { borrowClient, signer, vaultPda, mappedIx } =
+      createLoopscaleCoreClientForApiIxTests();
+
+    const ixs = await borrowClient.buildApiWithdrawCollateralIxs({
+      loan: pk(71),
+      collateralMint: USDC,
+      amount: new BN(1_000_000),
+      collateralIndex: 0,
+      assetIndexGuidance: [],
+      expectedLoanValues: {
+        expectedApy: new BN(0),
+        expectedLqt: [0, 0, 0, 0, 0],
+      },
+    });
+
+    expect(ixs).toHaveLength(2);
+    expect(ixs[0].programId).toEqual(ASSOCIATED_TOKEN_PROGRAM_ID);
+    expect(ixs[0].keys[0].pubkey).toEqual(signer);
+    expect(ixs[0].keys[2].pubkey).toEqual(vaultPda);
+    expect(ixs[0].keys[3].pubkey).toEqual(USDC);
+    expect(ixs[1]).toBe(mappedIx);
+  });
+
+  it("builds API/remapped sell-ledger instructions", async () => {
+    const { core, lendClient, signer, vaultPda, mappedIx } =
+      createLoopscaleCoreClientForApiIxTests();
+    const loan = pk(80);
+    const oldStrategy = pk(81);
+    const newStrategy = pk(82);
+
+    const ixs = await lendClient.buildApiSellLedgerIxs({
+      loan,
+      oldStrategy,
+      newStrategy,
+      ledgerIndex: 2,
+      expectedSalePrice: new BN(12_345),
+      assetIndexGuidance: [1, 175],
+    });
+
+    expect(ixs).toEqual([mappedIx]);
+    expect((core as any).fetchApiTransaction).toHaveBeenCalledWith(
+      "/markets/creditbook/sell",
+      expect.objectContaining({
+        headers: {
+          "content-type": "application/json",
+          "user-wallet": vaultPda.toBase58(),
+          payer: signer.toBase58(),
+        },
+      }),
+    );
+    const [, init] = (core as any).fetchApiTransaction.mock.calls[0];
+    expect(JSON.parse(init.body)).toEqual({
+      loan: loan.toBase58(),
+      oldStrategy: oldStrategy.toBase58(),
+      newStrategy: newStrategy.toBase58(),
+      sellParams: {
+        ledgerIndex: 2,
+        expectedSalePrice: 12_345,
+        assetIndexGuidance: [1, 175],
+      },
+    });
+    expect((core as any).mapApiMessagesToGlamIxs).toHaveBeenCalledWith(
+      ["stubbed"],
+      Buffer.from([55, 17, 153, 148, 120, 242, 80, 5]),
+    );
+  });
+
+  it("prepends vault WSOL ATA creation to API withdraw-strategy instructions", async () => {
+    const { lendClient, mappedIx } = createLoopscaleCoreClientForApiIxTests();
+
+    const ixs = await lendClient.buildApiWithdrawStrategyIxs({
+      strategy: pk(72),
+      principalMint: WSOL,
+      amount: new BN(1_000_000),
+      withdrawAll: true,
+    });
+
+    expect(ixs).toHaveLength(2);
+    expect(ixs[0].programId).toEqual(ASSOCIATED_TOKEN_PROGRAM_ID);
+    expect(ixs[0].keys[3].pubkey).toEqual(WSOL);
+    expect(ixs[1]).toBe(mappedIx);
   });
 });

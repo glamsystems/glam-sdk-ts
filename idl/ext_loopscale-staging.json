@@ -12,10 +12,11 @@
       "docs": [
         "Borrow principal against a locked loan.",
         "",
-        "- Permission: `BorrowPrincipal`.",
-        "- Policy",
-        "- `principal_mint` must be present in `LoopscalePolicy::borrow_allowlist`.",
-        "- `market_information` must be present in `LoopscalePolicy::markets_allowlist`."
+        "- Permission: `BorrowPermissions::BorrowPrincipal`.",
+        "- Policy:",
+        "- `principal_mint` must be present in `BorrowPolicy::principal_allowlist`.",
+        "- If `market_information` has a `BorrowPolicy::market_policies` entry,",
+        "advanced per-market borrow limits are enforced."
       ],
       "discriminator": [
         106,
@@ -165,7 +166,7 @@
       "docs": [
         "Close an existing Loopscale loan PDA.",
         "",
-        "- Permission: `ManageLoan`."
+        "- Permission: `BorrowPermissions::CloseLoan`."
       ],
       "discriminator": [
         96,
@@ -280,7 +281,7 @@
       "docs": [
         "Close a Loopscale lender strategy account.",
         "",
-        "- Permission: `CloseStrategy`."
+        "- Permission: `LendingPermissions::CloseStrategy`."
       ],
       "discriminator": [
         56,
@@ -405,7 +406,7 @@
       "docs": [
         "Create a new Loopscale loan PDA owned by the GLAM vault.",
         "",
-        "- Permission: `ManageLoan`."
+        "- Permission: `BorrowPermissions::CreateLoan`."
       ],
       "discriminator": [
         166,
@@ -529,7 +530,11 @@
       "docs": [
         "Create a new Loopscale lender strategy owned by the GLAM vault.",
         "",
-        "- Permission: `CreateStrategy`.",
+        "- Permission: `LendingPermissions::CreateStrategy`.",
+        "- Policy:",
+        "- `principal_mint` must be present in `LendingPolicy::principal_allowlist`.",
+        "- If `market_information` has a `LendingPolicy::market_policies` entry,",
+        "advanced per-market lending limits are enforced.",
         "- `params.lender` must equal the GLAM vault."
       ],
       "discriminator": [
@@ -664,8 +669,9 @@
       "docs": [
         "Deposit collateral into a Loopscale loan.",
         "",
-        "- Permission: `DepositCollateral`.",
-        "- Policy: `deposit_mint` must be present in `LoopscalePolicy::deposit_allowlist`."
+        "- Permission: `BorrowPermissions::DepositCollateral`.",
+        "- Policy:",
+        "- `deposit_mint` must be present in `BorrowPolicy::collateral_allowlist`."
       ],
       "discriminator": [
         156,
@@ -810,7 +816,11 @@
       "docs": [
         "Deposit principal liquidity into a Loopscale lender strategy.",
         "",
-        "- Permission: `DepositStrategy`."
+        "- Permission: `LendingPermissions::DepositStrategy`.",
+        "- Policy:",
+        "- `principal_mint` must be present in `LendingPolicy::principal_allowlist`.",
+        "- If `market_information` has a `LendingPolicy::market_policies` entry,",
+        "advanced per-market lending limits are enforced."
       ],
       "discriminator": [
         246,
@@ -951,7 +961,7 @@
       "docs": [
         "Repay principal on a Loopscale loan.",
         "",
-        "- Permission: `RepayPrincipal`."
+        "- Permission: `BorrowPermissions::RepayPrincipal`."
       ],
       "discriminator": [
         229,
@@ -1101,7 +1111,11 @@
       "docs": [
         "Sell a loan ledger from one strategy to another.",
         "",
-        "- Permission: `SellLedger`."
+        "- Permission: `LendingPermissions::SellLedger`.",
+        "- Policy:",
+        "- `principal_mint` must be present in `LendingPolicy::principal_allowlist`.",
+        "- If the new strategy market account has a `LendingPolicy::market_policies` entry,",
+        "advanced exposure limits are enforced."
       ],
       "discriminator": [
         55,
@@ -1261,19 +1275,21 @@
       ]
     },
     {
-      "name": "set_loopscale_policy",
+      "name": "set_borrow_policy",
       "docs": [
-        "Set the `LoopscalePolicy` (deposit, borrow, and markets allowlists) on the GLAM state."
+        "Set the Loopscale borrow policy (collateral allowlist and market policies).",
+        "",
+        "- Permission: `BorrowPermissions::SetPolicy`."
       ],
       "discriminator": [
-        216,
-        84,
-        180,
-        148,
-        164,
-        253,
-        148,
-        173
+        199,
+        94,
+        106,
+        205,
+        150,
+        227,
+        206,
+        68
       ],
       "accounts": [
         {
@@ -1288,6 +1304,43 @@
         {
           "name": "glam_protocol_program",
           "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "integration_program",
+          "address": "gstgL6y4uWjsfM3Qjs5euoTDmEcXoUjqx8rkYJhYngG"
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -1295,7 +1348,87 @@
           "name": "policy",
           "type": {
             "defined": {
-              "name": "LoopscalePolicy"
+              "name": "BorrowPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_lending_policy",
+      "docs": [
+        "Set the Loopscale lending policy (allowlists, market policies, and sell-ledger limits).",
+        "",
+        "- Permission: `LendingPermissions::SetPolicy`."
+      ],
+      "discriminator": [
+        226,
+        185,
+        23,
+        3,
+        113,
+        88,
+        118,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "integration_program",
+          "address": "gstgL6y4uWjsfM3Qjs5euoTDmEcXoUjqx8rkYJhYngG"
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "LendingPolicy"
             }
           }
         }
@@ -1306,7 +1439,14 @@
       "docs": [
         "Update a Loopscale lender strategy's terms, caps, and collateral terms.",
         "",
-        "- Permission: `UpdateStrategy`."
+        "- Permission: `LendingPermissions::UpdateStrategy`.",
+        "- Policy:",
+        "- The strategy market account must be passed as the first remaining account.",
+        "- `principal_mint` must be present in `LendingPolicy::principal_allowlist`.",
+        "- Collateral term asset identifiers must be present in",
+        "`LendingPolicy::collateral_allowlist`.",
+        "- If the strategy market account has a `LendingPolicy::market_policies` entry,",
+        "advanced per-market lending limits are enforced."
       ],
       "discriminator": [
         16,
@@ -1456,7 +1596,7 @@
       "docs": [
         "Update the collateral weight matrix on a loan.",
         "",
-        "- Permission: `ManageLoan`."
+        "- Permission: `BorrowPermissions::UpdateLoan`."
       ],
       "discriminator": [
         252,
@@ -1577,7 +1717,7 @@
       "docs": [
         "Withdraw collateral from a Loopscale loan.",
         "",
-        "- Permission: `WithdrawCollateral`."
+        "- Permission: `BorrowPermissions::WithdrawCollateral`."
       ],
       "discriminator": [
         115,
@@ -1719,7 +1859,7 @@
       "docs": [
         "Withdraw undeployed principal from a Loopscale lender strategy.",
         "",
-        "- Permission: `WithdrawStrategy`."
+        "- Permission: `LendingPermissions::WithdrawStrategy`."
       ],
       "discriminator": [
         31,
@@ -1944,6 +2084,103 @@
           {
             "name": "protocol_flow_fee",
             "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BorrowMarketPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "docs": [
+              "Loopscale market information account this policy applies to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_borrow_amount",
+            "docs": [
+              "Maximum principal amount that may be borrowed in a single instruction.",
+              "A value of zero means no per-instruction borrow is allowed for this market."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_total_borrow_amount",
+            "docs": [
+              "Maximum outstanding principal a single loan may owe in this market.",
+              "Enforced per loan (summed over that loan's ledgers in this market), not",
+              "aggregated across all of the vault's loans in this market. A value of zero",
+              "means no outstanding borrow exposure is allowed for this market."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_ltv_bps",
+            "docs": [
+              "Maximum expected liquidation LTV threshold, in basis points.",
+              "Borrow enforcement compares this to Loopscale's expected LQT values.",
+              "A value of zero means no expected liquidation LTV is allowed for this market."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "duration_indexes_allowlist",
+            "docs": [
+              "Duration indexes that may be used when borrowing from this market.",
+              "An empty list denies all borrow durations for this market. Index mapping:",
+              "- 0 = 1 day",
+              "- 1 = 1 week",
+              "- 2 = 1 month",
+              "- 3 = 3 months",
+              "- 4 = 1 year"
+            ],
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BorrowPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "collateral_allowlist",
+            "docs": [
+              "Collateral mints that may be deposited into Loopscale borrow loans."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "principal_allowlist",
+            "docs": [
+              "Principal mints that may be borrowed from Loopscale borrow markets.",
+              "An empty list denies all principal borrows."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "market_policies",
+            "docs": [
+              "Optional per-market risk limits for borrow operations.",
+              "If a market is present here, advanced per-market limits are enforced.",
+              "If absent, borrow operations are governed by the top-level allowlists."
+            ],
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "BorrowMarketPolicy"
+                }
+              }
+            }
           }
         ]
       }
@@ -2607,26 +2844,126 @@
       }
     },
     {
-      "name": "LoopscalePolicy",
+      "name": "LendingMarketPolicy",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "deposit_allowlist",
+            "name": "market",
+            "docs": [
+              "Loopscale market information account this policy applies to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_deposit_amount",
+            "docs": [
+              "Maximum principal amount that may be deposited in a single instruction.",
+              "A value of zero means no per-instruction deposit is allowed for this market."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_total_deposit_amount",
+            "docs": [
+              "Maximum principal exposure (token balance + deployed amount) a single",
+              "strategy may hold in this market. Enforced per strategy, not aggregated",
+              "across all of the vault's strategies in this market. A value of zero means",
+              "no lending exposure is allowed for this market."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_loan_apy_cbps",
+            "docs": [
+              "Minimum accepted loan APY, in centibasis points, for strategy terms in this market."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "max_ltv_bps",
+            "docs": [
+              "Maximum accepted borrower loan-to-value, in basis points, for strategy terms in this market.",
+              "A value of zero means no borrower LTV is allowed for this market."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "duration_indexes_allowlist",
+            "docs": [
+              "Duration indexes that may be offered by vault-owned strategies in this market.",
+              "An empty list denies all lending durations for this market. Index mapping:",
+              "- 0 = 1 day",
+              "- 1 = 1 week",
+              "- 2 = 1 month",
+              "- 3 = 3 months",
+              "- 4 = 1 year"
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "collateral_asset_allowlist",
+            "docs": [
+              "Collateral asset identifiers that vault-owned strategies may accept in this market.",
+              "An empty list denies all strategy collateral assets for this market."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LendingPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "principal_allowlist",
+            "docs": [
+              "Principal mints that may be lent into Loopscale strategies.",
+              "An empty list denies all strategy creation, updates, deposits, and ledger sales."
+            ],
             "type": {
               "vec": "pubkey"
             }
           },
           {
-            "name": "borrow_allowlist",
+            "name": "collateral_allowlist",
+            "docs": [
+              "Collateral asset identifiers that vault-owned strategies may accept.",
+              "An empty list denies all strategy collateral assets."
+            ],
             "type": {
               "vec": "pubkey"
             }
           },
           {
-            "name": "markets_allowlist",
+            "name": "market_policies",
+            "docs": [
+              "Optional per-market risk limits for strategy creation, updates, deposits, and ledger sales.",
+              "If a market is present here, advanced per-market limits are enforced.",
+              "If absent, lending operations are governed by top-level allowlists,",
+              "permission checks, and sell-ledger limits."
+            ],
             "type": {
-              "vec": "pubkey"
+              "vec": {
+                "defined": {
+                  "name": "LendingMarketPolicy"
+                }
+              }
+            }
+          },
+          {
+            "name": "sell_ledger_policy",
+            "docs": [
+              "Risk limits for selling Loopscale loan ledgers."
+            ],
+            "type": {
+              "defined": {
+                "name": "SellLedgerPolicy"
+              }
             }
           }
         ]
@@ -2946,6 +3283,30 @@
       }
     },
     {
+      "name": "SellLedgerPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_discount_bps",
+            "docs": [
+              "Maximum discount from the ledger's expected value, in basis points.",
+              "A value of zero requires no discount."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "max_slippage_bps",
+            "docs": [
+              "Maximum tolerated slippage while selling a ledger, in basis points.",
+              "A value of zero allows no slippage."
+            ],
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
       "name": "StateAccount",
       "type": {
         "kind": "struct",
@@ -3237,69 +3598,89 @@
   ],
   "constants": [
     {
-      "name": "PROTO_LOOPSCALE",
+      "name": "PROTO_LOOPSCALE_BORROW",
       "type": "u16",
       "value": "1"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_BORROW_PRINCIPAL",
+      "name": "PROTO_LOOPSCALE_BORROW_PERM_BORROW_PRINCIPAL",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_BORROW_PERM_CLOSE_LOAN",
+      "type": "u64",
+      "value": "2"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_BORROW_PERM_CREATE_LOAN",
+      "type": "u64",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_BORROW_PERM_DEPOSIT_COLLATERAL",
       "type": "u64",
       "value": "8"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_CLOSE_STRATEGY",
+      "name": "PROTO_LOOPSCALE_BORROW_PERM_REPAY_PRINCIPAL",
       "type": "u64",
-      "value": "32768"
+      "value": "64"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_CREATE_STRATEGY",
+      "name": "PROTO_LOOPSCALE_BORROW_PERM_SET_POLICY",
       "type": "u64",
-      "value": "2048"
+      "value": "128"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_DEPOSIT_COLLATERAL",
-      "type": "u64",
-      "value": "2"
-    },
-    {
-      "name": "PROTO_LOOPSCALE_PERM_DEPOSIT_STRATEGY",
-      "type": "u64",
-      "value": "8192"
-    },
-    {
-      "name": "PROTO_LOOPSCALE_PERM_MANAGE_LOAN",
-      "type": "u64",
-      "value": "1"
-    },
-    {
-      "name": "PROTO_LOOPSCALE_PERM_REPAY_PRINCIPAL",
-      "type": "u64",
-      "value": "16"
-    },
-    {
-      "name": "PROTO_LOOPSCALE_PERM_SELL_LEDGER",
-      "type": "u64",
-      "value": "65536"
-    },
-    {
-      "name": "PROTO_LOOPSCALE_PERM_UPDATE_STRATEGY",
-      "type": "u64",
-      "value": "4096"
-    },
-    {
-      "name": "PROTO_LOOPSCALE_PERM_WITHDRAW_COLLATERAL",
+      "name": "PROTO_LOOPSCALE_BORROW_PERM_UPDATE_LOAN",
       "type": "u64",
       "value": "4"
     },
     {
-      "name": "PROTO_LOOPSCALE_PERM_WITHDRAW_STRATEGY",
+      "name": "PROTO_LOOPSCALE_BORROW_PERM_WITHDRAW_COLLATERAL",
       "type": "u64",
-      "value": "16384"
+      "value": "16"
     },
     {
-      "name": "PROTO_LOOPSCALE_STRATEGY",
+      "name": "PROTO_LOOPSCALE_LENDING",
       "type": "u16",
       "value": "2"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_LENDING_PERM_CLOSE_STRATEGY",
+      "type": "u64",
+      "value": "16"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_LENDING_PERM_CREATE_STRATEGY",
+      "type": "u64",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_LENDING_PERM_DEPOSIT_STRATEGY",
+      "type": "u64",
+      "value": "4"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_LENDING_PERM_SELL_LEDGER",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_LENDING_PERM_SET_POLICY",
+      "type": "u64",
+      "value": "64"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_LENDING_PERM_UPDATE_STRATEGY",
+      "type": "u64",
+      "value": "2"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_LENDING_PERM_WITHDRAW_STRATEGY",
+      "type": "u64",
+      "value": "8"
     }
   ]
 }

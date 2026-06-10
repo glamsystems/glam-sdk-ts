@@ -16,7 +16,7 @@ import {
   type AddressLookupTableAccount,
 } from "@solana/web3.js";
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -26,18 +26,21 @@ import {
   BaseClient,
   BaseTxBuilder,
   TxOptions,
-  type ProtocolPolicyClient,
   type ProtocolPolicyTxBuilder,
-} from "./base";
-import { getIntegrationAuthorityPda } from "../utils/glamPDAs";
+} from "../base";
+import { getIntegrationAuthorityPda } from "../../utils/glamPDAs";
 import {
   LOOPSCALE_PROGRAM_ID,
   LOOPSCALE_PROTOCOL_ADMIN_STATE,
-} from "../constants";
-import { LOOPSCALE_PROTOCOL } from "../protocols";
-import { U64_MAX_BN, bnToSafeNumber, toBn } from "../utils/common";
-import { PkMap } from "../utils/pkmap";
-import { PkSet } from "../utils/pkset";
+  WSOL,
+} from "../../constants";
+import {
+  LOOPSCALE_BORROW_PROTOCOL,
+  LOOPSCALE_LENDING_PROTOCOL,
+} from "../../protocols";
+import { U64_MAX_BN } from "../../utils/common";
+import { PkMap } from "../../utils/pkmap";
+import { PkSet } from "../../utils/pkset";
 import {
   LOOPSCALE_LOAN_DISCRIMINATOR,
   LOOPSCALE_STRATEGY_ACCOUNT_DISCRIMINATOR,
@@ -46,8 +49,11 @@ import {
   LoopscaleStrategy,
   hasLoopscaleLoanDiscriminator,
   hasLoopscaleStrategyDiscriminator,
-} from "../deser";
-import { LoopscalePolicy } from "../deser/integrationPolicies";
+} from "../../deser";
+import {
+  LoopscaleBorrowPolicy,
+  LoopscaleLendingPolicy,
+} from "../../deser/integrationPolicies";
 
 export const LOOPSCALE_BS_AUTH = new PublicKey(
   "CyNKPfqsSLAejjZtEeNG3pR4SkPhSPHXdGhuNTyudrNs",
@@ -60,8 +66,11 @@ const LOOPSCALE_API_URL = "https://tars.loopscale.com/v1";
 const LOOPSCALE_MPC_TRANSACTION_TYPE = 1; // Versioned transaction
 export const LOOPSCALE_STRATEGY_DISCRIMINATOR =
   LOOPSCALE_STRATEGY_ACCOUNT_DISCRIMINATOR;
-const LOOPSCALE_CREATE_LOAN_DISCRIMINATOR = Buffer.from([
+export const LOOPSCALE_CREATE_LOAN_DISCRIMINATOR = Buffer.from([
   166, 131, 118, 219, 138, 218, 206, 140,
+]);
+export const LOOPSCALE_CREATE_STRATEGY_DISCRIMINATOR = Buffer.from([
+  152, 160, 107, 148, 245, 190, 127, 224,
 ]);
 const LOOPSCALE_LOCK_LOAN_DISCRIMINATOR = Buffer.from([
   28, 101, 52, 240, 146, 230, 95, 22,
@@ -69,31 +78,40 @@ const LOOPSCALE_LOCK_LOAN_DISCRIMINATOR = Buffer.from([
 const LOOPSCALE_UNLOCK_LOAN_DISCRIMINATOR = Buffer.from([
   121, 226, 178, 98, 215, 209, 240, 38,
 ]);
-const LOOPSCALE_DEPOSIT_COLLATERAL_DISCRIMINATOR = Buffer.from([
+export const LOOPSCALE_DEPOSIT_COLLATERAL_DISCRIMINATOR = Buffer.from([
   156, 131, 142, 116, 146, 247, 162, 120,
 ]);
-const LOOPSCALE_BORROW_PRINCIPAL_DISCRIMINATOR = Buffer.from([
+const LOOPSCALE_UPDATE_WEIGHT_MATRIX_DISCRIMINATOR = Buffer.from([
+  252, 166, 37, 207, 154, 83, 187, 128,
+]);
+export const LOOPSCALE_BORROW_PRINCIPAL_DISCRIMINATOR = Buffer.from([
   106, 10, 38, 204, 139, 188, 124, 50,
 ]);
-const LOOPSCALE_REPAY_PRINCIPAL_DISCRIMINATOR = Buffer.from([
+export const LOOPSCALE_REPAY_PRINCIPAL_DISCRIMINATOR = Buffer.from([
   229, 67, 83, 65, 77, 84, 80, 141,
 ]);
-const LOOPSCALE_WITHDRAW_COLLATERAL_DISCRIMINATOR = Buffer.from([
+export const LOOPSCALE_WITHDRAW_COLLATERAL_DISCRIMINATOR = Buffer.from([
   115, 135, 168, 106, 139, 214, 138, 150,
 ]);
-const LOOPSCALE_DEPOSIT_STRATEGY_DISCRIMINATOR = Buffer.from([
+export const LOOPSCALE_SELL_LEDGER_DISCRIMINATOR = Buffer.from([
+  55, 17, 153, 148, 120, 242, 80, 5,
+]);
+export const LOOPSCALE_DEPOSIT_STRATEGY_DISCRIMINATOR = Buffer.from([
   246, 82, 57, 226, 131, 222, 253, 249,
 ]);
-const LOOPSCALE_UPDATE_STRATEGY_DISCRIMINATOR = Buffer.from([
+export const LOOPSCALE_UPDATE_STRATEGY_DISCRIMINATOR = Buffer.from([
   16, 76, 138, 179, 171, 112, 196, 21,
 ]);
-const LOOPSCALE_WITHDRAW_STRATEGY_DISCRIMINATOR = Buffer.from([
+export const LOOPSCALE_WITHDRAW_STRATEGY_DISCRIMINATOR = Buffer.from([
   31, 45, 162, 5, 193, 217, 134, 188,
 ]);
-const LOOPSCALE_CLOSE_STRATEGY_DISCRIMINATOR = Buffer.from([
+export const LOOPSCALE_CLOSE_STRATEGY_DISCRIMINATOR = Buffer.from([
   56, 247, 170, 246, 89, 221, 134, 200,
 ]);
-const LOOPSCALE_UPDATE_STRATEGY_STANDARD_ACCOUNT_COUNT = 12;
+export const LOOPSCALE_UPDATE_STRATEGY_STANDARD_ACCOUNT_COUNT = 12;
+const GLAM_DEPOSIT_COLLATERAL_ACCOUNT_COUNT = 17;
+const GLAM_UPDATE_WEIGHT_MATRIX_ACCOUNT_COUNT = 10;
+const GLAM_UPDATE_STRATEGY_ACCOUNT_COUNT = 15;
 const MARKET_INFORMATION_DISCRIMINATOR = Buffer.from([
   194, 154, 190, 99, 64, 111, 37, 205,
 ]);
@@ -104,8 +122,6 @@ const LOOPSCALE_STRATEGY_DURATION_BY_INDEX = [
   { durationType: 2, duration: 3 }, // 3: 3 months
   { durationType: 4, duration: 1 }, // 4: 1 year
 ];
-
-type Tuple5 = [number, number, number, number, number];
 
 export type LoopscaleQuote = {
   apy: number;
@@ -148,24 +164,24 @@ export type LoopscaleApiUpdateStrategyParams = {
   };
 };
 
-type LoopscaleApiTransaction = {
+export type LoopscaleApiTransaction = {
   message?: string;
   signatures?: unknown[];
 };
 
-type LoopscaleApiTransactionResponse = LoopscaleApiTransaction & {
+export type LoopscaleApiTransactionResponse = LoopscaleApiTransaction & {
   transaction?: LoopscaleApiTransaction;
   transactions?: LoopscaleApiTransaction[];
   loanAddress?: string;
 };
 
-type LoopscaleApiTransactionPayload =
+export type LoopscaleApiTransactionPayload =
   | LoopscaleApiTransactionResponse
   | LoopscaleApiTransactionResponse[];
 
 /**
  * Account inputs for a Loopscale borrow that are derived from on-chain market
- * and strategy state (see {@link LoopscaleClient.resolveBorrowMarketAccounts}).
+ * and strategy state (see {@link LoopscaleCoreClient.resolveBorrowMarketAccounts}).
  */
 export type BorrowMarketAccounts = {
   marketInformation: PublicKey;
@@ -173,6 +189,36 @@ export type BorrowMarketAccounts = {
   durationIndex: number;
   assetIndexGuidance: Buffer;
 };
+
+export type LoopscaleAssetIndexGuidance = {
+  collateralAssetIndex: number;
+  principalAssetIndex: number;
+  ltvAssetIndex: number;
+};
+
+export function encodeLoopscaleAssetIndexGuidance(
+  guidance: LoopscaleAssetIndexGuidance,
+): Buffer {
+  return Buffer.from([
+    guidance.collateralAssetIndex,
+    guidance.principalAssetIndex,
+    guidance.ltvAssetIndex,
+  ]);
+}
+
+export type LoopscaleSellLedgerAssetIndexGuidance = {
+  principalAssetIndex: number;
+  collateralAssetIndex: number;
+};
+
+export function encodeLoopscaleSellLedgerAssetIndexGuidance(
+  guidance: LoopscaleSellLedgerAssetIndexGuidance,
+): Buffer {
+  return Buffer.from([
+    guidance.principalAssetIndex,
+    guidance.collateralAssetIndex,
+  ]);
+}
 
 export type LoopscaleBorrowPrincipalTerms = {
   strategy: PublicKey;
@@ -183,6 +229,18 @@ export type LoopscaleBorrowPrincipalTerms = {
 
 export type LoopscaleBorrowQuoteTerms = LoopscaleBorrowPrincipalTerms & {
   quote: LoopscaleQuote;
+};
+
+export type LoopscaleSellLedgerTerms = {
+  ledgerIndex: number;
+  oldStrategy: PublicKey;
+  newStrategy: PublicKey;
+  oldStrategyMarketInformation: PublicKey;
+  newStrategyMarketInformation: PublicKey;
+  principalMint: PublicKey;
+  assetIndexGuidance: Buffer;
+  guidance: LoopscaleSellLedgerAssetIndexGuidance;
+  remainingAccounts: AccountMeta[];
 };
 
 export type LoopscaleStrategyWithMarket = {
@@ -214,7 +272,7 @@ function isSkippableLoopscaleLoanLockIx(data: Buffer): boolean {
   );
 }
 
-function getLoopscaleApiMessages(
+export function getLoopscaleApiMessages(
   response: LoopscaleApiTransactionPayload,
 ): string[] {
   if (Array.isArray(response)) {
@@ -249,7 +307,7 @@ function getLoopscaleApiMessages(
  *
  * FIXME: When do we need to do this? Need a way to determine this dynamically.
  */
-function replaceLoopscaleApiExtraSigners(
+export function replaceLoopscaleApiExtraSigners(
   ix: TransactionInstruction,
   standardAccountCount: number,
 ): LoopscaleMappedTransaction {
@@ -286,6 +344,43 @@ function replaceLoopscaleApiExtraSigners(
     ],
     additionalSigners: replacementSigners.map(({ signer }) => signer),
   };
+}
+
+export function createVaultWsolAtaSetupIxs(params: {
+  mint: PublicKey;
+  payer: PublicKey;
+  vaultPda: PublicKey;
+  vaultAta: PublicKey;
+}): TransactionInstruction[] {
+  if (!params.mint.equals(WSOL)) {
+    return [];
+  }
+
+  return [
+    createAssociatedTokenAccountIdempotentInstruction(
+      params.payer,
+      params.vaultAta,
+      params.vaultPda,
+      WSOL,
+      TOKEN_PROGRAM_ID,
+    ),
+  ];
+}
+
+export function createVaultTokenAtaSetupIx(params: {
+  mint: PublicKey;
+  payer: PublicKey;
+  vaultPda: PublicKey;
+  vaultAta: PublicKey;
+  tokenProgram?: PublicKey;
+}): TransactionInstruction {
+  return createAssociatedTokenAccountIdempotentInstruction(
+    params.payer,
+    params.vaultAta,
+    params.vaultPda,
+    params.mint,
+    params.tokenProgram ?? TOKEN_PROGRAM_ID,
+  );
 }
 
 function loopscaleStrategyDurationKey(durationIndex: number): string {
@@ -354,6 +449,11 @@ export type LoopscaleExpectedLoanValues = {
 
 export type LoopscaleExternalYieldSourceArgs = {
   newExternalYieldSource: number;
+  createExternalYieldAccount: boolean;
+};
+
+export type LoopscaleOnchainExternalYieldSourceArgs = {
+  newExternalYieldSource: number;
   externalYieldVault: PublicKey;
 };
 
@@ -362,14 +462,13 @@ export type CreateLoanParams = {
 };
 
 export type CreateStrategyParams = {
-  lender: PublicKey;
   originationCap: BN;
   liquidityBuffer: BN;
   interestFee: BN;
   originationFee: BN;
   principalFee: BN;
   originationsEnabled: boolean;
-  externalYieldSourceArgs: LoopscaleExternalYieldSourceArgs | null;
+  externalYieldSourceArgs: LoopscaleOnchainExternalYieldSourceArgs | null;
 };
 
 export type LoopscaleCollateralTermsIndices = {
@@ -378,7 +477,7 @@ export type LoopscaleCollateralTermsIndices = {
 };
 
 export type LoopscaleMultiCollateralTermsUpdateParams = {
-  apy: BN;
+  apy: number;
   indices: LoopscaleCollateralTermsIndices[];
 };
 
@@ -390,14 +489,14 @@ export type UpdateStrategyParams = {
   principalFee?: BN | null;
   originationCap?: BN | null;
   marketInformation?: PublicKey | null;
-  externalYieldSourceArgs?: LoopscaleExternalYieldSourceArgs | null;
+  externalYieldSourceArgs?: LoopscaleOnchainExternalYieldSourceArgs | null;
 };
 
 export type DepositCollateralParams = {
   amount: BN;
   assetType: number;
   assetIdentifier: PublicKey;
-  assetIndexGuidance: Buffer;
+  assetIndexGuidance: number[];
 };
 
 export type UpdateWeightMatrixParams = {
@@ -409,7 +508,7 @@ export type UpdateWeightMatrixParams = {
 
 export type BorrowPrincipalParams = {
   amount: BN;
-  assetIndexGuidance: Buffer;
+  assetIndexGuidance: number[];
   duration: number;
   expectedLoanValues: LoopscaleExpectedLoanValues;
   skipSolUnwrap: boolean;
@@ -442,6 +541,7 @@ export type DepositStrategyAccounts = {
 
 export type UpdateStrategyAccounts = {
   strategy: PublicKey;
+  marketInformation: PublicKey;
   principalMint: PublicKey;
   strategyTa?: PublicKey;
   tokenProgram?: PublicKey;
@@ -456,7 +556,6 @@ export type WithdrawStrategyAccounts = {
   lenderTa?: PublicKey;
   strategyTa?: PublicKey;
   tokenProgram?: PublicKey;
-  associatedTokenProgram?: PublicKey;
 };
 
 export type CloseStrategyAccounts = {
@@ -469,11 +568,6 @@ export type CloseStrategyAccounts = {
 export type DepositCollateralAccounts = {
   loan: PublicKey;
   depositMint: PublicKey;
-  borrowerCollateralTa?: PublicKey;
-  loanCollateralTa?: PublicKey;
-  assetIdentifier?: PublicKey;
-  tokenProgram?: PublicKey;
-  associatedTokenProgram?: PublicKey;
 };
 
 export type UpdateWeightMatrixAccounts = {
@@ -483,19 +577,12 @@ export type UpdateWeightMatrixAccounts = {
 export type BorrowPrincipalAccounts = {
   loan: PublicKey;
   strategy: PublicKey;
-  marketInformation: PublicKey;
-  principalMint: PublicKey;
-  borrowerTa?: PublicKey;
-  strategyTa?: PublicKey;
-  tokenProgram?: PublicKey;
-  associatedTokenProgram?: PublicKey;
-  remainingAccounts?: AccountMeta[];
 };
 
 export type WithdrawCollateralParams = {
   amount: BN;
   collateralIndex: number;
-  assetIndexGuidance: Buffer;
+  assetIndexGuidance: number[];
   expectedLoanValues: LoopscaleExpectedLoanValues;
   closeIfEligible: boolean;
   withdrawAll: boolean;
@@ -517,13 +604,35 @@ export type RepayPrincipalParams = {
   repayAll: boolean;
 };
 
+export type SellLedgerParams = {
+  ledgerIndex: number;
+  expectedSalePrice: BN;
+  assetIndexGuidance: Buffer;
+};
+
 export type RepayPrincipalAccounts = {
   loan: PublicKey;
   strategy: PublicKey;
-  marketInformation: PublicKey;
-  principalMint: PublicKey;
+  marketInformation?: PublicKey;
+  principalMint?: PublicKey;
   borrowerTa?: PublicKey;
   strategyTa?: PublicKey;
+  tokenProgram?: PublicKey;
+  associatedTokenProgram?: PublicKey;
+  remainingAccounts?: AccountMeta[];
+};
+
+export type SellLedgerAccounts = {
+  loan: PublicKey;
+  oldStrategy: PublicKey;
+  newStrategy: PublicKey;
+  oldStrategyMarketInformation: PublicKey;
+  newStrategyMarketInformation: PublicKey;
+  principalMint: PublicKey;
+  newStrategyTa?: PublicKey;
+  lenderAuthTa?: PublicKey;
+  userVault?: PublicKey;
+  oldStrategyTa?: PublicKey;
   tokenProgram?: PublicKey;
   associatedTokenProgram?: PublicKey;
   remainingAccounts?: AccountMeta[];
@@ -540,11 +649,11 @@ export function getLoopscaleEventAuthorityPda(
 
 export function getLoopscaleLoanPda(
   borrower: PublicKey,
-  nonce: BN | bigint | number,
+  nonce: BN,
   programId: PublicKey = LOOPSCALE_PROGRAM_ID,
 ): PublicKey {
   return PublicKey.findProgramAddressSync(
-    [borrower.toBuffer(), toBn(nonce).toArrayLike(Buffer, "le", 8)],
+    [borrower.toBuffer(), nonce.toArrayLike(Buffer, "le", 8)],
     programId,
   )[0];
 }
@@ -597,7 +706,7 @@ const LOOPSCALE_LOAN_MIN_DATA_LEN =
   LOOPSCALE_LOAN_COLLATERAL_SECTION_OFFSET +
   LOOPSCALE_LOAN_COLLATERAL_COUNT * LOOPSCALE_LOAN_COLLATERAL_SIZE;
 
-function isLoopscaleLoanAccountInfo(
+export function isLoopscaleLoanAccountInfo(
   info: Web3AccountInfo<Buffer> | null,
 ): info is Web3AccountInfo<Buffer> {
   return !!(
@@ -630,7 +739,7 @@ export function readLoopscaleStrategyPrincipalMint(data: Buffer): PublicKey {
   );
 }
 
-function readLoopscaleOracleMints(data: Buffer): PublicKey[] {
+export function readLoopscaleOracleMints(data: Buffer): PublicKey[] {
   const body = data.subarray(LOOPSCALE_LOAN_DISCRIMINATOR.length);
   const mints = new PkSet();
 
@@ -668,36 +777,66 @@ function readLoopscaleOracleMints(data: Buffer): PublicKey[] {
   return Array.from(mints);
 }
 
-class TxBuilder
-  extends BaseTxBuilder<LoopscaleClient>
-  implements ProtocolPolicyTxBuilder<LoopscalePolicy>
+export class LoopscaleBorrowTxBuilder
+  extends BaseTxBuilder<LoopscaleCoreClient>
+  implements ProtocolPolicyTxBuilder<LoopscaleBorrowPolicy>
 {
   async setPolicyIx(
-    policy: LoopscalePolicy,
+    policy: LoopscaleBorrowPolicy,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
+    return await this.setBorrowPolicyIx(policy, signer);
+  }
+
+  async setBorrowPolicyIx(
+    policy: LoopscaleBorrowPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    // `duration_indexes_allowlist` is `Vec<u8>`, which Anchor's IDL coder
+    // encodes as `bytes` and requires a Buffer (not a number[]).
+    const encodablePolicy = {
+      collateralAllowlist: policy.collateralAllowlist,
+      principalAllowlist: policy.principalAllowlist,
+      marketPolicies: policy.marketPolicies.map((p) => ({
+        market: p.market,
+        maxBorrowAmount: p.maxBorrowAmount,
+        maxTotalBorrowAmount: p.maxTotalBorrowAmount,
+        maxLtvBps: p.maxLtvBps,
+        durationIndexesAllowlist: Buffer.from(p.durationIndexesAllowlist),
+      })),
+    };
     return await this.client.base.extLoopscaleProgram.methods
-      .setLoopscalePolicy(policy)
+      .setBorrowPolicy(encodablePolicy)
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
         glamProtocolProgram: this.client.base.protocolProgram.programId,
+        integrationProgram: this.client.programId,
+        integrationAuthority: this.client.integrationAuthorityPda,
       })
       .instruction();
   }
 
   async setPolicyTx(
-    policy: LoopscalePolicy,
+    policy: LoopscaleBorrowPolicy,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.setPolicyIx(policy, txOptions.signer);
+    const ix = await this.setBorrowPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async setBorrowPolicyTx(
+    policy: LoopscaleBorrowPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setBorrowPolicyIx(policy, txOptions.signer);
     return await this.buildVersionedTx([ix], txOptions);
   }
 
   async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
     return await this.clearProtocolPolicyIx(
       this.client.programId,
-      LOOPSCALE_PROTOCOL,
+      LOOPSCALE_BORROW_PROTOCOL,
       signer,
     );
   }
@@ -707,45 +846,13 @@ class TxBuilder
   ): Promise<VersionedTransaction> {
     return await this.clearProtocolPolicyTx(
       this.client.programId,
-      LOOPSCALE_PROTOCOL,
+      LOOPSCALE_BORROW_PROTOCOL,
       txOptions,
     );
   }
 
-  async createLoanIx(
-    params: CreateLoanParams,
-    accounts: CreateLoanAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    return await this.client.base.extLoopscaleProgram.methods
-      .createLoan({ nonce: params.nonce })
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamVault: this.client.base.vaultPda,
-        glamSigner: signer || this.client.base.signer,
-        integrationAuthority: this.client.integrationAuthorityPda,
-        cpiProgram: LOOPSCALE_PROGRAM_ID,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
-        bsAuth: LOOPSCALE_BS_AUTH,
-        loan: accounts.loan,
-        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
-        eventAuthority: this.client.getEventAuthorityPda(),
-      })
-      .instruction();
-  }
-
-  async createLoanTx(
-    params: CreateLoanParams,
-    accounts: CreateLoanAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.createLoanIx(params, accounts, txOptions.signer);
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
   async closeLoanIx(
-    accounts: CloseLoanAccounts,
+    loan: PublicKey,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
     return await this.client.base.extLoopscaleProgram.methods
@@ -759,7 +866,7 @@ class TxBuilder
         glamProtocolProgram: this.client.base.protocolProgram.programId,
         systemProgram: SystemProgram.programId,
         bsAuth: LOOPSCALE_BS_AUTH,
-        loan: accounts.loan,
+        loan,
         protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
         eventAuthority: this.client.getEventAuthorityPda(),
       })
@@ -767,309 +874,14 @@ class TxBuilder
   }
 
   async closeLoanTx(
-    accounts: CloseLoanAccounts,
+    loan: PublicKey,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.closeLoanIx(accounts, txOptions.signer);
+    const ix = await this.closeLoanIx(loan, txOptions.signer);
     return await this.buildVersionedTx([ix], txOptions);
   }
 
-  async createStrategyIx(
-    params: CreateStrategyParams,
-    accounts: CreateStrategyAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    return await this.client.base.extLoopscaleProgram.methods
-      .createStrategy({
-        lender: params.lender,
-        originationCap: params.originationCap,
-        liquidityBuffer: params.liquidityBuffer,
-        interestFee: params.interestFee,
-        originationFee: params.originationFee,
-        principalFee: params.principalFee,
-        originationsEnabled: params.originationsEnabled,
-        externalYieldSourceArgs: params.externalYieldSourceArgs,
-      })
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamVault: this.client.base.vaultPda,
-        glamSigner: signer || this.client.base.signer,
-        integrationAuthority: this.client.integrationAuthorityPda,
-        cpiProgram: LOOPSCALE_PROGRAM_ID,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
-        bsAuth: LOOPSCALE_BS_AUTH,
-        nonce: accounts.nonce,
-        strategy: accounts.strategy,
-        marketInformation: accounts.marketInformation,
-        principalMint: accounts.principalMint,
-        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
-        eventAuthority: this.client.getEventAuthorityPda(),
-      })
-      .instruction();
-  }
-
-  async depositStrategyIx(
-    amount: BN,
-    accounts: DepositStrategyAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
-    return await this.client.base.extLoopscaleProgram.methods
-      .depositStrategy(amount)
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamVault: this.client.base.vaultPda,
-        glamSigner: signer || this.client.base.signer,
-        integrationAuthority: this.client.integrationAuthorityPda,
-        cpiProgram: LOOPSCALE_PROGRAM_ID,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
-        bsAuth: LOOPSCALE_BS_AUTH,
-        strategy: accounts.strategy,
-        principalMint: accounts.principalMint,
-        marketInformation: accounts.marketInformation,
-        lenderTa:
-          accounts.lenderTa ||
-          this.client.base.getVaultAta(accounts.principalMint, tokenProgram),
-        strategyTa:
-          accounts.strategyTa ||
-          this.client.getStrategyTokenAta(
-            accounts.strategy,
-            accounts.principalMint,
-            tokenProgram,
-          ),
-        tokenProgram,
-        associatedTokenProgram:
-          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
-        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
-        eventAuthority: this.client.getEventAuthorityPda(),
-      })
-      .instruction();
-  }
-
-  async depositStrategyTx(
-    amount: BN,
-    accounts: DepositStrategyAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.depositStrategyIx(amount, accounts, txOptions.signer);
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
-  async updateStrategyIx(
-    collateralTerms: LoopscaleMultiCollateralTermsUpdateParams[],
-    params: UpdateStrategyParams | null,
-    accounts: UpdateStrategyAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
-    const normalizedParams = params
-      ? {
-          originationsEnabled: params.originationsEnabled ?? null,
-          liquidityBuffer: params.liquidityBuffer ?? null,
-          interestFee: params.interestFee ?? null,
-          originationFee: params.originationFee ?? null,
-          principalFee: params.principalFee ?? null,
-          originationCap: params.originationCap ?? null,
-          marketInformation: params.marketInformation ?? null,
-          externalYieldSourceArgs: params.externalYieldSourceArgs ?? null,
-        }
-      : null;
-
-    const instruction = this.client.base.extLoopscaleProgram.methods
-      .updateStrategy(collateralTerms, normalizedParams)
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamVault: this.client.base.vaultPda,
-        glamSigner: signer || this.client.base.signer,
-        integrationAuthority: this.client.integrationAuthorityPda,
-        cpiProgram: LOOPSCALE_PROGRAM_ID,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
-        bsAuth: LOOPSCALE_BS_AUTH,
-        strategy: accounts.strategy,
-        principalMint: accounts.principalMint,
-        strategyTa:
-          accounts.strategyTa ||
-          this.client.getStrategyTokenAta(
-            accounts.strategy,
-            accounts.principalMint,
-            tokenProgram,
-          ),
-        associatedTokenProgram:
-          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
-        tokenProgram,
-        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
-        eventAuthority: this.client.getEventAuthorityPda(),
-      });
-
-    if (accounts.remainingAccounts?.length) {
-      instruction.remainingAccounts(accounts.remainingAccounts);
-    }
-
-    return await instruction.instruction();
-  }
-
-  async updateStrategyTx(
-    collateralTerms: LoopscaleMultiCollateralTermsUpdateParams[],
-    params: UpdateStrategyParams | null,
-    accounts: UpdateStrategyAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.updateStrategyIx(
-      collateralTerms,
-      params,
-      accounts,
-      txOptions.signer,
-    );
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
-  async withdrawStrategyIx(
-    amount: BN,
-    withdrawAll: boolean,
-    accounts: WithdrawStrategyAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
-    return await this.client.base.extLoopscaleProgram.methods
-      .withdrawStrategy(amount, withdrawAll)
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamVault: this.client.base.vaultPda,
-        glamSigner: signer || this.client.base.signer,
-        integrationAuthority: this.client.integrationAuthorityPda,
-        cpiProgram: LOOPSCALE_PROGRAM_ID,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
-        bsAuth: LOOPSCALE_BS_AUTH,
-        strategy: accounts.strategy,
-        principalMint: accounts.principalMint,
-        marketInformation: accounts.marketInformation,
-        lenderTa:
-          accounts.lenderTa ||
-          this.client.base.getVaultAta(accounts.principalMint, tokenProgram),
-        strategyTa:
-          accounts.strategyTa ||
-          this.client.getStrategyTokenAta(
-            accounts.strategy,
-            accounts.principalMint,
-            tokenProgram,
-          ),
-        associatedTokenProgram:
-          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
-        tokenProgram,
-        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
-        eventAuthority: this.client.getEventAuthorityPda(),
-      })
-      .instruction();
-  }
-
-  async withdrawStrategyTx(
-    amount: BN,
-    withdrawAll: boolean,
-    accounts: WithdrawStrategyAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.withdrawStrategyIx(
-      amount,
-      withdrawAll,
-      accounts,
-      txOptions.signer,
-    );
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
-  async closeStrategyIx(
-    accounts: CloseStrategyAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
-    return await this.client.base.extLoopscaleProgram.methods
-      .closeStrategy()
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamVault: this.client.base.vaultPda,
-        glamSigner: signer || this.client.base.signer,
-        integrationAuthority: this.client.integrationAuthorityPda,
-        cpiProgram: LOOPSCALE_PROGRAM_ID,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
-        bsAuth: LOOPSCALE_BS_AUTH,
-        strategy: accounts.strategy,
-        principalMint: accounts.principalMint,
-        tokenProgram,
-        associatedTokenProgram:
-          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
-        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
-        eventAuthority: this.client.getEventAuthorityPda(),
-      })
-      .instruction();
-  }
-
-  async closeStrategyTx(
-    accounts: CloseStrategyAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.closeStrategyIx(accounts, txOptions.signer);
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
-  async depositCollateralIx(
-    params: DepositCollateralParams,
-    accounts: DepositCollateralAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
-
-    return await this.client.base.extLoopscaleProgram.methods
-      .depositCollateral({
-        amount: params.amount,
-        assetType: params.assetType,
-        assetIdentifier: params.assetIdentifier,
-        assetIndexGuidance: params.assetIndexGuidance,
-      })
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamVault: this.client.base.vaultPda,
-        glamSigner: signer || this.client.base.signer,
-        integrationAuthority: this.client.integrationAuthorityPda,
-        cpiProgram: LOOPSCALE_PROGRAM_ID,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
-        bsAuth: LOOPSCALE_BS_AUTH,
-        loan: accounts.loan,
-        borrowerCollateralTa:
-          accounts.borrowerCollateralTa ||
-          this.client.base.getVaultAta(accounts.depositMint, tokenProgram),
-        loanCollateralTa:
-          accounts.loanCollateralTa ||
-          this.client.getLoanTokenAta(accounts.loan, accounts.depositMint),
-        depositMint: accounts.depositMint,
-        assetIdentifier: accounts.assetIdentifier || accounts.depositMint,
-        tokenProgram,
-        associatedTokenProgram:
-          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
-        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
-        eventAuthority: this.client.getEventAuthorityPda(),
-      })
-      .instruction();
-  }
-
-  async depositCollateralTx(
-    params: DepositCollateralParams,
-    accounts: DepositCollateralAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.depositCollateralIx(
-      params,
-      accounts,
-      txOptions.signer,
-    );
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
+  /** @deprecated */
   async updateWeightMatrixIx(
     params: UpdateWeightMatrixParams,
     accounts: UpdateWeightMatrixAccounts,
@@ -1097,6 +909,7 @@ class TxBuilder
       .instruction();
   }
 
+  /** @deprecated */
   async updateWeightMatrixTx(
     params: UpdateWeightMatrixParams,
     accounts: UpdateWeightMatrixAccounts,
@@ -1109,136 +922,103 @@ class TxBuilder
     );
     return await this.buildVersionedTx([ix], txOptions);
   }
+}
 
-  async borrowPrincipalIx(
-    params: BorrowPrincipalParams,
-    accounts: BorrowPrincipalAccounts,
+export class LoopscaleLendTxBuilder extends BaseTxBuilder<LoopscaleCoreClient> {
+  async setPolicyIx(
+    policy: LoopscaleLendingPolicy,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
-    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
-    const instruction = this.client.base.extLoopscaleProgram.methods
-      .borrowPrincipal({
-        amount: params.amount,
-        assetIndexGuidance: params.assetIndexGuidance,
-        duration: params.duration,
-        expectedLoanValues: params.expectedLoanValues,
-        skipSolUnwrap: params.skipSolUnwrap,
-      })
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamVault: this.client.base.vaultPda,
-        glamSigner: signer || this.client.base.signer,
-        integrationAuthority: this.client.integrationAuthorityPda,
-        cpiProgram: LOOPSCALE_PROGRAM_ID,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
-        bsAuth: LOOPSCALE_BS_AUTH,
-        loan: accounts.loan,
-        strategy: accounts.strategy,
-        marketInformation: accounts.marketInformation,
-        principalMint: accounts.principalMint,
-        borrowerTa:
-          accounts.borrowerTa ||
-          this.client.base.getVaultAta(accounts.principalMint, tokenProgram),
-        strategyTa:
-          accounts.strategyTa ||
-          this.client.getStrategyTokenAta(
-            accounts.strategy,
-            accounts.principalMint,
-          ),
-        associatedTokenProgram:
-          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
-        tokenProgram,
-        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
-        eventAuthority: this.client.getEventAuthorityPda(),
-      });
-
-    if (accounts.remainingAccounts?.length) {
-      instruction.remainingAccounts(accounts.remainingAccounts);
-    }
-
-    return await instruction.instruction();
+    return await this.setLendingPolicyIx(policy, signer);
   }
 
-  async borrowPrincipalTx(
-    params: BorrowPrincipalParams,
-    accounts: BorrowPrincipalAccounts,
+  async setLendingPolicyIx(
+    policy: LoopscaleLendingPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    // `duration_indexes_allowlist` is `Vec<u8>`, which Anchor's IDL coder
+    // encodes as `bytes` and requires a Buffer (not a number[]).
+    const encodablePolicy = {
+      principalAllowlist: policy.principalAllowlist,
+      collateralAllowlist: policy.collateralAllowlist,
+      marketPolicies: policy.marketPolicies.map((p) => ({
+        market: p.market,
+        maxDepositAmount: p.maxDepositAmount,
+        maxTotalDepositAmount: p.maxTotalDepositAmount,
+        minLoanApyCbps: p.minLoanApyCbps,
+        maxLtvBps: p.maxLtvBps,
+        durationIndexesAllowlist: Buffer.from(p.durationIndexesAllowlist),
+        collateralAssetAllowlist: p.collateralAssetAllowlist,
+      })),
+      sellLedgerPolicy: policy.sellLedgerPolicy,
+    };
+    return await this.client.base.extLoopscaleProgram.methods
+      .setLendingPolicy(encodablePolicy)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        integrationProgram: this.client.programId,
+        integrationAuthority: this.client.integrationAuthorityPda,
+      })
+      .instruction();
+  }
+
+  async setPolicyTx(
+    policy: LoopscaleLendingPolicy,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.borrowPrincipalIx(params, accounts, txOptions.signer);
+    const ix = await this.setLendingPolicyIx(policy, txOptions.signer);
     return await this.buildVersionedTx([ix], txOptions);
   }
 
-  async withdrawCollateralIx(
-    params: WithdrawCollateralParams,
-    accounts: WithdrawCollateralAccounts,
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
-    const instruction = this.client.base.extLoopscaleProgram.methods
-      .withdrawCollateral({
-        amount: params.amount,
-        collateralIndex: params.collateralIndex,
-        assetIndexGuidance: params.assetIndexGuidance,
-        expectedLoanValues: params.expectedLoanValues,
-        closeIfEligible: params.closeIfEligible,
-        withdrawAll: params.withdrawAll,
-      })
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamVault: this.client.base.vaultPda,
-        glamSigner: signer || this.client.base.signer,
-        integrationAuthority: this.client.integrationAuthorityPda,
-        cpiProgram: LOOPSCALE_PROGRAM_ID,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-        systemProgram: SystemProgram.programId,
-        bsAuth: LOOPSCALE_BS_AUTH,
-        loan: accounts.loan,
-        borrowerTa:
-          accounts.borrowerTa ||
-          this.client.base.getVaultAta(accounts.assetMint, tokenProgram),
-        loanTa:
-          accounts.loanTa ||
-          this.client.getLoanTokenAta(accounts.loan, accounts.assetMint),
-        assetMint: accounts.assetMint,
-        tokenProgram,
-        associatedTokenProgram:
-          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
-        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
-        eventAuthority: this.client.getEventAuthorityPda(),
-      });
-
-    if (accounts.remainingAccounts?.length) {
-      instruction.remainingAccounts(accounts.remainingAccounts);
-    }
-
-    return await instruction.instruction();
-  }
-
-  async withdrawCollateralTx(
-    params: WithdrawCollateralParams,
-    accounts: WithdrawCollateralAccounts,
+  async setLendingPolicyTx(
+    policy: LoopscaleLendingPolicy,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.withdrawCollateralIx(
-      params,
-      accounts,
-      txOptions.signer,
+    const ix = await this.setLendingPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearLendingPolicyIx(signer);
+  }
+
+  async clearLendingPolicyIx(
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.programId,
+      LOOPSCALE_LENDING_PROTOCOL,
+      signer,
     );
-    return await this.buildVersionedTx([ix], txOptions);
   }
 
-  async repayPrincipalIx(
-    params: RepayPrincipalParams,
-    accounts: RepayPrincipalAccounts,
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearLendingPolicyTx(txOptions);
+  }
+
+  async clearLendingPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.programId,
+      LOOPSCALE_LENDING_PROTOCOL,
+      txOptions,
+    );
+  }
+
+  async createStrategyIx(
+    params: CreateStrategyParams,
+    accounts: CreateStrategyAccounts,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
-    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
-    const instruction = this.client.base.extLoopscaleProgram.methods
-      .repayPrincipal({
-        amount: params.amount,
-        ledgerIndex: params.ledgerIndex,
-        repayAll: params.repayAll,
+    return await this.client.base.extLoopscaleProgram.methods
+      .createStrategy({
+        lender: this.client.base.vaultPda,
+        ...params,
       })
       .accountsPartial({
         glamState: this.client.base.statePda,
@@ -1249,48 +1029,24 @@ class TxBuilder
         glamProtocolProgram: this.client.base.protocolProgram.programId,
         systemProgram: SystemProgram.programId,
         bsAuth: LOOPSCALE_BS_AUTH,
-        loan: accounts.loan,
+        nonce: accounts.nonce,
         strategy: accounts.strategy,
         marketInformation: accounts.marketInformation,
         principalMint: accounts.principalMint,
-        borrowerTa:
-          accounts.borrowerTa ||
-          this.client.base.getVaultAta(accounts.principalMint, tokenProgram),
-        strategyTa:
-          accounts.strategyTa ||
-          this.client.getStrategyTokenAta(
-            accounts.strategy,
-            accounts.principalMint,
-          ),
-        associatedTokenProgram:
-          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
-        tokenProgram,
         protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
         eventAuthority: this.client.getEventAuthorityPda(),
-      });
-
-    if (accounts.remainingAccounts?.length) {
-      instruction.remainingAccounts(accounts.remainingAccounts);
-    }
-
-    return await instruction.instruction();
-  }
-
-  async repayPrincipalTx(
-    params: RepayPrincipalParams,
-    accounts: RepayPrincipalAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.repayPrincipalIx(params, accounts, txOptions.signer);
-    return await this.buildVersionedTx([ix], txOptions);
+      })
+      .instruction();
   }
 }
 
-export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
-  readonly txBuilder: TxBuilder;
+export class LoopscaleCoreClient {
+  readonly borrowTxBuilder: LoopscaleBorrowTxBuilder;
+  readonly lendTxBuilder: LoopscaleLendTxBuilder;
 
   public constructor(readonly base: BaseClient) {
-    this.txBuilder = new TxBuilder(this);
+    this.borrowTxBuilder = new LoopscaleBorrowTxBuilder(this);
+    this.lendTxBuilder = new LoopscaleLendTxBuilder(this);
   }
 
   get programId(): PublicKey {
@@ -1301,35 +1057,11 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     return getIntegrationAuthorityPda(this.programId);
   }
 
-  async fetchPolicy(): Promise<LoopscalePolicy | null> {
-    return await this.base.fetchProtocolPolicy(
-      this.programId,
-      LOOPSCALE_PROTOCOL,
-      LoopscalePolicy,
-    );
-  }
-
-  async setPolicy(
-    policy: LoopscalePolicy,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
-    return await this.base.sendAndConfirm(tx);
-  }
-
-  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.clearPolicyTx(txOptions);
-    return await this.base.sendAndConfirm(tx);
-  }
-
   getEventAuthorityPda(): PublicKey {
     return getLoopscaleEventAuthorityPda();
   }
 
-  getLoanPda(
-    nonce: BN | bigint | number,
-    borrower: PublicKey = this.base.vaultPda,
-  ) {
+  getLoanPda(nonce: BN, borrower: PublicKey = this.base.vaultPda) {
     return getLoopscaleLoanPda(borrower, nonce);
   }
 
@@ -1531,6 +1263,31 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     }
   }
 
+  assertStrategyPrincipalWithdrawable(
+    strategy: LoopscaleStrategy,
+    amount: BN,
+    withdrawAll: boolean,
+  ): void {
+    const address = strategy.getAddress();
+    if (withdrawAll && strategy.tokenBalance.isZero()) {
+      const externalYieldMessage = strategy.externalYieldAmount.isZero()
+        ? ""
+        : ` Strategy external yield amount is ${strategy.externalYieldAmount}; specify an explicit amount to withdraw it.`;
+      throw new Error(
+        `Strategy ${address} has no undeployed principal for --all; token balance is 0.${externalYieldMessage}`,
+      );
+    }
+
+    const explicitWithdrawableAmount = strategy.tokenBalance.add(
+      strategy.externalYieldAmount,
+    );
+    if (!withdrawAll && amount.gt(explicitWithdrawableAmount)) {
+      throw new Error(
+        `Strategy ${address} has only ${explicitWithdrawableAmount} withdrawable amount; requested ${amount}.`,
+      );
+    }
+  }
+
   /** Fetches, validates, and decodes a Loopscale MarketInformation account. */
   async fetchMarketInformation(
     marketInformation: PublicKey,
@@ -1602,6 +1359,116 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
         principalAssetIndex,
         collateralAssetIndex,
       ]),
+    };
+  }
+
+  /**
+   * Resolves the market-derived inputs for sell_ledger. Loopscale's sell API
+   * emits principal/collateral asset-index hints plus the matching price oracle
+   * remaining accounts.
+   */
+  async resolveSellLedgerMarketAccounts(params: {
+    loan: PublicKey | LoopscaleLoan;
+    ledgerIndex: number;
+    newStrategy: PublicKey | LoopscaleStrategy;
+  }): Promise<LoopscaleSellLedgerTerms> {
+    const loanInfo =
+      params.loan instanceof PublicKey
+        ? await this.fetchLoan(params.loan)
+        : params.loan;
+    const ledger = loanInfo.ledgers[params.ledgerIndex];
+    if (!ledger || ledger.status === 0) {
+      throw new Error(
+        `Loan ${loanInfo.getAddress()} has no active ledger at index ${params.ledgerIndex}`,
+      );
+    }
+
+    const newStrategyInfo =
+      params.newStrategy instanceof PublicKey
+        ? await this.fetchStrategy(params.newStrategy)
+        : params.newStrategy;
+    const newStrategy =
+      params.newStrategy instanceof PublicKey
+        ? params.newStrategy
+        : newStrategyInfo.getAddress();
+
+    if (!newStrategyInfo.principalMint.equals(ledger.principalMint)) {
+      throw new Error(
+        `New strategy principal mint ${newStrategyInfo.principalMint} does not match ledger principal mint ${ledger.principalMint}`,
+      );
+    }
+    if (!newStrategyInfo.marketInformation.equals(ledger.marketInformation)) {
+      throw new Error(
+        `New strategy market ${newStrategyInfo.marketInformation} does not match ledger market ${ledger.marketInformation}`,
+      );
+    }
+
+    const marketInfo = await this.fetchMarketInformation(
+      ledger.marketInformation,
+    );
+    if (!marketInfo.principalMint.equals(ledger.principalMint)) {
+      throw new Error(
+        `Market principal mint ${marketInfo.principalMint} does not match ledger principal mint ${ledger.principalMint}`,
+      );
+    }
+
+    const collateralSlot = loanInfo.weightMatrix.findIndex(
+      (row) => row[params.ledgerIndex] > 0,
+    );
+    if (collateralSlot === -1) {
+      throw new Error(
+        `Loan ${loanInfo.getAddress()} has no collateral weight for ledger index ${params.ledgerIndex}`,
+      );
+    }
+    const collateral = loanInfo.collateral[collateralSlot];
+    if (
+      !collateral ||
+      collateral.amount.isZero() ||
+      collateral.assetIdentifier.equals(PublicKey.default)
+    ) {
+      throw new Error(
+        `Loan ${loanInfo.getAddress()} collateral slot ${collateralSlot} is empty`,
+      );
+    }
+
+    const collateralAssetIndex = this.requireAssetIndex(
+      marketInfo,
+      collateral.assetIdentifier,
+      "collateral asset identifier",
+    );
+    const principalAssetIndex = this.requireAssetIndex(
+      marketInfo,
+      ledger.principalMint,
+      "principal mint",
+    );
+    const guidance = {
+      principalAssetIndex,
+      collateralAssetIndex,
+    };
+    const remainingAccounts = [
+      this.requireMarketAssetInfo(marketInfo, principalAssetIndex, "principal")
+        .oracleAccount,
+      this.requireMarketAssetInfo(
+        marketInfo,
+        collateralAssetIndex,
+        "collateral",
+      ).oracleAccount,
+    ].map((pubkey) => ({
+      pubkey,
+      isSigner: false,
+      isWritable: false,
+    }));
+
+    return {
+      ledgerIndex: params.ledgerIndex,
+      oldStrategy: ledger.strategy,
+      newStrategy,
+      oldStrategyMarketInformation: ledger.marketInformation,
+      newStrategyMarketInformation: newStrategyInfo.marketInformation,
+      principalMint: ledger.principalMint,
+      assetIndexGuidance: encodeLoopscaleSellLedgerAssetIndexGuidance(guidance),
+      guidance,
+      remainingAccounts,
     };
   }
 
@@ -1815,6 +1682,20 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     return index;
   }
 
+  private requireMarketAssetInfo(
+    marketInfo: LoopscaleMarketInformation,
+    assetIndex: number,
+    label: string,
+  ) {
+    const assetInfo = marketInfo.assetData[assetIndex];
+    if (!assetInfo) {
+      throw new Error(
+        `Loopscale market is missing ${label} asset data at index ${assetIndex}`,
+      );
+    }
+    return assetInfo;
+  }
+
   // The collateral map stores the lending APY per (asset, duration); the borrow
   // instruction expects the duration *index*, which we recover by matching the
   // quoted APY against the strategy's populated slots for the collateral.
@@ -1948,7 +1829,7 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     );
   }
 
-  private async decompileApiMessage(
+  async decompileApiMessage(
     message: string,
   ): Promise<TransactionInstruction[]> {
     const versionedMessage = VersionedMessage.deserialize(
@@ -1963,7 +1844,7 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
         );
         if (!result.value) {
           throw new Error(
-            `Loopscale API message references missing address lookup table ${lookup.accountKey.toBase58()}`,
+            `Loopscale API message references missing address lookup table ${lookup.accountKey}`,
           );
         }
         addressLookupTableAccounts.push(result.value);
@@ -1975,7 +1856,7 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     }).instructions;
   }
 
-  private mapApiIx(ix: TransactionInstruction): TransactionInstruction {
+  mapApiIx(ix: TransactionInstruction): TransactionInstruction {
     const mappedIx = mapToGlamIx(
       ix,
       this.base.statePda,
@@ -1990,7 +1871,145 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     return mappedIx;
   }
 
-  private async mapApiMessagesToGlamIxs(
+  addUpdateStrategyValidationMarket(
+    ix: TransactionInstruction,
+    marketInformation: PublicKey,
+  ): TransactionInstruction {
+    const keys = [...ix.keys];
+    keys.splice(GLAM_UPDATE_STRATEGY_ACCOUNT_COUNT, 0, {
+      pubkey: marketInformation,
+      isSigner: false,
+      isWritable: false,
+    });
+    return new TransactionInstruction({
+      programId: ix.programId,
+      keys,
+      data: ix.data,
+    });
+  }
+
+  addDepositCollateralLedgerAccounts(
+    ixs: TransactionInstruction[],
+  ): TransactionInstruction[] {
+    return ixs.map((ix, index) => {
+      if (
+        !ix.data
+          .subarray(0, LOOPSCALE_DEPOSIT_COLLATERAL_DISCRIMINATOR.length)
+          .equals(LOOPSCALE_DEPOSIT_COLLATERAL_DISCRIMINATOR) ||
+        ix.keys.length > GLAM_DEPOSIT_COLLATERAL_ACCOUNT_COUNT
+      ) {
+        return ix;
+      }
+
+      const loan = ix.keys[8]?.pubkey;
+      if (!loan) {
+        return ix;
+      }
+      const assetIndexGuidanceOffset = 8 + 8 + 1 + 32;
+      if (ix.data.length < assetIndexGuidanceOffset + 4) {
+        return ix;
+      }
+      const assetIndexGuidanceLen = ix.data.readUInt32LE(
+        assetIndexGuidanceOffset,
+      );
+      if (assetIndexGuidanceLen === 0) {
+        return ix;
+      }
+      const weightIx = ixs.slice(index + 1).find((candidate) => {
+        return (
+          candidate.data
+            .subarray(0, LOOPSCALE_UPDATE_WEIGHT_MATRIX_DISCRIMINATOR.length)
+            .equals(LOOPSCALE_UPDATE_WEIGHT_MATRIX_DISCRIMINATOR) &&
+          candidate.keys[8]?.pubkey.equals(loan) &&
+          candidate.keys.length >
+            GLAM_UPDATE_WEIGHT_MATRIX_ACCOUNT_COUNT + assetIndexGuidanceLen
+        );
+      });
+      if (!weightIx) {
+        return ix;
+      }
+      const healthAccounts = weightIx.keys.slice(
+        GLAM_UPDATE_WEIGHT_MATRIX_ACCOUNT_COUNT,
+      );
+
+      return new TransactionInstruction({
+        programId: ix.programId,
+        keys: [...ix.keys, ...healthAccounts],
+        data: ix.data,
+      });
+    });
+  }
+
+  setDepositCollateralAssetIndexGuidance(
+    ixs: TransactionInstruction[],
+    assetIndexGuidance: number[],
+  ): TransactionInstruction[] {
+    if (assetIndexGuidance.length === 0) {
+      return ixs;
+    }
+
+    return ixs.map((ix) => {
+      if (
+        !ix.data
+          .subarray(0, LOOPSCALE_DEPOSIT_COLLATERAL_DISCRIMINATOR.length)
+          .equals(LOOPSCALE_DEPOSIT_COLLATERAL_DISCRIMINATOR)
+      ) {
+        return ix;
+      }
+
+      const assetIndexGuidanceOffset = 8 + 8 + 1 + 32;
+      const fixedData = ix.data.subarray(0, assetIndexGuidanceOffset);
+      const guidance = Buffer.from(assetIndexGuidance);
+      const guidanceLength = Buffer.alloc(4);
+      guidanceLength.writeUInt32LE(guidance.length, 0);
+
+      return new TransactionInstruction({
+        programId: ix.programId,
+        keys: ix.keys,
+        data: Buffer.concat([fixedData, guidanceLength, guidance]),
+      });
+    });
+  }
+
+  getApiUpdateWeightMatrixAssetIndexGuidance(
+    ixs: TransactionInstruction[],
+    loan: PublicKey,
+  ): number[] {
+    const updateWeightIx = ixs.find((ix) => {
+      return (
+        ix.data
+          .subarray(0, LOOPSCALE_UPDATE_WEIGHT_MATRIX_DISCRIMINATOR.length)
+          .equals(LOOPSCALE_UPDATE_WEIGHT_MATRIX_DISCRIMINATOR) &&
+        ix.keys[8]?.pubkey.equals(loan) &&
+        ix.keys.length > GLAM_UPDATE_WEIGHT_MATRIX_ACCOUNT_COUNT
+      );
+    });
+    if (!updateWeightIx) {
+      return [];
+    }
+
+    const guidanceOffset = 8 + 1 + 5 * 4 + 8 + 5 * 4;
+    if (updateWeightIx.data.length < guidanceOffset + 4) {
+      return [];
+    }
+    const guidanceLen = updateWeightIx.data.readUInt32LE(guidanceOffset);
+    const guidanceStart = guidanceOffset + 4;
+    if (updateWeightIx.data.length < guidanceStart + guidanceLen) {
+      return [];
+    }
+    return Array.from(
+      updateWeightIx.data.subarray(guidanceStart, guidanceStart + guidanceLen),
+    );
+  }
+
+  /**
+   * Decompiles instructions from transaction messages and maps eligible ones to GLAM instructions
+   *
+   * @param messages Serialized transaction messages.
+   * @param expectedDiscriminator Discriminator to look for in the instructions.
+   * @returns
+   */
+  async mapApiMessagesToGlamIxs(
     messages: string[],
     expectedDiscriminator: Buffer,
   ): Promise<TransactionInstruction[]> {
@@ -2000,14 +2019,22 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     for (const message of messages) {
       const apiIxs = await this.decompileApiMessage(message);
       for (const ix of apiIxs) {
+        // Skip mapping Compute Budget program instructions
         if (ix.programId.equals(ComputeBudgetProgram.programId)) {
           continue;
         }
+
+        // Skip mapping Loopscale loan lock/unlock instructions
+        if (isSkippableLoopscaleLoanLockIx(ix.data)) {
+          continue;
+        }
+
         if (!ix.programId.equals(LOOPSCALE_PROGRAM_ID)) {
           throw new Error(
-            `Loopscale API returned unsupported setup instruction for program ${ix.programId.toBase58()}`,
+            `Loopscale API returned unsupported setup instruction for program ${ix.programId}`,
           );
         }
+
         if (
           ix.data
             .subarray(0, expectedDiscriminator.length)
@@ -2015,9 +2042,7 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
         ) {
           sawExpectedInstruction = true;
         }
-        if (isSkippableLoopscaleLoanLockIx(ix.data)) {
-          continue;
-        }
+
         mappedIxs.push(this.mapApiIx(ix));
       }
     }
@@ -2035,382 +2060,34 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     return mappedIxs;
   }
 
-  private async fetchApiTransaction(
+  /**
+   * Fetches a transaction from the Loopscale API
+   *
+   * @param path API endpoint path.
+   * @param init Request initialization options.
+   * @returns
+   */
+  async fetchApiTransaction(
     path: string,
     init: RequestInit,
-    label: string,
   ): Promise<LoopscaleApiTransactionPayload> {
-    const response = await fetch(`${LOOPSCALE_API_URL}${path}`, init);
+    const response = await fetch(`${LOOPSCALE_API_URL}${path}`, {
+      ...init,
+      method: "POST",
+    });
+    const endpoint = `POST ${path}`;
     if (!response.ok) {
       throw new Error(
-        `Loopscale ${label} API failed (${response.status}): ${await response.text()}`,
+        `Loopscale API ${endpoint} failed (${response.status}): ${await response.text()}`,
       );
     }
     const payload = (await response.json()) as LoopscaleApiTransactionPayload;
     if (getLoopscaleApiMessages(payload).length === 0) {
-      throw new Error(`Loopscale ${label} API returned no transaction message`);
+      throw new Error(
+        `Loopscale API ${endpoint} returned no transaction message`,
+      );
     }
     return payload;
-  }
-
-  async buildApiCreateLoanIxs(params: {
-    nonce: BN;
-  }): Promise<{ loan: PublicKey; ixs: TransactionInstruction[] }> {
-    const expectedLoan = this.getLoanPda(params.nonce);
-    const payload = (await this.fetchApiTransaction(
-      "/markets/creditbook/create",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          payer: this.base.signer.toBase58(),
-        },
-        body: JSON.stringify({
-          borrower: this.base.vaultPda.toBase58(),
-          depositCollateral: [],
-          principalRequested: [],
-          assetIndexGuidance: [],
-          loanNonce: params.nonce.toString(),
-        }),
-      },
-      "create loan",
-    )) as LoopscaleApiTransactionResponse;
-    const loan = payload.loanAddress
-      ? new PublicKey(payload.loanAddress)
-      : expectedLoan;
-    if (!loan.equals(expectedLoan)) {
-      throw new Error(
-        `Loopscale create loan API returned loan ${loan}, expected ${expectedLoan}`,
-      );
-    }
-    const ixs = await this.mapApiMessagesToGlamIxs(
-      getLoopscaleApiMessages(payload),
-      LOOPSCALE_CREATE_LOAN_DISCRIMINATOR,
-    );
-    return { loan, ixs };
-  }
-
-  async buildApiDepositCollateralIxs(params: {
-    loan: PublicKey;
-    depositMint: PublicKey;
-    amount: BN;
-    assetType: number;
-    assetIdentifier: PublicKey;
-    assetIndexGuidance: number[];
-  }): Promise<TransactionInstruction[]> {
-    const payload = await this.fetchApiTransaction(
-      "/markets/creditbook/collateral/deposit",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "user-wallet": this.base.vaultPda.toBase58(),
-          payer: this.base.signer.toBase58(),
-        },
-        body: JSON.stringify({
-          loan: params.loan.toBase58(),
-          depositMint: params.depositMint.toBase58(),
-          amount: bnToSafeNumber(params.amount, "deposit amount"),
-          assetType: params.assetType,
-          assetIdentifier: params.assetIdentifier.toBase58(),
-          assetIndexGuidance: params.assetIndexGuidance,
-        }),
-      },
-      "deposit",
-    );
-    return await this.mapApiMessagesToGlamIxs(
-      getLoopscaleApiMessages(payload),
-      LOOPSCALE_DEPOSIT_COLLATERAL_DISCRIMINATOR,
-    );
-  }
-
-  async buildApiBorrowPrincipalIxs(params: {
-    loan: PublicKey;
-    strategy: PublicKey;
-    amount: BN;
-    assetIndexGuidance: number[];
-    duration: number;
-    expectedLoanValues: { expectedApy: BN; expectedLqt: Tuple5 };
-    skipSolUnwrap: boolean;
-  }): Promise<TransactionInstruction[]> {
-    const payload = await this.fetchApiTransaction(
-      "/markets/creditbook/borrow",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          payer: this.base.signer.toBase58(),
-        },
-        body: JSON.stringify({
-          loan: params.loan.toBase58(),
-          strategy: params.strategy.toBase58(),
-          borrowParams: {
-            amount: bnToSafeNumber(params.amount, "borrow amount"),
-            assetIndexGuidance: params.assetIndexGuidance,
-            duration: params.duration,
-            expectedLoanValues: {
-              expectedApy: bnToSafeNumber(
-                params.expectedLoanValues.expectedApy,
-                "expected APY",
-              ),
-              expectedLqt: params.expectedLoanValues.expectedLqt,
-            },
-            skipSolUnwrap: params.skipSolUnwrap,
-          },
-        }),
-      },
-      "borrow",
-    );
-    return await this.mapApiMessagesToGlamIxs(
-      getLoopscaleApiMessages(payload),
-      LOOPSCALE_BORROW_PRINCIPAL_DISCRIMINATOR,
-    );
-  }
-
-  async buildApiWithdrawCollateralIxs(params: {
-    loan: PublicKey;
-    collateralMint: PublicKey;
-    amount: BN;
-    collateralIndex: number;
-    assetIndexGuidance: number[];
-    expectedLoanValues: { expectedApy: BN; expectedLqt: Tuple5 };
-    closeIfEligible?: boolean;
-    withdrawAll?: boolean;
-  }): Promise<TransactionInstruction[]> {
-    const body: {
-      loan: string;
-      collateralMint: string;
-      amount: number;
-      collateralIndex: number;
-      expectedLoanValues: { expectedApy: number; expectedLqt: Tuple5 };
-      assetIndexGuidance?: number[];
-      closeIfEligible?: boolean;
-      withdrawAll?: boolean;
-    } = {
-      loan: params.loan.toBase58(),
-      collateralMint: params.collateralMint.toBase58(),
-      amount: bnToSafeNumber(params.amount, "withdraw amount"),
-      collateralIndex: params.collateralIndex,
-      expectedLoanValues: {
-        expectedApy: bnToSafeNumber(
-          params.expectedLoanValues.expectedApy,
-          "expected APY",
-        ),
-        expectedLqt: params.expectedLoanValues.expectedLqt,
-      },
-    };
-    if (params.assetIndexGuidance.length > 0) {
-      body.assetIndexGuidance = params.assetIndexGuidance;
-    }
-    if (params.closeIfEligible !== undefined) {
-      body.closeIfEligible = params.closeIfEligible;
-    }
-    if (params.withdrawAll !== undefined) {
-      body.withdrawAll = params.withdrawAll;
-    }
-
-    const payload = await this.fetchApiTransaction(
-      "/markets/creditbook/collateral/withdraw",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "user-wallet": this.base.vaultPda.toBase58(),
-          payer: this.base.signer.toBase58(),
-        },
-        body: JSON.stringify(body),
-      },
-      "withdraw",
-    );
-    return await this.mapApiMessagesToGlamIxs(
-      getLoopscaleApiMessages(payload),
-      LOOPSCALE_WITHDRAW_COLLATERAL_DISCRIMINATOR,
-    );
-  }
-
-  async buildApiRepayPrincipalIxs(params: {
-    loan: PublicKey;
-    strategy: PublicKey;
-    amount: BN;
-    ledgerIndex: number;
-    repayAll: boolean;
-  }): Promise<TransactionInstruction[]> {
-    const payload = await this.fetchApiTransaction(
-      "/markets/creditbook/repay_simple",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          payer: this.base.signer.toBase58(),
-        },
-        body: JSON.stringify({
-          loan: params.loan.toBase58(),
-          strategy: params.strategy.toBase58(),
-          repayParams: {
-            amount: bnToSafeNumber(params.amount, "repay amount"),
-            ledgerIndex: params.ledgerIndex,
-            repayAll: params.repayAll,
-          },
-        }),
-      },
-      "repay",
-    );
-    return await this.mapApiMessagesToGlamIxs(
-      getLoopscaleApiMessages(payload),
-      LOOPSCALE_REPAY_PRINCIPAL_DISCRIMINATOR,
-    );
-  }
-
-  async buildApiDepositStrategyIxs(params: {
-    strategy: PublicKey;
-    amount: BN;
-  }): Promise<TransactionInstruction[]> {
-    const payload = await this.fetchApiTransaction(
-      "/markets/strategy/deposit",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "user-wallet": this.base.vaultPda.toBase58(),
-          payer: this.base.signer.toBase58(),
-        },
-        body: JSON.stringify({
-          strategy: params.strategy.toBase58(),
-          amount: bnToSafeNumber(params.amount, "deposit amount"),
-        }),
-      },
-      "deposit strategy",
-    );
-    return await this.mapApiMessagesToGlamIxs(
-      getLoopscaleApiMessages(payload),
-      LOOPSCALE_DEPOSIT_STRATEGY_DISCRIMINATOR,
-    );
-  }
-
-  async buildApiWithdrawStrategyIxs(params: {
-    strategy: PublicKey;
-    amount: BN;
-    withdrawAll: boolean;
-  }): Promise<TransactionInstruction[]> {
-    const payload = await this.fetchApiTransaction(
-      "/markets/strategy/withdraw",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "user-wallet": this.base.vaultPda.toBase58(),
-          payer: this.base.signer.toBase58(),
-        },
-        body: JSON.stringify({
-          strategy: params.strategy.toBase58(),
-          amount: bnToSafeNumber(params.amount, "withdraw amount"),
-          withdrawAll: params.withdrawAll,
-        }),
-      },
-      "withdraw strategy",
-    );
-    return await this.mapApiMessagesToGlamIxs(
-      getLoopscaleApiMessages(payload),
-      LOOPSCALE_WITHDRAW_STRATEGY_DISCRIMINATOR,
-    );
-  }
-
-  async buildApiCloseStrategyIxs(params: {
-    strategy: PublicKey;
-  }): Promise<TransactionInstruction[]> {
-    const payload = await this.fetchApiTransaction(
-      `/markets/strategy/close/${params.strategy.toBase58()}`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          payer: this.base.signer.toBase58(),
-        },
-      },
-      "close strategy",
-    );
-    return await this.mapApiMessagesToGlamIxs(
-      getLoopscaleApiMessages(payload),
-      LOOPSCALE_CLOSE_STRATEGY_DISCRIMINATOR,
-    );
-  }
-
-  async buildApiUpdateStrategyTxs(params: {
-    strategy: PublicKey;
-    collateralTerms?: LoopscaleApiCollateralTermUpdate;
-    updateParams?: LoopscaleApiUpdateStrategyParams;
-  }): Promise<LoopscaleMappedTransaction[]> {
-    const payload = await this.fetchApiTransaction(
-      "/markets/strategy/update",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "user-wallet": this.base.vaultPda.toBase58(),
-          payer: this.base.signer.toBase58(),
-        },
-        body: JSON.stringify({
-          strategy: params.strategy.toBase58(),
-          collateralTerms: params.collateralTerms,
-          updateParams: params.updateParams,
-        }),
-      },
-      "update strategy",
-    );
-
-    let sawExpectedInstruction = false;
-    const txs: LoopscaleMappedTransaction[] = [];
-    for (const message of getLoopscaleApiMessages(payload)) {
-      const ixs: TransactionInstruction[] = [];
-      const additionalSigners: Keypair[] = [];
-
-      for (const ix of await this.decompileApiMessage(message)) {
-        if (ix.programId.equals(ComputeBudgetProgram.programId)) {
-          continue;
-        }
-        if (!ix.programId.equals(LOOPSCALE_PROGRAM_ID)) {
-          throw new Error(
-            `Loopscale update strategy API returned unsupported setup instruction for program ${ix.programId.toBase58()}`,
-          );
-        }
-        const isUpdateStrategy = ix.data
-          .subarray(0, LOOPSCALE_UPDATE_STRATEGY_DISCRIMINATOR.length)
-          .equals(LOOPSCALE_UPDATE_STRATEGY_DISCRIMINATOR);
-        if (!isUpdateStrategy) {
-          throw new Error(
-            `Loopscale update strategy API returned unsupported Loopscale instruction discriminator ${Buffer.from(ix.data.subarray(0, 8)).toString("hex")}`,
-          );
-        }
-        sawExpectedInstruction = true;
-        if (ix.keys.length < LOOPSCALE_UPDATE_STRATEGY_STANDARD_ACCOUNT_COUNT) {
-          throw new Error(
-            "Loopscale update_strategy template has too few accounts",
-          );
-        }
-
-        const replaced = replaceLoopscaleApiExtraSigners(
-          ix,
-          LOOPSCALE_UPDATE_STRATEGY_STANDARD_ACCOUNT_COUNT,
-        );
-        additionalSigners.push(...replaced.additionalSigners);
-        ixs.push(this.mapApiIx(replaced.ixs[0]));
-      }
-      if (ixs.length > 0) {
-        txs.push({ ixs, additionalSigners });
-      }
-    }
-
-    if (!sawExpectedInstruction) {
-      throw new Error(
-        "Loopscale update strategy API response did not include update_strategy",
-      );
-    }
-    if (txs.length === 0) {
-      throw new Error(
-        "Loopscale update strategy API response had no mappable instructions",
-      );
-    }
-    return txs;
   }
 
   /**
@@ -2494,7 +2171,7 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     );
   }
 
-  private async sendCosignedIxs(
+  async coSignAndSend(
     ixs: TransactionInstruction[],
     txOptions: TxOptions = {},
     additionalSigners: Keypair[] = [],
@@ -2509,12 +2186,12 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     }
     const cosignedTx = await this.cosignTransaction({
       tx: versionedTx,
-      identifier: `glam-loopscale-${new Date().getTime()}${identifierSuffix}`,
+      identifier: `glam-loopscale-${Date.now()}-${identifierSuffix}`,
     });
     return await this.base.sendAndConfirm(cosignedTx);
   }
 
-  private async sendCosignedIxBatches(
+  async sendCosignedIxBatches(
     txs: LoopscaleMappedTransaction[],
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature[]> {
@@ -2522,305 +2199,14 @@ export class LoopscaleClient implements ProtocolPolicyClient<LoopscalePolicy> {
     for (let i = 0; i < txs.length; i++) {
       const { ixs, additionalSigners } = txs[i];
       txSigs.push(
-        await this.sendCosignedIxs(ixs, txOptions, additionalSigners, `-${i}`),
+        await this.coSignAndSend(ixs, txOptions, additionalSigners, `-${i}`),
       );
     }
     return txSigs;
   }
 
-  async createLoan(
-    params: CreateLoanParams,
-    accounts: CreateLoanAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const { loan, ixs } = await this.buildApiCreateLoanIxs(params);
-    if (!loan.equals(accounts.loan)) {
-      throw new Error(
-        `Loopscale create loan API returned loan ${loan}, expected ${accounts.loan}`,
-      );
-    }
-    return await this.sendCosignedIxs(ixs, txOptions);
-  }
-
-  async closeLoan(
-    accounts: CloseLoanAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ix = await this.txBuilder.closeLoanIx(accounts, txOptions.signer);
-    return await this.sendCosignedIxs([ix], txOptions);
-  }
-
-  async depositStrategy(
-    amount: BN,
-    accounts: DepositStrategyAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ixs = await this.buildApiDepositStrategyIxs({
-      strategy: accounts.strategy,
-      amount,
-    });
-    return await this.sendCosignedIxs(ixs, txOptions);
-  }
-
-  async updateStrategy(
-    params: {
-      strategy: PublicKey;
-      collateralTerms?: LoopscaleApiCollateralTermUpdate;
-      updateParams?: LoopscaleApiUpdateStrategyParams;
-    },
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature[]> {
-    const txs = await this.buildApiUpdateStrategyTxs(params);
-    return await this.sendCosignedIxBatches(txs, txOptions);
-  }
-
-  async withdrawStrategy(
-    amount: BN,
-    withdrawAll: boolean,
-    accounts: WithdrawStrategyAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ixs = await this.buildApiWithdrawStrategyIxs({
-      strategy: accounts.strategy,
-      amount,
-      withdrawAll,
-    });
-    return await this.sendCosignedIxs(ixs, txOptions);
-  }
-
-  async closeStrategy(
-    accounts: CloseStrategyAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ixs = await this.buildApiCloseStrategyIxs({
-      strategy: accounts.strategy,
-    });
-    return await this.sendCosignedIxs(ixs, txOptions);
-  }
-
-  async depositCollateral(
-    params: DepositCollateralParams,
-    accounts: DepositCollateralAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ixs = await this.buildApiDepositCollateralIxs({
-      loan: accounts.loan,
-      depositMint: accounts.depositMint,
-      amount: params.amount,
-      assetType: params.assetType,
-      assetIdentifier: params.assetIdentifier,
-      assetIndexGuidance: [...params.assetIndexGuidance],
-    });
-    return await this.sendCosignedIxs(ixs, txOptions);
-  }
-
-  async updateWeightMatrix(
-    params: UpdateWeightMatrixParams,
-    accounts: UpdateWeightMatrixAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ix = await this.txBuilder.updateWeightMatrixIx(
-      params,
-      accounts,
-      txOptions.signer,
-    );
-    return await this.sendCosignedIxs([ix], txOptions);
-  }
-
-  async borrowPrincipal(
-    params: BorrowPrincipalParams,
-    accounts: BorrowPrincipalAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ixs = await this.buildApiBorrowPrincipalIxs({
-      loan: accounts.loan,
-      strategy: accounts.strategy,
-      amount: params.amount,
-      assetIndexGuidance: [...params.assetIndexGuidance],
-      duration: params.duration,
-      expectedLoanValues: {
-        expectedApy: params.expectedLoanValues.expectedApy,
-        expectedLqt: params.expectedLoanValues.expectedLqt as Tuple5,
-      },
-      skipSolUnwrap: params.skipSolUnwrap,
-    });
-    return await this.sendCosignedIxs(ixs, txOptions);
-  }
-
-  async withdrawCollateral(
-    params: WithdrawCollateralParams,
-    accounts: WithdrawCollateralAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ixs = await this.buildApiWithdrawCollateralIxs({
-      loan: accounts.loan,
-      collateralMint: accounts.assetMint,
-      amount: params.amount,
-      collateralIndex: params.collateralIndex,
-      assetIndexGuidance: [...params.assetIndexGuidance],
-      expectedLoanValues: {
-        expectedApy: params.expectedLoanValues.expectedApy,
-        expectedLqt: params.expectedLoanValues.expectedLqt as Tuple5,
-      },
-      closeIfEligible: params.closeIfEligible || undefined,
-      withdrawAll: params.withdrawAll || undefined,
-    });
-    return await this.sendCosignedIxs(ixs, txOptions);
-  }
-
-  async repayPrincipal(
-    params: RepayPrincipalParams,
-    accounts: RepayPrincipalAccounts,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ixs = await this.buildApiRepayPrincipalIxs({
-      loan: accounts.loan,
-      strategy: accounts.strategy,
-      amount: params.amount,
-      ledgerIndex: params.ledgerIndex,
-      repayAll: params.repayAll,
-    });
-    return await this.sendCosignedIxs(ixs, txOptions);
-  }
-
-  /**
-   * Resolves the strategy-derived account inputs a {@link repayPrincipal} needs
-   * from a known strategy, without consulting the quote API or market oracles.
-   * Repay does not carry expected loan values, so no oracle remaining accounts
-   * are required (confirmed against mainnet).
-   */
-  async resolveLedgerStrategyAccounts(strategy: PublicKey): Promise<{
-    strategy: PublicKey;
-    marketInformation: PublicKey;
-    principalMint: PublicKey;
-  }> {
-    const strategyInfo = await this.fetchStrategy(strategy);
-    return {
-      strategy,
-      marketInformation: strategyInfo.marketInformation,
-      principalMint: strategyInfo.principalMint,
-    };
-  }
-
   async getBaseAssetOracle(): Promise<PublicKey> {
     const { baseAssetMint } = await this.base.fetchStateModel();
     return (await this.base.getAssetMeta(baseAssetMint)).oracle;
-  }
-
-  async getPriceLoansAccounts(
-    commitment?: Commitment,
-  ): Promise<PriceLoansAccounts | null> {
-    const { externalPositions } = await this.base.fetchStateAccount();
-    if ((externalPositions || []).length === 0) {
-      return null;
-    }
-
-    const accountsInfo: (Web3AccountInfo<Buffer> | null)[] = [];
-    const chunkSize = 100;
-    for (let i = 0; i < externalPositions.length; i += chunkSize) {
-      const chunk = externalPositions.slice(i, i + chunkSize);
-      const chunkInfos = await this.base.connection.getMultipleAccountsInfo(
-        chunk,
-        commitment,
-      );
-      accountsInfo.push(...chunkInfos);
-    }
-
-    const loanAccounts: PublicKey[] = [];
-    const oracleMints = new PkSet();
-    for (let i = 0; i < accountsInfo.length; i++) {
-      const info = accountsInfo[i];
-      if (!isLoopscaleLoanAccountInfo(info)) {
-        continue;
-      }
-
-      loanAccounts.push(externalPositions[i]);
-      readLoopscaleOracleMints(info.data).forEach((mint) =>
-        oracleMints.add(mint),
-      );
-    }
-
-    if (loanAccounts.length === 0) {
-      return null;
-    }
-
-    const assetMetas = await this.base.fetchAssetMetas();
-    const oracleAccounts: PublicKey[] = [];
-    const seenOracles = new PkSet();
-
-    for (const mint of oracleMints) {
-      const assetMeta = assetMetas.get(mint);
-      if (!assetMeta?.oracle) {
-        throw new Error(`Oracle unavailable for asset ${mint.toBase58()}`);
-      }
-      if (!seenOracles.has(assetMeta.oracle)) {
-        seenOracles.add(assetMeta.oracle);
-        oracleAccounts.push(assetMeta.oracle);
-      }
-    }
-
-    return {
-      loanAccounts,
-      oracleAccounts,
-    };
-  }
-
-  async getPriceStrategiesAccounts(
-    commitment?: Commitment,
-  ): Promise<PriceStrategiesAccounts | null> {
-    const { externalPositions } = await this.base.fetchStateAccount();
-    if ((externalPositions || []).length === 0) {
-      return null;
-    }
-
-    const accountsInfo: (Web3AccountInfo<Buffer> | null)[] = [];
-    const chunkSize = 100;
-    for (let i = 0; i < externalPositions.length; i += chunkSize) {
-      const chunk = externalPositions.slice(i, i + chunkSize);
-      const chunkInfos = await this.base.connection.getMultipleAccountsInfo(
-        chunk,
-        commitment,
-      );
-      accountsInfo.push(...chunkInfos);
-    }
-
-    const strategyAccounts: PublicKey[] = [];
-    const oracleMints = new PkSet();
-    for (let i = 0; i < accountsInfo.length; i++) {
-      const info = accountsInfo[i];
-      if (!isLoopscaleStrategyAccountInfo(info)) {
-        continue;
-      }
-
-      strategyAccounts.push(externalPositions[i]);
-      const principalMint = readLoopscaleStrategyPrincipalMint(info.data);
-      if (!principalMint.equals(PublicKey.default)) {
-        oracleMints.add(principalMint);
-      }
-    }
-
-    if (strategyAccounts.length === 0) {
-      return null;
-    }
-
-    const assetMetas = await this.base.fetchAssetMetas();
-    const oracleAccounts: PublicKey[] = [];
-    const seenOracles = new PkSet();
-
-    for (const mint of oracleMints) {
-      const assetMeta = assetMetas.get(mint);
-      if (!assetMeta?.oracle) {
-        throw new Error(`Oracle unavailable for asset ${mint.toBase58()}`);
-      }
-      if (!seenOracles.has(assetMeta.oracle)) {
-        seenOracles.add(assetMeta.oracle);
-        oracleAccounts.push(assetMeta.oracle);
-      }
-    }
-
-    return {
-      strategyAccounts,
-      oracleAccounts,
-    };
   }
 }

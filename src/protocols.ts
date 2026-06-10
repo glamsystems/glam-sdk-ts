@@ -35,8 +35,8 @@ export const JUPITER_BORROW_PROTOCOL = 1 << 1;
 export const ORCA_WHIRLPOOLS_PROTOCOL = 1 << 0;
 
 // Mirror `SupportedProtocols` in anchor/programs/ext_loopscale/src/state/access.rs.
-export const LOOPSCALE_PROTOCOL = 1 << 0;
-export const LOOPSCALE_STRATEGY_PROTOCOL = 1 << 1;
+export const LOOPSCALE_BORROW_PROTOCOL = 1 << 0;
+export const LOOPSCALE_LENDING_PROTOCOL = 1 << 1;
 
 // Mirror `SupportedProtocols` in anchor/programs/ext_bridge/src/state/access.rs.
 export const LAYERZERO_OFT_PROTOCOL = 1 << 2;

@@ -3,6 +3,7 @@ import {
   struct,
   i16,
   u8,
+  u16,
   u32,
   u64,
   vec,
@@ -324,47 +325,233 @@ export class JupiterBorrowPolicy {
   }
 }
 
-export class LoopscalePolicy {
-  depositAllowlist: PublicKey[];
-  borrowAllowlist: PublicKey[];
-  marketsAllowlist: PublicKey[];
+export class LoopscaleBorrowMarketPolicy {
+  market: PublicKey;
+  maxBorrowAmount: BN;
+  maxTotalBorrowAmount: BN;
+  maxLtvBps: number;
+  durationIndexesAllowlist: number[];
 
   static _layout = struct([
-    vec(publicKey(), "depositAllowlist"),
-    vec(publicKey(), "borrowAllowlist"),
-    vec(publicKey(), "marketsAllowlist"),
+    publicKey("market"),
+    u64("maxBorrowAmount"),
+    u64("maxTotalBorrowAmount"),
+    u16("maxLtvBps"),
+    vec(u8(), "durationIndexesAllowlist"),
   ]);
 
   constructor(
-    depositAllowlist: PublicKey[] = [],
-    borrowAllowlist: PublicKey[] = [],
-    marketsAllowlist: PublicKey[] = [],
+    market: PublicKey,
+    maxBorrowAmount: BN,
+    maxTotalBorrowAmount: BN,
+    maxLtvBps: number,
+    durationIndexesAllowlist: number[] = [],
   ) {
-    this.depositAllowlist = depositAllowlist;
-    this.borrowAllowlist = borrowAllowlist;
-    this.marketsAllowlist = marketsAllowlist;
+    this.market = market;
+    this.maxBorrowAmount = maxBorrowAmount;
+    this.maxTotalBorrowAmount = maxTotalBorrowAmount;
+    this.maxLtvBps = maxLtvBps;
+    this.durationIndexesAllowlist = durationIndexesAllowlist;
   }
 
-  public static decode(buffer: Buffer<ArrayBufferLike>): LoopscalePolicy {
-    const { depositAllowlist, borrowAllowlist, marketsAllowlist } =
-      LoopscalePolicy._layout.decode(buffer) as LoopscalePolicy;
-    return new LoopscalePolicy(
-      depositAllowlist,
-      borrowAllowlist,
-      marketsAllowlist,
+  public static encodedSize(policy: LoopscaleBorrowMarketPolicy): number {
+    return 32 + 8 + 8 + 2 + 4 + policy.durationIndexesAllowlist.length;
+  }
+}
+
+export class LoopscaleLendingMarketPolicy {
+  market: PublicKey;
+  maxDepositAmount: BN;
+  maxTotalDepositAmount: BN;
+  minLoanApyCbps: number;
+  maxLtvBps: number;
+  durationIndexesAllowlist: number[];
+  collateralAssetAllowlist: PublicKey[];
+
+  static _layout = struct([
+    publicKey("market"),
+    u64("maxDepositAmount"),
+    u64("maxTotalDepositAmount"),
+    u32("minLoanApyCbps"),
+    u16("maxLtvBps"),
+    vec(u8(), "durationIndexesAllowlist"),
+    vec(publicKey(), "collateralAssetAllowlist"),
+  ]);
+
+  constructor(
+    market: PublicKey,
+    maxDepositAmount: BN,
+    maxTotalDepositAmount: BN,
+    minLoanApyCbps: number,
+    maxLtvBps: number,
+    durationIndexesAllowlist: number[] = [],
+    collateralAssetAllowlist: PublicKey[] = [],
+  ) {
+    this.market = market;
+    this.maxDepositAmount = maxDepositAmount;
+    this.maxTotalDepositAmount = maxTotalDepositAmount;
+    this.minLoanApyCbps = minLoanApyCbps;
+    this.maxLtvBps = maxLtvBps;
+    this.durationIndexesAllowlist = durationIndexesAllowlist;
+    this.collateralAssetAllowlist = collateralAssetAllowlist;
+  }
+
+  public static encodedSize(policy: LoopscaleLendingMarketPolicy): number {
+    return (
+      32 +
+      8 +
+      8 +
+      4 +
+      2 +
+      4 +
+      policy.durationIndexesAllowlist.length +
+      4 +
+      policy.collateralAssetAllowlist.length * 32
+    );
+  }
+}
+
+export class LoopscaleSellLedgerPolicy {
+  maxDiscountBps: number;
+  maxSlippageBps: number;
+
+  static _layout = struct([u16("maxDiscountBps"), u16("maxSlippageBps")]);
+
+  constructor(maxDiscountBps = 0, maxSlippageBps = 0) {
+    this.maxDiscountBps = maxDiscountBps;
+    this.maxSlippageBps = maxSlippageBps;
+  }
+}
+
+export class LoopscaleBorrowPolicy {
+  collateralAllowlist: PublicKey[];
+  principalAllowlist: PublicKey[];
+  marketPolicies: LoopscaleBorrowMarketPolicy[];
+
+  static _layout = struct([
+    vec(publicKey(), "collateralAllowlist"),
+    vec(publicKey(), "principalAllowlist"),
+    vec(LoopscaleBorrowMarketPolicy._layout, "marketPolicies"),
+  ]);
+
+  constructor(
+    collateralAllowlist: PublicKey[] = [],
+    principalAllowlist: PublicKey[] = [],
+    marketPolicies: LoopscaleBorrowMarketPolicy[] = [],
+  ) {
+    this.collateralAllowlist = collateralAllowlist;
+    this.principalAllowlist = principalAllowlist;
+    this.marketPolicies = marketPolicies;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): LoopscaleBorrowPolicy {
+    const { collateralAllowlist, principalAllowlist, marketPolicies } =
+      LoopscaleBorrowPolicy._layout.decode(buffer) as LoopscaleBorrowPolicy;
+    return new LoopscaleBorrowPolicy(
+      collateralAllowlist,
+      principalAllowlist,
+      marketPolicies.map(
+        (policy) =>
+          new LoopscaleBorrowMarketPolicy(
+            policy.market,
+            policy.maxBorrowAmount,
+            policy.maxTotalBorrowAmount,
+            policy.maxLtvBps,
+            policy.durationIndexesAllowlist,
+          ),
+      ),
     );
   }
 
   public encode(): Buffer {
     const policySize =
       4 +
-      this.depositAllowlist.length * 32 +
+      this.collateralAllowlist.length * 32 +
       4 +
-      this.borrowAllowlist.length * 32 +
+      this.principalAllowlist.length * 32 +
       4 +
-      this.marketsAllowlist.length * 32;
+      this.marketPolicies.reduce(
+        (size, policy) =>
+          size + LoopscaleBorrowMarketPolicy.encodedSize(policy),
+        0,
+      );
     const buffer = Buffer.alloc(policySize);
-    LoopscalePolicy._layout.encode(this, buffer);
+    LoopscaleBorrowPolicy._layout.encode(this, buffer);
+    return buffer;
+  }
+}
+
+export class LoopscaleLendingPolicy {
+  principalAllowlist: PublicKey[];
+  collateralAllowlist: PublicKey[];
+  marketPolicies: LoopscaleLendingMarketPolicy[];
+  sellLedgerPolicy: LoopscaleSellLedgerPolicy;
+
+  static _layout = struct([
+    vec(publicKey(), "principalAllowlist"),
+    vec(publicKey(), "collateralAllowlist"),
+    vec(LoopscaleLendingMarketPolicy._layout, "marketPolicies"),
+    LoopscaleSellLedgerPolicy._layout.replicate("sellLedgerPolicy"),
+  ]);
+
+  constructor(
+    principalAllowlist: PublicKey[] = [],
+    collateralAllowlist: PublicKey[] = [],
+    marketPolicies: LoopscaleLendingMarketPolicy[] = [],
+    sellLedgerPolicy: LoopscaleSellLedgerPolicy = new LoopscaleSellLedgerPolicy(),
+  ) {
+    this.principalAllowlist = principalAllowlist;
+    this.collateralAllowlist = collateralAllowlist;
+    this.marketPolicies = marketPolicies;
+    this.sellLedgerPolicy = sellLedgerPolicy;
+  }
+
+  public static decode(
+    buffer: Buffer<ArrayBufferLike>,
+  ): LoopscaleLendingPolicy {
+    const {
+      principalAllowlist,
+      collateralAllowlist,
+      marketPolicies,
+      sellLedgerPolicy,
+    } = LoopscaleLendingPolicy._layout.decode(buffer) as LoopscaleLendingPolicy;
+    return new LoopscaleLendingPolicy(
+      principalAllowlist,
+      collateralAllowlist,
+      marketPolicies.map(
+        (policy) =>
+          new LoopscaleLendingMarketPolicy(
+            policy.market,
+            policy.maxDepositAmount,
+            policy.maxTotalDepositAmount,
+            policy.minLoanApyCbps,
+            policy.maxLtvBps,
+            policy.durationIndexesAllowlist,
+            policy.collateralAssetAllowlist,
+          ),
+      ),
+      new LoopscaleSellLedgerPolicy(
+        sellLedgerPolicy.maxDiscountBps,
+        sellLedgerPolicy.maxSlippageBps,
+      ),
+    );
+  }
+
+  public encode(): Buffer {
+    const policySize =
+      4 +
+      this.principalAllowlist.length * 32 +
+      4 +
+      this.collateralAllowlist.length * 32 +
+      4 +
+      this.marketPolicies.reduce(
+        (size, policy) =>
+          size + LoopscaleLendingMarketPolicy.encodedSize(policy),
+        0,
+      ) +
+      4;
+    const buffer = Buffer.alloc(policySize);
+    LoopscaleLendingPolicy._layout.encode(this, buffer);
     return buffer;
   }
 }
