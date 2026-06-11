@@ -43,7 +43,11 @@ import {
 } from "../constants";
 import { BridgeClient, getActiveRegistryTransfers } from "./bridge";
 import { EpiClient } from "./epi";
-import { LoopscaleBorrowClient, LoopscaleLendClient } from "./loopscale";
+import {
+  LoopscaleBorrowClient,
+  LoopscaleLendClient,
+  LoopscaleVaultClient,
+} from "./loopscale";
 import {
   EPI_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
@@ -51,6 +55,7 @@ import {
   LAYERZERO_OFT_PROTOCOL,
   LOOPSCALE_BORROW_PROTOCOL,
   LOOPSCALE_LENDING_PROTOCOL,
+  LOOPSCALE_VAULT_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
   STAKE_PROTOCOL,
@@ -146,6 +151,7 @@ export class PriceClient {
     readonly epi: EpiClient,
     readonly loopscaleBorrow: LoopscaleBorrowClient,
     readonly loopscaleLend: LoopscaleLendClient,
+    readonly loopscaleVault: LoopscaleVaultClient,
     private readonly getJupiterApi: () => JupiterApiClient,
   ) {}
 
@@ -1282,6 +1288,61 @@ export class PriceClient {
       .instruction();
   }
 
+  /**
+   * Returns the program instruction that prices registered Loopscale vault LP
+   * token accounts and registered staked LP positions.
+   * If there are no registered Loopscale vault LP positions, returns null.
+   *
+   * Remaining accounts are laid out as N (vault, vault strategy, GLAM vault LP
+   * ATA) groups for vaults with tracked LP or stake positions, followed by
+   * VaultStake accounts, followed by oracle accounts.
+   */
+  public async priceLoopscaleVaultPositionsIx(): Promise<TransactionInstruction | null> {
+    const methods = this.base.mintProgram.methods as any;
+    if (typeof methods.priceLoopscaleVaultPositions !== "function") {
+      return null;
+    }
+
+    const accounts = await this.loopscaleVault.getPriceVaultsAccounts();
+    if (!accounts) {
+      return null;
+    }
+
+    const [solUsdOracle, baseAssetOracle] = await Promise.all([
+      accounts.solUsdOracle
+        ? Promise.resolve(accounts.solUsdOracle)
+        : this.base.getSolOracle(),
+      accounts.baseAssetOracle
+        ? Promise.resolve(accounts.baseAssetOracle)
+        : this.getBaseAssetOracle(),
+    ]);
+
+    const vaultAccountGroups = accounts.vaultAccounts.flatMap((vault, i) => [
+      vault,
+      accounts.strategyAccounts[i],
+      accounts.userLpTokenAccounts[i],
+    ]);
+    const remainingAccounts: AccountMeta[] = [
+      ...vaultAccountGroups,
+      ...accounts.vaultStakeAccounts,
+      ...accounts.oracleAccounts,
+    ].map((pubkey) => ({
+      pubkey,
+      isSigner: false,
+      isWritable: false,
+    }));
+
+    return await methods
+      .priceLoopscaleVaultPositions(accounts.numVaults)
+      .accounts({
+        glamState: this.base.statePda,
+        solUsdOracle,
+        baseAssetOracle,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+  }
+
   public async priceOrcaWhirlpoolPositionsIxs(
     stateModel: StateModel | null = this.cachedStateModel,
   ): Promise<PricingChunk | null> {
@@ -1501,9 +1562,12 @@ export class PriceClient {
           0 ||
           (loopscaleIntegrationAcl.protocolsBitmask &
             LOOPSCALE_LENDING_PROTOCOL) !==
+            0 ||
+          (loopscaleIntegrationAcl.protocolsBitmask &
+            LOOPSCALE_VAULT_PROTOCOL) !==
             0)
       ) {
-        const [loansIx, strategiesIx] = await Promise.all([
+        const [loansIx, strategiesIx, vaultsIx] = await Promise.all([
           (loopscaleIntegrationAcl.protocolsBitmask &
             LOOPSCALE_BORROW_PROTOCOL) !==
           0
@@ -1514,11 +1578,17 @@ export class PriceClient {
           0
             ? this.priceLoopscaleStrategiesIx()
             : null,
+          (loopscaleIntegrationAcl.protocolsBitmask &
+            LOOPSCALE_VAULT_PROTOCOL) !==
+          0
+            ? this.priceLoopscaleVaultPositionsIx()
+            : null,
         ]);
         if (loansIx) chunks.push({ ixs: [loansIx], kaminoReserves: [] });
         if (strategiesIx) {
           chunks.push({ ixs: [strategiesIx], kaminoReserves: [] });
         }
+        if (vaultsIx) chunks.push({ ixs: [vaultsIx], kaminoReserves: [] });
       }
 
       const nativeIntegrationAcl = integrationAcls.find((acl) =>

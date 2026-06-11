@@ -481,6 +481,29 @@ export class LoopscaleBorrowPolicy {
   }
 }
 
+export class LoopscaleVaultPolicy {
+  vaultAllowlist: PublicKey[];
+
+  static _layout = struct([vec(publicKey(), "vaultAllowlist")]);
+
+  constructor(vaultAllowlist: PublicKey[] = []) {
+    this.vaultAllowlist = vaultAllowlist;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): LoopscaleVaultPolicy {
+    const { vaultAllowlist } = LoopscaleVaultPolicy._layout.decode(
+      buffer,
+    ) as LoopscaleVaultPolicy;
+    return new LoopscaleVaultPolicy(vaultAllowlist);
+  }
+
+  public encode(): Buffer {
+    const buffer = Buffer.alloc(4 + this.vaultAllowlist.length * 32);
+    LoopscaleVaultPolicy._layout.encode(this, buffer);
+    return buffer;
+  }
+}
+
 export class LoopscaleLendingPolicy {
   principalAllowlist: PublicKey[];
   collateralAllowlist: PublicKey[];

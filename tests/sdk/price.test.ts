@@ -5,12 +5,15 @@ import { PriceClient } from "../../src/client/price";
 import {
   LOOPSCALE_BORROW_PROTOCOL,
   LOOPSCALE_LENDING_PROTOCOL,
+  LOOPSCALE_VAULT_PROTOCOL,
 } from "../../src/protocols";
 import { StateAccountType } from "../../src/models";
 import { PkMap } from "../../src/utils";
 
 const LOOPSCALE_PROTOCOLS =
-  LOOPSCALE_BORROW_PROTOCOL | LOOPSCALE_LENDING_PROTOCOL;
+  LOOPSCALE_BORROW_PROTOCOL |
+  LOOPSCALE_LENDING_PROTOCOL |
+  LOOPSCALE_VAULT_PROTOCOL;
 
 function pk(seed: number): PublicKey {
   const bytes = new Uint8Array(32);
@@ -76,6 +79,9 @@ function createPriceClient(params: {
   const loopscaleLend = {
     getPriceStrategiesAccounts: jest.fn().mockResolvedValue(null),
   } as any;
+  const loopscaleVault = {
+    getPriceVaultsAccounts: jest.fn().mockResolvedValue(null),
+  } as any;
   const bridge = {
     txBuilder: {
       priceManagedTransfersIxs: jest.fn().mockResolvedValue(null),
@@ -90,17 +96,26 @@ function createPriceClient(params: {
     {} as any,
     loopscaleBorrow,
     loopscaleLend,
+    loopscaleVault,
     () => params.jupiterApi ?? ({} as any),
   );
 
-  return { client, base, loopscaleBorrow, loopscaleLend, bridge };
+  return {
+    client,
+    base,
+    loopscaleBorrow,
+    loopscaleLend,
+    loopscaleVault,
+    bridge,
+  };
 }
 
 describe("PriceClient", () => {
-  it("appends loopscale loan and strategy pricing when the loopscale ACL is enabled", async () => {
+  it("appends loopscale loan, strategy, and vault pricing when the loopscale ACL is enabled", async () => {
     const priceVaultIx = ix(pk(61));
     const priceLoansIx = ix(pk(62));
     const priceStrategiesIx = ix(pk(63));
+    const priceLoopscaleVaultPositionsInstruction = ix(pk(64));
     const { client } = createPriceClient({
       loopscaleProtocolsBitmask: LOOPSCALE_PROTOCOLS,
     });
@@ -114,12 +129,52 @@ describe("PriceClient", () => {
     const priceLoopscaleStrategiesIx = jest
       .spyOn(client, "priceLoopscaleStrategiesIx")
       .mockResolvedValue(priceStrategiesIx);
+    const priceLoopscaleVaultPositionsIx = jest
+      .spyOn(client, "priceLoopscaleVaultPositionsIx")
+      .mockResolvedValue(priceLoopscaleVaultPositionsInstruction);
 
     const ixs = await client.priceVaultIxs();
 
     expect(priceLoopscaleLoansIx).toHaveBeenCalled();
     expect(priceLoopscaleStrategiesIx).toHaveBeenCalled();
-    expect(ixs).toEqual([priceVaultIx, priceLoansIx, priceStrategiesIx]);
+    expect(priceLoopscaleVaultPositionsIx).toHaveBeenCalled();
+    expect(ixs).toEqual([
+      priceVaultIx,
+      priceLoansIx,
+      priceStrategiesIx,
+      priceLoopscaleVaultPositionsInstruction,
+    ]);
+  });
+
+  it("appends loopscale vault pricing when only the loopscale vault ACL is enabled", async () => {
+    const priceVaultIx = ix(pk(65));
+    const priceLoopscaleVaultPositionsInstruction = ix(pk(66));
+    const { client } = createPriceClient({
+      loopscaleProtocolsBitmask: LOOPSCALE_VAULT_PROTOCOL,
+    });
+
+    jest
+      .spyOn(client, "priceVaultTokensIx")
+      .mockResolvedValue({ ixs: [priceVaultIx], kaminoReserves: [] } as any);
+    const priceLoopscaleLoansIx = jest
+      .spyOn(client, "priceLoopscaleLoansIx")
+      .mockResolvedValue(ix(pk(67)));
+    const priceLoopscaleStrategiesIx = jest
+      .spyOn(client, "priceLoopscaleStrategiesIx")
+      .mockResolvedValue(ix(pk(68)));
+    const priceLoopscaleVaultPositionsIx = jest
+      .spyOn(client, "priceLoopscaleVaultPositionsIx")
+      .mockResolvedValue(priceLoopscaleVaultPositionsInstruction);
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(priceLoopscaleLoansIx).not.toHaveBeenCalled();
+    expect(priceLoopscaleStrategiesIx).not.toHaveBeenCalled();
+    expect(priceLoopscaleVaultPositionsIx).toHaveBeenCalled();
+    expect(ixs).toEqual([
+      priceVaultIx,
+      priceLoopscaleVaultPositionsInstruction,
+    ]);
   });
 
   it("skips loopscale loan pricing when the loopscale ACL is disabled", async () => {
@@ -137,11 +192,15 @@ describe("PriceClient", () => {
     const priceLoopscaleStrategiesIx = jest
       .spyOn(client, "priceLoopscaleStrategiesIx")
       .mockResolvedValue(ix(pk(73)));
+    const priceLoopscaleVaultPositionsIx = jest
+      .spyOn(client, "priceLoopscaleVaultPositionsIx")
+      .mockResolvedValue(ix(pk(74)));
 
     const ixs = await client.priceVaultIxs();
 
     expect(priceLoopscaleLoansIx).not.toHaveBeenCalled();
     expect(priceLoopscaleStrategiesIx).not.toHaveBeenCalled();
+    expect(priceLoopscaleVaultPositionsIx).not.toHaveBeenCalled();
     expect(ixs).toEqual([priceVaultIx]);
   });
 
@@ -160,11 +219,15 @@ describe("PriceClient", () => {
     const priceLoopscaleStrategiesIx = jest
       .spyOn(client, "priceLoopscaleStrategiesIx")
       .mockResolvedValue(null);
+    const priceLoopscaleVaultPositionsIx = jest
+      .spyOn(client, "priceLoopscaleVaultPositionsIx")
+      .mockResolvedValue(null);
 
     const ixs = await client.priceVaultIxs();
 
     expect(priceLoopscaleLoansIx).toHaveBeenCalled();
     expect(priceLoopscaleStrategiesIx).toHaveBeenCalled();
+    expect(priceLoopscaleVaultPositionsIx).toHaveBeenCalled();
     expect(ixs).toEqual([priceVaultIx]);
   });
 
@@ -204,6 +267,7 @@ describe("PriceClient", () => {
       {} as any,
       {} as any,
       loopscaleBorrow,
+      {} as any,
       {} as any,
       () => ({}) as any,
     );
@@ -245,6 +309,7 @@ describe("PriceClient", () => {
       {} as any,
       {} as any,
       loopscaleBorrow,
+      {} as any,
       {} as any,
       () => ({}) as any,
     );
@@ -292,6 +357,7 @@ describe("PriceClient", () => {
       {} as any,
       {} as any,
       loopscaleLend,
+      {} as any,
       () => ({}) as any,
     );
     jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(baseAssetOracle);
@@ -333,11 +399,113 @@ describe("PriceClient", () => {
       {} as any,
       {} as any,
       loopscaleLend,
+      {} as any,
       () => ({}) as any,
     );
 
     expect(await client.priceLoopscaleStrategiesIx()).toBeNull();
     expect(priceLoopscaleStrategies).not.toHaveBeenCalled();
+  });
+
+  it("priceLoopscaleVaultPositionsIx builds via the mint program with ordered vault, stake, and oracle accounts", async () => {
+    const statePda = pk(121);
+    const solUsdOracle = pk(122);
+    const baseAssetOracle = pk(123);
+    const vaultA = pk(124);
+    const vaultB = pk(125);
+    const strategyA = pk(126);
+    const strategyB = pk(127);
+    const userLpA = pk(128);
+    const userLpB = pk(129);
+    const stakeA = pk(130);
+    const oracleA = pk(131);
+    const builtIx = ix(pk(132));
+
+    const instructionBuilder = {
+      accounts: jest.fn().mockReturnThis(),
+      remainingAccounts: jest.fn().mockReturnThis(),
+      instruction: jest.fn().mockResolvedValue(builtIx),
+    };
+    const priceLoopscaleVaultPositions = jest
+      .fn()
+      .mockReturnValue(instructionBuilder);
+
+    const base = {
+      statePda,
+      mintProgram: { methods: { priceLoopscaleVaultPositions } },
+      getSolOracle: jest.fn().mockResolvedValue(solUsdOracle),
+    } as any;
+    const loopscaleVault = {
+      getPriceVaultsAccounts: jest.fn().mockResolvedValue({
+        numVaults: 2,
+        vaultAccounts: [vaultA, vaultB],
+        strategyAccounts: [strategyA, strategyB],
+        userLpTokenAccounts: [userLpA, userLpB],
+        vaultStakeAccounts: [stakeA],
+        oracleAccounts: [oracleA],
+      }),
+    } as any;
+
+    const client = new PriceClient(
+      base,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      loopscaleVault,
+      () => ({}) as any,
+    );
+    jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(baseAssetOracle);
+
+    const result = await client.priceLoopscaleVaultPositionsIx();
+
+    expect(result).toBe(builtIx);
+    expect(loopscaleVault.getPriceVaultsAccounts).toHaveBeenCalled();
+    expect(priceLoopscaleVaultPositions).toHaveBeenCalledWith(2);
+    expect(instructionBuilder.accounts).toHaveBeenCalledWith({
+      glamState: statePda,
+      solUsdOracle,
+      baseAssetOracle,
+    });
+    expect(instructionBuilder.remainingAccounts).toHaveBeenCalledWith([
+      { pubkey: vaultA, isSigner: false, isWritable: false },
+      { pubkey: strategyA, isSigner: false, isWritable: false },
+      { pubkey: userLpA, isSigner: false, isWritable: false },
+      { pubkey: vaultB, isSigner: false, isWritable: false },
+      { pubkey: strategyB, isSigner: false, isWritable: false },
+      { pubkey: userLpB, isSigner: false, isWritable: false },
+      { pubkey: stakeA, isSigner: false, isWritable: false },
+      { pubkey: oracleA, isSigner: false, isWritable: false },
+    ]);
+  });
+
+  it("priceLoopscaleVaultPositionsIx returns null when there are no loopscale vault LP tokens", async () => {
+    const priceLoopscaleVaultPositions = jest.fn();
+    const base = {
+      statePda: pk(133),
+      mintProgram: { methods: { priceLoopscaleVaultPositions } },
+      getSolOracle: jest.fn(),
+    } as any;
+    const loopscaleVault = {
+      getPriceVaultsAccounts: jest.fn().mockResolvedValue(null),
+    } as any;
+
+    const client = new PriceClient(
+      base,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      loopscaleVault,
+      () => ({}) as any,
+    );
+
+    expect(await client.priceLoopscaleVaultPositionsIx()).toBeNull();
+    expect(priceLoopscaleVaultPositions).not.toHaveBeenCalled();
   });
 
   it("uses mint account decimals when token price fallback is unavailable", async () => {

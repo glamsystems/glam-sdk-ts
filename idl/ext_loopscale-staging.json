@@ -162,6 +162,144 @@
       ]
     },
     {
+      "name": "claim_vault_rewards",
+      "docs": [
+        "Claim rewards accrued by a Loopscale VaultStake account.",
+        "",
+        "- Permission: `VaultPermissions::ClaimVaultRewards`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        0,
+        152,
+        75,
+        29,
+        195,
+        223,
+        12,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vault_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "user_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "stake_account",
+          "writable": true
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocol_admin_state"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "mints",
+          "type": {
+            "vec": "pubkey"
+          }
+        }
+      ]
+    },
+    {
       "name": "close_loan",
       "docs": [
         "Close an existing Loopscale loan PDA.",
@@ -957,6 +1095,168 @@
       ]
     },
     {
+      "name": "deposit_user_vault",
+      "docs": [
+        "Deposit principal into a Loopscale user vault and receive Token-2022 LP tokens.",
+        "",
+        "- Permission: `VaultPermissions::DepositUserVault`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        204,
+        190,
+        182,
+        224,
+        15,
+        219,
+        247,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "market_information"
+        },
+        {
+          "name": "lp_mint",
+          "writable": true
+        },
+        {
+          "name": "user_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "user_principal_ta",
+          "writable": true
+        },
+        {
+          "name": "strategy_principal_ta",
+          "writable": true
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "principal_token_program"
+        },
+        {
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocol_admin_state"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LpParams"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "repay_principal",
       "docs": [
         "Repay principal on a Loopscale loan.",
@@ -1429,6 +1729,403 @@
           "type": {
             "defined": {
               "name": "LendingPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_vault_policy",
+      "docs": [
+        "Set the Loopscale vault policy (vault allowlist).",
+        "",
+        "- Permission: `VaultPermissions::SetPolicy`."
+      ],
+      "discriminator": [
+        184,
+        31,
+        142,
+        18,
+        106,
+        143,
+        184,
+        158
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "integration_program",
+          "address": "gstgL6y4uWjsfM3Qjs5euoTDmEcXoUjqx8rkYJhYngG"
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "VaultPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "stake_user_vault_lp",
+      "docs": [
+        "Stake Loopscale user vault LP tokens into a VaultStake account.",
+        "",
+        "- Permission: `VaultPermissions::StakeUserVaultLp`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        114,
+        132,
+        194,
+        209,
+        208,
+        149,
+        43,
+        136
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true
+        },
+        {
+          "name": "nonce",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "vault_stake",
+          "writable": true
+        },
+        {
+          "name": "lp_mint"
+        },
+        {
+          "name": "user_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "vault_stake_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "vault_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "user_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocol_admin_state"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "VaultStakeParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unstake_user_vault_lp",
+      "docs": [
+        "Unstake Loopscale user vault LP tokens from a VaultStake account.",
+        "",
+        "- Permission: `VaultPermissions::UnstakeUserVaultLp`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        83,
+        78,
+        230,
+        123,
+        226,
+        40,
+        158,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "writable": true
+        },
+        {
+          "name": "vault_stake",
+          "writable": true
+        },
+        {
+          "name": "user_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "vault_stake_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "vault_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "user_rewards_info",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocol_admin_state"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "VaultUnstakeParams"
             }
           }
         }
@@ -1996,6 +2693,168 @@
         {
           "name": "withdraw_all",
           "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_user_vault",
+      "docs": [
+        "Withdraw principal from a Loopscale user vault by burning Token-2022 LP tokens.",
+        "",
+        "- Permission: `VaultPermissions::WithdrawUserVault`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        9,
+        80,
+        134,
+        138,
+        212,
+        20,
+        61,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bs_auth",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "market_information"
+        },
+        {
+          "name": "lp_mint",
+          "writable": true
+        },
+        {
+          "name": "user_lp_ta",
+          "writable": true
+        },
+        {
+          "name": "user_principal_ta",
+          "writable": true
+        },
+        {
+          "name": "strategy_principal_ta",
+          "writable": true
+        },
+        {
+          "name": "principal_mint"
+        },
+        {
+          "name": "principal_token_program"
+        },
+        {
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocol_admin_state"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LpParams"
+            }
+          }
         }
       ]
     }
@@ -2654,6 +3513,38 @@
       }
     },
     {
+      "name": "ExactInParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount_in",
+            "type": "u64"
+          },
+          {
+            "name": "min_amount_out",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExactOutParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount_out",
+            "type": "u64"
+          },
+          {
+            "name": "max_amount_in",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "ExpectedLoanValues",
       "type": {
         "kind": "struct",
@@ -2965,6 +3856,34 @@
                 "name": "SellLedgerPolicy"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LpParams",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "ExactIn",
+            "fields": [
+              {
+                "defined": {
+                  "name": "ExactInParams"
+                }
+              }
+            ]
+          },
+          {
+            "name": "ExactOut",
+            "fields": [
+              {
+                "defined": {
+                  "name": "ExactOutParams"
+                }
+              }
+            ]
           }
         ]
       }
@@ -3560,6 +4479,74 @@
       }
     },
     {
+      "name": "VaultPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault_allowlist",
+            "docs": [
+              "Loopscale user vault accounts that may be used by the GLAM vault.",
+              "An empty list denies all Loopscale user vault operations."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultStakeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "principal_amount",
+            "type": "u64"
+          },
+          {
+            "name": "stake_all",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "duration",
+            "type": "u32"
+          },
+          {
+            "name": "duration_type",
+            "type": "u8"
+          },
+          {
+            "name": "action_type",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultUnstakeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_type",
+            "type": "u8"
+          },
+          {
+            "name": "principal_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "WithdrawCollateralParams",
       "type": {
         "kind": "struct",
@@ -3681,6 +4668,41 @@
       "name": "PROTO_LOOPSCALE_LENDING_PERM_WITHDRAW_STRATEGY",
       "type": "u64",
       "value": "8"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_VAULT",
+      "type": "u16",
+      "value": "4"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_VAULT_PERM_CLAIM_VAULT_REWARDS",
+      "type": "u64",
+      "value": "16"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_VAULT_PERM_DEPOSIT_USER_VAULT",
+      "type": "u64",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_VAULT_PERM_SET_POLICY",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_VAULT_PERM_STAKE_USER_VAULT_LP",
+      "type": "u64",
+      "value": "4"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_VAULT_PERM_UNSTAKE_USER_VAULT_LP",
+      "type": "u64",
+      "value": "8"
+    },
+    {
+      "name": "PROTO_LOOPSCALE_VAULT_PERM_WITHDRAW_USER_VAULT",
+      "type": "u64",
+      "value": "2"
     }
   ]
 }

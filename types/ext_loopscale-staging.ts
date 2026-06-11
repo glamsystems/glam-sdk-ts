@@ -168,6 +168,144 @@ export type ExtLoopscale = {
       ]
     },
     {
+      "name": "claimVaultRewards",
+      "docs": [
+        "Claim rewards accrued by a Loopscale VaultStake account.",
+        "",
+        "- Permission: `VaultPermissions::ClaimVaultRewards`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        0,
+        152,
+        75,
+        29,
+        195,
+        223,
+        12,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bsAuth",
+          "signer": true
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vaultRewardsInfo",
+          "writable": true
+        },
+        {
+          "name": "userRewardsInfo",
+          "writable": true
+        },
+        {
+          "name": "stakeAccount",
+          "writable": true
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocolAdminState"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "mints",
+          "type": {
+            "vec": "pubkey"
+          }
+        }
+      ]
+    },
+    {
       "name": "closeLoan",
       "docs": [
         "Close an existing Loopscale loan PDA.",
@@ -963,6 +1101,168 @@ export type ExtLoopscale = {
       ]
     },
     {
+      "name": "depositUserVault",
+      "docs": [
+        "Deposit principal into a Loopscale user vault and receive Token-2022 LP tokens.",
+        "",
+        "- Permission: `VaultPermissions::DepositUserVault`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        204,
+        190,
+        182,
+        224,
+        15,
+        219,
+        247,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bsAuth",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "marketInformation"
+        },
+        {
+          "name": "lpMint",
+          "writable": true
+        },
+        {
+          "name": "userLpTa",
+          "writable": true
+        },
+        {
+          "name": "userPrincipalTa",
+          "writable": true
+        },
+        {
+          "name": "strategyPrincipalTa",
+          "writable": true
+        },
+        {
+          "name": "principalMint"
+        },
+        {
+          "name": "principalTokenProgram"
+        },
+        {
+          "name": "token2022Program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocolAdminState"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "lpParams"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "repayPrincipal",
       "docs": [
         "Repay principal on a Loopscale loan.",
@@ -1435,6 +1735,403 @@ export type ExtLoopscale = {
           "type": {
             "defined": {
               "name": "lendingPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "setVaultPolicy",
+      "docs": [
+        "Set the Loopscale vault policy (vault allowlist).",
+        "",
+        "- Permission: `VaultPermissions::SetPolicy`."
+      ],
+      "discriminator": [
+        184,
+        31,
+        142,
+        18,
+        106,
+        143,
+        184,
+        158
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "integrationProgram",
+          "address": "gstgL6y4uWjsfM3Qjs5euoTDmEcXoUjqx8rkYJhYngG"
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "vaultPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "stakeUserVaultLp",
+      "docs": [
+        "Stake Loopscale user vault LP tokens into a VaultStake account.",
+        "",
+        "- Permission: `VaultPermissions::StakeUserVaultLp`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        114,
+        132,
+        194,
+        209,
+        208,
+        149,
+        43,
+        136
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bsAuth",
+          "signer": true
+        },
+        {
+          "name": "nonce",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "vaultStake",
+          "writable": true
+        },
+        {
+          "name": "lpMint"
+        },
+        {
+          "name": "userLpTa",
+          "writable": true
+        },
+        {
+          "name": "vaultStakeLpTa",
+          "writable": true
+        },
+        {
+          "name": "vaultRewardsInfo",
+          "writable": true
+        },
+        {
+          "name": "userRewardsInfo",
+          "writable": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocolAdminState"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "vaultStakeParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unstakeUserVaultLp",
+      "docs": [
+        "Unstake Loopscale user vault LP tokens from a VaultStake account.",
+        "",
+        "- Permission: `VaultPermissions::UnstakeUserVaultLp`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        83,
+        78,
+        230,
+        123,
+        226,
+        40,
+        158,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bsAuth",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "lpMint",
+          "writable": true
+        },
+        {
+          "name": "vaultStake",
+          "writable": true
+        },
+        {
+          "name": "userLpTa",
+          "writable": true
+        },
+        {
+          "name": "vaultStakeLpTa",
+          "writable": true
+        },
+        {
+          "name": "vaultRewardsInfo",
+          "writable": true
+        },
+        {
+          "name": "userRewardsInfo",
+          "writable": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocolAdminState"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "vaultUnstakeParams"
             }
           }
         }
@@ -2002,6 +2699,168 @@ export type ExtLoopscale = {
         {
           "name": "withdrawAll",
           "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "withdrawUserVault",
+      "docs": [
+        "Withdraw principal from a Loopscale user vault by burning Token-2022 LP tokens.",
+        "",
+        "- Permission: `VaultPermissions::WithdrawUserVault`.",
+        "- Policy: `vault` must be present in `VaultPolicy::vault_allowlist`."
+      ],
+      "discriminator": [
+        9,
+        80,
+        134,
+        138,
+        212,
+        20,
+        61,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bsAuth",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        },
+        {
+          "name": "marketInformation"
+        },
+        {
+          "name": "lpMint",
+          "writable": true
+        },
+        {
+          "name": "userLpTa",
+          "writable": true
+        },
+        {
+          "name": "userPrincipalTa",
+          "writable": true
+        },
+        {
+          "name": "strategyPrincipalTa",
+          "writable": true
+        },
+        {
+          "name": "principalMint"
+        },
+        {
+          "name": "principalTokenProgram"
+        },
+        {
+          "name": "token2022Program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "protocolAdminState"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "lpParams"
+            }
+          }
         }
       ]
     }
@@ -2660,6 +3519,38 @@ export type ExtLoopscale = {
       }
     },
     {
+      "name": "exactInParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountIn",
+            "type": "u64"
+          },
+          {
+            "name": "minAmountOut",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "exactOutParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amountOut",
+            "type": "u64"
+          },
+          {
+            "name": "maxAmountIn",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "expectedLoanValues",
       "type": {
         "kind": "struct",
@@ -2971,6 +3862,34 @@ export type ExtLoopscale = {
                 "name": "sellLedgerPolicy"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "lpParams",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "exactIn",
+            "fields": [
+              {
+                "defined": {
+                  "name": "exactInParams"
+                }
+              }
+            ]
+          },
+          {
+            "name": "exactOut",
+            "fields": [
+              {
+                "defined": {
+                  "name": "exactOutParams"
+                }
+              }
+            ]
           }
         ]
       }
@@ -3566,6 +4485,74 @@ export type ExtLoopscale = {
       }
     },
     {
+      "name": "vaultPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vaultAllowlist",
+            "docs": [
+              "Loopscale user vault accounts that may be used by the GLAM vault.",
+              "An empty list denies all Loopscale user vault operations."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "vaultStakeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "principalAmount",
+            "type": "u64"
+          },
+          {
+            "name": "stakeAll",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "duration",
+            "type": "u32"
+          },
+          {
+            "name": "durationType",
+            "type": "u8"
+          },
+          {
+            "name": "actionType",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "vaultUnstakeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "actionType",
+            "type": "u8"
+          },
+          {
+            "name": "principalAmount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "withdrawCollateralParams",
       "type": {
         "kind": "struct",
@@ -3687,6 +4674,41 @@ export type ExtLoopscale = {
       "name": "protoLoopscaleLendingPermWithdrawStrategy",
       "type": "u64",
       "value": "8"
+    },
+    {
+      "name": "protoLoopscaleVault",
+      "type": "u16",
+      "value": "4"
+    },
+    {
+      "name": "protoLoopscaleVaultPermClaimVaultRewards",
+      "type": "u64",
+      "value": "16"
+    },
+    {
+      "name": "protoLoopscaleVaultPermDepositUserVault",
+      "type": "u64",
+      "value": "1"
+    },
+    {
+      "name": "protoLoopscaleVaultPermSetPolicy",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "protoLoopscaleVaultPermStakeUserVaultLp",
+      "type": "u64",
+      "value": "4"
+    },
+    {
+      "name": "protoLoopscaleVaultPermUnstakeUserVaultLp",
+      "type": "u64",
+      "value": "8"
+    },
+    {
+      "name": "protoLoopscaleVaultPermWithdrawUserVault",
+      "type": "u64",
+      "value": "2"
     }
   ]
 };

@@ -207,6 +207,7 @@ function makeClient(
     {} as any,
     {} as any,
     {} as any,
+    {} as any,
     (() => undefined) as any,
   );
 
@@ -270,6 +271,9 @@ describe("PriceClient Kamino reserve refresh planning", () => {
         ),
         getVaultAta: jest.fn(() => PublicKey.unique()),
       } as any,
+      {} as any,
+      {} as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -467,6 +471,9 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
       (() => undefined) as any,
     );
     jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(USDC_ORACLE);
@@ -536,6 +543,9 @@ describe("PriceClient Kamino reserve refresh planning", () => {
           },
         },
       } as any,
+      {} as any,
+      {} as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,

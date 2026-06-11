@@ -16,8 +16,11 @@ import {
   type AddressLookupTableAccount,
 } from "@solana/web3.js";
 import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  AccountLayout,
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { mapToGlamIx } from "@glamsystems/ix-mapper";
@@ -37,6 +40,7 @@ import {
 import {
   LOOPSCALE_BORROW_PROTOCOL,
   LOOPSCALE_LENDING_PROTOCOL,
+  LOOPSCALE_VAULT_PROTOCOL,
 } from "../../protocols";
 import { U64_MAX_BN } from "../../utils/common";
 import { PkMap } from "../../utils/pkmap";
@@ -44,15 +48,19 @@ import { PkSet } from "../../utils/pkset";
 import {
   LOOPSCALE_LOAN_DISCRIMINATOR,
   LOOPSCALE_STRATEGY_ACCOUNT_DISCRIMINATOR,
+  LOOPSCALE_VAULT_DISCRIMINATOR,
   LoopscaleLoan,
   LoopscaleMarketInformation,
   LoopscaleStrategy,
   hasLoopscaleLoanDiscriminator,
   hasLoopscaleStrategyDiscriminator,
+  hasLoopscaleVaultDiscriminator,
+  hasLoopscaleVaultStakeDiscriminator,
 } from "../../deser";
 import {
   LoopscaleBorrowPolicy,
   LoopscaleLendingPolicy,
+  LoopscaleVaultPolicy,
 } from "../../deser/integrationPolicies";
 
 export const LOOPSCALE_BS_AUTH = new PublicKey(
@@ -349,8 +357,8 @@ export function replaceLoopscaleApiExtraSigners(
 export function createVaultWsolAtaSetupIxs(params: {
   mint: PublicKey;
   payer: PublicKey;
-  vaultPda: PublicKey;
-  vaultAta: PublicKey;
+  owner: PublicKey;
+  ata: PublicKey;
 }): TransactionInstruction[] {
   if (!params.mint.equals(WSOL)) {
     return [];
@@ -359,8 +367,8 @@ export function createVaultWsolAtaSetupIxs(params: {
   return [
     createAssociatedTokenAccountIdempotentInstruction(
       params.payer,
-      params.vaultAta,
-      params.vaultPda,
+      params.ata,
+      params.owner,
       WSOL,
       TOKEN_PROGRAM_ID,
     ),
@@ -370,16 +378,16 @@ export function createVaultWsolAtaSetupIxs(params: {
 export function createVaultTokenAtaSetupIx(params: {
   mint: PublicKey;
   payer: PublicKey;
-  vaultPda: PublicKey;
-  vaultAta: PublicKey;
-  tokenProgram?: PublicKey;
+  owner: PublicKey;
+  ata: PublicKey;
+  tokenProgram: PublicKey;
 }): TransactionInstruction {
   return createAssociatedTokenAccountIdempotentInstruction(
     params.payer,
-    params.vaultAta,
-    params.vaultPda,
+    params.ata,
+    params.owner,
     params.mint,
-    params.tokenProgram ?? TOKEN_PROGRAM_ID,
+    params.tokenProgram,
   );
 }
 
@@ -459,6 +467,50 @@ export type LoopscaleOnchainExternalYieldSourceArgs = {
 
 export type CreateLoanParams = {
   nonce: BN;
+};
+
+export type LoopscaleLpParams =
+  | {
+      exactIn: {
+        amountIn: BN;
+        minAmountOut: BN;
+      };
+    }
+  | {
+      exactOut: {
+        amountOut: BN;
+        maxAmountIn: BN;
+      };
+    };
+
+function normalizeLoopscaleLpParams(params: LoopscaleLpParams): any {
+  if ("exactIn" in params) {
+    return {
+      exactIn: Array.isArray(params.exactIn)
+        ? params.exactIn
+        : [params.exactIn],
+    };
+  }
+
+  return {
+    exactOut: Array.isArray(params.exactOut)
+      ? params.exactOut
+      : [params.exactOut],
+  };
+}
+
+export type LoopscaleVaultStakeParams = {
+  amount: BN;
+  principalAmount: BN;
+  stakeAll: boolean | null;
+  duration: number;
+  durationType: number;
+  actionType: number;
+};
+
+export type LoopscaleVaultUnstakeParams = {
+  actionType: number;
+  principalAmount: BN;
 };
 
 export type CreateStrategyParams = {
@@ -565,9 +617,46 @@ export type CloseStrategyAccounts = {
   associatedTokenProgram?: PublicKey;
 };
 
+export type DepositWithdrawUserVaultAccounts = {
+  vault: PublicKey;
+  strategy: PublicKey;
+  marketInformation: PublicKey;
+  lpMint: PublicKey;
+  principalMint: PublicKey;
+  lpTokenProgram: PublicKey;
+  principalTokenProgram: PublicKey;
+};
+
+export type StakeUserVaultLpAccounts = {
+  nonce: PublicKey;
+  vault: PublicKey;
+  vaultStake: PublicKey;
+  lpMint: PublicKey;
+};
+
+export type UnstakeUserVaultLpAccounts = {
+  vault: PublicKey;
+  lpMint: PublicKey;
+  vaultStake: PublicKey;
+};
+
+export type ClaimVaultRewardsAccounts = {
+  vault: PublicKey;
+  vaultStake: PublicKey;
+  vaultRewardsInfo?: PublicKey;
+  userRewardsInfo?: PublicKey;
+  associatedTokenProgram?: PublicKey;
+  remainingAccounts?: AccountMeta[];
+};
+
 export type DepositCollateralAccounts = {
   loan: PublicKey;
   depositMint: PublicKey;
+  assetIdentifier?: PublicKey;
+  borrowerCollateralTa?: PublicKey;
+  loanCollateralTa?: PublicKey;
+  tokenProgram?: PublicKey;
+  associatedTokenProgram?: PublicKey;
 };
 
 export type UpdateWeightMatrixAccounts = {
@@ -668,6 +757,57 @@ export function getLoopscaleStrategyPda(
   )[0];
 }
 
+export function getLoopscaleVaultPda(
+  vaultNonce: PublicKey,
+  programId: PublicKey = LOOPSCALE_PROGRAM_ID,
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("vault"), vaultNonce.toBuffer()],
+    programId,
+  )[0];
+}
+
+export function getLoopscaleVaultStrategyPda(
+  vault: PublicKey,
+  programId: PublicKey = LOOPSCALE_PROGRAM_ID,
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("strategy"), vault.toBuffer()],
+    programId,
+  )[0];
+}
+
+export function getLoopscaleVaultRewardsInfoPda(
+  vault: PublicKey,
+  programId: PublicKey = LOOPSCALE_PROGRAM_ID,
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("vault_rewards_info"), vault.toBuffer()],
+    programId,
+  )[0];
+}
+
+export function getLoopscaleVaultStakePda(
+  stakeNonce: PublicKey,
+  vault: PublicKey,
+  programId: PublicKey = LOOPSCALE_PROGRAM_ID,
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("vault_stake"), stakeNonce.toBuffer(), vault.toBuffer()],
+    programId,
+  )[0];
+}
+
+export function getLoopscaleUserRewardsInfoPda(
+  vaultStake: PublicKey,
+  programId: PublicKey = LOOPSCALE_PROGRAM_ID,
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("user_rewards_info"), vaultStake.toBuffer()],
+    programId,
+  )[0];
+}
+
 export type PriceLoansAccounts = {
   loanAccounts: PublicKey[];
   oracleAccounts: PublicKey[];
@@ -684,8 +824,28 @@ export type PriceStrategiesAccounts = {
   glamConfig?: PublicKey;
 };
 
+export type PriceVaultsAccounts = {
+  numVaults: number;
+  vaultAccounts: PublicKey[];
+  strategyAccounts: PublicKey[];
+  userLpTokenAccounts: PublicKey[];
+  vaultStakeAccounts: PublicKey[];
+  oracleAccounts: PublicKey[];
+  solUsdOracle?: PublicKey;
+  baseAssetOracle?: PublicKey;
+  glamConfig?: PublicKey;
+};
+
 const LOOPSCALE_STRATEGY_PRINCIPAL_MINT_OFFSET = 42;
 const LOOPSCALE_STRATEGY_MIN_DATA_LEN = 220;
+const LOOPSCALE_VAULT_LP_MINT_OFFSET = 81;
+const LOOPSCALE_VAULT_PRINCIPAL_MINT_OFFSET = 113;
+const LOOPSCALE_VAULT_MIN_DATA_LEN =
+  LOOPSCALE_VAULT_DISCRIMINATOR.length + 32 + 32 + 1 + 8 + 32 + 32;
+const LOOPSCALE_VAULT_STAKE_VAULT_OFFSET = 8;
+const LOOPSCALE_VAULT_STAKE_AMOUNT_OFFSET = 105;
+const LOOPSCALE_VAULT_STAKE_MIN_DATA_LEN =
+  LOOPSCALE_VAULT_STAKE_AMOUNT_OFFSET + 8;
 const LOOPSCALE_LOAN_LEDGER_SECTION_OFFSET = 1 + 1 + 1 + 32 + 8 + 8;
 const LOOPSCALE_LOAN_LEDGER_COUNT = 5;
 const LOOPSCALE_LOAN_LEDGER_SIZE = 182;
@@ -730,6 +890,30 @@ export function isLoopscaleStrategyAccountInfo(
   );
 }
 
+export function isLoopscaleVaultAccountInfo(
+  info: Web3AccountInfo<Buffer> | null,
+): info is Web3AccountInfo<Buffer> {
+  return !!(
+    info &&
+    typeof info.owner?.equals === "function" &&
+    info.owner.equals(LOOPSCALE_PROGRAM_ID) &&
+    info.data.length >= LOOPSCALE_VAULT_MIN_DATA_LEN &&
+    hasLoopscaleVaultDiscriminator(info.data)
+  );
+}
+
+export function isLoopscaleVaultStakeAccountInfo(
+  info: Web3AccountInfo<Buffer> | null,
+): info is Web3AccountInfo<Buffer> {
+  return !!(
+    info &&
+    typeof info.owner?.equals === "function" &&
+    info.owner.equals(LOOPSCALE_PROGRAM_ID) &&
+    info.data.length >= LOOPSCALE_VAULT_STAKE_MIN_DATA_LEN &&
+    hasLoopscaleVaultStakeDiscriminator(info.data)
+  );
+}
+
 export function readLoopscaleStrategyPrincipalMint(data: Buffer): PublicKey {
   return new PublicKey(
     data.subarray(
@@ -737,6 +921,52 @@ export function readLoopscaleStrategyPrincipalMint(data: Buffer): PublicKey {
       LOOPSCALE_STRATEGY_PRINCIPAL_MINT_OFFSET + 32,
     ),
   );
+}
+
+export function readLoopscaleVaultLpMint(data: Buffer): PublicKey {
+  return new PublicKey(
+    data.subarray(
+      LOOPSCALE_VAULT_LP_MINT_OFFSET,
+      LOOPSCALE_VAULT_LP_MINT_OFFSET + 32,
+    ),
+  );
+}
+
+export function readLoopscaleVaultPrincipalMint(data: Buffer): PublicKey {
+  return new PublicKey(
+    data.subarray(
+      LOOPSCALE_VAULT_PRINCIPAL_MINT_OFFSET,
+      LOOPSCALE_VAULT_PRINCIPAL_MINT_OFFSET + 32,
+    ),
+  );
+}
+
+export function readLoopscaleVaultStakeVault(data: Buffer): PublicKey {
+  return new PublicKey(
+    data.subarray(
+      LOOPSCALE_VAULT_STAKE_VAULT_OFFSET,
+      LOOPSCALE_VAULT_STAKE_VAULT_OFFSET + 32,
+    ),
+  );
+}
+
+export function readLoopscaleVaultStakeAmount(data: Buffer): BN {
+  return new BN(
+    Array.from(
+      data.subarray(
+        LOOPSCALE_VAULT_STAKE_AMOUNT_OFFSET,
+        LOOPSCALE_VAULT_STAKE_AMOUNT_OFFSET + 8,
+      ),
+    ),
+    "le",
+  );
+}
+
+export function readTokenAccountAmount(data: Buffer): bigint {
+  if (data.length < AccountLayout.span) {
+    return 0n;
+  }
+  return AccountLayout.decode(data).amount;
 }
 
 export function readLoopscaleOracleMints(data: Buffer): PublicKey[] {
@@ -878,6 +1108,60 @@ export class LoopscaleBorrowTxBuilder
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const ix = await this.closeLoanIx(loan, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async depositCollateralIx(
+    params: DepositCollateralParams,
+    accounts: DepositCollateralAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
+
+    return await this.client.base.extLoopscaleProgram.methods
+      .depositCollateral({
+        amount: params.amount,
+        assetType: params.assetType,
+        assetIdentifier: params.assetIdentifier,
+        assetIndexGuidance: Buffer.from(params.assetIndexGuidance),
+      })
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.integrationAuthorityPda,
+        cpiProgram: LOOPSCALE_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        bsAuth: LOOPSCALE_BS_AUTH,
+        loan: accounts.loan,
+        borrowerCollateralTa:
+          accounts.borrowerCollateralTa ||
+          this.client.base.getVaultAta(accounts.depositMint, tokenProgram),
+        loanCollateralTa:
+          accounts.loanCollateralTa ||
+          this.client.getLoanTokenAta(accounts.loan, accounts.depositMint),
+        depositMint: accounts.depositMint,
+        assetIdentifier: accounts.assetIdentifier || accounts.depositMint,
+        tokenProgram,
+        associatedTokenProgram:
+          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
+        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
+        eventAuthority: this.client.getEventAuthorityPda(),
+      })
+      .instruction();
+  }
+
+  async depositCollateralTx(
+    params: DepositCollateralParams,
+    accounts: DepositCollateralAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.depositCollateralIx(
+      params,
+      accounts,
+      txOptions.signer,
+    );
     return await this.buildVersionedTx([ix], txOptions);
   }
 
@@ -1040,13 +1324,516 @@ export class LoopscaleLendTxBuilder extends BaseTxBuilder<LoopscaleCoreClient> {
   }
 }
 
+export class LoopscaleVaultTxBuilder
+  extends BaseTxBuilder<LoopscaleCoreClient>
+  implements ProtocolPolicyTxBuilder<LoopscaleVaultPolicy>
+{
+  async setPolicyIx(
+    policy: LoopscaleVaultPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.setVaultPolicyIx(policy, signer);
+  }
+
+  async setVaultPolicyIx(
+    policy: LoopscaleVaultPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.extLoopscaleProgram.methods
+      .setVaultPolicy({
+        vaultAllowlist: policy.vaultAllowlist,
+      })
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        integrationProgram: this.client.programId,
+        integrationAuthority: this.client.integrationAuthorityPda,
+      })
+      .instruction();
+  }
+
+  async setPolicyTx(
+    policy: LoopscaleVaultPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setVaultPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async setVaultPolicyTx(
+    policy: LoopscaleVaultPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setVaultPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearVaultPolicyIx(signer);
+  }
+
+  async clearVaultPolicyIx(
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.programId,
+      LOOPSCALE_VAULT_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearVaultPolicyTx(txOptions);
+  }
+
+  async clearVaultPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.programId,
+      LOOPSCALE_VAULT_PROTOCOL,
+      txOptions,
+    );
+  }
+
+  async depositUserVaultIx(
+    params: LoopscaleLpParams,
+    accounts: DepositWithdrawUserVaultAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const { lpTokenProgram, principalTokenProgram } = accounts;
+    return await this.client.base.extLoopscaleProgram.methods
+      .depositUserVault(normalizeLoopscaleLpParams(params))
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.integrationAuthorityPda,
+        cpiProgram: LOOPSCALE_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        bsAuth: LOOPSCALE_BS_AUTH,
+        vault: accounts.vault,
+        strategy: accounts.strategy,
+        marketInformation: accounts.marketInformation,
+        lpMint: accounts.lpMint,
+        userLpTa: this.client.base.getVaultAta(accounts.lpMint, lpTokenProgram),
+        userPrincipalTa: this.client.base.getVaultAta(
+          accounts.principalMint,
+          principalTokenProgram,
+        ),
+        strategyPrincipalTa: this.client.getStrategyTokenAta(
+          accounts.strategy,
+          accounts.principalMint,
+          principalTokenProgram,
+        ),
+        principalMint: accounts.principalMint,
+        principalTokenProgram,
+        token2022Program: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
+        eventAuthority: this.client.getEventAuthorityPda(),
+      })
+      .instruction();
+  }
+
+  depositUserVaultSetupIxs(
+    accounts: DepositWithdrawUserVaultAccounts,
+    signer?: PublicKey,
+  ): TransactionInstruction[] {
+    return this.depositWithdrawUserVaultSetupIxs(accounts, signer);
+  }
+
+  async depositUserVaultIxs(
+    params: LoopscaleLpParams,
+    accounts: DepositWithdrawUserVaultAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction[]> {
+    return [
+      ...this.depositUserVaultSetupIxs(accounts, signer),
+      await this.depositUserVaultIx(params, accounts, signer),
+    ];
+  }
+
+  async depositUserVaultTx(
+    params: LoopscaleLpParams,
+    accounts: DepositWithdrawUserVaultAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ixs = await this.depositUserVaultIxs(
+      params,
+      accounts,
+      txOptions.signer,
+    );
+    return await this.buildVersionedTx(ixs, txOptions);
+  }
+
+  async withdrawUserVaultIx(
+    params: LoopscaleLpParams,
+    accounts: DepositWithdrawUserVaultAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const { lpTokenProgram, principalTokenProgram } = accounts;
+
+    return await this.client.base.extLoopscaleProgram.methods
+      .withdrawUserVault(normalizeLoopscaleLpParams(params))
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.integrationAuthorityPda,
+        cpiProgram: LOOPSCALE_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        bsAuth: LOOPSCALE_BS_AUTH,
+        vault: accounts.vault,
+        strategy: accounts.strategy,
+        marketInformation: accounts.marketInformation,
+        lpMint: accounts.lpMint,
+        userLpTa: this.client.base.getVaultAta(accounts.lpMint, lpTokenProgram),
+        userPrincipalTa: this.client.base.getVaultAta(
+          accounts.principalMint,
+          principalTokenProgram,
+        ),
+        strategyPrincipalTa: this.client.getStrategyTokenAta(
+          accounts.strategy,
+          accounts.principalMint,
+          principalTokenProgram,
+        ),
+        principalMint: accounts.principalMint,
+        principalTokenProgram,
+        token2022Program: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
+        eventAuthority: this.client.getEventAuthorityPda(),
+      })
+      .instruction();
+  }
+
+  async withdrawUserVaultIxs(
+    params: LoopscaleLpParams,
+    accounts: DepositWithdrawUserVaultAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction[]> {
+    return [
+      ...this.depositWithdrawUserVaultSetupIxs(accounts, signer),
+      await this.withdrawUserVaultIx(params, accounts, signer),
+    ];
+  }
+
+  async withdrawUserVaultTx(
+    params: LoopscaleLpParams,
+    accounts: DepositWithdrawUserVaultAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ixs = await this.withdrawUserVaultIxs(
+      params,
+      accounts,
+      txOptions.signer,
+    );
+    return await this.buildVersionedTx(ixs, txOptions);
+  }
+
+  async stakeUserVaultLpIx(
+    params: LoopscaleVaultStakeParams,
+    accounts: StakeUserVaultLpAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const tokenProgram = TOKEN_2022_PROGRAM_ID;
+    const vaultStakeLpTa = this.client.getVaultStakeLpTokenAta(
+      accounts.vaultStake,
+      accounts.lpMint,
+      tokenProgram,
+    );
+    return await this.client.base.extLoopscaleProgram.methods
+      .stakeUserVaultLp(params)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.integrationAuthorityPda,
+        cpiProgram: LOOPSCALE_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        bsAuth: LOOPSCALE_BS_AUTH,
+        ...accounts,
+        userLpTa: this.client.base.getVaultAta(accounts.lpMint, tokenProgram),
+        vaultStakeLpTa,
+        vaultRewardsInfo: this.client.getVaultRewardsInfoPda(accounts.vault),
+        userRewardsInfo: this.client.getUserRewardsInfoPda(accounts.vaultStake),
+        tokenProgram,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
+        eventAuthority: this.client.getEventAuthorityPda(),
+      })
+      .instruction();
+  }
+
+  stakeUserVaultLpSetupIxs(
+    accounts: StakeUserVaultLpAccounts,
+    signer?: PublicKey,
+  ): TransactionInstruction[] {
+    const tokenProgram = TOKEN_2022_PROGRAM_ID;
+    const payer = signer || this.client.base.signer;
+    const ixs: TransactionInstruction[] = [];
+
+    ixs.push(
+      createVaultTokenAtaSetupIx({
+        mint: accounts.lpMint,
+        payer,
+        owner: this.client.base.vaultPda,
+        ata: this.client.base.getVaultAta(accounts.lpMint, tokenProgram),
+        tokenProgram,
+      }),
+    );
+
+    ixs.push(
+      createVaultTokenAtaSetupIx({
+        mint: accounts.lpMint,
+        payer,
+        owner: accounts.vaultStake,
+        ata: this.client.getVaultStakeLpTokenAta(
+          accounts.vaultStake,
+          accounts.lpMint,
+          tokenProgram,
+        ),
+        tokenProgram,
+      }),
+    );
+
+    return ixs;
+  }
+
+  async stakeUserVaultLpIxs(
+    params: LoopscaleVaultStakeParams,
+    accounts: StakeUserVaultLpAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction[]> {
+    return [
+      ...this.stakeUserVaultLpSetupIxs(accounts, signer),
+      await this.stakeUserVaultLpIx(params, accounts, signer),
+    ];
+  }
+
+  async stakeUserVaultLpTx(
+    params: LoopscaleVaultStakeParams,
+    accounts: StakeUserVaultLpAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ixs = await this.stakeUserVaultLpIxs(
+      params,
+      accounts,
+      txOptions.signer,
+    );
+    return await this.buildVersionedTx(ixs, txOptions);
+  }
+
+  async unstakeUserVaultLpIx(
+    params: LoopscaleVaultUnstakeParams,
+    accounts: UnstakeUserVaultLpAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const tokenProgram = TOKEN_2022_PROGRAM_ID;
+    return await this.client.base.extLoopscaleProgram.methods
+      .unstakeUserVaultLp(params)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.integrationAuthorityPda,
+        cpiProgram: LOOPSCALE_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        bsAuth: LOOPSCALE_BS_AUTH,
+        ...accounts,
+        userLpTa: this.client.base.getVaultAta(accounts.lpMint, tokenProgram),
+        vaultStakeLpTa: this.client.getVaultStakeLpTokenAta(
+          accounts.vaultStake,
+          accounts.lpMint,
+          tokenProgram,
+        ),
+        vaultRewardsInfo: this.client.getVaultRewardsInfoPda(accounts.vault),
+        userRewardsInfo: this.client.getUserRewardsInfoPda(accounts.vaultStake),
+        tokenProgram,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
+        eventAuthority: this.client.getEventAuthorityPda(),
+      })
+      .instruction();
+  }
+
+  unstakeUserVaultLpSetupIxs(
+    accounts: UnstakeUserVaultLpAccounts,
+    signer?: PublicKey,
+  ): TransactionInstruction[] {
+    const tokenProgram = TOKEN_2022_PROGRAM_ID;
+    const payer = signer || this.client.base.signer;
+    const ixs: TransactionInstruction[] = [];
+
+    ixs.push(
+      createVaultTokenAtaSetupIx({
+        mint: accounts.lpMint,
+        payer,
+        owner: this.client.base.vaultPda,
+        ata: this.client.base.getVaultAta(accounts.lpMint, tokenProgram),
+        tokenProgram,
+      }),
+    );
+    ixs.push(
+      createVaultTokenAtaSetupIx({
+        mint: accounts.lpMint,
+        payer,
+        owner: accounts.vaultStake,
+        ata: this.client.getVaultStakeLpTokenAta(
+          accounts.vaultStake,
+          accounts.lpMint,
+          tokenProgram,
+        ),
+        tokenProgram,
+      }),
+    );
+
+    return ixs;
+  }
+
+  async unstakeUserVaultLpIxs(
+    params: LoopscaleVaultUnstakeParams,
+    accounts: UnstakeUserVaultLpAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction[]> {
+    return [
+      ...this.unstakeUserVaultLpSetupIxs(accounts, signer),
+      await this.unstakeUserVaultLpIx(params, accounts, signer),
+    ];
+  }
+
+  async unstakeUserVaultLpTx(
+    params: LoopscaleVaultUnstakeParams,
+    accounts: UnstakeUserVaultLpAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ixs = await this.unstakeUserVaultLpIxs(
+      params,
+      accounts,
+      txOptions.signer,
+    );
+    return await this.buildVersionedTx(ixs, txOptions);
+  }
+
+  async claimVaultRewardsIx(
+    mints: PublicKey[],
+    accounts: ClaimVaultRewardsAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const instruction = this.client.base.extLoopscaleProgram.methods
+      .claimVaultRewards(mints)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.integrationAuthorityPda,
+        cpiProgram: LOOPSCALE_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        bsAuth: LOOPSCALE_BS_AUTH,
+        vault: accounts.vault,
+        vaultRewardsInfo:
+          accounts.vaultRewardsInfo ||
+          this.client.getVaultRewardsInfoPda(accounts.vault),
+        userRewardsInfo:
+          accounts.userRewardsInfo ||
+          this.client.getUserRewardsInfoPda(accounts.vaultStake),
+        stakeAccount: accounts.vaultStake,
+        associatedTokenProgram:
+          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
+        protocolAdminState: LOOPSCALE_PROTOCOL_ADMIN_STATE,
+        eventAuthority: this.client.getEventAuthorityPda(),
+      });
+
+    if (accounts.remainingAccounts?.length) {
+      instruction.remainingAccounts(accounts.remainingAccounts);
+    }
+
+    return await instruction.instruction();
+  }
+
+  async claimVaultRewardsTx(
+    mints: PublicKey[],
+    accounts: ClaimVaultRewardsAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.claimVaultRewardsIx(
+      mints,
+      accounts,
+      txOptions.signer,
+    );
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  private depositWithdrawUserVaultSetupIxs(
+    accounts: DepositWithdrawUserVaultAccounts,
+    signer?: PublicKey,
+  ): TransactionInstruction[] {
+    const {
+      strategy,
+      lpMint,
+      principalMint,
+      lpTokenProgram,
+      principalTokenProgram,
+    } = accounts;
+    const payer = signer || this.client.base.signer;
+    const ixs: TransactionInstruction[] = [];
+
+    ixs.push(
+      createVaultTokenAtaSetupIx({
+        mint: lpMint,
+        payer,
+        owner: this.client.base.vaultPda,
+        ata: this.client.base.getVaultAta(lpMint, lpTokenProgram),
+        tokenProgram: lpTokenProgram,
+      }),
+    );
+
+    ixs.push(
+      createVaultTokenAtaSetupIx({
+        mint: principalMint,
+        payer,
+        owner: this.client.base.vaultPda,
+        ata: this.client.base.getVaultAta(principalMint, principalTokenProgram),
+        tokenProgram: principalTokenProgram,
+      }),
+    );
+
+    ixs.push(
+      createVaultTokenAtaSetupIx({
+        mint: principalMint,
+        payer,
+        owner: strategy,
+        ata: this.client.getStrategyTokenAta(
+          strategy,
+          principalMint,
+          principalTokenProgram,
+        ),
+        tokenProgram: principalTokenProgram,
+      }),
+    );
+
+    return ixs;
+  }
+}
+
 export class LoopscaleCoreClient {
   readonly borrowTxBuilder: LoopscaleBorrowTxBuilder;
   readonly lendTxBuilder: LoopscaleLendTxBuilder;
+  readonly vaultTxBuilder: LoopscaleVaultTxBuilder;
 
   public constructor(readonly base: BaseClient) {
     this.borrowTxBuilder = new LoopscaleBorrowTxBuilder(this);
     this.lendTxBuilder = new LoopscaleLendTxBuilder(this);
+    this.vaultTxBuilder = new LoopscaleVaultTxBuilder(this);
   }
 
   get programId(): PublicKey {
@@ -1069,6 +1856,26 @@ export class LoopscaleCoreClient {
     return getLoopscaleStrategyPda(nonce);
   }
 
+  getVaultPda(vaultNonce: PublicKey) {
+    return getLoopscaleVaultPda(vaultNonce);
+  }
+
+  getVaultStrategyPda(vault: PublicKey) {
+    return getLoopscaleVaultStrategyPda(vault);
+  }
+
+  getVaultRewardsInfoPda(vault: PublicKey) {
+    return getLoopscaleVaultRewardsInfoPda(vault);
+  }
+
+  getVaultStakePda(stakeNonce: PublicKey, vault: PublicKey) {
+    return getLoopscaleVaultStakePda(stakeNonce, vault);
+  }
+
+  getUserRewardsInfoPda(vaultStake: PublicKey) {
+    return getLoopscaleUserRewardsInfoPda(vaultStake);
+  }
+
   getLoanTokenAta(
     loan: PublicKey,
     mint: PublicKey,
@@ -1083,6 +1890,27 @@ export class LoopscaleCoreClient {
     tokenProgram: PublicKey = TOKEN_PROGRAM_ID,
   ): PublicKey {
     return getAssociatedTokenAddressSync(mint, strategy, true, tokenProgram);
+  }
+
+  getVaultLpTokenAta(
+    lpMint: PublicKey,
+    owner: PublicKey = this.base.vaultPda,
+    tokenProgram: PublicKey = TOKEN_2022_PROGRAM_ID,
+  ): PublicKey {
+    return getAssociatedTokenAddressSync(lpMint, owner, true, tokenProgram);
+  }
+
+  getVaultStakeLpTokenAta(
+    vaultStake: PublicKey,
+    lpMint: PublicKey,
+    tokenProgram: PublicKey = TOKEN_2022_PROGRAM_ID,
+  ): PublicKey {
+    return getAssociatedTokenAddressSync(
+      lpMint,
+      vaultStake,
+      true,
+      tokenProgram,
+    );
   }
 
   async fetchLoan(loan: PublicKey): Promise<LoopscaleLoan> {
@@ -1134,6 +1962,31 @@ export class LoopscaleCoreClient {
       (address, data) => LoopscaleStrategy.decode(address, data),
       commitment,
     );
+  }
+
+  async fetchRegisteredVaultStakeAccountInfos(
+    commitment?: Commitment,
+  ): Promise<{ address: PublicKey; info: Web3AccountInfo<Buffer> }[]> {
+    const { externalPositions } = await this.base.fetchStateAccount();
+    const registeredPositions = externalPositions ?? [];
+    const positions: { address: PublicKey; info: Web3AccountInfo<Buffer> }[] =
+      [];
+    const chunkSize = 100;
+
+    for (let i = 0; i < registeredPositions.length; i += chunkSize) {
+      const chunk = registeredPositions.slice(i, i + chunkSize);
+      const accounts = await this.base.connection.getMultipleAccountsInfo(
+        chunk,
+        commitment,
+      );
+      accounts.forEach((account, index) => {
+        if (isLoopscaleVaultStakeAccountInfo(account)) {
+          positions.push({ address: chunk[index], info: account });
+        }
+      });
+    }
+
+    return positions;
   }
 
   private async fetchRegisteredExternalPositions<T>(

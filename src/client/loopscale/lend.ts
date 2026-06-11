@@ -102,10 +102,6 @@ export class LoopscaleLendClient
   }
 
   async fetchPolicy(): Promise<LoopscaleLendingPolicy | null> {
-    return await this.fetchLendingPolicy();
-  }
-
-  async fetchLendingPolicy(): Promise<LoopscaleLendingPolicy | null> {
     return await this.base.fetchProtocolPolicy(
       this.programId,
       LOOPSCALE_LENDING_PROTOCOL,
@@ -117,24 +113,11 @@ export class LoopscaleLendClient
     policy: LoopscaleLendingPolicy,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    return await this.setLendingPolicy(policy, txOptions);
-  }
-
-  async setLendingPolicy(
-    policy: LoopscaleLendingPolicy,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
     const tx = await this.txBuilder.setLendingPolicyTx(policy, txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 
   async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
-    return await this.clearLendingPolicy(txOptions);
-  }
-
-  async clearLendingPolicy(
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
     const tx = await this.txBuilder.clearLendingPolicyTx(txOptions);
     return await this.base.sendAndConfirm(tx);
   }
@@ -285,8 +268,8 @@ export class LoopscaleLendClient
       ? createVaultWsolAtaSetupIxs({
           mint: params.principalMint,
           payer: this.base.signer,
-          vaultPda: this.base.vaultPda,
-          vaultAta: this.base.getVaultAta(params.principalMint),
+          owner: this.base.vaultPda,
+          ata: this.base.getVaultAta(params.principalMint),
         })
       : [];
     return [...setupIxs, ...mappedIxs];

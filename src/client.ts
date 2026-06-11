@@ -20,7 +20,11 @@ import { StakePoolClient } from "./client/stake-pool";
 import { CctpClient } from "./client/cctp";
 import { BridgeClient } from "./client/bridge";
 import { EpiClient } from "./client/epi";
-import { LoopscaleBorrowClient, LoopscaleLendClient } from "./client/loopscale";
+import {
+  LoopscaleBorrowClient,
+  LoopscaleLendClient,
+  LoopscaleVaultClient,
+} from "./client/loopscale";
 import { LoopscaleCoreClient } from "./client/loopscale/core";
 import { PhoenixClient } from "./client/phoenix";
 import { JupiterBorrowClient, JupiterEarnClient } from "./client/jupiter-lend";
@@ -53,6 +57,7 @@ export class GlamClient extends BaseClient {
   private _loopscaleCore?: LoopscaleCoreClient;
   private _loopscaleBorrow?: LoopscaleBorrowClient;
   private _loopscaleLend?: LoopscaleLendClient;
+  private _loopscaleVault?: LoopscaleVaultClient;
   private _phoenix?: PhoenixClient;
   private _jupiterEarn?: JupiterEarnClient;
   private _jupiterBorrow?: JupiterBorrowClient;
@@ -125,6 +130,7 @@ export class GlamClient extends BaseClient {
         this.epi,
         this.loopscaleBorrow,
         this.loopscaleLend,
+        this.loopscaleVault,
         () => this.jupiterSwap.jupApi,
       );
     }
@@ -220,6 +226,13 @@ export class GlamClient extends BaseClient {
       this._loopscaleLend = new LoopscaleLendClient(this.loopscaleCore);
     }
     return this._loopscaleLend;
+  }
+
+  get loopscaleVault(): LoopscaleVaultClient {
+    if (!this._loopscaleVault) {
+      this._loopscaleVault = new LoopscaleVaultClient(this.loopscaleCore);
+    }
+    return this._loopscaleVault;
   }
 
   get phoenix(): PhoenixClient {

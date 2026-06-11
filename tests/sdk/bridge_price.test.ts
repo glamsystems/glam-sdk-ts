@@ -31,6 +31,9 @@ function makePriceClient() {
     {} as any,
     bridge as any,
     {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
     (() => undefined) as any,
   );
 
@@ -87,6 +90,9 @@ function makeBridgePriceClient() {
     {} as any,
     {} as any,
     bridge as any,
+    {} as any,
+    {} as any,
+    {} as any,
     {} as any,
     (() => undefined) as any,
   );

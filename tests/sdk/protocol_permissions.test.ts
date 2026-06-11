@@ -18,6 +18,9 @@ import {
   JUPITER_SWAP_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
+  LOOPSCALE_BORROW_PROTOCOL,
+  LOOPSCALE_LENDING_PROTOCOL,
+  LOOPSCALE_VAULT_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
   SYSTEM_PROTOCOL,
@@ -100,20 +103,48 @@ describe("getProtocolsAndPermissions", () => {
         getPermissionNames(
           staging,
           getExtLoopscaleProgramId(staging).toBase58(),
-          "0000000000000001",
+          protocolBitflagKey(LOOPSCALE_BORROW_PROTOCOL),
         ),
       ).toEqual([
-        "ManageLoan",
+        "CreateLoan",
+        "CloseLoan",
+        "UpdateLoan",
         "DepositCollateral",
         "WithdrawCollateral",
         "BorrowPrincipal",
         "RepayPrincipal",
+        "SetPolicy",
+      ]);
+
+      expect(
+        getPermissionNames(
+          staging,
+          getExtLoopscaleProgramId(staging).toBase58(),
+          protocolBitflagKey(LOOPSCALE_LENDING_PROTOCOL),
+        ),
+      ).toEqual([
         "CreateStrategy",
         "UpdateStrategy",
         "DepositStrategy",
         "WithdrawStrategy",
         "CloseStrategy",
         "SellLedger",
+        "SetPolicy",
+      ]);
+
+      expect(
+        getPermissionNames(
+          staging,
+          getExtLoopscaleProgramId(staging).toBase58(),
+          protocolBitflagKey(LOOPSCALE_VAULT_PROTOCOL),
+        ),
+      ).toEqual([
+        "DepositUserVault",
+        "WithdrawUserVault",
+        "StakeUserVaultLp",
+        "UnstakeUserVaultLp",
+        "ClaimVaultRewards",
+        "SetPolicy",
       ]);
 
       expect(

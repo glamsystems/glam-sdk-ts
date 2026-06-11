@@ -63,6 +63,12 @@ const capMonitorLayout = (property: string) =>
 export const LOOPSCALE_STRATEGY_ACCOUNT_DISCRIMINATOR = Buffer.from([
   174, 110, 39, 119, 82, 106, 169, 102,
 ]);
+export const LOOPSCALE_VAULT_DISCRIMINATOR = Buffer.from([
+  211, 8, 232, 43, 2, 152, 117, 119,
+]);
+export const LOOPSCALE_VAULT_STAKE_DISCRIMINATOR = Buffer.from([
+  225, 34, 128, 53, 167, 239, 182, 107,
+]);
 
 export function hasLoopscaleStrategyDiscriminator(data: Buffer): boolean {
   return hasLoopscaleDiscriminator(
@@ -175,6 +181,40 @@ export class LoopscaleStrategy extends Decodable {
       return acc;
     }, []);
   }
+}
+
+export class LoopscaleVault extends Decodable {
+  discriminator!: number[];
+  manager!: PublicKey;
+  nonce!: PublicKey;
+  bump!: number;
+  lpSupply!: BN;
+  lpMint!: PublicKey;
+  principalMint!: PublicKey;
+  cumulativePrincipalDeposited!: BN;
+  depositsEnabled!: number;
+  maxEarlyUnstakeFee!: BN;
+
+  static _layout = struct([
+    array(u8(), 8, "discriminator"),
+    publicKey("manager"),
+    publicKey("nonce"),
+    u8("bump"),
+    u64("lpSupply"),
+    publicKey("lpMint"),
+    publicKey("principalMint"),
+    u64("cumulativePrincipalDeposited"),
+    u8("depositsEnabled"),
+    u64("maxEarlyUnstakeFee"),
+  ]);
+}
+
+export function hasLoopscaleVaultDiscriminator(data: Buffer): boolean {
+  return hasLoopscaleDiscriminator(data, LOOPSCALE_VAULT_DISCRIMINATOR);
+}
+
+export function hasLoopscaleVaultStakeDiscriminator(data: Buffer): boolean {
+  return hasLoopscaleDiscriminator(data, LOOPSCALE_VAULT_STAKE_DISCRIMINATOR);
 }
 
 //

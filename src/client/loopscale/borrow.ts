@@ -50,6 +50,7 @@ import {
   WithdrawCollateralParams,
 } from "./core";
 import { bnToSafeNumber } from "../../utils/common";
+import { fetchMintAndTokenProgram } from "../../utils";
 
 export type Tuple5 = [number, number, number, number, number];
 
@@ -89,10 +90,6 @@ export class LoopscaleBorrowClient
   }
 
   async fetchPolicy(): Promise<LoopscaleBorrowPolicy | null> {
-    return await this.fetchBorrowPolicy();
-  }
-
-  async fetchBorrowPolicy(): Promise<LoopscaleBorrowPolicy | null> {
     return await this.base.fetchProtocolPolicy(
       this.programId,
       LOOPSCALE_BORROW_PROTOCOL,
@@ -101,13 +98,6 @@ export class LoopscaleBorrowClient
   }
 
   async setPolicy(
-    policy: LoopscaleBorrowPolicy,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    return await this.setBorrowPolicy(policy, txOptions);
-  }
-
-  async setBorrowPolicy(
     policy: LoopscaleBorrowPolicy,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
@@ -368,11 +358,16 @@ export class LoopscaleBorrowClient
       getLoopscaleApiMessages(payload),
       LOOPSCALE_WITHDRAW_COLLATERAL_DISCRIMINATOR,
     );
+    const { tokenProgram } = await fetchMintAndTokenProgram(
+      this.base.connection,
+      params.collateralMint,
+    );
     const setupIx = createVaultTokenAtaSetupIx({
       mint: params.collateralMint,
       payer: this.base.signer,
-      vaultPda: this.base.vaultPda,
-      vaultAta: this.base.getVaultAta(params.collateralMint),
+      owner: this.base.vaultPda,
+      ata: this.base.getVaultAta(params.collateralMint),
+      tokenProgram,
     });
     return [setupIx, ...mappedIxs];
   }
