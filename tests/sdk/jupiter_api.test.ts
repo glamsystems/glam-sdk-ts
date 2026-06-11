@@ -1,7 +1,12 @@
-import { JupiterApiClient } from "../../src/utils/jupiterApi";
+import {
+  JupTokenList,
+  JupiterApiClient,
+  withStakePoolTokens,
+} from "../../src/utils/jupiterApi";
 
 describe("JupiterApiClient", () => {
   const originalFetch = global.fetch;
+  const starSolMint = "STARxPuRLr3R6huwJ2ppqoTZ65WtA6S2unEzYiYV8bh";
 
   afterEach(() => {
     global.fetch = originalFetch;
@@ -44,5 +49,74 @@ describe("JupiterApiClient", () => {
         blockId: 124,
       },
     ]);
+  });
+
+  it("can augment the token list with stake-pool LSTs", () => {
+    const tokenList = withStakePoolTokens(new JupTokenList([]));
+
+    expect(tokenList.getByMint(starSolMint)).toMatchObject({
+      address: starSolMint,
+      name: "StarPool staked SOL",
+      symbol: "StarSOL",
+      decimals: 9,
+      tags: expect.arrayContaining(["lst", "verified"]),
+    });
+  });
+
+  it("does not overwrite Jupiter metadata when augmenting stake-pool LSTs", () => {
+    const tokenList = withStakePoolTokens(
+      new JupTokenList([
+        {
+          address: starSolMint,
+          name: "Jupiter StarSOL",
+          symbol: "jSTAR",
+          decimals: 9,
+          logoURI: "https://example.com/star.svg",
+          tags: ["verified"],
+          usdPrice: 123,
+          slot: 456,
+        },
+      ]),
+    );
+
+    expect(tokenList.getByMint(starSolMint)).toMatchObject({
+      name: "Jupiter StarSOL",
+      symbol: "jSTAR",
+      usdPrice: 123,
+      slot: 456,
+    });
+  });
+
+  it("applies stake-pool augmentation when returning a cached token list", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    }) as any;
+
+    const client = new JupiterApiClient({ apiKey: "test" });
+    await expect(client.fetchTokensList(true)).resolves.toHaveProperty(
+      "tokens",
+      [],
+    );
+
+    const augmented = await client.fetchTokensListV2({
+      forceRefresh: false,
+      includeStakePools: true,
+    });
+
+    expect(augmented.getByMint(starSolMint)?.symbol).toBe("StarSOL");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the original token list unaugmented", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    }) as any;
+
+    const client = new JupiterApiClient({ apiKey: "test" });
+    const tokenList = await client.fetchTokensList(true);
+
+    expect(tokenList.getByMint(starSolMint)).toBeUndefined();
   });
 });

@@ -304,7 +304,11 @@ export function GlamProvider({
   const { data: jupTokenList } = useQuery({
     queryKey: queryKeys.global.jupTokens(clusterKey),
     enabled: cluster.network === ClusterNetwork.Mainnet,
-    queryFn: () => new JupiterApiClient().fetchTokensList(true),
+    queryFn: () =>
+      new JupiterApiClient().fetchTokensListV2({
+        forceRefresh: true,
+        includeStakePools: true,
+      }),
     staleTime: 1000 * 30, // 30 seconds
   });
 

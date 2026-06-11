@@ -1,5 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import { z } from "zod";
+import { STAKE_POOLS } from "../assets";
+import { PkSet } from "./pkset";
 
 export type QuoteParams = {
   inputMint: string;
@@ -98,6 +100,35 @@ export type TokenPrice = {
   decimals: number;
   blockId: number;
 };
+
+export type FetchTokensListOptions = {
+  forceRefresh?: boolean;
+  includeStakePools?: boolean;
+};
+
+export function withStakePoolTokens(tokenList: JupTokenList): JupTokenList {
+  const knownMints = new PkSet(
+    tokenList.tokens.map((token) => new PublicKey(token.address)),
+  );
+  const stakePoolTokens: TokenListItem[] = STAKE_POOLS.filter(
+    (pool) => !knownMints.has(new PublicKey(pool.mint)),
+  ).map((pool) => ({
+    address: pool.mint,
+    name: pool.name,
+    symbol: pool.symbol,
+    decimals: pool.decimals,
+    logoURI: pool.logoURI ?? "",
+    tags: ["lst", "verified"],
+    usdPrice: 0,
+    slot: 0,
+  }));
+
+  if (stakePoolTokens.length === 0) {
+    return tokenList;
+  }
+
+  return new JupTokenList([...tokenList.tokens, ...stakePoolTokens]);
+}
 
 export class JupiterApiClient {
   swapApiBaseUrl: string;
@@ -209,6 +240,14 @@ export class JupiterApiClient {
     const jupTokenList = new JupTokenList(tokenList);
     this.tokenListCache = { data: jupTokenList, timestamp: Date.now() };
     return jupTokenList;
+  }
+
+  async fetchTokensListV2(
+    options: FetchTokensListOptions = {},
+  ): Promise<JupTokenList> {
+    const { forceRefresh = false, includeStakePools = false } = options;
+    const tokenList = await this.fetchTokensList(forceRefresh);
+    return includeStakePools ? withStakePoolTokens(tokenList) : tokenList;
   }
 
   async fetchProgramLabels(): Promise<{ [key: string]: string }> {
