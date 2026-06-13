@@ -105,33 +105,6 @@ const LOOKUP_TABLES = [
 
 const GLAM_LOOKUP_TABLES_TIMEOUT_MS = 5_000;
 
-class TimeoutError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "TimeoutError";
-  }
-}
-
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  errorMessage: string,
-): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(
-      () => reject(new TimeoutError(errorMessage)),
-      timeoutMs,
-    );
-  });
-
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-  });
-}
-
 export type TxOptions = {
   signer?: PublicKey;
   computeUnitLimit?: number;
@@ -411,15 +384,20 @@ export class BaseClient {
       return this._glamLookupTablesPromise;
     }
     this._glamLookupTablesCacheKey = key;
-    this._glamLookupTablesPromise = withTimeout(
-      findGlamLookupTables(this.statePda, this.vaultPda, this.connection),
+    this._glamLookupTablesPromise = findGlamLookupTables(
+      this.statePda,
+      this.vaultPda,
+      this.connection,
       GLAM_LOOKUP_TABLES_TIMEOUT_MS,
-      `Timed out discovering GLAM address lookup tables after ${GLAM_LOOKUP_TABLES_TIMEOUT_MS}ms`,
     ).catch((error) => {
       this.invalidateGlamLookupTablesCache();
 
-      if (error instanceof TimeoutError) {
-        console.warn(`${error.message}; continuing without GLAM lookup tables`);
+      if (error?.name === "TimeoutError") {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(
+            `Timed out discovering GLAM address lookup tables after ${GLAM_LOOKUP_TABLES_TIMEOUT_MS}ms; continuing without GLAM lookup tables`,
+          );
+        }
         return [];
       }
 

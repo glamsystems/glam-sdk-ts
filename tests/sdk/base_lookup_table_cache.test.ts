@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { BaseClient } from "../../src/client/base";
 import { ClusterNetwork } from "../../src/clientConfig";
 
@@ -80,26 +80,32 @@ describe("BaseClient default lookup table cache", () => {
 describe("BaseClient GLAM lookup table cache", () => {
   const statePda = new PublicKey("11111111111111111111111111111112");
   const otherStatePda = new PublicKey("11111111111111111111111111111113");
+  const originalFetch = global.fetch;
+  const emptyProgramAccountsResponse = () =>
+    new Response(JSON.stringify({ jsonrpc: "2.0", id: "1", result: [] }));
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
 
   it("discovers ALTs once per statePda and serves subsequent calls from cache", async () => {
-    const getProgramAccounts = jest.fn(async () => []);
+    global.fetch = jest.fn(async () => emptyProgramAccountsResponse());
     const client = makeClient({
       cluster: ClusterNetwork.Mainnet,
-      getProgramAccounts,
       statePda,
     });
 
     await (client as any).getGlamLookupTablesCached();
     await (client as any).getGlamLookupTablesCached();
 
-    expect(getProgramAccounts).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("re-discovers when statePda changes", async () => {
-    const getProgramAccounts = jest.fn(async () => []);
+    global.fetch = jest.fn(async () => emptyProgramAccountsResponse());
     const client = makeClient({
       cluster: ClusterNetwork.Mainnet,
-      getProgramAccounts,
       statePda,
     });
 
@@ -107,14 +113,13 @@ describe("BaseClient GLAM lookup table cache", () => {
     client.statePda = otherStatePda;
     await (client as any).getGlamLookupTablesCached();
 
-    expect(getProgramAccounts).toHaveBeenCalledTimes(2);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
   it("invalidateGlamLookupTablesCache forces the next call to re-fetch", async () => {
-    const getProgramAccounts = jest.fn(async () => []);
+    global.fetch = jest.fn(async () => emptyProgramAccountsResponse());
     const client = makeClient({
       cluster: ClusterNetwork.Mainnet,
-      getProgramAccounts,
       statePda,
     });
 
@@ -122,17 +127,24 @@ describe("BaseClient GLAM lookup table cache", () => {
     client.invalidateGlamLookupTablesCache();
     await (client as any).getGlamLookupTablesCached();
 
-    expect(getProgramAccounts).toHaveBeenCalledTimes(2);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
   it("clears the cache when discovery rejects so the next call retries", async () => {
-    const getProgramAccounts = jest
+    global.fetch = jest
       .fn()
-      .mockRejectedValueOnce(new Error("rpc deprioritized"))
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: "1",
+            error: { code: -32000, message: "rpc deprioritized" },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(emptyProgramAccountsResponse());
     const client = makeClient({
       cluster: ClusterNetwork.Mainnet,
-      getProgramAccounts,
       statePda,
     });
 
@@ -141,6 +153,49 @@ describe("BaseClient GLAM lookup table cache", () => {
     );
     await (client as any).getGlamLookupTablesCached();
 
-    expect(getProgramAccounts).toHaveBeenCalledTimes(2);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("aborts in-flight GLAM ALT discovery when the timeout fires", async () => {
+    const abortController = new AbortController();
+    const timeoutSpy = jest
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(abortController.signal);
+    const abortListener = jest.fn();
+    global.fetch = jest.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const rejectTimeout = () => {
+            reject(
+              new DOMException("The operation timed out.", "TimeoutError"),
+            );
+          };
+          if (init?.signal?.aborted) {
+            rejectTimeout();
+            return;
+          }
+          init?.signal?.addEventListener("abort", () => {
+            abortListener();
+            rejectTimeout();
+          });
+        }),
+    ) as typeof fetch;
+    jest.spyOn(console, "warn").mockImplementation();
+
+    const client = makeClient({
+      cluster: ClusterNetwork.Mainnet,
+      statePda,
+    });
+    client.provider.connection = new Connection("https://rpc.example.com");
+    Object.defineProperty(client, "vaultPda", {
+      value: otherStatePda,
+    });
+
+    const promise = (client as any).getGlamLookupTablesCached();
+    abortController.abort();
+
+    await expect(promise).resolves.toEqual([]);
+    expect(timeoutSpy).toHaveBeenCalledWith(5_000);
+    expect(abortListener).toHaveBeenCalledTimes(1);
   });
 });

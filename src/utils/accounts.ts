@@ -320,6 +320,7 @@ export async function findGlamLookupTables(
   statePda: PublicKey,
   vaultPda: PublicKey,
   connection: Connection,
+  timeoutMs?: number,
 ): Promise<AddressLookupTableAccount[]> {
   // Fetch lookup table accounts owned by the ALT program with filters.
   // Some RPC providers still overload or deprioritize this indexed scan.
@@ -337,6 +338,7 @@ export async function findGlamLookupTables(
       { memcmp: { offset: 88, bytes: vaultPda.toBase58() } }, // 2nd entry: vault
       { memcmp: { offset: 120, bytes: GLAM_CONFIG_PROGRAM.toBase58() } }, // 3rd entry: global config program
     ],
+    timeoutMs,
   });
 
   return accounts.map(

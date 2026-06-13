@@ -13,6 +13,11 @@ import {
   isHeliusRpc,
 } from "./helius";
 
+type TimedGetProgramAccountsConfig = GetProgramAccountsConfig &
+  HeliusGetProgramAccountsV2Config & {
+    timeoutMs?: number;
+  };
+
 export {
   getAsset,
   getHeliusApiKey,
@@ -44,7 +49,7 @@ export type {
 export async function getProgramAccounts(
   connection: Connection,
   programId: PublicKey,
-  config: GetProgramAccountsConfig & HeliusGetProgramAccountsV2Config,
+  config: TimedGetProgramAccountsConfig,
 ): Promise<GetProgramAccountsResponse> {
   // 2026-03-02: Helius getProgramAccountsV2 cannot find ALTs, disable it for now
   // if (isHeliusRpc(connection.rpcEndpoint)) {
@@ -63,19 +68,54 @@ export async function getProgramAccounts(
 export async function getProgramAccountsWithRetry(
   connection: Connection,
   programId: PublicKey,
-  config: GetProgramAccountsConfig,
+  config: GetProgramAccountsConfig & { timeoutMs?: number },
 ): Promise<GetProgramAccountsResponse> {
   const maxRetries = 3;
   const delayMs = 1000;
   let lastError: Error | undefined;
 
+  const fetchProgramAccounts = async () => {
+    const { timeoutMs, ...rpcConfig } = config;
+
+    if (!timeoutMs) {
+      return await connection.getProgramAccounts(programId, rpcConfig);
+    }
+
+    const timedConnection = new Connection(connection.rpcEndpoint, {
+      commitment: connection.commitment,
+      fetch: async (input, init) => {
+        try {
+          return await fetch(input, {
+            ...init,
+            signal: AbortSignal.timeout(timeoutMs),
+          });
+        } catch (error: any) {
+          if (error?.name === "TimeoutError") {
+            const timeoutError = new Error(
+              `getProgramAccounts timed out after ${timeoutMs}ms`,
+            );
+            timeoutError.name = "TimeoutError";
+            throw timeoutError;
+          }
+          throw error;
+        }
+      },
+    });
+
+    return await timedConnection.getProgramAccounts(programId, rpcConfig);
+  };
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      return await connection.getProgramAccounts(programId, config);
+      return await fetchProgramAccounts();
     } catch (error: any) {
       lastError = error;
 
-      if (error.code !== -32600 || attempt === maxRetries) {
+      if (error?.name === "TimeoutError") {
+        throw error;
+      }
+
+      if (error?.code !== -32600 || attempt === maxRetries) {
         break;
       }
 
