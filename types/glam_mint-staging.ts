@@ -7294,6 +7294,11 @@ export type GlamMint = {
       "code": 6019,
       "name": "invalidMintState",
       "msg": "Invalid mint state"
+    },
+    {
+      "code": 6020,
+      "name": "subscriptionPausedOverdue",
+      "msg": "Subscription paused due to overdue requests"
     }
   ],
   "types": [
@@ -8124,8 +8129,17 @@ export type GlamMint = {
             "type": "u64"
           },
           {
+            "name": "pauseOnOverdue",
+            "type": "u8"
+          },
+          {
             "name": "reserved",
-            "type": "u64"
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
           },
           {
             "name": "allowlist",

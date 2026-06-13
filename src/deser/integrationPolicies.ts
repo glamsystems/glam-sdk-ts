@@ -9,6 +9,7 @@ import {
   vec,
   publicKey,
   option,
+  array,
 } from "@coral-xyz/borsh";
 import { PublicKey } from "@solana/web3.js";
 
@@ -17,7 +18,8 @@ export class MintPolicy {
   maxCap: BN;
   minSubscription: BN;
   minRedemption: BN;
-  reserved: BN;
+  pauseOnOverdue: number;
+  reserved: number[];
   allowlist: PublicKey[] | null;
   blocklist: PublicKey[] | null;
 
@@ -26,7 +28,8 @@ export class MintPolicy {
     u64("maxCap"),
     u64("minSubscription"),
     u64("minRedemption"),
-    u64("reserved"),
+    u8("pauseOnOverdue"),
+    array(u8(), 7, "reserved"),
     option(vec(publicKey()), "allowlist"),
     option(vec(publicKey()), "blocklist"),
   ]);
@@ -36,7 +39,8 @@ export class MintPolicy {
     maxCap: BN,
     minSubscription: BN,
     minRedemption: BN,
-    reserved: BN,
+    pauseOnOverdue: number,
+    reserved: number[],
     allowlist: PublicKey[] | null,
     blocklist: PublicKey[] | null,
   ) {
@@ -44,6 +48,7 @@ export class MintPolicy {
     this.maxCap = maxCap;
     this.minSubscription = minSubscription;
     this.minRedemption = minRedemption;
+    this.pauseOnOverdue = pauseOnOverdue;
     this.reserved = reserved;
     this.allowlist = allowlist;
     this.blocklist = blocklist;
@@ -56,6 +61,7 @@ export class MintPolicy {
       data.maxCap,
       data.minSubscription,
       data.minRedemption,
+      data.pauseOnOverdue,
       data.reserved,
       data.allowlist,
       data.blocklist,
@@ -64,7 +70,7 @@ export class MintPolicy {
 
   public encode(): Buffer {
     // Calculate the required buffer size
-    // Fixed fields: 4 + 8 + 8 + 8 + 8 = 36 bytes
+    // Fixed fields: 4 + 8 + 8 + 8 + 1 + 7 = 36 bytes
     // Variable fields: allowlist and blocklist (1 byte option flag + 4 bytes length + 32 bytes per pubkey)
     const allowlistSize = this.allowlist
       ? 1 + 4 + this.allowlist.length * 32
