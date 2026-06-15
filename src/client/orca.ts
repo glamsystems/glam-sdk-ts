@@ -24,6 +24,7 @@ import {
 } from "./base";
 import {
   KAMINO_LENDING_PROGRAM,
+  ORCA_DYNAMIC_TICK_ARRAY_DISCRIMINATOR,
   MEMO_PROGRAM,
   ORCA_POSITION_DISCRIMINATOR,
   ORCA_TICK_ARRAY_DISCRIMINATOR,
@@ -72,6 +73,11 @@ const ORCA_TICK_ARRAY_WHIRLPOOL_OFFSET =
   ORCA_TICK_ARRAY_TICK_SIZE * ORCA_TICK_ARRAY_SIZE;
 const ORCA_TICK_INITIALIZED_OFFSET = 0;
 const ORCA_TICK_REWARD_GROWTHS_OUTSIDE_OFFSET = 65;
+const ORCA_DYNAMIC_TICK_ARRAY_START_TICK_INDEX_OFFSET = 8;
+const ORCA_DYNAMIC_TICK_ARRAY_WHIRLPOOL_OFFSET = 12;
+const ORCA_DYNAMIC_TICK_ARRAY_TICKS_OFFSET = 60;
+const ORCA_DYNAMIC_TICK_DATA_SIZE = 112;
+const ORCA_DYNAMIC_TICK_REWARD_GROWTHS_OUTSIDE_OFFSET = 64;
 const ORCA_Q64 = 1n << 64n;
 const ORCA_U128_MOD = 1n << 128n;
 
@@ -450,6 +456,16 @@ export function parseOrcaTickArrayTick(
   tickIndex: number,
   tickSpacing: number,
 ): ParsedOrcaTick {
+  if (hasDiscriminator(data, ORCA_DYNAMIC_TICK_ARRAY_DISCRIMINATOR)) {
+    return parseOrcaDynamicTickArrayTick(
+      data,
+      expectedWhirlpool,
+      expectedStartTickIndex,
+      tickIndex,
+      tickSpacing,
+    );
+  }
+
   if (!hasDiscriminator(data, ORCA_TICK_ARRAY_DISCRIMINATOR)) {
     throw new Error("Invalid Orca tick array account discriminator");
   }
@@ -483,6 +499,65 @@ export function parseOrcaTickArrayTick(
     );
   }
   return { rewardGrowthsOutside };
+}
+
+function parseOrcaDynamicTickArrayTick(
+  data: Buffer,
+  expectedWhirlpool: PublicKey,
+  expectedStartTickIndex: number,
+  tickIndex: number,
+  tickSpacing: number,
+): ParsedOrcaTick {
+  const startTickIndex = data.readInt32LE(
+    ORCA_DYNAMIC_TICK_ARRAY_START_TICK_INDEX_OFFSET,
+  );
+  if (startTickIndex !== expectedStartTickIndex) {
+    throw new Error("Invalid Orca tick array start index");
+  }
+  const whirlpool = readPubkey(data, ORCA_DYNAMIC_TICK_ARRAY_WHIRLPOOL_OFFSET);
+  if (!whirlpool.equals(expectedWhirlpool)) {
+    throw new Error("Invalid Orca tick array Whirlpool");
+  }
+
+  const targetOffset = tickOffset(tickIndex, startTickIndex, tickSpacing);
+  let offset = ORCA_DYNAMIC_TICK_ARRAY_TICKS_OFFSET;
+  for (let i = 0; i <= targetOffset; i++) {
+    if (offset >= data.length) {
+      throw new Error("Invalid Orca dynamic tick array account data");
+    }
+    const variant = data[offset];
+    offset += 1;
+
+    if (variant === 0) {
+      if (i === targetOffset) {
+        throw new Error("Orca position tick is not initialized");
+      }
+      continue;
+    }
+    if (variant !== 1) {
+      throw new Error("Invalid Orca dynamic tick variant");
+    }
+    if (offset + ORCA_DYNAMIC_TICK_DATA_SIZE > data.length) {
+      throw new Error("Invalid Orca dynamic tick array account data");
+    }
+    if (i === targetOffset) {
+      const rewardGrowthsOutside = [];
+      for (let j = 0; j < ORCA_NUM_REWARDS; j++) {
+        rewardGrowthsOutside.push(
+          readU128LE(
+            data,
+            offset + ORCA_DYNAMIC_TICK_REWARD_GROWTHS_OUTSIDE_OFFSET + j * 16,
+          ),
+        );
+      }
+      return {
+        rewardGrowthsOutside,
+      };
+    }
+    offset += ORCA_DYNAMIC_TICK_DATA_SIZE;
+  }
+
+  throw new Error("Invalid Orca dynamic tick array account data");
 }
 
 function wrappingAddU128(a: bigint, b: bigint): bigint {
@@ -1346,18 +1421,22 @@ export class OrcaWhirlpoolsClient
         ),
       };
     });
-    const tickArrayKeys = Array.from(
+    const tickArrayKeysToFetch = Array.from(
       new PkSet(
-        pricingPositions.flatMap(({ tickArrayLower, tickArrayUpper }) => [
-          tickArrayLower,
-          tickArrayUpper,
-        ]),
+        pricingPositions.flatMap(
+          ({ position, tickArrayLower, tickArrayUpper }) =>
+            position.liquidity === 0n ? [] : [tickArrayLower, tickArrayUpper],
+        ),
       ),
     );
     const tickArrayAccountsInfo =
-      await this.base.connection.getMultipleAccountsInfo(tickArrayKeys);
+      tickArrayKeysToFetch.length === 0
+        ? []
+        : await this.base.connection.getMultipleAccountsInfo(
+            tickArrayKeysToFetch,
+          );
     const tickArrays = new PkMap<Buffer>();
-    tickArrayKeys.forEach((tickArray, i) => {
+    tickArrayKeysToFetch.forEach((tickArray, i) => {
       const accountInfo = tickArrayAccountsInfo[i];
       if (!accountInfo) {
         throw new Error(`Orca tick array account not found: ${tickArray}`);
@@ -1392,33 +1471,34 @@ export class OrcaWhirlpoolsClient
 
         const tokenMetaA = assetMetaFor(whirlpool.tokenMintA);
         const tokenMetaB = assetMetaFor(whirlpool.tokenMintB);
-        const tickLower = parseOrcaTickArrayTick(
-          tickArrays.get(tickArrayLower)!,
-          position.whirlpool,
-          getOrcaTickArrayStartIndex(
-            position.tickLowerIndex,
-            whirlpool.tickSpacing,
-          ),
-          position.tickLowerIndex,
-          whirlpool.tickSpacing,
-        );
-        const tickUpper = parseOrcaTickArrayTick(
-          tickArrays.get(tickArrayUpper)!,
-          position.whirlpool,
-          getOrcaTickArrayStartIndex(
-            position.tickUpperIndex,
-            whirlpool.tickSpacing,
-          ),
-          position.tickUpperIndex,
-          whirlpool.tickSpacing,
-        );
-        const rewardAmounts = rewardOwedAmounts(
-          whirlpool,
-          position,
-          tickLower,
-          tickUpper,
-          currentTimestamp,
-        );
+        const rewardAmounts =
+          position.liquidity === 0n
+            ? position.rewardAmountsOwed
+            : rewardOwedAmounts(
+                whirlpool,
+                position,
+                parseOrcaTickArrayTick(
+                  tickArrays.get(tickArrayLower)!,
+                  position.whirlpool,
+                  getOrcaTickArrayStartIndex(
+                    position.tickLowerIndex,
+                    whirlpool.tickSpacing,
+                  ),
+                  position.tickLowerIndex,
+                  whirlpool.tickSpacing,
+                ),
+                parseOrcaTickArrayTick(
+                  tickArrays.get(tickArrayUpper)!,
+                  position.whirlpool,
+                  getOrcaTickArrayStartIndex(
+                    position.tickUpperIndex,
+                    whirlpool.tickSpacing,
+                  ),
+                  position.tickUpperIndex,
+                  whirlpool.tickSpacing,
+                ),
+                currentTimestamp,
+              );
 
         [
           positionKey,

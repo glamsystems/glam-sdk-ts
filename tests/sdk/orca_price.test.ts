@@ -4,9 +4,11 @@ import {
   deriveTickArrayForPosition,
   OrcaWhirlpoolsClient,
   parseOrcaPosition,
+  parseOrcaTickArrayTick,
   parseOrcaWhirlpool,
 } from "../../src/client/orca";
 import {
+  ORCA_DYNAMIC_TICK_ARRAY_DISCRIMINATOR,
   ORCA_POSITION_DISCRIMINATOR,
   ORCA_TICK_ARRAY_DISCRIMINATOR,
   ORCA_WHIRLPOOL_DISCRIMINATOR,
@@ -54,6 +56,12 @@ const TICK_SIZE = 113;
 const TICK_ARRAY_WHIRLPOOL_OFFSET =
   TICK_ARRAY_TICKS_OFFSET + TICK_SIZE * TICK_ARRAY_SIZE;
 const TICK_INITIALIZED_OFFSET = 0;
+const TICK_REWARD_GROWTHS_OUTSIDE_OFFSET = 65;
+const DYNAMIC_TICK_ARRAY_START_TICK_INDEX_OFFSET = 8;
+const DYNAMIC_TICK_ARRAY_WHIRLPOOL_OFFSET = 12;
+const DYNAMIC_TICK_ARRAY_TICKS_OFFSET = 60;
+const DYNAMIC_TICK_DATA_SIZE = 112;
+const DYNAMIC_TICK_REWARD_GROWTHS_OUTSIDE_OFFSET = 64;
 
 function accountInfo(owner: PublicKey, data: Buffer = Buffer.alloc(0)) {
   return {
@@ -150,11 +158,15 @@ function orcaTickArrayData({
   startTickIndex,
   tickIndex,
   tickSpacing = 5,
+  rewardGrowthOutside = 0n,
+  initialized = true,
 }: {
   whirlpool?: PublicKey;
   startTickIndex: number;
   tickIndex: number;
   tickSpacing?: number;
+  rewardGrowthOutside?: bigint;
+  initialized?: boolean;
 }) {
   const data = Buffer.alloc(TICK_ARRAY_WHIRLPOOL_OFFSET + PUBKEY_LEN);
   writeDiscriminator(data, ORCA_TICK_ARRAY_DISCRIMINATOR);
@@ -162,8 +174,42 @@ function orcaTickArrayData({
   writePubkey(data, TICK_ARRAY_WHIRLPOOL_OFFSET, whirlpool);
 
   const offset = (tickIndex - startTickIndex) / tickSpacing;
-  data[TICK_ARRAY_TICKS_OFFSET + TICK_SIZE * offset + TICK_INITIALIZED_OFFSET] =
-    1;
+  const tickOffset = TICK_ARRAY_TICKS_OFFSET + TICK_SIZE * offset;
+  data[tickOffset + TICK_INITIALIZED_OFFSET] = initialized ? 1 : 0;
+  data.writeBigUInt64LE(
+    rewardGrowthOutside,
+    tickOffset + TICK_REWARD_GROWTHS_OUTSIDE_OFFSET,
+  );
+  return data;
+}
+
+function orcaDynamicTickArrayData({
+  whirlpool = WHIRLPOOL,
+  startTickIndex,
+  tickIndex,
+  tickSpacing = 5,
+  rewardGrowthOutside = 0n,
+}: {
+  whirlpool?: PublicKey;
+  startTickIndex: number;
+  tickIndex: number;
+  tickSpacing?: number;
+  rewardGrowthOutside?: bigint;
+}) {
+  const offset = (tickIndex - startTickIndex) / tickSpacing;
+  const data = Buffer.alloc(
+    DYNAMIC_TICK_ARRAY_TICKS_OFFSET + offset + 1 + DYNAMIC_TICK_DATA_SIZE,
+  );
+  writeDiscriminator(data, ORCA_DYNAMIC_TICK_ARRAY_DISCRIMINATOR);
+  data.writeInt32LE(startTickIndex, DYNAMIC_TICK_ARRAY_START_TICK_INDEX_OFFSET);
+  writePubkey(data, DYNAMIC_TICK_ARRAY_WHIRLPOOL_OFFSET, whirlpool);
+
+  const tickOffset = DYNAMIC_TICK_ARRAY_TICKS_OFFSET + offset;
+  data[tickOffset] = 1;
+  data.writeBigUInt64LE(
+    rewardGrowthOutside,
+    tickOffset + 1 + DYNAMIC_TICK_REWARD_GROWTHS_OUTSIDE_OFFSET,
+  );
   return data;
 }
 
@@ -192,6 +238,34 @@ describe("Orca Whirlpool pricing SDK helpers", () => {
     expect(whirlpool.tickCurrentIndex).toBe(0);
     expect(whirlpool.rewardInfos[0].mint.equals(REWARD_MINT)).toBe(true);
     expect(whirlpool.rewardInfos[0].emissionsPerSecondX64).toBe(7n);
+  });
+
+  it("parses fixed and dynamic Orca tick array accounts", () => {
+    const fixedTick = parseOrcaTickArrayTick(
+      orcaTickArrayData({
+        startTickIndex: -440,
+        tickIndex: -390,
+        rewardGrowthOutside: 11n,
+      }),
+      WHIRLPOOL,
+      -440,
+      -390,
+      5,
+    );
+    const dynamicTick = parseOrcaTickArrayTick(
+      orcaDynamicTickArrayData({
+        startTickIndex: -440,
+        tickIndex: -390,
+        rewardGrowthOutside: 13n,
+      }),
+      WHIRLPOOL,
+      -440,
+      -390,
+      5,
+    );
+
+    expect(fixedTick.rewardGrowthsOutside[0]).toBe(11n);
+    expect(dynamicTick.rewardGrowthsOutside[0]).toBe(13n);
   });
 
   it("categorizes Orca position accounts by owner and discriminator", async () => {
@@ -336,22 +410,6 @@ describe("Orca Whirlpool pricing SDK helpers", () => {
           ORCA_WHIRLPOOLS_PROGRAM_ID,
           orcaWhirlpoolData({ rewardLastUpdatedTimestamp: 0n }),
         ),
-      ])
-      .mockResolvedValueOnce([
-        accountInfo(
-          ORCA_WHIRLPOOLS_PROGRAM_ID,
-          orcaTickArrayData({
-            startTickIndex: -440,
-            tickIndex: -90,
-          }),
-        ),
-        accountInfo(
-          ORCA_WHIRLPOOLS_PROGRAM_ID,
-          orcaTickArrayData({
-            startTickIndex: 0,
-            tickIndex: 175,
-          }),
-        ),
       ]);
     const orca = new OrcaWhirlpoolsClient({
       vaultPda: VAULT,
@@ -377,6 +435,80 @@ describe("Orca Whirlpool pricing SDK helpers", () => {
         ORACLE_B,
       ],
     );
+    expect(getMultipleAccountsInfo).toHaveBeenCalledTimes(2);
+  });
+
+  it("builds Orca pricing accounts for zero-liquidity positions without fetching boundary tick arrays", async () => {
+    const assetMetas = new PkMap([
+      [
+        TOKEN_MINT_A,
+        {
+          asset: TOKEN_MINT_A,
+          oracle: ORACLE_A,
+          oracleSource: "Pyth",
+          programId: TOKEN_PROGRAM_ID,
+        },
+      ],
+      [
+        TOKEN_MINT_B,
+        {
+          asset: TOKEN_MINT_B,
+          oracle: ORACLE_B,
+          oracleSource: "Pyth",
+          programId: TOKEN_PROGRAM_ID,
+        },
+      ],
+      [
+        REWARD_MINT,
+        {
+          asset: REWARD_MINT,
+          oracle: REWARD_ORACLE,
+          oracleSource: "Pyth",
+          programId: TOKEN_PROGRAM_ID,
+        },
+      ],
+    ]);
+    const getMultipleAccountsInfo = jest
+      .fn()
+      .mockResolvedValueOnce([
+        accountInfo(
+          ORCA_WHIRLPOOLS_PROGRAM_ID,
+          orcaPositionData({ liquidity: 0n, rewardAmountOwed: 3n }),
+        ),
+      ])
+      .mockResolvedValueOnce([
+        accountInfo(
+          ORCA_WHIRLPOOLS_PROGRAM_ID,
+          orcaWhirlpoolData({ rewardLastUpdatedTimestamp: 0n }),
+        ),
+      ]);
+    const orca = new OrcaWhirlpoolsClient({
+      vaultPda: VAULT,
+      connection: { getMultipleAccountsInfo },
+      fetchAssetMetas: jest.fn(async () => assetMetas),
+    } as any);
+
+    const accounts = await orca.remainingAccountsForPricingWhirlpoolPositions([
+      POSITION,
+    ]);
+
+    expectPubkeys(
+      accounts?.remainingAccounts.map(({ pubkey }) => pubkey) || [],
+      [
+        POSITION,
+        orca.getPositionTokenAta(POSITION_MINT),
+        WHIRLPOOL,
+        deriveTickArrayForPosition(WHIRLPOOL, -90, 5),
+        deriveTickArrayForPosition(WHIRLPOOL, 175, 5),
+        TOKEN_MINT_A,
+        ORACLE_A,
+        TOKEN_MINT_B,
+        ORACLE_B,
+        REWARD_MINT,
+        REWARD_ORACLE,
+      ],
+    );
+    expect(getMultipleAccountsInfo).toHaveBeenCalledTimes(2);
   });
 
   it("rejects duplicate Orca positions before fetching account data", async () => {

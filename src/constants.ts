@@ -197,6 +197,9 @@ export const ORCA_WHIRLPOOL_DISCRIMINATOR = [
 export const ORCA_TICK_ARRAY_DISCRIMINATOR = [
   69, 97, 189, 190, 110, 7, 66, 187,
 ] as const;
+export const ORCA_DYNAMIC_TICK_ARRAY_DISCRIMINATOR = [
+  17, 216, 246, 142, 225, 199, 218, 56,
+] as const;
 
 /**
  * Token ACL (sRFC-37)
