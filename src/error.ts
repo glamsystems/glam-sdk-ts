@@ -12,6 +12,7 @@ import {
   getExtJupiterIdl,
   getExtLoopscaleIdl,
   getExtOrcaIdl,
+  getExtNeutralIdl,
   resolveStaging,
 } from "./glamExports";
 import { JUPITER_PROGRAM_ID } from "./constants";
@@ -102,6 +103,7 @@ export function resolveErrorCode(
     getExtLoopscaleIdl(isStaging),
     getExtJupiterIdl(isStaging),
     getExtOrcaIdl(isStaging),
+    getExtNeutralIdl(isStaging),
   ];
 
   if (programId) {

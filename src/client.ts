@@ -29,6 +29,7 @@ import { LoopscaleCoreClient } from "./client/loopscale/core";
 import { PhoenixClient } from "./client/phoenix";
 import { JupiterBorrowClient, JupiterEarnClient } from "./client/jupiter-lend";
 import { OrcaWhirlpoolsClient } from "./client/orca";
+import { NeutralClient } from "./client/neutral";
 
 /**
  * Main entrypoint for the GLAM SDK
@@ -62,6 +63,7 @@ export class GlamClient extends BaseClient {
   private _jupiterEarn?: JupiterEarnClient;
   private _jupiterBorrow?: JupiterBorrowClient;
   private _orca?: OrcaWhirlpoolsClient;
+  private _neutral?: NeutralClient;
 
   public constructor(config?: GlamClientConfig) {
     super(config);
@@ -261,5 +263,12 @@ export class GlamClient extends BaseClient {
       this._orca = new OrcaWhirlpoolsClient(this);
     }
     return this._orca;
+  }
+
+  get neutral(): NeutralClient {
+    if (!this._neutral) {
+      this._neutral = new NeutralClient(this);
+    }
+    return this._neutral;
   }
 }

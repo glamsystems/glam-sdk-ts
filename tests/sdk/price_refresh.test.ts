@@ -7,6 +7,12 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { OrcaWhirlpoolsClient } from "../../src/client/orca";
 import { PriceClient } from "../../src/client/price";
 import {
+  getNeutralOracleDataPda,
+  getNeutralUserBundlePda,
+  NeutralBundleAccount,
+  NTBUNDLE_PROGRAM_ID,
+} from "../../src/client/neutral";
+import {
   KAMINO_LENDING_PROGRAM,
   ORCA_POSITION_DISCRIMINATOR,
   ORCA_WHIRLPOOLS_PROGRAM_ID,
@@ -33,6 +39,7 @@ const EXT_EPI = PublicKey.unique();
 const EXT_PHOENIX = PublicKey.unique();
 const EXT_ORCA = PublicKey.unique();
 const EXT_LOOPSCALE = PublicKey.unique();
+const EXT_NEUTRAL = PublicKey.unique();
 const OBLIGATION = new PublicKey(
   "65iwhmFa5mRSmeBGNGEzSfG6y66Pk6r5eksYDMFSMRb6",
 );
@@ -129,6 +136,10 @@ const ORCA_ACL = {
   integrationProgram: EXT_ORCA,
   protocolsBitmask: ORCA_WHIRLPOOLS_PROTOCOL,
 };
+const NEUTRAL_ACL = {
+  integrationProgram: EXT_NEUTRAL,
+  protocolsBitmask: 0b01,
+};
 
 function makeClient(
   activeReservePubkeys: PublicKey[],
@@ -161,6 +172,7 @@ function makeClient(
       extPhoenixProgram: { programId: EXT_PHOENIX },
       extOrcaProgram: { programId: EXT_ORCA },
       extLoopscaleProgram: { programId: EXT_LOOPSCALE },
+      extNeutralProgram: { programId: EXT_NEUTRAL },
       fetchStateModel: jest.fn(async () => ({
         accountType: StateAccountType.VAULT,
         baseAssetMint: PublicKey.default,
@@ -618,5 +630,113 @@ describe("PriceClient Kamino reserve refresh planning", () => {
 
     expect(priceBridgeSpy).toHaveBeenCalledTimes(1);
     expect(ixs).toContain(bridgeIx);
+  });
+
+  it("skips Neutral bundle depositor pricing when ext_neutral is not enabled", async () => {
+    const neutralIx = ix(5);
+    const { client } = makeClient([RESERVE_A, RESERVE_C]);
+    const priceNeutralSpy = jest
+      .spyOn(client as any, "priceNeutralBundleDepositorsIx")
+      .mockResolvedValue({ ixs: [neutralIx], kaminoReserves: [] });
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(priceNeutralSpy).not.toHaveBeenCalled();
+    expect(ixs).not.toContain(neutralIx);
+  });
+
+  it("prices Neutral bundle depositors when ext_neutral is enabled", async () => {
+    const neutralIx = ix(5);
+    const { client } = makeClient(
+      [RESERVE_A, RESERVE_C],
+      [KAMINO_LENDING_ACL, NEUTRAL_ACL],
+    );
+    const priceNeutralSpy = jest
+      .spyOn(client as any, "priceNeutralBundleDepositorsIx")
+      .mockResolvedValue({ ixs: [neutralIx], kaminoReserves: [] });
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(priceNeutralSpy).toHaveBeenCalledTimes(1);
+    expect(ixs).toContain(neutralIx);
+  });
+
+  it("builds Neutral bundle depositor pricing accounts from tracked external positions", async () => {
+    const bundle = PublicKey.unique();
+    const userBundle = getNeutralUserBundlePda(VAULT, bundle);
+    const oracleData = getNeutralOracleDataPda(bundle);
+    const bundleAsset = PublicKey.unique();
+    const bundleAssetOracle = PublicKey.unique();
+    const baseAssetOracle = PublicKey.unique();
+    const solUsdOracle = PublicKey.unique();
+    const neutralIx = ix(6);
+    const builder = methodBuilder(neutralIx);
+    const decodeSpy = jest
+      .spyOn(NeutralBundleAccount, "decode")
+      .mockReturnValue({ assetAddress: bundleAsset } as NeutralBundleAccount);
+
+    const client = new PriceClient(
+      {
+        vaultPda: VAULT,
+        statePda: STATE,
+        extNeutralProgram: { programId: EXT_NEUTRAL },
+        fetchStateModel: jest.fn(async () => ({
+          accountType: StateAccountType.VAULT,
+          baseAssetMint: PublicKey.default,
+          externalPositions: [userBundle],
+          integrationAcls: [NEUTRAL_ACL],
+        })),
+        connection: {
+          getProgramAccounts: jest.fn(async () => [
+            {
+              pubkey: bundle,
+              account: accountInfo(NTBUNDLE_PROGRAM_ID, Buffer.alloc(0)),
+            },
+          ]),
+        },
+        getSolOracle: jest.fn(async () => solUsdOracle),
+        getAssetMeta: jest.fn(async (asset: PublicKey) => ({
+          asset,
+          decimals: 6,
+          oracle: asset.equals(bundleAsset)
+            ? bundleAssetOracle
+            : PublicKey.default,
+          programId: TOKEN_PROGRAM_ID,
+          oracleSource: "Pyth",
+        })),
+        mintProgram: {
+          methods: {
+            priceNeutralBundleDepositors: jest.fn(() => builder),
+          },
+        },
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => undefined) as any,
+    );
+    jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(baseAssetOracle);
+
+    const chunk = await (client as any).priceNeutralBundleDepositorsIx();
+
+    expect(chunk.ixs).toEqual([neutralIx]);
+    expect(chunk.kaminoReserves).toEqual([]);
+    expect(builder.accounts).toHaveBeenCalledWith({
+      glamState: STATE,
+      solUsdOracle,
+      baseAssetOracle,
+    });
+    const remainingAccounts = builder.remainingAccounts.mock.calls[0][0];
+    expectPubkeys(
+      remainingAccounts.map(({ pubkey }: { pubkey: PublicKey }) => pubkey),
+      [userBundle, bundle, oracleData, bundleAssetOracle],
+    );
+    remainingAccounts.forEach((account: any) => {
+      expect(account.isSigner).toBe(false);
+      expect(account.isWritable).toBe(false);
+    });
+    expect(decodeSpy).toHaveBeenCalledWith(bundle, Buffer.alloc(0));
+    decodeSpy.mockRestore();
   });
 });

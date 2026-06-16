@@ -9,6 +9,7 @@ import {
   LoopscaleLendingMarketPolicy,
   LoopscaleLendingPolicy,
   LoopscaleSellLedgerPolicy,
+  NtBundlePolicy,
   PhoenixPolicy,
   WhirlpoolsPolicy,
 } from "../../src/deser/integrationPolicies";
@@ -423,5 +424,26 @@ describe("WhirlpoolsPolicy", () => {
     expect(() => WhirlpoolsPolicy.decode(missingDeviation)).toThrow(
       "Invalid Whirlpools policy bounds",
     );
+  });
+});
+
+describe("NtBundlePolicy", () => {
+  const bundle1 = new PublicKey("11111111111111111111111111111112");
+  const bundle2 = new PublicKey("11111111111111111111111111111113");
+
+  it("round-trips the bundle allowlist", () => {
+    const policy = new NtBundlePolicy([bundle1, bundle2]);
+    const recovered = NtBundlePolicy.decode(policy.encode());
+
+    expect(recovered.bundlesAllowlist).toHaveLength(2);
+    expect(recovered.bundlesAllowlist[0].toBase58()).toBe(bundle1.toBase58());
+    expect(recovered.bundlesAllowlist[1].toBase58()).toBe(bundle2.toBase58());
+  });
+
+  it("round-trips an empty deny-all allowlist", () => {
+    const policy = new NtBundlePolicy([]);
+    const recovered = NtBundlePolicy.decode(policy.encode());
+
+    expect(recovered.bundlesAllowlist).toEqual([]);
   });
 });

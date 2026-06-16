@@ -16,6 +16,29 @@ export function expectPublicKeyArrayEqual(
   );
 }
 
+/**
+ * Asserts that an action throws an error with the expected text
+ *
+ * @param action The action to perform
+ * @param expectedText The expected error text
+ */
+export const expectRejects = async (
+  action: () => Promise<unknown>,
+  expectedText?: string,
+) => {
+  let text = "";
+  try {
+    await action();
+  } catch (error: any) {
+    text = [error?.message, error?.logs?.join("\n")].filter(Boolean).join("\n");
+  }
+
+  expect(text.length).toBeGreaterThan(0);
+  if (expectedText) {
+    expect(text).toContain(expectedText);
+  }
+};
+
 export const sleep = async (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 

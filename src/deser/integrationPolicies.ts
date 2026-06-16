@@ -744,6 +744,30 @@ export class WhirlpoolsPolicy {
   }
 }
 
+export class NtBundlePolicy {
+  bundlesAllowlist: PublicKey[];
+
+  static _layout = struct([vec(publicKey(), "bundlesAllowlist")]);
+
+  constructor(bundlesAllowlist: PublicKey[]) {
+    this.bundlesAllowlist = bundlesAllowlist;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): NtBundlePolicy {
+    const { bundlesAllowlist } = NtBundlePolicy._layout.decode(
+      buffer,
+    ) as NtBundlePolicy;
+    return new NtBundlePolicy(bundlesAllowlist);
+  }
+
+  public encode(): Buffer {
+    const bundlesAllowlistSize = 4 + this.bundlesAllowlist.length * 32;
+    const buffer = Buffer.alloc(bundlesAllowlistSize);
+    NtBundlePolicy._layout.encode(this, buffer);
+    return buffer;
+  }
+}
+
 export class CctpPolicy {
   allowedDestinations: { domain: number; address: PublicKey }[];
 

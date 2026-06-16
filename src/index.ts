@@ -11,6 +11,7 @@ export * from "./client/loopscale";
 export * from "./client/phoenix";
 export * from "./client/jupiter-lend";
 export * from "./client/orca";
+export * from "./client/neutral";
 export * from "./client/price";
 export * from "./deser/integrationPolicies";
 export * from "./deser/loopscaleLayouts";

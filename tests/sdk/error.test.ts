@@ -1,5 +1,9 @@
 import { extractFailedProgramId, resolveErrorCode } from "../../src/error";
-import { getGlamProtocolIdl, getExtSplIdl } from "../../src/glamExports";
+import {
+  getGlamProtocolIdl,
+  getExtSplIdl,
+  getExtNeutralProgramId,
+} from "../../src/glamExports";
 import { JUPITER_PROGRAM_ID } from "../../src/constants";
 
 describe("extractFailedProgramId", () => {
@@ -52,6 +56,18 @@ describe("resolveErrorCode", () => {
   it("accepts hex codes", () => {
     expect(resolveErrorCode("0x1771", jupiterId)).toContain(
       "Slippage tolerance exceeded",
+    );
+  });
+
+  it("resolves ext_neutral errors without falling through to Jupiter code collisions", () => {
+    expect(
+      resolveErrorCode(6008, getExtNeutralProgramId(false).toBase58(), false),
+    ).toBe("Neutral bundle permission mode does not match the instruction");
+  });
+
+  it("keeps Jupiter mappings for Jupiter program failures", () => {
+    expect(resolveErrorCode(6008, jupiterId)).toBe(
+      "Jupiter swap failed: Not enough account keys",
     );
   });
 

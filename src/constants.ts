@@ -9,6 +9,7 @@ import {
   getExtMarinadeProgramId,
   getExtPhoenixProgramId,
   getExtOrcaProgramId,
+  getExtNeutralProgramId,
   getExtSplProgramId,
   getExtStakePoolProgramId,
   getGlamMintProgramId,
@@ -200,6 +201,9 @@ export const ORCA_TICK_ARRAY_DISCRIMINATOR = [
 export const ORCA_DYNAMIC_TICK_ARRAY_DISCRIMINATOR = [
   17, 216, 246, 142, 225, 199, 218, 56,
 ] as const;
+export const NTBUNDLE_PROGRAM_ID = new PublicKey(
+  "BUNDDh4P5XviMm1f3gCvnq2qKx6TGosAGnoUK12e7cXU",
+);
 
 /**
  * Token ACL (sRFC-37)
@@ -455,6 +459,20 @@ export const getProtocolsAndPermissions = (
         [1 << 7]: "IncreaseLiquidityByTokenAmounts",
         [1 << 8]: "RepositionLiquidity",
         [1 << 9]: "InitializeTickArray",
+      },
+    },
+  },
+  // Neutral integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_neutral/src/state/access.rs
+  [getExtNeutralProgramId(staging).toBase58()]: {
+    "0000000000000001": {
+      name: "Neutral",
+      staging: true,
+      permissions: {
+        [1 << 0]: "InitializeBundleDepositor",
+        [1 << 1]: "RequestDeposit",
+        [1 << 2]: "RequestWithdrawal",
+        [1 << 3]: "CloseUserBundleAccount",
       },
     },
   },

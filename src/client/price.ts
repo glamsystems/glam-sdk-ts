@@ -19,6 +19,7 @@ import {
   bfToDecimal,
   findStakeAccounts,
   Fraction,
+  getProgramAccounts,
   getGlobalConfigPda,
   getIntegrationAuthorityPda,
   PkMap,
@@ -60,12 +61,22 @@ import {
   PHOENIX_PROTOCOL,
   STAKE_PROTOCOL,
 } from "../protocols";
+import {
+  getNeutralOracleDataPda,
+  getNeutralUserBundlePda,
+  NT_BUNDLE_PROTOCOL,
+  NeutralBundleAccount,
+  NTBUNDLE_PROGRAM_ID,
+} from "./neutral";
 
 const PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET = 360;
 const PUBKEY_LEN = 32;
 const PHOENIX_TRADER_DISCRIMINATOR = [41, 97, 73, 105, 110, 214, 112, 9];
 const PHOENIX_REQUEST_HEAP_FRAME_BYTES = 256 * 1024;
 const ORCA_PRICING_MAX_ACCOUNT_KEYS = 64;
+const NT_BUNDLE_ACCOUNT_DISCRIMINATOR = Buffer.from([
+  15, 82, 167, 230, 37, 214, 82, 80,
+]);
 
 /**
  * Represents a single asset holding within a vault.
@@ -1471,6 +1482,102 @@ export class PriceClient {
     return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
 
+  private async priceNeutralBundleDepositorsIx(): Promise<PricingChunk> {
+    const stateModel =
+      this.cachedStateModel ?? (await this.base.fetchStateModel());
+    const externalPositions = new PkSet(stateModel.externalPositions ?? []);
+    if (externalPositions.size === 0) {
+      return { ixs: [], kaminoReserves: [] };
+    }
+
+    // User bundle accounts do not store their parent bundle, so discover bundles and
+    // intersect derived user bundle PDAs with the tracked external positions.
+    const bundleAccounts = await getProgramAccounts(
+      this.base.connection,
+      NTBUNDLE_PROGRAM_ID,
+      {
+        commitment: "confirmed",
+        filters: [
+          {
+            memcmp: {
+              offset: 0,
+              bytes: NT_BUNDLE_ACCOUNT_DISCRIMINATOR.toString("base64"),
+              encoding: "base64",
+            },
+          },
+        ],
+      },
+    );
+    const positions = bundleAccounts
+      .map(({ pubkey: bundle, account: bundleInfo }) => ({
+        bundle,
+        bundleInfo,
+        userBundle: getNeutralUserBundlePda(this.base.vaultPda, bundle),
+      }))
+      .filter(({ userBundle }) => externalPositions.has(userBundle));
+
+    if (positions.length === 0) {
+      return { ixs: [], kaminoReserves: [] };
+    }
+
+    const [solUsdOracle, baseAssetOracle, baseAssetMeta] = await Promise.all([
+      this.base.getSolOracle(),
+      this.getBaseAssetOracle(),
+      this.base.getAssetMeta(stateModel.baseAssetMint),
+    ]);
+
+    const kaminoReserves = new PkSet();
+    if (baseAssetMeta.oracleSource === "KaminoReserve") {
+      kaminoReserves.add(baseAssetMeta.oracle);
+    }
+
+    const remainingAccounts: AccountMeta[] = [];
+    for (let i = 0; i < positions.length; i++) {
+      const { bundle, bundleInfo, userBundle } = positions[i];
+      if (!bundleInfo.owner.equals(NTBUNDLE_PROGRAM_ID)) {
+        throw new Error(
+          `Neutral bundle ${bundle} is owned by ${bundleInfo.owner}, expected ${NTBUNDLE_PROGRAM_ID}`,
+        );
+      }
+
+      const bundleAccount = NeutralBundleAccount.decode(
+        bundle,
+        bundleInfo.data,
+      );
+      const bundleAssetMeta = await this.base.getAssetMeta(
+        bundleAccount.assetAddress,
+      );
+      if (bundleAssetMeta.oracleSource === "KaminoReserve") {
+        kaminoReserves.add(bundleAssetMeta.oracle);
+      }
+
+      [
+        userBundle,
+        bundle,
+        getNeutralOracleDataPda(bundle),
+        bundleAssetMeta.oracle,
+      ].forEach((pubkey) => {
+        remainingAccounts.push({
+          pubkey,
+          isSigner: false,
+          isWritable: false,
+        });
+      });
+    }
+
+    const ix = await (this.base.mintProgram.methods as any)
+      .priceNeutralBundleDepositors()
+      .accounts({
+        glamState: this.base.statePda,
+        solUsdOracle,
+        baseAssetOracle,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+
+    return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
+  }
+
   private async priceEpiValidatedPositionsIx(): Promise<TransactionInstruction | null> {
     const observationState = await this.epi.fetchObservationState();
     if (!observationState) {
@@ -1643,6 +1750,16 @@ export class PriceClient {
       );
       if (bridgeIntegrationAcl) {
         chunks.push(await this.priceManagedTransfersIxs());
+      }
+
+      const neutralIntegrationAcl = integrationAcls.find(
+        (acl) =>
+          acl.integrationProgram.equals(
+            this.base.extNeutralProgram.programId,
+          ) && (acl.protocolsBitmask & NT_BUNDLE_PROTOCOL) !== 0,
+      );
+      if (neutralIntegrationAcl) {
+        chunks.push(await this.priceNeutralBundleDepositorsIx());
       }
     }
 

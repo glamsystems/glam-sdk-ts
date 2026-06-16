@@ -6,6 +6,7 @@ import {
   getExtLoopscaleProgramId,
   getExtPhoenixProgramId,
   getExtOrcaProgramId,
+  getExtNeutralProgramId,
   getGlamMintProgramId,
   getGlamProtocolProgramId,
 } from "../../src/glamExports";
@@ -211,6 +212,19 @@ describe("getProtocolsAndPermissions", () => {
           protocolBitflagKey(CCTP_PROTOCOL),
         ),
       ).toEqual(["Transfer"]);
+
+      expect(
+        getPermissionNames(
+          staging,
+          getExtNeutralProgramId(staging).toBase58(),
+          "0000000000000001",
+        ),
+      ).toEqual([
+        "InitializeBundleDepositor",
+        "RequestDeposit",
+        "RequestWithdrawal",
+        "CloseUserBundleAccount",
+      ]);
 
       expect(
         getPermissionNames(
