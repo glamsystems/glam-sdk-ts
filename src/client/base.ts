@@ -53,6 +53,7 @@ import {
   ExtPhoenixProgram,
   ExtOrcaProgram,
   ExtNeutralProgram,
+  ExtMarginfiProgram,
   ExtSplProgram,
   ExtStakePoolProgram,
   GlamMintProgram,
@@ -65,6 +66,7 @@ import {
   getExtLoopscaleProgram,
   getExtOrcaProgram,
   getExtNeutralProgram,
+  getExtMarginfiProgram,
   getExtMarinadeProgram,
   getExtPhoenixProgram,
   getExtSplProgram,
@@ -177,6 +179,7 @@ export class BaseClient {
   private _extJupiterProgram?: ExtJupiterProgram;
   private _extOrcaProgram?: ExtOrcaProgram;
   private _extNeutralProgram?: ExtNeutralProgram;
+  private _extMarginfiProgram?: ExtMarginfiProgram;
 
   private _statePda?: PublicKey;
   private _globalConfig?: GlobalConfig;
@@ -339,6 +342,16 @@ export class BaseClient {
       );
     }
     return this._extNeutralProgram;
+  }
+
+  get extMarginfiProgram(): ExtMarginfiProgram {
+    if (!this._extMarginfiProgram) {
+      this._extMarginfiProgram = getExtMarginfiProgram(
+        this.provider,
+        this.staging,
+      );
+    }
+    return this._extMarginfiProgram;
   }
 
   get isVaultConnected(): boolean {

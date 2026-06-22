@@ -2835,6 +2835,238 @@ export type GlamMint = {
       ]
     },
     {
+      "name": "priceMarginfiAccounts",
+      "docs": [
+        "Prices Marginfi accounts registered as vault external positions.",
+        "",
+        "Clients must refresh active banks and call Marginfi `lending_account_pulse_health`",
+        "in the same transaction before this ix.",
+        "",
+        "Extra accounts for pricing N Marginfi accounts:",
+        "- marginfi_account x N"
+      ],
+      "discriminator": [
+        146,
+        215,
+        180,
+        231,
+        191,
+        188,
+        42,
+        235
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                227,
+                199,
+                235,
+                230,
+                176,
+                132,
+                243,
+                117,
+                43,
+                131,
+                173,
+                18,
+                78,
+                255,
+                26,
+                50,
+                209,
+                135,
+                86,
+                219,
+                140,
+                126,
+                61,
+                255,
+                0,
+                218,
+                252,
+                224,
+                172,
+                8,
+                223,
+                207
+              ]
+            }
+          }
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "solUsdOracle"
+        },
+        {
+          "name": "baseAssetOracle"
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "glamConfig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                10,
+                11,
+                0,
+                83,
+                72,
+                16,
+                46,
+                144,
+                46,
+                42,
+                79,
+                22,
+                157,
+                123,
+                21,
+                242,
+                192,
+                146,
+                1,
+                78,
+                88,
+                59,
+                102,
+                9,
+                190,
+                226,
+                92,
+                189,
+                187,
+                232,
+                83,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "glamProtocol",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "eventAuthority",
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "eventProgram",
+          "optional": true,
+          "address": "GM1NtvvnSXUptTrMCqbogAdZJydZSNv98DoU5AZVLmGh"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "priceOrcaWhirlpoolPositions",
       "docs": [
         "Prices Orca Whirlpools positions registered as vault external positions.",

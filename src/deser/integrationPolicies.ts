@@ -261,6 +261,48 @@ export class KaminoVaultsPolicy {
   }
 }
 
+export class MarginfiPolicy {
+  groupsAllowlist: PublicKey[];
+  banksAllowlist: PublicKey[];
+  borrowAllowlist: PublicKey[];
+
+  static _layout = struct([
+    vec(publicKey(), "groupsAllowlist"),
+    vec(publicKey(), "banksAllowlist"),
+    vec(publicKey(), "borrowAllowlist"),
+  ]);
+
+  constructor(
+    groupsAllowlist: PublicKey[],
+    banksAllowlist: PublicKey[],
+    borrowAllowlist: PublicKey[],
+  ) {
+    this.groupsAllowlist = groupsAllowlist;
+    this.banksAllowlist = banksAllowlist;
+    this.borrowAllowlist = borrowAllowlist;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): MarginfiPolicy {
+    const { groupsAllowlist, banksAllowlist, borrowAllowlist } =
+      MarginfiPolicy._layout.decode(buffer) as MarginfiPolicy;
+    return new MarginfiPolicy(groupsAllowlist, banksAllowlist, borrowAllowlist);
+  }
+
+  public encode(): Buffer {
+    const totalSize =
+      4 +
+      this.groupsAllowlist.length * 32 +
+      4 +
+      this.banksAllowlist.length * 32 +
+      4 +
+      this.borrowAllowlist.length * 32;
+
+    const buffer = Buffer.alloc(totalSize);
+    MarginfiPolicy._layout.encode(this, buffer);
+    return buffer;
+  }
+}
+
 export class JupiterEarnPolicy {
   mintsAllowlist: PublicKey[];
 

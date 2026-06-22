@@ -16,6 +16,7 @@ import type { ExtJupiter } from "../target/types/ext_jupiter";
 import type { ExtOrca } from "../target/types/ext_orca";
 import type { ExtLoopscale } from "../target/types/ext_loopscale";
 import type { ExtNeutral } from "../target/types/ext_neutral";
+import type { ExtMarginfi } from "../target/types/ext_marginfi";
 
 import GlamProtocolIdlJson from "../target/idl/glam_protocol.json";
 import GlamConfigIdlJson from "../target/idl/glam_config.json";
@@ -33,6 +34,7 @@ import ExtJupiterIdlJson from "../target/idl/ext_jupiter.json";
 import ExtOrcaIdlJson from "../target/idl/ext_orca.json";
 import ExtLoopscaleIdlJson from "../target/idl/ext_loopscale.json";
 import ExtNeutralIdlJson from "../target/idl/ext_neutral.json";
+import ExtMarginfiIdlJson from "../target/idl/ext_marginfi.json";
 
 import GlamProtocolIdlJsonStaging from "../target/idl/glam_protocol-staging.json";
 import GlamMintIdlJsonStaging from "../target/idl/glam_mint-staging.json";
@@ -48,6 +50,7 @@ import ExtJupiterIdlJsonStaging from "../target/idl/ext_jupiter-staging.json";
 import ExtOrcaIdlJsonStaging from "../target/idl/ext_orca-staging.json";
 import ExtLoopscaleIdlJsonStaging from "../target/idl/ext_loopscale-staging.json";
 import ExtNeutralIdlJsonStaging from "../target/idl/ext_neutral-staging.json";
+import ExtMarginfiIdlJsonStaging from "../target/idl/ext_marginfi-staging.json";
 
 export {
   GlamProtocol,
@@ -58,6 +61,7 @@ export {
   ExtOrca,
   ExtLoopscale,
   ExtNeutral,
+  ExtMarginfi,
 };
 
 const EXT_DRIFT_STAGING_PROGRAM_ID =
@@ -78,6 +82,7 @@ export type ExtJupiterProgram = Program<ExtJupiter>;
 export type ExtOrcaProgram = Program<ExtOrca>;
 export type ExtLoopscaleProgram = Program<ExtLoopscale>;
 export type ExtNeutralProgram = Program<ExtNeutral>;
+export type ExtMarginfiProgram = Program<ExtMarginfi>;
 
 const isStaging = () => {
   const s = process.env.NEXT_PUBLIC_GLAM_STAGING || process.env.GLAM_STAGING;
@@ -150,6 +155,10 @@ export function getExtNeutralIdl(staging: boolean) {
   return staging ? ExtNeutralIdlJsonStaging : ExtNeutralIdlJson;
 }
 
+export function getExtMarginfiIdl(staging: boolean) {
+  return staging ? ExtMarginfiIdlJsonStaging : ExtMarginfiIdlJson;
+}
+
 export function getExtMarinadeIdl(staging: boolean) {
   return staging ? ExtMarinadeIdlJsonStaging : ExtMarinadeIdlJson;
 }
@@ -210,6 +219,10 @@ export function getExtLoopscaleProgramId(staging: boolean) {
 
 export function getExtNeutralProgramId(staging: boolean) {
   return new PublicKey(getExtNeutralIdl(staging).address);
+}
+
+export function getExtMarginfiProgramId(staging: boolean) {
+  return new PublicKey(getExtMarginfiIdl(staging).address);
 }
 
 export function getExtMarinadeProgramId(staging: boolean) {
@@ -316,4 +329,11 @@ export function getExtNeutralProgram(
   staging: boolean,
 ): ExtNeutralProgram {
   return new Program<ExtNeutral>(getExtNeutralIdl(staging), provider);
+}
+
+export function getExtMarginfiProgram(
+  provider: Provider,
+  staging: boolean,
+): ExtMarginfiProgram {
+  return new Program<ExtMarginfi>(getExtMarginfiIdl(staging), provider);
 }

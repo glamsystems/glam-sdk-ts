@@ -30,6 +30,7 @@ import { PhoenixClient } from "./client/phoenix";
 import { JupiterBorrowClient, JupiterEarnClient } from "./client/jupiter-lend";
 import { OrcaWhirlpoolsClient } from "./client/orca";
 import { NeutralClient } from "./client/neutral";
+import { MarginfiClient } from "./client/marginfi";
 
 /**
  * Main entrypoint for the GLAM SDK
@@ -64,6 +65,7 @@ export class GlamClient extends BaseClient {
   private _jupiterBorrow?: JupiterBorrowClient;
   private _orca?: OrcaWhirlpoolsClient;
   private _neutral?: NeutralClient;
+  private _marginfi?: MarginfiClient;
 
   public constructor(config?: GlamClientConfig) {
     super(config);
@@ -133,6 +135,7 @@ export class GlamClient extends BaseClient {
         this.loopscaleBorrow,
         this.loopscaleLend,
         this.loopscaleVault,
+        this.marginfi,
         () => this.jupiterSwap.jupApi,
       );
     }
@@ -270,5 +273,12 @@ export class GlamClient extends BaseClient {
       this._neutral = new NeutralClient(this);
     }
     return this._neutral;
+  }
+
+  get marginfi(): MarginfiClient {
+    if (!this._marginfi) {
+      this._marginfi = new MarginfiClient(this);
+    }
+    return this._marginfi;
   }
 }

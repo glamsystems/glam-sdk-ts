@@ -1,0 +1,2261 @@
+{
+  "address": "gstgMghFitRBz2GXKwgpMd7L1JXd1sg59q2v5Y83vSY",
+  "metadata": {
+    "name": "ext_marginfi",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Marginfi integration for GLAM Protocol"
+  },
+  "instructions": [
+    {
+      "name": "kamino_deposit",
+      "docs": [
+        "Deposit Kamino-backed collateral into a Marginfi account.",
+        "",
+        "- Permission: `MarginfiPermissions::KaminoDeposit`.",
+        "- Policy:",
+        "- `group` must be present in `MarginfiPolicy::groups_allowlist`.",
+        "- `bank` must be present in `MarginfiPolicy::banks_allowlist`."
+      ],
+      "discriminator": [
+        237,
+        8,
+        188,
+        187,
+        115,
+        99,
+        49,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "signer_token_account",
+          "writable": true
+        },
+        {
+          "name": "liquidity_vault_authority",
+          "writable": true
+        },
+        {
+          "name": "liquidity_vault",
+          "writable": true
+        },
+        {
+          "name": "integration_acc_2",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "lending_market_authority"
+        },
+        {
+          "name": "integration_acc_1",
+          "writable": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "reserve_liquidity_supply",
+          "writable": true
+        },
+        {
+          "name": "reserve_collateral_mint",
+          "writable": true
+        },
+        {
+          "name": "reserve_destination_deposit_collateral",
+          "writable": true
+        },
+        {
+          "name": "obligation_farm_user_state",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "reserve_farm_state",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "kamino_program"
+        },
+        {
+          "name": "farms_program"
+        },
+        {
+          "name": "collateral_token_program"
+        },
+        {
+          "name": "liquidity_token_program"
+        },
+        {
+          "name": "instruction_sysvar_account"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "kamino_withdraw",
+      "docs": [
+        "Withdraw Kamino-backed collateral from a Marginfi account.",
+        "",
+        "- Permission: `MarginfiPermissions::KaminoWithdraw`.",
+        "- Policy:",
+        "- `group` must be present in `MarginfiPolicy::groups_allowlist`.",
+        "- `bank` must be present in `MarginfiPolicy::banks_allowlist`."
+      ],
+      "discriminator": [
+        199,
+        101,
+        41,
+        45,
+        213,
+        98,
+        224,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "destination_token_account",
+          "writable": true
+        },
+        {
+          "name": "liquidity_vault_authority",
+          "writable": true
+        },
+        {
+          "name": "liquidity_vault",
+          "writable": true
+        },
+        {
+          "name": "integration_acc_2",
+          "writable": true
+        },
+        {
+          "name": "lending_market"
+        },
+        {
+          "name": "lending_market_authority"
+        },
+        {
+          "name": "integration_acc_1",
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "writable": true
+        },
+        {
+          "name": "reserve_liquidity_supply",
+          "writable": true
+        },
+        {
+          "name": "reserve_collateral_mint",
+          "writable": true
+        },
+        {
+          "name": "reserve_source_collateral",
+          "writable": true
+        },
+        {
+          "name": "obligation_farm_user_state",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "reserve_farm_state",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "kamino_program"
+        },
+        {
+          "name": "farms_program"
+        },
+        {
+          "name": "collateral_token_program"
+        },
+        {
+          "name": "liquidity_token_program"
+        },
+        {
+          "name": "instruction_sysvar_account"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "withdraw_all",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lending_account_borrow",
+      "docs": [
+        "Borrow liquidity from Marginfi into the GLAM vault.",
+        "",
+        "- Permission: `MarginfiPermissions::Borrow`.",
+        "- Policy:",
+        "- `group` must be present in `MarginfiPolicy::groups_allowlist`.",
+        "- `bank` must be present in `MarginfiPolicy::banks_allowlist`.",
+        "- The bank mint must be present in `MarginfiPolicy::borrow_allowlist`."
+      ],
+      "discriminator": [
+        4,
+        126,
+        116,
+        53,
+        48,
+        5,
+        212,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "destination_token_account",
+          "writable": true
+        },
+        {
+          "name": "bank_liquidity_vault_authority"
+        },
+        {
+          "name": "liquidity_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "lending_account_deposit",
+      "docs": [
+        "Deposit liquidity from the GLAM vault into a Marginfi account.",
+        "",
+        "- Permission: `MarginfiPermissions::Deposit`.",
+        "- Policy:",
+        "- `group` must be present in `MarginfiPolicy::groups_allowlist`.",
+        "- `bank` must be present in `MarginfiPolicy::banks_allowlist`."
+      ],
+      "discriminator": [
+        171,
+        94,
+        235,
+        103,
+        82,
+        64,
+        212,
+        140
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "signer_token_account",
+          "writable": true
+        },
+        {
+          "name": "liquidity_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "deposit_up_to_limit",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lending_account_repay",
+      "docs": [
+        "Repay borrowed liquidity from the GLAM vault to a Marginfi account.",
+        "",
+        "- Permission: `MarginfiPermissions::Repay`.",
+        "- Policy:",
+        "- `group` must be present in `MarginfiPolicy::groups_allowlist`.",
+        "- `bank` must be present in `MarginfiPolicy::banks_allowlist`."
+      ],
+      "discriminator": [
+        79,
+        209,
+        172,
+        177,
+        222,
+        51,
+        173,
+        151
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "signer_token_account",
+          "writable": true
+        },
+        {
+          "name": "liquidity_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "repay_all",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lending_account_withdraw",
+      "docs": [
+        "Withdraw liquidity from a Marginfi account to the GLAM vault.",
+        "",
+        "- Permission: `MarginfiPermissions::Withdraw`.",
+        "- Policy:",
+        "- `group` must be present in `MarginfiPolicy::groups_allowlist`.",
+        "- `bank` must be present in `MarginfiPolicy::banks_allowlist`."
+      ],
+      "discriminator": [
+        36,
+        72,
+        74,
+        19,
+        210,
+        210,
+        192,
+        192
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "bank",
+          "writable": true
+        },
+        {
+          "name": "destination_token_account",
+          "writable": true
+        },
+        {
+          "name": "bank_liquidity_vault_authority"
+        },
+        {
+          "name": "liquidity_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "withdraw_all",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "marginfi_account_close",
+      "docs": [
+        "Close an empty Marginfi account PDA owned by the GLAM vault.",
+        "",
+        "- Permission: `MarginfiPermissions::CloseAccount`."
+      ],
+      "discriminator": [
+        186,
+        221,
+        93,
+        34,
+        50,
+        97,
+        194,
+        241
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "marginfi_account_initialize_pda",
+      "docs": [
+        "Initialize a Marginfi account PDA owned by the GLAM vault.",
+        "",
+        "- Permission: `MarginfiPermissions::InitAccount`."
+      ],
+      "discriminator": [
+        87,
+        177,
+        91,
+        80,
+        218,
+        119,
+        245,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "marginfi_group"
+        },
+        {
+          "name": "marginfi_account",
+          "writable": true
+        },
+        {
+          "name": "instructions_sysvar"
+        }
+      ],
+      "args": [
+        {
+          "name": "account_index",
+          "type": "u16"
+        },
+        {
+          "name": "third_party_id",
+          "type": {
+            "option": "u16"
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_marginfi_policy",
+      "docs": [
+        "Set the Marginfi policy (group, bank, and borrow-token allowlists).",
+        "",
+        "- Permission: GLAM state owner via `glam_protocol::set_protocol_policy`."
+      ],
+      "discriminator": [
+        161,
+        236,
+        171,
+        232,
+        25,
+        67,
+        129,
+        198
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "MarginfiPolicy"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StateAccount",
+      "discriminator": [
+        142,
+        247,
+        54,
+        95,
+        85,
+        133,
+        249,
+        103
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "AccountType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Vault"
+          },
+          {
+            "name": "TokenizedVault"
+          },
+          {
+            "name": "Mint"
+          },
+          {
+            "name": "SingleAssetVault"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccruedFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "vault_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_subscription_fee",
+            "type": "u128"
+          },
+          {
+            "name": "manager_redemption_fee",
+            "type": "u128"
+          },
+          {
+            "name": "management_fee",
+            "type": "u128"
+          },
+          {
+            "name": "performance_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_base_fee",
+            "type": "u128"
+          },
+          {
+            "name": "protocol_flow_fee",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatedModel",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "created_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateAcl",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "integration_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationPermissions"
+                }
+              }
+            }
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineField",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": {
+              "defined": {
+                "name": "EngineFieldName"
+              }
+            }
+          },
+          {
+            "name": "value",
+            "type": {
+              "defined": {
+                "name": "EngineFieldValue"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldName",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Owner"
+          },
+          {
+            "name": "PortfolioManagerName"
+          },
+          {
+            "name": "Name"
+          },
+          {
+            "name": "Uri"
+          },
+          {
+            "name": "Assets"
+          },
+          {
+            "name": "DelegateAcls"
+          },
+          {
+            "name": "IntegrationAcls"
+          },
+          {
+            "name": "TimelockDuration"
+          },
+          {
+            "name": "Borrowable"
+          },
+          {
+            "name": "DefaultAccountStateFrozen"
+          },
+          {
+            "name": "PermanentDelegate"
+          },
+          {
+            "name": "NotifyAndSettle"
+          },
+          {
+            "name": "FeeStructure"
+          },
+          {
+            "name": "FeeParams"
+          },
+          {
+            "name": "ClaimableFees"
+          },
+          {
+            "name": "ClaimedFees"
+          },
+          {
+            "name": "OracleConfigs"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EngineFieldValue",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Boolean",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "U8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u8"
+              }
+            ]
+          },
+          {
+            "name": "U32",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u32"
+              }
+            ]
+          },
+          {
+            "name": "U64",
+            "fields": [
+              {
+                "name": "val",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "String",
+            "fields": [
+              {
+                "name": "val",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "Pubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "VecPubkey",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "pubkey"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecU8",
+            "fields": [
+              {
+                "name": "val",
+                "type": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "VecU32",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": "u32"
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecDelegateAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "DelegateAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "VecIntegrationAcl",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "IntegrationAcl"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeStructure",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeStructure"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "FeeParams",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "FeeParams"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "AccruedFees",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "AccruedFees"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "NotifyAndSettle",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "NotifyAndSettle"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "OracleConfigs",
+            "fields": [
+              {
+                "name": "val",
+                "type": {
+                  "defined": {
+                    "name": "OracleConfigs"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "EntryExitFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subscription_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "redemption_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "year_in_seconds",
+            "type": "u32"
+          },
+          {
+            "name": "pa_high_water_mark",
+            "type": "i128"
+          },
+          {
+            "name": "pa_last_nav",
+            "type": "i128"
+          },
+          {
+            "name": "last_aum",
+            "type": "i128"
+          },
+          {
+            "name": "last_performance_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_management_fee_crystallized",
+            "type": "i64"
+          },
+          {
+            "name": "last_protocol_fee_crystallized",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeStructure",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "manager",
+            "type": {
+              "defined": {
+                "name": "EntryExitFees"
+              }
+            }
+          },
+          {
+            "name": "management",
+            "type": {
+              "defined": {
+                "name": "ManagementFee"
+              }
+            }
+          },
+          {
+            "name": "performance",
+            "type": {
+              "defined": {
+                "name": "PerformanceFee"
+              }
+            }
+          },
+          {
+            "name": "protocol",
+            "type": {
+              "defined": {
+                "name": "ProtocolFees"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "HurdleType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationAcl",
+      "docs": [
+        "An integration program can have multiple protocols supported.",
+        "Enabled protocols are stored in a bitmask, and each protocol can have its own policy."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocols_bitmask",
+            "type": "u16"
+          },
+          {
+            "name": "protocol_policies",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPolicy"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "IntegrationPermissions",
+      "docs": [
+        "Stores delegate permissions for an integration program."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_permissions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProtocolPermissions"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ManagementFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarginfiPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "groups_allowlist",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "banks_allowlist",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "borrow_allowlist",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "NoticePeriodType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Hard"
+          },
+          {
+            "name": "Soft"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NotifyAndSettle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "model",
+            "type": {
+              "defined": {
+                "name": "ValuationModel"
+              }
+            }
+          },
+          {
+            "name": "permissionless_fulfillment",
+            "type": "bool"
+          },
+          {
+            "name": "subscribe_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "subscribe_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "subscribe_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_notice_period_type",
+            "type": {
+              "defined": {
+                "name": "NoticePeriodType"
+              }
+            }
+          },
+          {
+            "name": "redeem_notice_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_settlement_period",
+            "type": "u64"
+          },
+          {
+            "name": "redeem_cancellation_window",
+            "type": "u64"
+          },
+          {
+            "name": "time_unit",
+            "type": {
+              "defined": {
+                "name": "TimeUnit"
+              }
+            }
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleConfigs",
+      "docs": [
+        "Vault-specific oracle configs. If available, these configs are preferred over the global config."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_ages_seconds",
+            "type": {
+              "vec": {
+                "array": [
+                  "u16",
+                  2
+                ]
+              }
+            }
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                12
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PerformanceFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_rate_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hurdle_type",
+            "type": {
+              "defined": {
+                "name": "HurdleType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PricedProtocol",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "rent",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "i128"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "last_updated_slot",
+            "type": "u64"
+          },
+          {
+            "name": "integration_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolFees",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "base_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "flow_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPermissions",
+      "docs": [
+        "Represents a delegate's permissions for a specific protocol"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "permissions_bitmask",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolPolicy",
+      "docs": [
+        "Stores policy data for an integrated protocol.",
+        "Integration programs serialize/deserialize this data."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "data",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StateAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "account_type",
+            "type": {
+              "defined": {
+                "name": "AccountType"
+              }
+            }
+          },
+          {
+            "name": "enabled",
+            "type": "bool"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "portfolio_manager_name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "created",
+            "type": {
+              "defined": {
+                "name": "CreatedModel"
+              }
+            }
+          },
+          {
+            "name": "base_asset_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_asset_decimals",
+            "type": "u8"
+          },
+          {
+            "name": "base_asset_token_program",
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timelock_duration",
+            "type": "u32"
+          },
+          {
+            "name": "timelock_expires_at",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "assets",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "integration_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IntegrationAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "delegate_acls",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "DelegateAcl"
+                }
+              }
+            }
+          },
+          {
+            "name": "external_positions",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "priced_protocols",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "PricedProtocol"
+                }
+              }
+            }
+          },
+          {
+            "name": "params",
+            "type": {
+              "vec": {
+                "vec": {
+                  "defined": {
+                    "name": "EngineField"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TimeUnit",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Second"
+          },
+          {
+            "name": "Slot"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ValuationModel",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Continuous"
+          },
+          {
+            "name": "Periodic"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "PROTO_MARGINFI",
+      "type": "u16",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_MARGINFI_PERM_BORROW",
+      "type": "u64",
+      "value": "8"
+    },
+    {
+      "name": "PROTO_MARGINFI_PERM_CLOSE_ACCOUNT",
+      "type": "u64",
+      "value": "32"
+    },
+    {
+      "name": "PROTO_MARGINFI_PERM_DEPOSIT",
+      "type": "u64",
+      "value": "2"
+    },
+    {
+      "name": "PROTO_MARGINFI_PERM_INIT_ACCOUNT",
+      "type": "u64",
+      "value": "1"
+    },
+    {
+      "name": "PROTO_MARGINFI_PERM_KAMINO_DEPOSIT",
+      "type": "u64",
+      "value": "64"
+    },
+    {
+      "name": "PROTO_MARGINFI_PERM_KAMINO_WITHDRAW",
+      "type": "u64",
+      "value": "128"
+    },
+    {
+      "name": "PROTO_MARGINFI_PERM_REPAY",
+      "type": "u64",
+      "value": "16"
+    },
+    {
+      "name": "PROTO_MARGINFI_PERM_WITHDRAW",
+      "type": "u64",
+      "value": "4"
+    }
+  ]
+}

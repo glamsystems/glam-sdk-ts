@@ -7,6 +7,7 @@ import {
   getExtKaminoProgramId,
   getExtLoopscaleProgramId,
   getExtMarinadeProgramId,
+  getExtMarginfiProgramId,
   getExtPhoenixProgramId,
   getExtOrcaProgramId,
   getExtNeutralProgramId,
@@ -29,6 +30,7 @@ import {
   LOOPSCALE_BORROW_PROTOCOL,
   LOOPSCALE_LENDING_PROTOCOL,
   LOOPSCALE_VAULT_PROTOCOL,
+  MARGINFI_PROTOCOL,
   MARINADE_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
@@ -134,6 +136,9 @@ export const MESSAGE_TRANSMITTER_V2 = new PublicKey(
 );
 export const LOOPSCALE_PROGRAM_ID = new PublicKey(
   "1oopBoJG58DgkUVKkEzKgyG9dvRmpgeEm1AVjoHkF78",
+);
+export const MARGINFI_PROGRAM_ID = new PublicKey(
+  "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
 );
 export const WORMHOLE_CORE_BRIDGE_PROGRAM = new PublicKey(
   "worm2ZoG2kUd4vFXhvjh93UUH596ayRfgQ2MgjNMTth",
@@ -416,6 +421,24 @@ export const getProtocolsAndPermissions = (
         [1 << 3]: "UnstakeUserVaultLp",
         [1 << 4]: "ClaimVaultRewards",
         [1 << 5]: "SetPolicy",
+      },
+    },
+  },
+  // Marginfi integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_marginfi/src/state/access.rs
+  [getExtMarginfiProgramId(staging).toBase58()]: {
+    [protocolBitflagKey(MARGINFI_PROTOCOL)]: {
+      name: "Marginfi",
+      staging: true,
+      permissions: {
+        [1 << 0]: "InitAccount",
+        [1 << 1]: "Deposit",
+        [1 << 2]: "Withdraw",
+        [1 << 3]: "Borrow",
+        [1 << 4]: "Repay",
+        [1 << 5]: "CloseAccount",
+        [1 << 6]: "KaminoDeposit",
+        [1 << 7]: "KaminoWithdraw",
       },
     },
   },

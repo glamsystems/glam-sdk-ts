@@ -11,6 +11,7 @@ import { fetchAddressLookupTableAccounts } from "../utils/lookupTables";
 import { BN } from "@coral-xyz/anchor";
 import { KaminoLendingClient, KaminoVaultsClient } from "./kamino";
 import { OrcaWhirlpoolsClient } from "./orca";
+import { MarginfiClient } from "./marginfi";
 
 import { BaseClient } from "./base";
 
@@ -37,6 +38,7 @@ import {
 import { KVaultState, Obligation, Reserve } from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
 import {
+  MARGINFI_PROGRAM_ID,
   PHOENIX_GLOBAL_CONFIG,
   PHOENIX_PROGRAM_ID,
   USDC,
@@ -57,6 +59,7 @@ import {
   LOOPSCALE_BORROW_PROTOCOL,
   LOOPSCALE_LENDING_PROTOCOL,
   LOOPSCALE_VAULT_PROTOCOL,
+  MARGINFI_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
   STAKE_PROTOCOL,
@@ -163,6 +166,7 @@ export class PriceClient {
     readonly loopscaleBorrow: LoopscaleBorrowClient,
     readonly loopscaleLend: LoopscaleLendClient,
     readonly loopscaleVault: LoopscaleVaultClient,
+    readonly marginfi: MarginfiClient,
     private readonly getJupiterApi: () => JupiterApiClient,
   ) {}
 
@@ -1606,6 +1610,52 @@ export class PriceClient {
       .instruction();
   }
 
+  private async priceMarginfiAccountsIx(
+    stateModel: StateModel,
+  ): Promise<PricingChunk | null> {
+    const externalPositions = stateModel.externalPositions || [];
+    if (externalPositions.length === 0) {
+      return null;
+    }
+
+    const accountInfos =
+      await this.base.connection.getMultipleAccountsInfo(externalPositions);
+    const marginfiAccounts = externalPositions.filter((_, index) =>
+      accountInfos[index]?.owner.equals(MARGINFI_PROGRAM_ID),
+    );
+    if (marginfiAccounts.length === 0) {
+      return null;
+    }
+
+    const [solUsdOracle, baseAssetOracle] = await Promise.all([
+      this.base.getSolOracle(),
+      this.getBaseAssetOracle(),
+    ]);
+    const preInstructions: TransactionInstruction[] = [];
+    for (const marginfiAccount of marginfiAccounts) {
+      const { ixs } = await this.marginfi.pulseHealthIx(marginfiAccount);
+      preInstructions.push(...ixs);
+    }
+
+    const ix = await (this.base.mintProgram.methods as any)
+      .priceMarginfiAccounts()
+      .accounts({
+        glamState: this.base.statePda,
+        solUsdOracle,
+        baseAssetOracle,
+      })
+      .remainingAccounts(
+        marginfiAccounts.map((pubkey) => ({
+          pubkey,
+          isSigner: false,
+          isWritable: false,
+        })),
+      )
+      .instruction();
+
+    return { ixs: [...preInstructions, ix], kaminoReserves: [] };
+  }
+
   private async _priceVaultIxsImpl(): Promise<TransactionInstruction[]> {
     const stateModel = await this.base.fetchStateModel();
     this.cachedStateModel = stateModel;
@@ -1766,6 +1816,17 @@ export class PriceClient {
       );
       if (neutralIntegrationAcl) {
         chunks.push(await this.priceNeutralBundleDepositorsIx());
+      }
+
+      const marginfiIntegrationAcl = integrationAcls.find(
+        (acl) =>
+          acl.integrationProgram.equals(
+            this.base.extMarginfiProgram.programId,
+          ) && (acl.protocolsBitmask & MARGINFI_PROTOCOL) !== 0,
+      );
+      if (marginfiIntegrationAcl) {
+        const chunk = await this.priceMarginfiAccountsIx(stateModel);
+        if (chunk) chunks.push(chunk);
       }
     }
 

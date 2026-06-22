@@ -39,6 +39,9 @@ export const LOOPSCALE_BORROW_PROTOCOL = 1 << 0;
 export const LOOPSCALE_LENDING_PROTOCOL = 1 << 1;
 export const LOOPSCALE_VAULT_PROTOCOL = 1 << 2;
 
+// Mirror `SupportedProtocols` in anchor/programs/ext_marginfi/src/state/access.rs.
+export const MARGINFI_PROTOCOL = 1 << 0;
+
 // Mirror `SupportedProtocols` in anchor/programs/ext_bridge/src/state/access.rs.
 export const LAYERZERO_OFT_PROTOCOL = 1 << 2;
 
