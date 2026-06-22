@@ -18,41 +18,42 @@ import {
   WORMHOLE_VERIFY_VAA_SHIM_PROGRAM,
 } from "../constants";
 import { getGlobalConfigPda } from "../utils/glamPDAs";
+import { PkSet } from "../utils";
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
 
 type BufferLike = Uint8Array | number[] | Buffer;
 type BufferLike32 = BufferLike;
 type BufferLike20 = BufferLike;
 
-export type EpiDenominationKindInput =
+export type RpiDenominationKindInput =
   | { usd: Record<string, never> }
   | { mint: Record<string, never> };
 
-export type EpiDenominationSpecInput = {
-  denom: EpiDenominationKindInput;
+export type RpiDenominationSpecInput = {
+  denom: RpiDenominationKindInput;
   mint: PublicKey;
 };
 
-export type EpiExternalPositionTypeInput =
+export type RpiRegisteredPositionTypeInput =
   | { valued: Record<string, never> }
   | { tokenized: Record<string, never> };
 
-export type EpiExternalSourceTypeInput =
+export type RpiRegisteredSourceTypeInput =
   | { trusted: Record<string, never> }
   | { native: Record<string, never> }
   | { wormhole: Record<string, never> };
 
-export type EpiNativeCustodyKindInput =
+export type RpiNativeCustodyKindInput =
   | { splToken: Record<string, never> }
   | { nativeSol: Record<string, never> };
 
-export type UpsertExternalPositionParams = {
+export type UpsertRegisteredPositionParams = {
   positionId: BufferLike32;
-  positionType: EpiExternalPositionTypeInput;
-  sourceType: EpiExternalSourceTypeInput;
-  denomination: EpiDenominationSpecInput;
+  positionType: RpiRegisteredPositionTypeInput;
+  sourceType: RpiRegisteredSourceTypeInput;
+  denomination: RpiDenominationSpecInput;
   nativeCustodyAccount?: PublicKey;
-  nativeCustodyKind?: EpiNativeCustodyKindInput;
+  nativeCustodyKind?: RpiNativeCustodyKindInput;
   enabled?: boolean;
   freshnessOverrideSecs?: number;
   submitAllowlist?: PublicKey[];
@@ -60,25 +61,32 @@ export type UpsertExternalPositionParams = {
   configureAllowlist?: PublicKey[];
 };
 
-export type SubmitExternalObservationParams = {
+export type SubmitObservationParams = {
   positionId: BufferLike32;
   amount: BN;
-  denomination: EpiDenominationSpecInput;
+  denomination: RpiDenominationSpecInput;
   observationTimestamp: BN;
   externalShares?: BN;
   reserved?: Uint8Array | number[] | Buffer;
 };
 
-export type ValidateExternalObservationOracleAccounts = {
+export type ValidateObservationOracleAccounts = {
   glamConfig?: PublicKey | null;
   solUsdOracle?: PublicKey | null;
   baseAssetOracle?: PublicKey | null;
   observedMintOracle?: PublicKey | null;
 };
 
-export type ValidateExternalObservationParams = {
+export type ValidateObservationParams = {
   positionId: BufferLike32;
-} & ValidateExternalObservationOracleAccounts;
+} & ValidateObservationOracleAccounts;
+
+type ResolvedValidateObservationAccounts = Required<
+  Omit<ValidateObservationOracleAccounts, "observedMintOracle">
+> & {
+  remainingAccounts: AccountMeta[];
+  kaminoReservesToRefresh: PublicKey[];
+};
 
 export type WormholeObservationConfigInput = {
   positionId: BufferLike32;
@@ -98,7 +106,7 @@ export type WormholeHyperliquidObservationConfigInput = {
   usdcSpotToken: BN;
 };
 
-export type SubmitExternalObservationWormholeParams = {
+export type SubmitObservationWormholeParams = {
   positionId: BufferLike32;
   signedVaa: BufferLike;
   payloadConfigAccounts?: AccountMeta[];
@@ -109,7 +117,7 @@ export type SubmitExternalObservationWormholeParams = {
   maxSignaturesPerPost?: number;
 };
 
-export type SubmitExternalObservationWormholeResult = {
+export type SubmitObservationWormholeResult = {
   postSignatureTxs: TransactionSignature[];
   submitTx: TransactionSignature;
   guardianSignatures: PublicKey;
@@ -159,8 +167,8 @@ function toReservedBytes(value?: Uint8Array | number[] | Buffer): number[] {
 }
 
 function validateParams(
-  value: BufferLike32 | ValidateExternalObservationParams,
-): ValidateExternalObservationParams {
+  value: BufferLike32 | ValidateObservationParams,
+): ValidateObservationParams {
   if (
     typeof value === "object" &&
     !Buffer.isBuffer(value) &&
@@ -283,13 +291,13 @@ function encodeWormholePostSignaturesData(
   return data;
 }
 
-class TxBuilder extends BaseTxBuilder<EpiClient> {
-  async upsertExternalPositionIx(
-    params: UpsertExternalPositionParams,
+class TxBuilder extends BaseTxBuilder<RpiClient> {
+  async upsertRegisteredPositionIx(
+    params: UpsertRegisteredPositionParams,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
-    return await this.client.base.extEpiProgram.methods
-      .upsertExternalPosition({
+    return await this.client.base.extRpiProgram.methods
+      .upsertRegisteredPosition({
         positionId: toFixedArray32(params.positionId, "positionId"),
         positionType: params.positionType,
         sourceType: params.sourceType,
@@ -306,18 +314,20 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
         glamVault: this.client.base.vaultPda,
+        observationState: this.client.getObservationStatePda(),
+        integrationAuthority: this.client.getIntegrationAuthorityPda(),
         glamProtocolProgram: this.client.base.protocolProgram.programId,
         systemProgram: SystemProgram.programId,
       })
       .instruction();
   }
 
-  async upsertExternalPositionWormholeConfigIx(
+  async upsertRegisteredPositionWormholeConfigIx(
     params: WormholeObservationConfigInput,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
-    return await this.client.base.extEpiProgram.methods
-      .upsertExternalPositionWormholeConfig({
+    return await this.client.base.extRpiProgram.methods
+      .upsertRegisteredPositionWormholeConfig({
         positionId: toFixedArray32(params.positionId, "positionId"),
         emitterChain: params.emitterChain,
         emitterAddress: toFixedArray32(params.emitterAddress, "emitterAddress"),
@@ -336,12 +346,12 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
       .instruction();
   }
 
-  async upsertExternalPositionWormholeHyperliquidConfigIx(
+  async upsertRegisteredPositionWormholeHyperliquidConfigIx(
     params: WormholeHyperliquidObservationConfigInput,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
-    return await this.client.base.extEpiProgram.methods
-      .upsertExternalPositionWormholeHyperliquidConfig({
+    return await this.client.base.extRpiProgram.methods
+      .upsertRegisteredPositionWormholeHyperliquidConfig({
         positionId: toFixedArray32(params.positionId, "positionId"),
         hyperliquidAccount: toFixedArray20(
           params.hyperliquidAccount,
@@ -373,12 +383,12 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
       .instruction();
   }
 
-  async submitExternalObservationIx(
-    params: SubmitExternalObservationParams,
+  async submitObservationIx(
+    params: SubmitObservationParams,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
-    return await this.client.base.extEpiProgram.methods
-      .submitExternalObservation({
+    return await this.client.base.extRpiProgram.methods
+      .submitObservation({
         positionId: toFixedArray32(params.positionId, "positionId"),
         amount: params.amount,
         denomination: params.denomination,
@@ -389,6 +399,7 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
+        observationState: this.client.getObservationStatePda(),
       })
       .instruction();
   }
@@ -450,8 +461,8 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
     });
   }
 
-  async submitExternalObservationWormholeIx(
-    params: SubmitExternalObservationWormholeParams,
+  async submitObservationWormholeIx(
+    params: SubmitObservationWormholeParams,
     guardianSignatures: PublicKey,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
@@ -471,8 +482,8 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
       },
     ];
 
-    return await this.client.base.extEpiProgram.methods
-      .submitExternalObservationWormhole(
+    return await this.client.base.extRpiProgram.methods
+      .submitObservationWormhole(
         toFixedArray32(params.positionId, "positionId"),
         guardianSetBump,
         parsedVaa.vaaBody,
@@ -480,6 +491,7 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
+        observationState: this.client.getObservationStatePda(),
         wormholeConfig: this.client.getWormholeObservationConfigPda(
           params.positionId,
         ),
@@ -493,69 +505,85 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
       .instruction();
   }
 
-  async validateExternalObservationIx(
-    paramsOrPositionId: BufferLike32 | ValidateExternalObservationParams,
+  async validateObservationIx(
+    paramsOrPositionId: BufferLike32 | ValidateObservationParams,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
     const params = validateParams(paramsOrPositionId);
     const accounts =
-      await this.client.resolveValidateExternalObservationAccounts(params);
+      await this.client.resolveValidateObservationAccounts(params);
+    return await this.validateObservationIxWithAccounts(
+      params,
+      accounts,
+      signer,
+    );
+  }
 
-    return await this.client.base.extEpiProgram.methods
-      .validateExternalObservation(
-        toFixedArray32(params.positionId, "positionId"),
-      )
+  private async validateObservationIxWithAccounts(
+    params: ValidateObservationParams,
+    accounts: ResolvedValidateObservationAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.extRpiProgram.methods
+      .validateObservation(toFixedArray32(params.positionId, "positionId"))
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
+        observationState: this.client.getObservationStatePda(),
         glamConfig: accounts.glamConfig,
         solUsdOracle: accounts.solUsdOracle,
         baseAssetOracle: accounts.baseAssetOracle,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
       })
       .remainingAccounts(accounts.remainingAccounts)
       .instruction();
   }
 
-  async refreshPricedProtocolIx(
-    signer?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    return await this.client.base.extEpiProgram.methods
-      .refreshPricedProtocol()
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamSigner: signer || this.client.base.signer,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-      })
-      .instruction();
+  private async refreshKaminoReserveOracleIxs(
+    reserveKeys: PublicKey[],
+  ): Promise<TransactionInstruction[]> {
+    if (reserveKeys.length === 0) {
+      return [];
+    }
+
+    const kaminoLending = (this.client.base as any).kaminoLending;
+    if (!kaminoLending) {
+      throw new Error(
+        "RPI validation requires Kamino reserve refresh support for KaminoReserve oracle accounts",
+      );
+    }
+
+    const reserves = await kaminoLending.fetchAndParseReserves(reserveKeys);
+    return [kaminoLending.txBuilder.refreshReservesBatchIx(reserves, false)];
   }
 
-  async submitExternalObservationTx(
-    params: SubmitExternalObservationParams,
+  async submitObservationTx(
+    params: SubmitObservationParams,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.submitExternalObservationIx(params, txOptions.signer);
+    const ix = await this.submitObservationIx(params, txOptions.signer);
     return await this.buildVersionedTx([ix], txOptions);
   }
 
-  async upsertExternalPositionTx(
-    params: UpsertExternalPositionParams,
+  async upsertRegisteredPositionTx(
+    params: UpsertRegisteredPositionParams,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.upsertExternalPositionIx(params, txOptions.signer);
+    const ix = await this.upsertRegisteredPositionIx(params, txOptions.signer);
     return await this.buildVersionedTx([ix], txOptions);
   }
 
-  async removeExternalPositionTx(
+  async removeRegisteredPositionTx(
     positionId: BufferLike32,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.client.base.extEpiProgram.methods
-      .removeExternalPosition(toFixedArray32(positionId, "positionId"))
+    const ix = await this.client.base.extRpiProgram.methods
+      .removeRegisteredPosition(toFixedArray32(positionId, "positionId"))
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: txOptions.signer || this.client.base.signer,
         glamVault: this.client.base.vaultPda,
+        observationState: this.client.getObservationStatePda(),
+        integrationAuthority: this.client.getIntegrationAuthorityPda(),
         glamProtocolProgram: this.client.base.protocolProgram.programId,
         systemProgram: SystemProgram.programId,
       })
@@ -563,35 +591,35 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
     return await this.buildVersionedTx([ix], txOptions);
   }
 
-  async upsertExternalPositionWormholeConfigTx(
+  async upsertRegisteredPositionWormholeConfigTx(
     params: WormholeObservationConfigInput,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.upsertExternalPositionWormholeConfigIx(
+    const ix = await this.upsertRegisteredPositionWormholeConfigIx(
       params,
       txOptions.signer,
     );
     return await this.buildVersionedTx([ix], txOptions);
   }
 
-  async upsertExternalPositionWormholeHyperliquidConfigTx(
+  async upsertRegisteredPositionWormholeHyperliquidConfigTx(
     params: WormholeHyperliquidObservationConfigInput,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.upsertExternalPositionWormholeHyperliquidConfigIx(
+    const ix = await this.upsertRegisteredPositionWormholeHyperliquidConfigIx(
       params,
       txOptions.signer,
     );
     return await this.buildVersionedTx([ix], txOptions);
   }
 
-  async submitExternalObservationWormholeTx(
-    params: SubmitExternalObservationWormholeParams,
+  async submitObservationWormholeTx(
+    params: SubmitObservationWormholeParams,
     guardianSignatures: PublicKey,
     txOptions: TxOptions = {},
     closeSignatures = true,
   ): Promise<VersionedTransaction> {
-    const ix = await this.submitExternalObservationWormholeIx(
+    const ix = await this.submitObservationWormholeIx(
       params,
       guardianSignatures,
       txOptions.signer,
@@ -609,26 +637,29 @@ class TxBuilder extends BaseTxBuilder<EpiClient> {
     return await this.buildVersionedTx(ixs, txOptions);
   }
 
-  async validateExternalObservationTx(
-    paramsOrPositionId: BufferLike32 | ValidateExternalObservationParams,
+  async validateObservationTx(
+    paramsOrPositionId: BufferLike32 | ValidateObservationParams,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const ix = await this.validateExternalObservationIx(
-      paramsOrPositionId,
+    const params = validateParams(paramsOrPositionId);
+    const accounts =
+      await this.client.resolveValidateObservationAccounts(params);
+    const refreshIxs = await this.refreshKaminoReserveOracleIxs(
+      accounts.kaminoReservesToRefresh,
+    );
+    const ix = await this.validateObservationIxWithAccounts(
+      params,
+      accounts,
       txOptions.signer,
     );
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
-  async refreshPricedProtocolTx(
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.refreshPricedProtocolIx(txOptions.signer);
-    return await this.buildVersionedTx([ix], txOptions);
+    return await this.buildVersionedTx([ix], {
+      ...txOptions,
+      preInstructions: [...(txOptions.preInstructions || []), ...refreshIxs],
+    });
   }
 }
 
-export class EpiClient {
+export class RpiClient {
   readonly txBuilder: TxBuilder;
 
   public constructor(readonly base: BaseClient) {
@@ -638,7 +669,7 @@ export class EpiClient {
   getObservationStatePda(): PublicKey {
     return PublicKey.findProgramAddressSync(
       [Buffer.from(SEED_OBSERVATION_STATE), this.base.statePda.toBuffer()],
-      this.base.extEpiProgram.programId,
+      this.base.extRpiProgram.programId,
     )[0];
   }
 
@@ -649,7 +680,7 @@ export class EpiClient {
         this.base.statePda.toBuffer(),
         Buffer.from(toFixedArray32(positionId, "positionId")),
       ],
-      this.base.extEpiProgram.programId,
+      this.base.extRpiProgram.programId,
     )[0];
   }
 
@@ -662,92 +693,92 @@ export class EpiClient {
         this.base.statePda.toBuffer(),
         Buffer.from(toFixedArray32(positionId, "positionId")),
       ],
-      this.base.extEpiProgram.programId,
+      this.base.extRpiProgram.programId,
     )[0];
   }
 
   getIntegrationAuthorityPda(): PublicKey {
     return PublicKey.findProgramAddressSync(
       [Buffer.from(SEED_INTEGRATION_AUTHORITY)],
-      this.base.extEpiProgram.programId,
+      this.base.extRpiProgram.programId,
     )[0];
   }
 
   async fetchObservationState() {
-    return await this.base.extEpiProgram.account.observationState.fetchNullable(
+    return await this.base.extRpiProgram.account.observationState.fetchNullable(
       this.getObservationStatePda(),
     );
   }
 
   async fetchWormholeObservationConfig(positionId: BufferLike32) {
-    return await this.base.extEpiProgram.account.wormholeObservationConfig.fetchNullable(
+    return await this.base.extRpiProgram.account.wormholeObservationConfig.fetchNullable(
       this.getWormholeObservationConfigPda(positionId),
     );
   }
 
   async fetchWormholeHyperliquidObservationConfig(positionId: BufferLike32) {
-    return await this.base.extEpiProgram.account.wormholeHyperliquidObservationConfig.fetchNullable(
+    return await this.base.extRpiProgram.account.wormholeHyperliquidObservationConfig.fetchNullable(
       this.getWormholeHyperliquidObservationConfigPda(positionId),
     );
   }
 
-  async submitExternalObservation(
-    params: SubmitExternalObservationParams,
+  async submitObservation(
+    params: SubmitObservationParams,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.submitExternalObservationTx(
+    const tx = await this.txBuilder.submitObservationTx(params, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async upsertRegisteredPosition(
+    params: UpsertRegisteredPositionParams,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.upsertRegisteredPositionTx(
       params,
       txOptions,
     );
     return await this.base.sendAndConfirm(tx);
   }
 
-  async upsertExternalPosition(
-    params: UpsertExternalPositionParams,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.upsertExternalPositionTx(params, txOptions);
-    return await this.base.sendAndConfirm(tx);
-  }
-
-  async removeExternalPosition(
+  async removeRegisteredPosition(
     positionId: BufferLike32,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.removeExternalPositionTx(
+    const tx = await this.txBuilder.removeRegisteredPositionTx(
       positionId,
       txOptions,
     );
     return await this.base.sendAndConfirm(tx);
   }
 
-  async upsertExternalPositionWormholeConfig(
+  async upsertRegisteredPositionWormholeConfig(
     params: WormholeObservationConfigInput,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.upsertExternalPositionWormholeConfigTx(
+    const tx = await this.txBuilder.upsertRegisteredPositionWormholeConfigTx(
       params,
       txOptions,
     );
     return await this.base.sendAndConfirm(tx);
   }
 
-  async upsertExternalPositionWormholeHyperliquidConfig(
+  async upsertRegisteredPositionWormholeHyperliquidConfig(
     params: WormholeHyperliquidObservationConfigInput,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const tx =
-      await this.txBuilder.upsertExternalPositionWormholeHyperliquidConfigTx(
+      await this.txBuilder.upsertRegisteredPositionWormholeHyperliquidConfigTx(
         params,
         txOptions,
       );
     return await this.base.sendAndConfirm(tx);
   }
 
-  async submitExternalObservationWormhole(
-    params: SubmitExternalObservationWormholeParams,
+  async submitObservationWormhole(
+    params: SubmitObservationWormholeParams,
     txOptions: TxOptions = {},
-  ): Promise<SubmitExternalObservationWormholeResult> {
+  ): Promise<SubmitObservationWormholeResult> {
     const parsedVaa = parseWormholeSignedVaa(params.signedVaa);
     const guardianSignatures = params.guardianSignatures || Keypair.generate();
     const maxSignaturesPerPost = params.maxSignaturesPerPost || 13;
@@ -778,7 +809,7 @@ export class EpiClient {
       );
     }
 
-    const submitTx = await this.txBuilder.submitExternalObservationWormholeTx(
+    const submitTx = await this.txBuilder.submitObservationWormholeTx(
       params,
       guardianSignatures.publicKey,
       txOptions,
@@ -793,32 +824,36 @@ export class EpiClient {
     };
   }
 
-  async validateExternalObservation(
-    paramsOrPositionId: BufferLike32 | ValidateExternalObservationParams,
+  async validateObservation(
+    paramsOrPositionId: BufferLike32 | ValidateObservationParams,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.validateExternalObservationTx(
+    const tx = await this.txBuilder.validateObservationTx(
       paramsOrPositionId,
       txOptions,
     );
     return await this.base.sendAndConfirm(tx);
   }
 
-  async resolveValidateExternalObservationAccounts(
-    params: ValidateExternalObservationParams,
-  ): Promise<
-    Required<
-      Omit<ValidateExternalObservationOracleAccounts, "observedMintOracle">
-    > & {
-      remainingAccounts: AccountMeta[];
-    }
-  > {
-    const overrides: ValidateExternalObservationOracleAccounts = params;
+  async resolveValidateObservationAccounts(
+    params: ValidateObservationParams,
+  ): Promise<ResolvedValidateObservationAccounts> {
+    const overrides: ValidateObservationOracleAccounts = params;
     const nullAccounts = {
       glamConfig: overrides.glamConfig ?? null,
       solUsdOracle: overrides.solUsdOracle ?? null,
       baseAssetOracle: overrides.baseAssetOracle ?? null,
       remainingAccounts: [] as AccountMeta[],
+      kaminoReservesToRefresh: [] as PublicKey[],
+    };
+    const kaminoReservesToRefresh = new PkSet();
+    const addKaminoReserveToRefresh = (assetMeta?: {
+      oracle?: PublicKey;
+      oracleSource?: string;
+    }) => {
+      if (assetMeta?.oracleSource === "KaminoReserve" && assetMeta.oracle) {
+        kaminoReservesToRefresh.add(assetMeta.oracle);
+      }
     };
 
     const observationState = await this.fetchObservationState();
@@ -857,12 +892,16 @@ export class EpiClient {
         ? Promise.resolve({ oracle: overrides.baseAssetOracle })
         : this.base.getAssetMeta(stateAccount.baseAssetMint),
     ]);
+    addKaminoReserveToRefresh(baseAssetMeta);
 
     const remainingAccounts: AccountMeta[] = [];
     if (isMintDenomination(pendingObservation.denomination)) {
-      const observedMintOracle =
-        overrides.observedMintOracle ||
-        (await this.base.getAssetMeta(observedMint)).oracle;
+      let observedMintOracle = overrides.observedMintOracle;
+      if (!observedMintOracle) {
+        const observedMintMeta = await this.base.getAssetMeta(observedMint);
+        addKaminoReserveToRefresh(observedMintMeta);
+        observedMintOracle = observedMintMeta.oracle;
+      }
       remainingAccounts.push({
         pubkey: observedMintOracle,
         isSigner: false,
@@ -877,13 +916,7 @@ export class EpiClient {
       solUsdOracle,
       baseAssetOracle: baseAssetMeta.oracle,
       remainingAccounts,
+      kaminoReservesToRefresh: Array.from(kaminoReservesToRefresh),
     };
-  }
-
-  async refreshPricedProtocol(
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.refreshPricedProtocolTx(txOptions);
-    return await this.base.sendAndConfirm(tx);
   }
 }

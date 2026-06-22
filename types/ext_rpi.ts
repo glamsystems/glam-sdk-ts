@@ -1,138 +1,46 @@
-{
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/ext_rpi.json`.
+ */
+export type ExtRpi = {
   "address": "G1NTew9pcXtYUTuTK4bJTUxKw2LghYmJCCDYxaKQN7oc",
   "metadata": {
-    "name": "ext_epi",
+    "name": "extRpi",
     "version": "1.0.0",
     "spec": "0.1.0",
-    "description": "External Position Integration for GLAM Protocol"
+    "description": "Registered Position Integration for GLAM Protocol"
   },
   "instructions": [
     {
-      "name": "refresh_priced_protocol",
+      "name": "removeRegisteredPosition",
       "docs": [
-        "Republish the aggregate EPI priced protocol from already validated",
-        "observations at the current slot."
-      ],
-      "discriminator": [
-        229,
-        89,
-        39,
-        46,
-        5,
-        217,
-        10,
-        192
-      ],
-      "accounts": [
-        {
-          "name": "glam_state",
-          "writable": true
-        },
-        {
-          "name": "glam_signer",
-          "signer": true
-        },
-        {
-          "name": "observation_state",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  111,
-                  98,
-                  115,
-                  101,
-                  114,
-                  118,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glam_state"
-              }
-            ]
-          }
-        },
-        {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "remove_external_position",
-      "docs": [
-        "Remove an external position from the registry.",
+        "Remove a registered position from the registry.",
         "Closes the observation state PDA and refunds rent to the signer."
       ],
       "discriminator": [
-        97,
-        146,
-        246,
-        241,
-        130,
-        26,
-        108,
-        97
+        102,
+        188,
+        200,
+        90,
+        244,
+        35,
+        5,
+        7
       ],
       "accounts": [
         {
-          "name": "glam_state",
+          "name": "glamState",
           "writable": true
         },
         {
-          "name": "glam_signer",
+          "name": "glamSigner",
           "writable": true,
           "signer": true
         },
         {
-          "name": "glam_vault",
+          "name": "glamVault",
           "writable": true,
           "pda": {
             "seeds": [
@@ -148,17 +56,17 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               }
             ],
             "program": {
               "kind": "account",
-              "path": "glam_protocol_program"
+              "path": "glamProtocolProgram"
             }
           }
         },
         {
-          "name": "observation_state",
+          "name": "observationState",
           "writable": true,
           "pda": {
             "seeds": [
@@ -186,13 +94,13 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               }
             ]
           }
         },
         {
-          "name": "integration_authority",
+          "name": "integrationAuthority",
           "pda": {
             "seeds": [
               {
@@ -225,17 +133,17 @@
           }
         },
         {
-          "name": "glam_protocol_program",
+          "name": "glamProtocolProgram",
           "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "position_id",
+          "name": "positionId",
           "type": {
             "array": [
               "u8",
@@ -246,31 +154,31 @@
       ]
     },
     {
-      "name": "submit_external_observation",
+      "name": "submitObservation",
       "docs": [
-        "Submit an observation for a configured external position.",
+        "Submit an observation for a configured registered position.",
         "Writes to pending slot; replaces any existing pending observation."
       ],
       "discriminator": [
-        100,
-        228,
-        147,
-        149,
+        109,
+        4,
         22,
-        28,
-        158,
-        163
+        163,
+        138,
+        215,
+        205,
+        180
       ],
       "accounts": [
         {
-          "name": "glam_state"
+          "name": "glamState"
         },
         {
-          "name": "glam_signer",
+          "name": "glamSigner",
           "signer": true
         },
         {
-          "name": "observation_state",
+          "name": "observationState",
           "writable": true,
           "pda": {
             "seeds": [
@@ -298,7 +206,7 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               }
             ]
           }
@@ -309,40 +217,40 @@
           "name": "input",
           "type": {
             "defined": {
-              "name": "PositionObservationInput"
+              "name": "positionObservationInput"
             }
           }
         }
       ]
     },
     {
-      "name": "submit_external_observation_wormhole",
+      "name": "submitObservationWormhole",
       "docs": [
-        "Submit a Wormhole Guardian-verified external observation.",
+        "Submit a Wormhole Guardian-verified registered observation.",
         "The caller only relays a VAA body whose signatures have already been",
         "posted to the Wormhole Verification Shim."
       ],
       "discriminator": [
-        124,
-        238,
-        191,
-        242,
-        222,
-        175,
-        91,
-        148
+        98,
+        36,
+        143,
+        5,
+        50,
+        123,
+        9,
+        67
       ],
       "accounts": [
         {
-          "name": "glam_state"
+          "name": "glamState"
         },
         {
-          "name": "glam_signer",
+          "name": "glamSigner",
           "writable": true,
           "signer": true
         },
         {
-          "name": "observation_state",
+          "name": "observationState",
           "writable": true,
           "pda": {
             "seeds": [
@@ -370,13 +278,13 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               }
             ]
           }
         },
         {
-          "name": "wormhole_config",
+          "name": "wormholeConfig",
           "writable": true,
           "pda": {
             "seeds": [
@@ -414,29 +322,29 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               },
               {
                 "kind": "arg",
-                "path": "position_id"
+                "path": "positionId"
               }
             ]
           }
         },
         {
-          "name": "guardian_set"
+          "name": "guardianSet"
         },
         {
-          "name": "guardian_signatures"
+          "name": "guardianSignatures"
         },
         {
-          "name": "wormhole_verify_vaa_shim",
+          "name": "wormholeVerifyVaaShim",
           "address": "EFaNWErqAtVWufdNb7yofSHHfWFos843DFpu4JBw24at"
         }
       ],
       "args": [
         {
-          "name": "position_id",
+          "name": "positionId",
           "type": {
             "array": [
               "u8",
@@ -445,43 +353,43 @@
           }
         },
         {
-          "name": "guardian_set_bump",
+          "name": "guardianSetBump",
           "type": "u8"
         },
         {
-          "name": "vaa_body",
+          "name": "vaaBody",
           "type": "bytes"
         }
       ]
     },
     {
-      "name": "upsert_external_position",
+      "name": "upsertRegisteredPosition",
       "docs": [
-        "Create or update an external position configuration.",
+        "Create or update a registered position configuration.",
         "Creates the observation state PDA on first call for a position."
       ],
       "discriminator": [
-        199,
-        33,
-        239,
-        150,
-        200,
-        123,
-        43,
-        70
+        89,
+        19,
+        168,
+        143,
+        107,
+        179,
+        125,
+        11
       ],
       "accounts": [
         {
-          "name": "glam_state",
+          "name": "glamState",
           "writable": true
         },
         {
-          "name": "glam_signer",
+          "name": "glamSigner",
           "writable": true,
           "signer": true
         },
         {
-          "name": "glam_vault",
+          "name": "glamVault",
           "writable": true,
           "pda": {
             "seeds": [
@@ -497,17 +405,17 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               }
             ],
             "program": {
               "kind": "account",
-              "path": "glam_protocol_program"
+              "path": "glamProtocolProgram"
             }
           }
         },
         {
-          "name": "observation_state",
+          "name": "observationState",
           "writable": true,
           "pda": {
             "seeds": [
@@ -535,13 +443,13 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               }
             ]
           }
         },
         {
-          "name": "integration_authority",
+          "name": "integrationAuthority",
           "pda": {
             "seeds": [
               {
@@ -574,11 +482,11 @@
           }
         },
         {
-          "name": "glam_protocol_program",
+          "name": "glamProtocolProgram",
           "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -587,39 +495,39 @@
           "name": "config",
           "type": {
             "defined": {
-              "name": "ExternalPositionConfig"
+              "name": "positionConfig"
             }
           }
         }
       ]
     },
     {
-      "name": "upsert_external_position_wormhole_config",
+      "name": "upsertRegisteredPositionWormholeConfig",
       "docs": [
         "Create or update Wormhole verification config for a Wormhole-sourced",
-        "external position."
+        "registered position."
       ],
       "discriminator": [
-        173,
-        64,
-        201,
-        39,
-        54,
-        49,
-        192,
-        89
+        139,
+        183,
+        73,
+        75,
+        245,
+        117,
+        75,
+        109
       ],
       "accounts": [
         {
-          "name": "glam_state"
+          "name": "glamState"
         },
         {
-          "name": "glam_signer",
+          "name": "glamSigner",
           "writable": true,
           "signer": true
         },
         {
-          "name": "wormhole_config",
+          "name": "wormholeConfig",
           "writable": true,
           "pda": {
             "seeds": [
@@ -657,7 +565,7 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               },
               {
                 "kind": "arg",
@@ -667,7 +575,7 @@
           }
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -676,39 +584,39 @@
           "name": "input",
           "type": {
             "defined": {
-              "name": "WormholeObservationConfigInput"
+              "name": "wormholeObservationConfigInput"
             }
           }
         }
       ]
     },
     {
-      "name": "upsert_external_position_wormhole_hyperliquid_config",
+      "name": "upsertRegisteredPositionWormholeHyperliquidConfig",
       "docs": [
         "Create or update Hyperliquid-specific payload config for a",
-        "Wormhole-sourced external position."
+        "Wormhole-sourced registered position."
       ],
       "discriminator": [
-        42,
-        13,
-        175,
-        7,
-        34,
-        137,
-        176,
-        108
+        163,
+        241,
+        249,
+        72,
+        43,
+        248,
+        96,
+        44
       ],
       "accounts": [
         {
-          "name": "glam_state"
+          "name": "glamState"
         },
         {
-          "name": "glam_signer",
+          "name": "glamSigner",
           "writable": true,
           "signer": true
         },
         {
-          "name": "wormhole_config",
+          "name": "wormholeConfig",
           "pda": {
             "seeds": [
               {
@@ -745,7 +653,7 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               },
               {
                 "kind": "arg",
@@ -755,7 +663,7 @@
           }
         },
         {
-          "name": "hyperliquid_config",
+          "name": "hyperliquidConfig",
           "writable": true,
           "pda": {
             "seeds": [
@@ -796,7 +704,7 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               },
               {
                 "kind": "arg",
@@ -806,7 +714,7 @@
           }
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -815,17 +723,16 @@
           "name": "input",
           "type": {
             "defined": {
-              "name": "WormholeHyperliquidObservationConfigInput"
+              "name": "wormholeHyperliquidObservationConfigInput"
             }
           }
         }
       ]
     },
     {
-      "name": "validate_external_observation",
+      "name": "validateObservation",
       "docs": [
-        "Validate a pending observation, promote to active, and publish",
-        "the full aggregate priced protocol for ext_epi.",
+        "Validate a pending observation and promote it to active.",
         "",
         "Remaining accounts:",
         "- `remaining_accounts[0]` is required when the pending observation",
@@ -833,26 +740,26 @@
         "account used for price normalization."
       ],
       "discriminator": [
-        88,
-        144,
-        219,
-        126,
-        79,
-        29,
-        43,
-        188
+        134,
+        150,
+        250,
+        52,
+        188,
+        156,
+        130,
+        122
       ],
       "accounts": [
         {
-          "name": "glam_state",
+          "name": "glamState",
           "writable": true
         },
         {
-          "name": "glam_signer",
+          "name": "glamSigner",
           "signer": true
         },
         {
-          "name": "observation_state",
+          "name": "observationState",
           "writable": true,
           "pda": {
             "seeds": [
@@ -880,46 +787,13 @@
               },
               {
                 "kind": "account",
-                "path": "glam_state"
+                "path": "glamState"
               }
             ]
           }
         },
         {
-          "name": "integration_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "glam_config",
+          "name": "glamConfig",
           "docs": [
             "and its discriminator is checked by AssetMetasRef before use."
           ],
@@ -985,27 +859,23 @@
           }
         },
         {
-          "name": "sol_usd_oracle",
+          "name": "solUsdOracle",
           "docs": [
             "against GLAM global oracle metadata before price use."
           ],
           "optional": true
         },
         {
-          "name": "base_asset_oracle",
+          "name": "baseAssetOracle",
           "docs": [
             "GLAM global oracle metadata before price use."
           ],
           "optional": true
-        },
-        {
-          "name": "glam_protocol_program",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
         }
       ],
       "args": [
         {
-          "name": "position_id",
+          "name": "positionId",
           "type": {
             "array": [
               "u8",
@@ -1018,7 +888,7 @@
   ],
   "accounts": [
     {
-      "name": "ObservationState",
+      "name": "observationState",
       "discriminator": [
         122,
         174,
@@ -1031,7 +901,7 @@
       ]
     },
     {
-      "name": "StateAccount",
+      "name": "stateAccount",
       "discriminator": [
         142,
         247,
@@ -1044,7 +914,7 @@
       ]
     },
     {
-      "name": "WormholeHyperliquidObservationConfig",
+      "name": "wormholeHyperliquidObservationConfig",
       "discriminator": [
         34,
         225,
@@ -1057,7 +927,7 @@
       ]
     },
     {
-      "name": "WormholeObservationConfig",
+      "name": "wormholeObservationConfig",
       "discriminator": [
         64,
         123,
@@ -1070,69 +940,226 @@
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "positionNotFound",
+      "msg": "Registered position not found"
+    },
+    {
+      "code": 6001,
+      "name": "positionAlreadyExists",
+      "msg": "Registered position already exists in the observation state"
+    },
+    {
+      "code": 6002,
+      "name": "positionRegistryFull",
+      "msg": "Registered position registry is full"
+    },
+    {
+      "code": 6003,
+      "name": "positionIdentityMismatch",
+      "msg": "Registered position identity fields cannot be changed"
+    },
+    {
+      "code": 6004,
+      "name": "positionDisabled",
+      "msg": "Registered position is disabled"
+    },
+    {
+      "code": 6005,
+      "name": "invalidPositionSource",
+      "msg": "Registered position source type is invalid for this operation"
+    },
+    {
+      "code": 6006,
+      "name": "invalidPositionType",
+      "msg": "Registered position type is invalid for this operation"
+    },
+    {
+      "code": 6007,
+      "name": "invalidPositionDenomination",
+      "msg": "Registered position denomination is invalid for this operation"
+    },
+    {
+      "code": 6008,
+      "name": "unsupportedObservationDenomination",
+      "msg": "Observation denomination is unsupported by the GLAM state"
+    },
+    {
+      "code": 6009,
+      "name": "observationStateMismatch",
+      "msg": "Observation state does not belong to this GLAM state"
+    },
+    {
+      "code": 6010,
+      "name": "observationNotFound",
+      "msg": "Observation entry not found"
+    },
+    {
+      "code": 6011,
+      "name": "pendingObservationNotFound",
+      "msg": "Pending observation not found"
+    },
+    {
+      "code": 6012,
+      "name": "validatedObservationNotFound",
+      "msg": "Validated observation not found"
+    },
+    {
+      "code": 6013,
+      "name": "observationTimestampInFuture",
+      "msg": "Observation timestamp is in the future"
+    },
+    {
+      "code": 6014,
+      "name": "observationStale",
+      "msg": "Observation is stale"
+    },
+    {
+      "code": 6015,
+      "name": "missingExternalShares",
+      "msg": "Tokenized observations require external shares"
+    },
+    {
+      "code": 6016,
+      "name": "missingGlamConfig",
+      "msg": "GLAM config account is required to normalize this observation"
+    },
+    {
+      "code": 6017,
+      "name": "missingObservedMintOracle",
+      "msg": "Observed mint oracle account is required to normalize this observation"
+    },
+    {
+      "code": 6018,
+      "name": "missingBaseAssetOracle",
+      "msg": "Base asset oracle account is required to normalize this observation"
+    },
+    {
+      "code": 6019,
+      "name": "missingSolUsdOracle",
+      "msg": "SOL/USD oracle account is required to normalize this observation"
+    },
+    {
+      "code": 6020,
+      "name": "invalidWormholeConfig",
+      "msg": "Wormhole observation config is invalid"
+    },
+    {
+      "code": 6021,
+      "name": "unsupportedWormholePayload",
+      "msg": "Unsupported Wormhole payload"
+    },
+    {
+      "code": 6022,
+      "name": "invalidWormholeVaa",
+      "msg": "Invalid Wormhole VAA body"
+    },
+    {
+      "code": 6023,
+      "name": "invalidWormholeEmitter",
+      "msg": "Invalid Wormhole emitter"
+    },
+    {
+      "code": 6024,
+      "name": "wormholeReplay",
+      "msg": "Wormhole VAA sequence was already processed"
+    },
+    {
+      "code": 6025,
+      "name": "invalidWormholePayloadHeader",
+      "msg": "Invalid Wormhole payload header"
+    },
+    {
+      "code": 6026,
+      "name": "missingWormholePayloadConfig",
+      "msg": "Missing Wormhole payload config account"
+    },
+    {
+      "code": 6027,
+      "name": "invalidWormholePayloadConfig",
+      "msg": "Invalid Wormhole payload config account"
+    },
+    {
+      "code": 6028,
+      "name": "invalidHyperliquidConfig",
+      "msg": "Invalid Hyperliquid payload config"
+    },
+    {
+      "code": 6029,
+      "name": "invalidHyperliquidNavPayload",
+      "msg": "Invalid Hyperliquid NAV payload"
+    },
+    {
+      "code": 6030,
+      "name": "invalidWormholeVerifyVaaShim",
+      "msg": "Invalid Wormhole Verification Shim program"
+    }
+  ],
   "types": [
     {
-      "name": "AccountType",
+      "name": "accountType",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Vault"
+            "name": "vault"
           },
           {
-            "name": "TokenizedVault"
+            "name": "tokenizedVault"
           },
           {
-            "name": "Mint"
+            "name": "mint"
           },
           {
-            "name": "SingleAssetVault"
+            "name": "singleAssetVault"
           }
         ]
       }
     },
     {
-      "name": "AccruedFees",
+      "name": "accruedFees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "vault_subscription_fee",
+            "name": "vaultSubscriptionFee",
             "type": "u128"
           },
           {
-            "name": "vault_redemption_fee",
+            "name": "vaultRedemptionFee",
             "type": "u128"
           },
           {
-            "name": "manager_subscription_fee",
+            "name": "managerSubscriptionFee",
             "type": "u128"
           },
           {
-            "name": "manager_redemption_fee",
+            "name": "managerRedemptionFee",
             "type": "u128"
           },
           {
-            "name": "management_fee",
+            "name": "managementFee",
             "type": "u128"
           },
           {
-            "name": "performance_fee",
+            "name": "performanceFee",
             "type": "u128"
           },
           {
-            "name": "protocol_base_fee",
+            "name": "protocolBaseFee",
             "type": "u128"
           },
           {
-            "name": "protocol_flow_fee",
+            "name": "protocolFlowFee",
             "type": "u128"
           }
         ]
       }
     },
     {
-      "name": "CreatedModel",
+      "name": "createdModel",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1146,18 +1173,18 @@
             }
           },
           {
-            "name": "created_by",
+            "name": "createdBy",
             "type": "pubkey"
           },
           {
-            "name": "created_at",
+            "name": "createdAt",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "DelegateAcl",
+      "name": "delegateAcl",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1166,24 +1193,24 @@
             "type": "pubkey"
           },
           {
-            "name": "integration_permissions",
+            "name": "integrationPermissions",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "IntegrationPermissions"
+                  "name": "integrationPermissions"
                 }
               }
             }
           },
           {
-            "name": "expires_at",
+            "name": "expiresAt",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "Denomination",
+      "name": "denomination",
       "docs": [
         "Denomination of an observation amount.",
         "Never reorder existing variants — append only."
@@ -1195,16 +1222,16 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "Usd"
+            "name": "usd"
           },
           {
-            "name": "Mint"
+            "name": "mint"
           }
         ]
       }
     },
     {
-      "name": "DenominationSpec",
+      "name": "denominationSpec",
       "docs": [
         "Full denomination spec: the discriminant plus an optional mint pubkey."
       ],
@@ -1215,7 +1242,7 @@
             "name": "denom",
             "type": {
               "defined": {
-                "name": "Denomination"
+                "name": "denomination"
               }
             }
           },
@@ -1231,7 +1258,7 @@
       }
     },
     {
-      "name": "EngineField",
+      "name": "engineField",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1239,7 +1266,7 @@
             "name": "name",
             "type": {
               "defined": {
-                "name": "EngineFieldName"
+                "name": "engineFieldName"
               }
             }
           },
@@ -1247,7 +1274,7 @@
             "name": "value",
             "type": {
               "defined": {
-                "name": "EngineFieldValue"
+                "name": "engineFieldValue"
               }
             }
           }
@@ -1255,71 +1282,71 @@
       }
     },
     {
-      "name": "EngineFieldName",
+      "name": "engineFieldName",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Owner"
+            "name": "owner"
           },
           {
-            "name": "PortfolioManagerName"
+            "name": "portfolioManagerName"
           },
           {
-            "name": "Name"
+            "name": "name"
           },
           {
-            "name": "Uri"
+            "name": "uri"
           },
           {
-            "name": "Assets"
+            "name": "assets"
           },
           {
-            "name": "DelegateAcls"
+            "name": "delegateAcls"
           },
           {
-            "name": "IntegrationAcls"
+            "name": "integrationAcls"
           },
           {
-            "name": "TimelockDuration"
+            "name": "timelockDuration"
           },
           {
-            "name": "Borrowable"
+            "name": "borrowable"
           },
           {
-            "name": "DefaultAccountStateFrozen"
+            "name": "defaultAccountStateFrozen"
           },
           {
-            "name": "PermanentDelegate"
+            "name": "permanentDelegate"
           },
           {
-            "name": "NotifyAndSettle"
+            "name": "notifyAndSettle"
           },
           {
-            "name": "FeeStructure"
+            "name": "feeStructure"
           },
           {
-            "name": "FeeParams"
+            "name": "feeParams"
           },
           {
-            "name": "ClaimableFees"
+            "name": "claimableFees"
           },
           {
-            "name": "ClaimedFees"
+            "name": "claimedFees"
           },
           {
-            "name": "OracleConfigs"
+            "name": "oracleConfigs"
           }
         ]
       }
     },
     {
-      "name": "EngineFieldValue",
+      "name": "engineFieldValue",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Boolean",
+            "name": "boolean",
             "fields": [
               {
                 "name": "val",
@@ -1328,7 +1355,7 @@
             ]
           },
           {
-            "name": "U8",
+            "name": "u8",
             "fields": [
               {
                 "name": "val",
@@ -1337,7 +1364,7 @@
             ]
           },
           {
-            "name": "U32",
+            "name": "u32",
             "fields": [
               {
                 "name": "val",
@@ -1346,7 +1373,7 @@
             ]
           },
           {
-            "name": "U64",
+            "name": "u64",
             "fields": [
               {
                 "name": "val",
@@ -1355,7 +1382,7 @@
             ]
           },
           {
-            "name": "String",
+            "name": "string",
             "fields": [
               {
                 "name": "val",
@@ -1364,7 +1391,7 @@
             ]
           },
           {
-            "name": "Pubkey",
+            "name": "pubkey",
             "fields": [
               {
                 "name": "val",
@@ -1373,7 +1400,7 @@
             ]
           },
           {
-            "name": "VecPubkey",
+            "name": "vecPubkey",
             "fields": [
               {
                 "name": "val",
@@ -1384,7 +1411,7 @@
             ]
           },
           {
-            "name": "VecU8",
+            "name": "vecU8",
             "fields": [
               {
                 "name": "val",
@@ -1393,7 +1420,7 @@
             ]
           },
           {
-            "name": "VecU32",
+            "name": "vecU32",
             "fields": [
               {
                 "name": "val",
@@ -1404,14 +1431,14 @@
             ]
           },
           {
-            "name": "VecDelegateAcl",
+            "name": "vecDelegateAcl",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "DelegateAcl"
+                      "name": "delegateAcl"
                     }
                   }
                 }
@@ -1419,14 +1446,14 @@
             ]
           },
           {
-            "name": "VecIntegrationAcl",
+            "name": "vecIntegrationAcl",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "IntegrationAcl"
+                      "name": "integrationAcl"
                     }
                   }
                 }
@@ -1434,65 +1461,65 @@
             ]
           },
           {
-            "name": "FeeStructure",
+            "name": "feeStructure",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "FeeStructure"
+                    "name": "feeStructure"
                   }
                 }
               }
             ]
           },
           {
-            "name": "FeeParams",
+            "name": "feeParams",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "FeeParams"
+                    "name": "feeParams"
                   }
                 }
               }
             ]
           },
           {
-            "name": "AccruedFees",
+            "name": "accruedFees",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "AccruedFees"
+                    "name": "accruedFees"
                   }
                 }
               }
             ]
           },
           {
-            "name": "NotifyAndSettle",
+            "name": "notifyAndSettle",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "NotifyAndSettle"
+                    "name": "notifyAndSettle"
                   }
                 }
               }
             ]
           },
           {
-            "name": "OracleConfigs",
+            "name": "oracleConfigs",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "OracleConfigs"
+                    "name": "oracleConfigs"
                   }
                 }
               }
@@ -1502,227 +1529,59 @@
       }
     },
     {
-      "name": "EntryExitFees",
+      "name": "entryExitFees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "subscription_fee_bps",
+            "name": "subscriptionFeeBps",
             "type": "u16"
           },
           {
-            "name": "redemption_fee_bps",
+            "name": "redemptionFeeBps",
             "type": "u16"
           }
         ]
       }
     },
     {
-      "name": "ExternalPositionConfig",
-      "docs": [
-        "Per-position configuration entry in the registry."
-      ],
+      "name": "feeParams",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "position_id",
-            "docs": [
-              "Unique identifier for this position within the vault.",
-              "",
-              "Under the cleaner pricing model, this 32-byte id is also the canonical",
-              "coverage key published into `glam_state.external_positions` and",
-              "`PricedProtocol.positions`. For bridge-managed inflight transfers, this",
-              "should be the transfer-record pubkey bytes."
-            ],
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "position_type",
-            "docs": [
-              "Type of position (Valued or Tokenized)."
-            ],
-            "type": {
-              "defined": {
-                "name": "ExternalPositionType"
-              }
-            }
-          },
-          {
-            "name": "source_type",
-            "docs": [
-              "Source type (Trusted or Native)."
-            ],
-            "type": {
-              "defined": {
-                "name": "ExternalSourceType"
-              }
-            }
-          },
-          {
-            "name": "denomination",
-            "docs": [
-              "Denomination rules for Trusted positions.",
-              "For Native positions this is ignored (denomination derived from custody)."
-            ],
-            "type": {
-              "defined": {
-                "name": "DenominationSpec"
-              }
-            }
-          },
-          {
-            "name": "native_custody_account",
-            "docs": [
-              "Custody account for Native positions. `Pubkey::default()` for Trusted."
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "native_custody_kind",
-            "docs": [
-              "Custody kind for Native positions."
-            ],
-            "type": {
-              "defined": {
-                "name": "NativeCustodyKind"
-              }
-            }
-          },
-          {
-            "name": "enabled",
-            "docs": [
-              "Whether this position is enabled for observations."
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "freshness_override_secs",
-            "docs": [
-              "Freshness override in seconds. 0 means use vault default."
-            ],
+            "name": "yearInSeconds",
             "type": "u32"
           },
           {
-            "name": "submit_allowlist",
-            "docs": [
-              "Per-position submit allowlist. Empty vec = use role-based access only."
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "validate_allowlist",
-            "docs": [
-              "Per-position validate allowlist. Empty vec = use role-based access only."
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "configure_allowlist",
-            "docs": [
-              "Per-position configure allowlist. Empty vec = use role-based access only.",
-              "This is intentionally more permissive than the protocol-wide asset",
-              "allowlist semantics where an empty allowlist means deny all."
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "ExternalPositionType",
-      "docs": [
-        "Type of external position.",
-        "Never reorder existing variants — append only."
-      ],
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Valued"
-          },
-          {
-            "name": "Tokenized"
-          }
-        ]
-      }
-    },
-    {
-      "name": "ExternalSourceType",
-      "docs": [
-        "Source of observation data.",
-        "Never reorder existing variants — append only."
-      ],
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Trusted"
-          },
-          {
-            "name": "Native"
-          },
-          {
-            "name": "Wormhole"
-          }
-        ]
-      }
-    },
-    {
-      "name": "FeeParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "year_in_seconds",
-            "type": "u32"
-          },
-          {
-            "name": "pa_high_water_mark",
+            "name": "paHighWaterMark",
             "type": "i128"
           },
           {
-            "name": "pa_last_nav",
+            "name": "paLastNav",
             "type": "i128"
           },
           {
-            "name": "last_aum",
+            "name": "lastAum",
             "type": "i128"
           },
           {
-            "name": "last_performance_fee_crystallized",
+            "name": "lastPerformanceFeeCrystallized",
             "type": "i64"
           },
           {
-            "name": "last_management_fee_crystallized",
+            "name": "lastManagementFeeCrystallized",
             "type": "i64"
           },
           {
-            "name": "last_protocol_fee_crystallized",
+            "name": "lastProtocolFeeCrystallized",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "FeeStructure",
+      "name": "feeStructure",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1730,7 +1589,7 @@
             "name": "vault",
             "type": {
               "defined": {
-                "name": "EntryExitFees"
+                "name": "entryExitFees"
               }
             }
           },
@@ -1738,7 +1597,7 @@
             "name": "manager",
             "type": {
               "defined": {
-                "name": "EntryExitFees"
+                "name": "entryExitFees"
               }
             }
           },
@@ -1746,7 +1605,7 @@
             "name": "management",
             "type": {
               "defined": {
-                "name": "ManagementFee"
+                "name": "managementFee"
               }
             }
           },
@@ -1754,7 +1613,7 @@
             "name": "performance",
             "type": {
               "defined": {
-                "name": "PerformanceFee"
+                "name": "performanceFee"
               }
             }
           },
@@ -1762,7 +1621,7 @@
             "name": "protocol",
             "type": {
               "defined": {
-                "name": "ProtocolFees"
+                "name": "protocolFees"
               }
             }
           }
@@ -1770,21 +1629,21 @@
       }
     },
     {
-      "name": "HurdleType",
+      "name": "hurdleType",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Hard"
+            "name": "hard"
           },
           {
-            "name": "Soft"
+            "name": "soft"
           }
         ]
       }
     },
     {
-      "name": "IntegrationAcl",
+      "name": "integrationAcl",
       "docs": [
         "An integration program can have multiple protocols supported.",
         "Enabled protocols are stored in a bitmask, and each protocol can have its own policy."
@@ -1793,19 +1652,19 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "integration_program",
+            "name": "integrationProgram",
             "type": "pubkey"
           },
           {
-            "name": "protocols_bitmask",
+            "name": "protocolsBitmask",
             "type": "u16"
           },
           {
-            "name": "protocol_policies",
+            "name": "protocolPolicies",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "ProtocolPolicy"
+                  "name": "protocolPolicy"
                 }
               }
             }
@@ -1814,7 +1673,7 @@
       }
     },
     {
-      "name": "IntegrationPermissions",
+      "name": "integrationPermissions",
       "docs": [
         "Stores delegate permissions for an integration program."
       ],
@@ -1822,15 +1681,15 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "integration_program",
+            "name": "integrationProgram",
             "type": "pubkey"
           },
           {
-            "name": "protocol_permissions",
+            "name": "protocolPermissions",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "ProtocolPermissions"
+                  "name": "protocolPermissions"
                 }
               }
             }
@@ -1839,19 +1698,19 @@
       }
     },
     {
-      "name": "ManagementFee",
+      "name": "managementFee",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "fee_bps",
+            "name": "feeBps",
             "type": "u16"
           }
         ]
       }
     },
     {
-      "name": "NativeCustodyKind",
+      "name": "nativeCustodyKind",
       "docs": [
         "Custody kind for Native source positions.",
         "Never reorder existing variants — append only."
@@ -1863,30 +1722,30 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "SplToken"
+            "name": "splToken"
           },
           {
-            "name": "NativeSol"
+            "name": "nativeSol"
           }
         ]
       }
     },
     {
-      "name": "NoticePeriodType",
+      "name": "noticePeriodType",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Hard"
+            "name": "hard"
           },
           {
-            "name": "Soft"
+            "name": "soft"
           }
         ]
       }
     },
     {
-      "name": "NotifyAndSettle",
+      "name": "notifyAndSettle",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1894,64 +1753,64 @@
             "name": "model",
             "type": {
               "defined": {
-                "name": "ValuationModel"
+                "name": "valuationModel"
               }
             }
           },
           {
-            "name": "permissionless_fulfillment",
+            "name": "permissionlessFulfillment",
             "type": "bool"
           },
           {
-            "name": "subscribe_notice_period_type",
+            "name": "subscribeNoticePeriodType",
             "type": {
               "defined": {
-                "name": "NoticePeriodType"
+                "name": "noticePeriodType"
               }
             }
           },
           {
-            "name": "subscribe_notice_period",
+            "name": "subscribeNoticePeriod",
             "type": "u64"
           },
           {
-            "name": "subscribe_settlement_period",
+            "name": "subscribeSettlementPeriod",
             "type": "u64"
           },
           {
-            "name": "subscribe_cancellation_window",
+            "name": "subscribeCancellationWindow",
             "type": "u64"
           },
           {
-            "name": "redeem_notice_period_type",
+            "name": "redeemNoticePeriodType",
             "type": {
               "defined": {
-                "name": "NoticePeriodType"
+                "name": "noticePeriodType"
               }
             }
           },
           {
-            "name": "redeem_notice_period",
+            "name": "redeemNoticePeriod",
             "type": "u64"
           },
           {
-            "name": "redeem_settlement_period",
+            "name": "redeemSettlementPeriod",
             "type": "u64"
           },
           {
-            "name": "redeem_cancellation_window",
+            "name": "redeemCancellationWindow",
             "type": "u64"
           },
           {
-            "name": "time_unit",
+            "name": "timeUnit",
             "type": {
               "defined": {
-                "name": "TimeUnit"
+                "name": "timeUnit"
               }
             }
           },
           {
-            "name": "_padding",
+            "name": "padding",
             "type": {
               "array": [
                 "u8",
@@ -1963,7 +1822,7 @@
       }
     },
     {
-      "name": "Observation",
+      "name": "observation",
       "docs": [
         "A single observation snapshot."
       ],
@@ -1981,7 +1840,7 @@
             ],
             "type": {
               "defined": {
-                "name": "StoredI128"
+                "name": "storedI128"
               }
             }
           },
@@ -1992,12 +1851,12 @@
             ],
             "type": {
               "defined": {
-                "name": "DenominationSpec"
+                "name": "denominationSpec"
               }
             }
           },
           {
-            "name": "_pad_denom",
+            "name": "padDenom",
             "docs": [
               "Alignment padding after denomination (to 8-byte boundary for i64)."
             ],
@@ -2009,28 +1868,28 @@
             }
           },
           {
-            "name": "observation_timestamp",
+            "name": "observationTimestamp",
             "docs": [
               "Unix timestamp of the observation."
             ],
             "type": "i64"
           },
           {
-            "name": "external_shares",
+            "name": "externalShares",
             "docs": [
               "External share count (for Tokenized positions)."
             ],
             "type": "u64"
           },
           {
-            "name": "submitted_by",
+            "name": "submittedBy",
             "docs": [
               "Signer who submitted this observation."
             ],
             "type": "pubkey"
           },
           {
-            "name": "submitted_at_slot",
+            "name": "submittedAtSlot",
             "docs": [
               "Slot at which this observation was submitted."
             ],
@@ -2040,9 +1899,9 @@
       }
     },
     {
-      "name": "ObservationState",
+      "name": "observationState",
       "docs": [
-        "Single PDA per vault that tracks all external position observations.",
+        "Single PDA per vault that tracks all registered position observations.",
         "Seeds: [SEED_OBSERVATION_STATE, glam_state.key()]"
       ],
       "serialization": "bytemuckunsafe",
@@ -2053,24 +1912,15 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "glam_state",
-            "docs": [
-              "The glam_state this observation state belongs to."
-            ],
+            "name": "glamState",
             "type": "pubkey"
           },
           {
             "name": "bump",
-            "docs": [
-              "PDA bump."
-            ],
             "type": "u8"
           },
           {
-            "name": "positions_len",
-            "docs": [
-              "Number of active positions stored in `positions`."
-            ],
+            "name": "positionsLen",
             "type": "u8"
           },
           {
@@ -2091,7 +1941,7 @@
               "array": [
                 {
                   "defined": {
-                    "name": "PositionObservation"
+                    "name": "positionObservation"
                   }
                 },
                 16
@@ -2102,7 +1952,7 @@
       }
     },
     {
-      "name": "OracleConfigs",
+      "name": "oracleConfigs",
       "docs": [
         "Vault-specific oracle configs. If available, these configs are preferred over the global config."
       ],
@@ -2110,7 +1960,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "max_ages_seconds",
+            "name": "maxAgesSeconds",
             "type": {
               "vec": {
                 "array": [
@@ -2133,23 +1983,23 @@
       }
     },
     {
-      "name": "PerformanceFee",
+      "name": "performanceFee",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "fee_bps",
+            "name": "feeBps",
             "type": "u16"
           },
           {
-            "name": "hurdle_rate_bps",
+            "name": "hurdleRateBps",
             "type": "u16"
           },
           {
-            "name": "hurdle_type",
+            "name": "hurdleType",
             "type": {
               "defined": {
-                "name": "HurdleType"
+                "name": "hurdleType"
               }
             }
           }
@@ -2157,7 +2007,129 @@
       }
     },
     {
-      "name": "PositionObservation",
+      "name": "positionConfig",
+      "docs": [
+        "Per-position configuration entry in the registry."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "positionId",
+            "docs": [
+              "Unique identifier for this position within the vault.",
+              "",
+              "GLAM AUM coverage for RPI is represented by the vault's ObservationState",
+              "PDA. This id remains the per-position key inside the RPI policy and",
+              "observation state."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "positionType",
+            "docs": [
+              "Type of position (Valued or Tokenized)."
+            ],
+            "type": {
+              "defined": {
+                "name": "registeredPositionType"
+              }
+            }
+          },
+          {
+            "name": "sourceType",
+            "docs": [
+              "Source type (Trusted or Native)."
+            ],
+            "type": {
+              "defined": {
+                "name": "registeredSourceType"
+              }
+            }
+          },
+          {
+            "name": "denomination",
+            "docs": [
+              "Denomination rules for Trusted positions.",
+              "For Native positions this is ignored (denomination derived from custody)."
+            ],
+            "type": {
+              "defined": {
+                "name": "denominationSpec"
+              }
+            }
+          },
+          {
+            "name": "nativeCustodyAccount",
+            "docs": [
+              "Custody account for Native positions. `Pubkey::default()` for Trusted."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "nativeCustodyKind",
+            "docs": [
+              "Custody kind for Native positions."
+            ],
+            "type": {
+              "defined": {
+                "name": "nativeCustodyKind"
+              }
+            }
+          },
+          {
+            "name": "enabled",
+            "docs": [
+              "Whether this position is enabled for observations."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "freshnessOverrideSecs",
+            "docs": [
+              "Freshness override in seconds. 0 means use vault default."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "submitAllowlist",
+            "docs": [
+              "Per-position submit allowlist. Empty vec = use role-based access only."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "validateAllowlist",
+            "docs": [
+              "Per-position validate allowlist. Empty vec = use role-based access only."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "configureAllowlist",
+            "docs": [
+              "Per-position configure allowlist. Empty vec = use role-based access only.",
+              "This is intentionally more permissive than the protocol-wide asset",
+              "allowlist semantics where an empty allowlist means deny all."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "positionObservation",
       "docs": [
         "Observation data for a single position, stored inline in `ObservationState`."
       ],
@@ -2169,7 +2141,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "position_id",
+            "name": "positionId",
             "docs": [
               "The position_id this entry tracks."
             ],
@@ -2181,14 +2153,14 @@
             }
           },
           {
-            "name": "has_pending",
+            "name": "hasPending",
             "docs": [
               "Whether a pending observation exists."
             ],
             "type": "bool"
           },
           {
-            "name": "_pad_pending",
+            "name": "padPending",
             "docs": [
               "Alignment padding after has_pending (to 8-byte boundary for Observation)."
             ],
@@ -2200,25 +2172,25 @@
             }
           },
           {
-            "name": "pending_observation",
+            "name": "pendingObservation",
             "docs": [
               "The pending observation (only valid when `has_pending == true`)."
             ],
             "type": {
               "defined": {
-                "name": "Observation"
+                "name": "observation"
               }
             }
           },
           {
-            "name": "has_validated",
+            "name": "hasValidated",
             "docs": [
               "Whether a validated observation exists."
             ],
             "type": "bool"
           },
           {
-            "name": "_pad_validated",
+            "name": "padValidated",
             "docs": [
               "Alignment padding after has_validated (to 8-byte boundary for Observation)."
             ],
@@ -2230,39 +2202,39 @@
             }
           },
           {
-            "name": "last_validated_observation",
+            "name": "lastValidatedObservation",
             "docs": [
               "The last validated observation (only valid when `has_validated == true`)."
             ],
             "type": {
               "defined": {
-                "name": "Observation"
+                "name": "observation"
               }
             }
           },
           {
-            "name": "validated_by",
+            "name": "validatedBy",
             "docs": [
               "Signer who last validated."
             ],
             "type": "pubkey"
           },
           {
-            "name": "validated_at_slot",
+            "name": "validatedAtSlot",
             "docs": [
               "Slot at which last validation occurred."
             ],
             "type": "u64"
           },
           {
-            "name": "validated_base_asset_amount",
+            "name": "validatedBaseAssetAmount",
             "docs": [
               "Base-asset-normalized amount from the last validated observation.",
               "This is the value that contributes to the aggregate priced protocol."
             ],
             "type": {
               "defined": {
-                "name": "StoredI128"
+                "name": "storedI128"
               }
             }
           }
@@ -2270,7 +2242,7 @@
       }
     },
     {
-      "name": "PositionObservationInput",
+      "name": "positionObservationInput",
       "docs": [
         "Observation data submitted by a caller."
       ],
@@ -2278,10 +2250,10 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "position_id",
+            "name": "positionId",
             "docs": [
               "The position being observed, identified by position_id.",
-              "The same 32-byte id is used as the canonical AUM coverage key."
+              "GLAM AUM coverage is tracked through the vault's ObservationState PDA."
             ],
             "type": {
               "array": [
@@ -2305,19 +2277,19 @@
             ],
             "type": {
               "defined": {
-                "name": "DenominationSpec"
+                "name": "denominationSpec"
               }
             }
           },
           {
-            "name": "observation_timestamp",
+            "name": "observationTimestamp",
             "docs": [
               "Unix timestamp of the observation."
             ],
             "type": "i64"
           },
           {
-            "name": "external_shares",
+            "name": "externalShares",
             "docs": [
               "External share count (required > 0 for Tokenized positions, 0 for Valued)."
             ],
@@ -2339,7 +2311,7 @@
       }
     },
     {
-      "name": "PricedProtocol",
+      "name": "pricedProtocol",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2356,15 +2328,15 @@
             "type": "u8"
           },
           {
-            "name": "last_updated_slot",
+            "name": "lastUpdatedSlot",
             "type": "u64"
           },
           {
-            "name": "integration_program",
+            "name": "integrationProgram",
             "type": "pubkey"
           },
           {
-            "name": "protocol_bitflag",
+            "name": "protocolBitflag",
             "type": "u16"
           },
           {
@@ -2377,23 +2349,23 @@
       }
     },
     {
-      "name": "ProtocolFees",
+      "name": "protocolFees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "base_fee_bps",
+            "name": "baseFeeBps",
             "type": "u16"
           },
           {
-            "name": "flow_fee_bps",
+            "name": "flowFeeBps",
             "type": "u16"
           }
         ]
       }
     },
     {
-      "name": "ProtocolPermissions",
+      "name": "protocolPermissions",
       "docs": [
         "Represents a delegate's permissions for a specific protocol"
       ],
@@ -2401,18 +2373,18 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "protocol_bitflag",
+            "name": "protocolBitflag",
             "type": "u16"
           },
           {
-            "name": "permissions_bitmask",
+            "name": "permissionsBitmask",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "ProtocolPolicy",
+      "name": "protocolPolicy",
       "docs": [
         "Stores policy data for an integrated protocol.",
         "Integration programs serialize/deserialize this data."
@@ -2421,7 +2393,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "protocol_bitflag",
+            "name": "protocolBitflag",
             "type": "u16"
           },
           {
@@ -2432,15 +2404,60 @@
       }
     },
     {
-      "name": "StateAccount",
+      "name": "registeredPositionType",
+      "docs": [
+        "Type of registered position.",
+        "Never reorder existing variants — append only."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "valued"
+          },
+          {
+            "name": "tokenized"
+          }
+        ]
+      }
+    },
+    {
+      "name": "registeredSourceType",
+      "docs": [
+        "Source of observation data.",
+        "Never reorder existing variants — append only."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "trusted"
+          },
+          {
+            "name": "native"
+          },
+          {
+            "name": "wormhole"
+          }
+        ]
+      }
+    },
+    {
+      "name": "stateAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "account_type",
+            "name": "accountType",
             "type": {
               "defined": {
-                "name": "AccountType"
+                "name": "accountType"
               }
             }
           },
@@ -2457,7 +2474,7 @@
             "type": "pubkey"
           },
           {
-            "name": "portfolio_manager_name",
+            "name": "portfolioManagerName",
             "type": {
               "array": [
                 "u8",
@@ -2469,20 +2486,20 @@
             "name": "created",
             "type": {
               "defined": {
-                "name": "CreatedModel"
+                "name": "createdModel"
               }
             }
           },
           {
-            "name": "base_asset_mint",
+            "name": "baseAssetMint",
             "type": "pubkey"
           },
           {
-            "name": "base_asset_decimals",
+            "name": "baseAssetDecimals",
             "type": "u8"
           },
           {
-            "name": "base_asset_token_program",
+            "name": "baseAssetTokenProgram",
             "type": "u8"
           },
           {
@@ -2495,11 +2512,11 @@
             }
           },
           {
-            "name": "timelock_duration",
+            "name": "timelockDuration",
             "type": "u32"
           },
           {
-            "name": "timelock_expires_at",
+            "name": "timelockExpiresAt",
             "type": "u64"
           },
           {
@@ -2513,37 +2530,37 @@
             }
           },
           {
-            "name": "integration_acls",
+            "name": "integrationAcls",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "IntegrationAcl"
+                  "name": "integrationAcl"
                 }
               }
             }
           },
           {
-            "name": "delegate_acls",
+            "name": "delegateAcls",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "DelegateAcl"
+                  "name": "delegateAcl"
                 }
               }
             }
           },
           {
-            "name": "external_positions",
+            "name": "externalPositions",
             "type": {
               "vec": "pubkey"
             }
           },
           {
-            "name": "priced_protocols",
+            "name": "pricedProtocols",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "PricedProtocol"
+                  "name": "pricedProtocol"
                 }
               }
             }
@@ -2554,7 +2571,7 @@
               "vec": {
                 "vec": {
                   "defined": {
-                    "name": "EngineField"
+                    "name": "engineField"
                   }
                 }
               }
@@ -2564,7 +2581,7 @@
       }
     },
     {
-      "name": "StoredI128",
+      "name": "storedI128",
       "docs": [
         "Byte-backed i128 storage that keeps the containing zero-copy account 8-byte aligned."
       ],
@@ -2588,44 +2605,44 @@
       }
     },
     {
-      "name": "TimeUnit",
+      "name": "timeUnit",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Second"
+            "name": "second"
           },
           {
-            "name": "Slot"
+            "name": "slot"
           }
         ]
       }
     },
     {
-      "name": "ValuationModel",
+      "name": "valuationModel",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Continuous"
+            "name": "continuous"
           },
           {
-            "name": "Periodic"
+            "name": "periodic"
           }
         ]
       }
     },
     {
-      "name": "WormholeHyperliquidObservationConfig",
+      "name": "wormholeHyperliquidObservationConfig",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "glam_state",
+            "name": "glamState",
             "type": "pubkey"
           },
           {
-            "name": "position_id",
+            "name": "positionId",
             "type": {
               "array": [
                 "u8",
@@ -2634,7 +2651,7 @@
             }
           },
           {
-            "name": "hyperliquid_account",
+            "name": "hyperliquidAccount",
             "type": {
               "array": [
                 "u8",
@@ -2643,7 +2660,7 @@
             }
           },
           {
-            "name": "account_margin_summary_precompile",
+            "name": "accountMarginSummaryPrecompile",
             "type": {
               "array": [
                 "u8",
@@ -2652,7 +2669,7 @@
             }
           },
           {
-            "name": "spot_balance_precompile",
+            "name": "spotBalancePrecompile",
             "type": {
               "array": [
                 "u8",
@@ -2661,11 +2678,11 @@
             }
           },
           {
-            "name": "perp_dex_index",
+            "name": "perpDexIndex",
             "type": "u32"
           },
           {
-            "name": "usdc_spot_token",
+            "name": "usdcSpotToken",
             "type": "u64"
           },
           {
@@ -2676,12 +2693,12 @@
       }
     },
     {
-      "name": "WormholeHyperliquidObservationConfigInput",
+      "name": "wormholeHyperliquidObservationConfigInput",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "position_id",
+            "name": "positionId",
             "type": {
               "array": [
                 "u8",
@@ -2690,7 +2707,7 @@
             }
           },
           {
-            "name": "hyperliquid_account",
+            "name": "hyperliquidAccount",
             "type": {
               "array": [
                 "u8",
@@ -2699,7 +2716,7 @@
             }
           },
           {
-            "name": "account_margin_summary_precompile",
+            "name": "accountMarginSummaryPrecompile",
             "type": {
               "array": [
                 "u8",
@@ -2708,7 +2725,7 @@
             }
           },
           {
-            "name": "spot_balance_precompile",
+            "name": "spotBalancePrecompile",
             "type": {
               "array": [
                 "u8",
@@ -2717,27 +2734,27 @@
             }
           },
           {
-            "name": "perp_dex_index",
+            "name": "perpDexIndex",
             "type": "u32"
           },
           {
-            "name": "usdc_spot_token",
+            "name": "usdcSpotToken",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "WormholeObservationConfig",
+      "name": "wormholeObservationConfig",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "glam_state",
+            "name": "glamState",
             "type": "pubkey"
           },
           {
-            "name": "position_id",
+            "name": "positionId",
             "type": {
               "array": [
                 "u8",
@@ -2746,11 +2763,11 @@
             }
           },
           {
-            "name": "emitter_chain",
+            "name": "emitterChain",
             "type": "u16"
           },
           {
-            "name": "emitter_address",
+            "name": "emitterAddress",
             "type": {
               "array": [
                 "u8",
@@ -2759,27 +2776,27 @@
             }
           },
           {
-            "name": "payload_version",
+            "name": "payloadVersion",
             "type": "u8"
           },
           {
-            "name": "payload_type",
+            "name": "payloadType",
             "type": "u8"
           },
           {
-            "name": "max_age_seconds",
+            "name": "maxAgeSeconds",
             "type": "u32"
           },
           {
-            "name": "has_last_sequence",
+            "name": "hasLastSequence",
             "type": "bool"
           },
           {
-            "name": "last_sequence",
+            "name": "lastSequence",
             "type": "u64"
           },
           {
-            "name": "last_vaa_hash",
+            "name": "lastVaaHash",
             "type": {
               "array": [
                 "u8",
@@ -2795,12 +2812,12 @@
       }
     },
     {
-      "name": "WormholeObservationConfigInput",
+      "name": "wormholeObservationConfigInput",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "position_id",
+            "name": "positionId",
             "type": {
               "array": [
                 "u8",
@@ -2809,11 +2826,11 @@
             }
           },
           {
-            "name": "emitter_chain",
+            "name": "emitterChain",
             "type": "u16"
           },
           {
-            "name": "emitter_address",
+            "name": "emitterAddress",
             "type": {
               "array": [
                 "u8",
@@ -2822,15 +2839,15 @@
             }
           },
           {
-            "name": "payload_version",
+            "name": "payloadVersion",
             "type": "u8"
           },
           {
-            "name": "payload_type",
+            "name": "payloadType",
             "type": "u8"
           },
           {
-            "name": "max_age_seconds",
+            "name": "maxAgeSeconds",
             "type": "u32"
           }
         ]
@@ -2839,24 +2856,24 @@
   ],
   "constants": [
     {
-      "name": "PROTO_EPI",
+      "name": "protoRpi",
       "type": "u16",
       "value": "1"
     },
     {
-      "name": "PROTO_EPI_PERM_CONFIGURE",
+      "name": "protoRpiPermConfigure",
       "type": "u64",
       "value": "1"
     },
     {
-      "name": "PROTO_EPI_PERM_SUBMIT_OBSERVATION",
+      "name": "protoRpiPermSubmitObservation",
       "type": "u64",
       "value": "2"
     },
     {
-      "name": "PROTO_EPI_PERM_VALIDATE_OBSERVATION",
+      "name": "protoRpiPermValidateObservation",
       "type": "u64",
       "value": "4"
     }
   ]
-}
+};

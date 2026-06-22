@@ -10,7 +10,7 @@ import type { ExtMarinade } from "../target/types/ext_marinade";
 import type { ExtStakePool } from "../target/types/ext_stake_pool";
 import type { ExtCctp } from "../target/types/ext_cctp";
 import type { ExtBridge } from "../target/types/ext_bridge";
-import type { ExtEpi } from "../target/types/ext_epi";
+import type { ExtRpi } from "../target/types/ext_rpi";
 import type { ExtPhoenix } from "../target/types/ext_phoenix";
 import type { ExtJupiter } from "../target/types/ext_jupiter";
 import type { ExtOrca } from "../target/types/ext_orca";
@@ -27,7 +27,7 @@ import ExtMarinadeIdlJson from "../target/idl/ext_marinade.json";
 import ExtStakePoolIdlJson from "../target/idl/ext_stake_pool.json";
 import ExtCctpIdlJson from "../target/idl/ext_cctp.json";
 import ExtBridgeIdlJson from "../target/idl/ext_bridge.json";
-import ExtEpiIdlJson from "../target/idl/ext_epi.json";
+import ExtRpiIdlJson from "../target/idl/ext_rpi.json";
 import ExtPhoenixIdlJson from "../target/idl/ext_phoenix.json";
 import ExtJupiterIdlJson from "../target/idl/ext_jupiter.json";
 import ExtOrcaIdlJson from "../target/idl/ext_orca.json";
@@ -42,7 +42,7 @@ import ExtStakePoolIdlJsonStaging from "../target/idl/ext_stake_pool-staging.jso
 import ExtCctpIdlJsonStaging from "../target/idl/ext_cctp-staging.json";
 import ExtMarinadeIdlJsonStaging from "../target/idl/ext_marinade-staging.json";
 import ExtBridgeIdlJsonStaging from "../target/idl/ext_bridge-staging.json";
-import ExtEpiIdlJsonStaging from "../target/idl/ext_epi-staging.json";
+import ExtRpiIdlJsonStaging from "../target/idl/ext_rpi-staging.json";
 import ExtPhoenixIdlJsonStaging from "../target/idl/ext_phoenix-staging.json";
 import ExtJupiterIdlJsonStaging from "../target/idl/ext_jupiter-staging.json";
 import ExtOrcaIdlJsonStaging from "../target/idl/ext_orca-staging.json";
@@ -72,7 +72,7 @@ export type ExtMarinadeProgram = Program<ExtMarinade>;
 export type ExtStakePoolProgram = Program<ExtStakePool>;
 export type ExtCctpProgram = Program<ExtCctp>;
 export type ExtBridgeProgram = Program<ExtBridge>;
-export type ExtEpiProgram = Program<ExtEpi>;
+export type ExtRpiProgram = Program<ExtRpi>;
 export type ExtPhoenixProgram = Program<ExtPhoenix>;
 export type ExtJupiterProgram = Program<ExtJupiter>;
 export type ExtOrcaProgram = Program<ExtOrca>;
@@ -126,8 +126,8 @@ export function getExtBridgeIdl(staging: boolean) {
   };
 }
 
-export function getExtEpiIdl(staging: boolean) {
-  return staging ? ExtEpiIdlJsonStaging : ExtEpiIdlJson;
+export function getExtRpiIdl(staging: boolean) {
+  return staging ? ExtRpiIdlJsonStaging : ExtRpiIdlJson;
 }
 
 export function getExtPhoenixIdl(staging: boolean) {
@@ -188,8 +188,8 @@ export function getExtBridgeProgramId(staging: boolean) {
   return new PublicKey(getExtBridgeIdl(staging).address);
 }
 
-export function getExtEpiProgramId(staging: boolean) {
-  return new PublicKey(getExtEpiIdl(staging).address);
+export function getExtRpiProgramId(staging: boolean) {
+  return new PublicKey(getExtRpiIdl(staging).address);
 }
 
 export function getExtPhoenixProgramId(staging: boolean) {
@@ -276,11 +276,11 @@ export function getExtBridgeProgram(
   return new Program<ExtBridge>(getExtBridgeIdl(staging), provider);
 }
 
-export function getExtEpiProgram(
+export function getExtRpiProgram(
   provider: Provider,
   staging: boolean,
-): ExtEpiProgram {
-  return new Program<ExtEpi>(getExtEpiIdl(staging), provider);
+): ExtRpiProgram {
+  return new Program<ExtRpi>(getExtRpiIdl(staging), provider);
 }
 
 export function getExtPhoenixProgram(

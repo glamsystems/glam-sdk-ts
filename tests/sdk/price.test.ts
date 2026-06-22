@@ -66,11 +66,12 @@ function createPriceClient(params: {
     fetchAssetMetas: jest.fn().mockResolvedValue(new Map()),
     extKaminoProgram: { programId: pk(42) },
     extLoopscaleProgram: { programId: extLoopscaleProgramId },
-    extEpiProgram: { programId: pk(43) },
+    extRpiProgram: { programId: pk(43) },
     protocolProgram: { programId: pk(44) },
     extBridgeProgram: { programId: pk(45) },
     extPhoenixProgram: { programId: pk(46) },
     extOrcaProgram: { programId: pk(47) },
+    extNeutralProgram: { programId: pk(48) },
   } as any;
 
   const loopscaleBorrow = {

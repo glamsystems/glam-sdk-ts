@@ -6,7 +6,7 @@ export * from "./client/jupiter";
 export * from "./client/timelock";
 export * from "./client/cctp";
 export * from "./client/bridge";
-export * from "./client/epi";
+export * from "./client/rpi";
 export * from "./client/loopscale";
 export * from "./client/phoenix";
 export * from "./client/jupiter-lend";

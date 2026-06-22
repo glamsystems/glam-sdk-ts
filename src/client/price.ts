@@ -43,14 +43,14 @@ import {
   WSOL,
 } from "../constants";
 import { BridgeClient, getActiveRegistryTransfers } from "./bridge";
-import { EpiClient } from "./epi";
+import { RpiClient } from "./rpi";
 import {
   LoopscaleBorrowClient,
   LoopscaleLendClient,
   LoopscaleVaultClient,
 } from "./loopscale";
 import {
-  EPI_PROTOCOL,
+  RPI_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
   KAMINO_VAULTS_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
@@ -159,7 +159,7 @@ export class PriceClient {
     readonly klend: KaminoLendingClient,
     readonly kvaults: KaminoVaultsClient,
     readonly bridge: BridgeClient,
-    readonly epi: EpiClient,
+    readonly rpi: RpiClient,
     readonly loopscaleBorrow: LoopscaleBorrowClient,
     readonly loopscaleLend: LoopscaleLendClient,
     readonly loopscaleVault: LoopscaleVaultClient,
@@ -1578,26 +1578,30 @@ export class PriceClient {
     return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
 
-  private async priceEpiValidatedPositionsIx(): Promise<TransactionInstruction | null> {
-    const observationState = await this.epi.fetchObservationState();
-    if (!observationState) {
+  private async priceRpiRegisteredPositionsIx(
+    externalPositions: PublicKey[],
+  ): Promise<TransactionInstruction | null> {
+    const observationState = this.rpi.getObservationStatePda();
+    if (
+      !externalPositions.some((externalPosition) =>
+        externalPosition.equals(observationState),
+      )
+    ) {
       return null;
     }
 
-    const activePositions = observationState.positions.slice(
-      0,
-      observationState.positionsLen,
+    const integrationAuthority = getIntegrationAuthorityPda(
+      this.base.mintProgram.programId,
     );
-    if (!activePositions.some((position) => position.hasValidated)) {
-      return null;
-    }
 
-    return await this.base.extEpiProgram.methods
-      .refreshPricedProtocol()
+    return await this.base.mintProgram.methods
+      .priceRegisteredPositions()
       .accountsPartial({
         glamState: this.base.statePda,
-        glamSigner: this.base.signer,
-        glamProtocolProgram: this.base.protocolProgram.programId,
+        signer: this.base.signer,
+        observationState,
+        integrationAuthority,
+        glamProtocol: this.base.protocolProgram.programId,
       })
       .instruction();
   }
@@ -1709,13 +1713,15 @@ export class PriceClient {
         if (ix) chunks.push({ ixs: [ix], kaminoReserves: [] });
       }
 
-      const epiIntegrationAcl = integrationAcls.find(
+      const rpiIntegrationAcl = integrationAcls.find(
         (acl) =>
-          acl.integrationProgram.equals(this.base.extEpiProgram.programId) &&
-          (acl.protocolsBitmask & EPI_PROTOCOL) !== 0,
+          acl.integrationProgram.equals(this.base.extRpiProgram.programId) &&
+          (acl.protocolsBitmask & RPI_PROTOCOL) !== 0,
       );
-      if (epiIntegrationAcl) {
-        const ix = await this.priceEpiValidatedPositionsIx();
+      if (rpiIntegrationAcl) {
+        const ix = await this.priceRpiRegisteredPositionsIx(
+          externalPositions || [],
+        );
         if (ix) chunks.push({ ixs: [ix], kaminoReserves: [] });
       }
 

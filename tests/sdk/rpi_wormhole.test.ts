@@ -1,10 +1,13 @@
+import { BN } from "@coral-xyz/anchor";
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
-import { EpiClient, parseWormholeSignedVaa } from "../../src/client/epi";
+import { RpiClient, parseWormholeSignedVaa } from "../../src/client/rpi";
 import { USDC } from "../../src/constants";
 
-const EXT_EPI_PROGRAM = PublicKey.unique();
+const EXT_RPI_PROGRAM = PublicKey.unique();
 const STATE = PublicKey.unique();
 const SIGNER = PublicKey.unique();
+const VAULT = PublicKey.unique();
+const GLAM_PROTOCOL = PublicKey.unique();
 
 function makeSignedVaa(signatureCount = 2, guardianSetIndex = 7) {
   const body = Buffer.alloc(241, 0xab);
@@ -32,7 +35,7 @@ function methodBuilder(instruction: TransactionInstruction) {
   return builder;
 }
 
-describe("EPI Wormhole SDK helpers", () => {
+describe("RPI Wormhole SDK helpers", () => {
   it("parses signed VAAs into guardian signatures and body", () => {
     const { signedVaa, body } = makeSignedVaa(2, 11);
 
@@ -50,24 +53,25 @@ describe("EPI Wormhole SDK helpers", () => {
     const positionId = Buffer.alloc(32, 9);
     const submitBuilder = methodBuilder(
       new TransactionInstruction({
-        programId: EXT_EPI_PROGRAM,
+        programId: EXT_RPI_PROGRAM,
         keys: [],
         data: Buffer.alloc(0),
       }),
     );
     const submitMethod = jest.fn(() => submitBuilder);
-    const client = new EpiClient({
+    const client = new RpiClient({
       statePda: STATE,
       signer: SIGNER,
-      extEpiProgram: {
-        programId: EXT_EPI_PROGRAM,
+      extRpiProgram: {
+        programId: EXT_RPI_PROGRAM,
         methods: {
-          submitExternalObservationWormhole: submitMethod,
+          submitObservationWormhole: submitMethod,
         },
       },
     } as any);
+    const observationState = client.getObservationStatePda();
 
-    await client.txBuilder.submitExternalObservationWormholeIx(
+    await client.txBuilder.submitObservationWormholeIx(
       {
         positionId,
         signedVaa,
@@ -85,6 +89,7 @@ describe("EPI Wormhole SDK helpers", () => {
       expect.objectContaining({
         glamState: STATE,
         glamSigner: SIGNER,
+        observationState,
       }),
     );
     expect(submitBuilder.accountsPartial.mock.calls[0][0]).not.toHaveProperty(
@@ -94,16 +99,96 @@ describe("EPI Wormhole SDK helpers", () => {
     expect(submitBuilder.remainingAccounts.mock.calls[0][0]).toHaveLength(1);
   });
 
+  it("passes the vault observation state to core RPI instruction builders", async () => {
+    const instruction = new TransactionInstruction({
+      programId: EXT_RPI_PROGRAM,
+      keys: [],
+      data: Buffer.alloc(0),
+    });
+    const upsertBuilder = methodBuilder(instruction);
+    const submitBuilder = methodBuilder(instruction);
+    const validateBuilder = methodBuilder(instruction);
+    const removeBuilder = methodBuilder(instruction);
+    const client = new RpiClient({
+      statePda: STATE,
+      signer: SIGNER,
+      vaultPda: VAULT,
+      protocolProgram: { programId: GLAM_PROTOCOL },
+      extRpiProgram: {
+        programId: EXT_RPI_PROGRAM,
+        methods: {
+          upsertRegisteredPosition: jest.fn(() => upsertBuilder),
+          submitObservation: jest.fn(() => submitBuilder),
+          validateObservation: jest.fn(() => validateBuilder),
+          removeRegisteredPosition: jest.fn(() => removeBuilder),
+        },
+        account: {
+          observationState: {
+            fetchNullable: jest.fn(async () => null),
+          },
+        },
+      },
+    } as any);
+    jest
+      .spyOn(client.txBuilder as any, "buildVersionedTx")
+      .mockResolvedValue({} as any);
+
+    const positionId = Buffer.alloc(32, 6);
+    const observationState = client.getObservationStatePda();
+    const integrationAuthority = client.getIntegrationAuthorityPda();
+
+    await client.txBuilder.upsertRegisteredPositionIx({
+      positionId,
+      positionType: { valued: {} },
+      sourceType: { trusted: {} },
+      denomination: { denom: { usd: {} }, mint: PublicKey.default },
+    });
+    await client.txBuilder.submitObservationIx({
+      positionId,
+      amount: new BN(1),
+      denomination: { denom: { usd: {} }, mint: PublicKey.default },
+      observationTimestamp: new BN(1),
+    });
+    await client.txBuilder.validateObservationIx(positionId);
+    await client.txBuilder.removeRegisteredPositionTx(positionId);
+
+    expect(upsertBuilder.accountsPartial).toHaveBeenCalledWith(
+      expect.objectContaining({
+        observationState,
+        integrationAuthority,
+      }),
+    );
+    expect(submitBuilder.accountsPartial).toHaveBeenCalledWith(
+      expect.objectContaining({
+        observationState,
+      }),
+    );
+    expect(validateBuilder.accountsPartial).toHaveBeenCalledWith(
+      expect.objectContaining({
+        observationState,
+      }),
+    );
+    expect(removeBuilder.accountsPartial).toHaveBeenCalledWith(
+      expect.objectContaining({
+        observationState,
+        integrationAuthority,
+      }),
+    );
+  });
+
   it("resolves oracle accounts for USD observations even with USDC base asset", async () => {
     const positionId = Buffer.alloc(32, 4);
     const solUsdOracle = PublicKey.unique();
     const baseAssetOracle = PublicKey.unique();
-    const getAssetMeta = jest.fn(async () => ({ oracle: baseAssetOracle }));
-    const client = new EpiClient({
+    const getAssetMeta = jest.fn(async () => ({
+      oracle: baseAssetOracle,
+      oracleSource: "KaminoReserve",
+    }));
+    const client = new RpiClient({
       statePda: STATE,
       signer: SIGNER,
-      extEpiProgram: {
-        programId: EXT_EPI_PROGRAM,
+      extRpiProgram: {
+        programId: EXT_RPI_PROGRAM,
         account: {
           observationState: {
             fetchNullable: jest.fn(async () => ({
@@ -132,7 +217,7 @@ describe("EPI Wormhole SDK helpers", () => {
       getAssetMeta,
     } as any);
 
-    const accounts = await client.resolveValidateExternalObservationAccounts({
+    const accounts = await client.resolveValidateObservationAccounts({
       positionId,
     });
 
@@ -140,6 +225,7 @@ describe("EPI Wormhole SDK helpers", () => {
     expect(accounts.solUsdOracle).toBe(solUsdOracle);
     expect(accounts.baseAssetOracle).toBe(baseAssetOracle);
     expect(accounts.remainingAccounts).toHaveLength(0);
+    expect(accounts.kaminoReservesToRefresh).toEqual([baseAssetOracle]);
     expect(getAssetMeta).toHaveBeenCalledWith(USDC);
   });
 });

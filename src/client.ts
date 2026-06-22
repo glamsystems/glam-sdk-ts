@@ -19,7 +19,7 @@ import { StakeClient } from "./client/stake";
 import { StakePoolClient } from "./client/stake-pool";
 import { CctpClient } from "./client/cctp";
 import { BridgeClient } from "./client/bridge";
-import { EpiClient } from "./client/epi";
+import { RpiClient } from "./client/rpi";
 import {
   LoopscaleBorrowClient,
   LoopscaleLendClient,
@@ -54,7 +54,7 @@ export class GlamClient extends BaseClient {
   private _timelock?: TimelockClient;
   private _cctp?: CctpClient;
   private _bridge?: BridgeClient;
-  private _epi?: EpiClient;
+  private _rpi?: RpiClient;
   private _loopscaleCore?: LoopscaleCoreClient;
   private _loopscaleBorrow?: LoopscaleBorrowClient;
   private _loopscaleLend?: LoopscaleLendClient;
@@ -129,7 +129,7 @@ export class GlamClient extends BaseClient {
         this.kaminoLending,
         this.kaminoVaults,
         this.bridge,
-        this.epi,
+        this.rpi,
         this.loopscaleBorrow,
         this.loopscaleLend,
         this.loopscaleVault,
@@ -202,11 +202,11 @@ export class GlamClient extends BaseClient {
     return this._bridge;
   }
 
-  get epi(): EpiClient {
-    if (!this._epi) {
-      this._epi = new EpiClient(this);
+  get rpi(): RpiClient {
+    if (!this._rpi) {
+      this._rpi = new RpiClient(this);
     }
-    return this._epi;
+    return this._rpi;
   }
 
   private get loopscaleCore(): LoopscaleCoreClient {

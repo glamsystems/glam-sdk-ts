@@ -1,144 +1,40 @@
-/**
- * Program IDL in camelCase format in order to be used in JS/TS.
- *
- * Note that this is only a type helper and is not the actual IDL. The original
- * IDL can be found at `target/idl/ext_epi.json`.
- */
-export type ExtEpi = {
+{
   "address": "gstge5RzNEGQwpwBPKTJbP9yczoFEzzm5upSSsie9fX",
   "metadata": {
-    "name": "extEpi",
+    "name": "ext_rpi",
     "version": "1.0.0",
     "spec": "0.1.0",
-    "description": "External Position Integration for GLAM Protocol"
+    "description": "Registered Position Integration for GLAM Protocol"
   },
   "instructions": [
     {
-      "name": "refreshPricedProtocol",
+      "name": "remove_registered_position",
       "docs": [
-        "Republish the aggregate EPI priced protocol from already validated",
-        "observations at the current slot."
-      ],
-      "discriminator": [
-        229,
-        89,
-        39,
-        46,
-        5,
-        217,
-        10,
-        192
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamSigner",
-          "signer": true
-        },
-        {
-          "name": "observationState",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  111,
-                  98,
-                  115,
-                  101,
-                  114,
-                  118,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ]
-          }
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "removeExternalPosition",
-      "docs": [
-        "Remove an external position from the registry.",
+        "Remove a registered position from the registry.",
         "Closes the observation state PDA and refunds rent to the signer."
       ],
       "discriminator": [
-        97,
-        146,
-        246,
-        241,
-        130,
-        26,
-        108,
-        97
+        102,
+        188,
+        200,
+        90,
+        244,
+        35,
+        5,
+        7
       ],
       "accounts": [
         {
-          "name": "glamState",
+          "name": "glam_state",
           "writable": true
         },
         {
-          "name": "glamSigner",
+          "name": "glam_signer",
           "writable": true,
           "signer": true
         },
         {
-          "name": "glamVault",
+          "name": "glam_vault",
           "writable": true,
           "pda": {
             "seeds": [
@@ -154,17 +50,17 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               }
             ],
             "program": {
               "kind": "account",
-              "path": "glamProtocolProgram"
+              "path": "glam_protocol_program"
             }
           }
         },
         {
-          "name": "observationState",
+          "name": "observation_state",
           "writable": true,
           "pda": {
             "seeds": [
@@ -192,13 +88,13 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               }
             ]
           }
         },
         {
-          "name": "integrationAuthority",
+          "name": "integration_authority",
           "pda": {
             "seeds": [
               {
@@ -231,17 +127,17 @@ export type ExtEpi = {
           }
         },
         {
-          "name": "glamProtocolProgram",
+          "name": "glam_protocol_program",
           "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "positionId",
+          "name": "position_id",
           "type": {
             "array": [
               "u8",
@@ -252,31 +148,31 @@ export type ExtEpi = {
       ]
     },
     {
-      "name": "submitExternalObservation",
+      "name": "submit_observation",
       "docs": [
-        "Submit an observation for a configured external position.",
+        "Submit an observation for a configured registered position.",
         "Writes to pending slot; replaces any existing pending observation."
       ],
       "discriminator": [
-        100,
-        228,
-        147,
-        149,
+        109,
+        4,
         22,
-        28,
-        158,
-        163
+        163,
+        138,
+        215,
+        205,
+        180
       ],
       "accounts": [
         {
-          "name": "glamState"
+          "name": "glam_state"
         },
         {
-          "name": "glamSigner",
+          "name": "glam_signer",
           "signer": true
         },
         {
-          "name": "observationState",
+          "name": "observation_state",
           "writable": true,
           "pda": {
             "seeds": [
@@ -304,7 +200,7 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               }
             ]
           }
@@ -315,40 +211,40 @@ export type ExtEpi = {
           "name": "input",
           "type": {
             "defined": {
-              "name": "positionObservationInput"
+              "name": "PositionObservationInput"
             }
           }
         }
       ]
     },
     {
-      "name": "submitExternalObservationWormhole",
+      "name": "submit_observation_wormhole",
       "docs": [
-        "Submit a Wormhole Guardian-verified external observation.",
+        "Submit a Wormhole Guardian-verified registered observation.",
         "The caller only relays a VAA body whose signatures have already been",
         "posted to the Wormhole Verification Shim."
       ],
       "discriminator": [
-        124,
-        238,
-        191,
-        242,
-        222,
-        175,
-        91,
-        148
+        98,
+        36,
+        143,
+        5,
+        50,
+        123,
+        9,
+        67
       ],
       "accounts": [
         {
-          "name": "glamState"
+          "name": "glam_state"
         },
         {
-          "name": "glamSigner",
+          "name": "glam_signer",
           "writable": true,
           "signer": true
         },
         {
-          "name": "observationState",
+          "name": "observation_state",
           "writable": true,
           "pda": {
             "seeds": [
@@ -376,13 +272,13 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               }
             ]
           }
         },
         {
-          "name": "wormholeConfig",
+          "name": "wormhole_config",
           "writable": true,
           "pda": {
             "seeds": [
@@ -420,29 +316,29 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               },
               {
                 "kind": "arg",
-                "path": "positionId"
+                "path": "position_id"
               }
             ]
           }
         },
         {
-          "name": "guardianSet"
+          "name": "guardian_set"
         },
         {
-          "name": "guardianSignatures"
+          "name": "guardian_signatures"
         },
         {
-          "name": "wormholeVerifyVaaShim",
+          "name": "wormhole_verify_vaa_shim",
           "address": "EFaNWErqAtVWufdNb7yofSHHfWFos843DFpu4JBw24at"
         }
       ],
       "args": [
         {
-          "name": "positionId",
+          "name": "position_id",
           "type": {
             "array": [
               "u8",
@@ -451,43 +347,43 @@ export type ExtEpi = {
           }
         },
         {
-          "name": "guardianSetBump",
+          "name": "guardian_set_bump",
           "type": "u8"
         },
         {
-          "name": "vaaBody",
+          "name": "vaa_body",
           "type": "bytes"
         }
       ]
     },
     {
-      "name": "upsertExternalPosition",
+      "name": "upsert_registered_position",
       "docs": [
-        "Create or update an external position configuration.",
+        "Create or update a registered position configuration.",
         "Creates the observation state PDA on first call for a position."
       ],
       "discriminator": [
-        199,
-        33,
-        239,
-        150,
-        200,
-        123,
-        43,
-        70
+        89,
+        19,
+        168,
+        143,
+        107,
+        179,
+        125,
+        11
       ],
       "accounts": [
         {
-          "name": "glamState",
+          "name": "glam_state",
           "writable": true
         },
         {
-          "name": "glamSigner",
+          "name": "glam_signer",
           "writable": true,
           "signer": true
         },
         {
-          "name": "glamVault",
+          "name": "glam_vault",
           "writable": true,
           "pda": {
             "seeds": [
@@ -503,17 +399,17 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               }
             ],
             "program": {
               "kind": "account",
-              "path": "glamProtocolProgram"
+              "path": "glam_protocol_program"
             }
           }
         },
         {
-          "name": "observationState",
+          "name": "observation_state",
           "writable": true,
           "pda": {
             "seeds": [
@@ -541,13 +437,13 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               }
             ]
           }
         },
         {
-          "name": "integrationAuthority",
+          "name": "integration_authority",
           "pda": {
             "seeds": [
               {
@@ -580,11 +476,11 @@ export type ExtEpi = {
           }
         },
         {
-          "name": "glamProtocolProgram",
+          "name": "glam_protocol_program",
           "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -593,39 +489,39 @@ export type ExtEpi = {
           "name": "config",
           "type": {
             "defined": {
-              "name": "externalPositionConfig"
+              "name": "PositionConfig"
             }
           }
         }
       ]
     },
     {
-      "name": "upsertExternalPositionWormholeConfig",
+      "name": "upsert_registered_position_wormhole_config",
       "docs": [
         "Create or update Wormhole verification config for a Wormhole-sourced",
-        "external position."
+        "registered position."
       ],
       "discriminator": [
-        173,
-        64,
-        201,
-        39,
-        54,
-        49,
-        192,
-        89
+        139,
+        183,
+        73,
+        75,
+        245,
+        117,
+        75,
+        109
       ],
       "accounts": [
         {
-          "name": "glamState"
+          "name": "glam_state"
         },
         {
-          "name": "glamSigner",
+          "name": "glam_signer",
           "writable": true,
           "signer": true
         },
         {
-          "name": "wormholeConfig",
+          "name": "wormhole_config",
           "writable": true,
           "pda": {
             "seeds": [
@@ -663,7 +559,7 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               },
               {
                 "kind": "arg",
@@ -673,7 +569,7 @@ export type ExtEpi = {
           }
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -682,39 +578,39 @@ export type ExtEpi = {
           "name": "input",
           "type": {
             "defined": {
-              "name": "wormholeObservationConfigInput"
+              "name": "WormholeObservationConfigInput"
             }
           }
         }
       ]
     },
     {
-      "name": "upsertExternalPositionWormholeHyperliquidConfig",
+      "name": "upsert_registered_position_wormhole_hyperliquid_config",
       "docs": [
         "Create or update Hyperliquid-specific payload config for a",
-        "Wormhole-sourced external position."
+        "Wormhole-sourced registered position."
       ],
       "discriminator": [
-        42,
-        13,
-        175,
-        7,
-        34,
-        137,
-        176,
-        108
+        163,
+        241,
+        249,
+        72,
+        43,
+        248,
+        96,
+        44
       ],
       "accounts": [
         {
-          "name": "glamState"
+          "name": "glam_state"
         },
         {
-          "name": "glamSigner",
+          "name": "glam_signer",
           "writable": true,
           "signer": true
         },
         {
-          "name": "wormholeConfig",
+          "name": "wormhole_config",
           "pda": {
             "seeds": [
               {
@@ -751,7 +647,7 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               },
               {
                 "kind": "arg",
@@ -761,7 +657,7 @@ export type ExtEpi = {
           }
         },
         {
-          "name": "hyperliquidConfig",
+          "name": "hyperliquid_config",
           "writable": true,
           "pda": {
             "seeds": [
@@ -802,7 +698,7 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               },
               {
                 "kind": "arg",
@@ -812,7 +708,7 @@ export type ExtEpi = {
           }
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -821,17 +717,16 @@ export type ExtEpi = {
           "name": "input",
           "type": {
             "defined": {
-              "name": "wormholeHyperliquidObservationConfigInput"
+              "name": "WormholeHyperliquidObservationConfigInput"
             }
           }
         }
       ]
     },
     {
-      "name": "validateExternalObservation",
+      "name": "validate_observation",
       "docs": [
-        "Validate a pending observation, promote to active, and publish",
-        "the full aggregate priced protocol for ext_epi.",
+        "Validate a pending observation and promote it to active.",
         "",
         "Remaining accounts:",
         "- `remaining_accounts[0]` is required when the pending observation",
@@ -839,26 +734,26 @@ export type ExtEpi = {
         "account used for price normalization."
       ],
       "discriminator": [
-        88,
-        144,
-        219,
-        126,
-        79,
-        29,
-        43,
-        188
+        134,
+        150,
+        250,
+        52,
+        188,
+        156,
+        130,
+        122
       ],
       "accounts": [
         {
-          "name": "glamState",
+          "name": "glam_state",
           "writable": true
         },
         {
-          "name": "glamSigner",
+          "name": "glam_signer",
           "signer": true
         },
         {
-          "name": "observationState",
+          "name": "observation_state",
           "writable": true,
           "pda": {
             "seeds": [
@@ -886,46 +781,13 @@ export type ExtEpi = {
               },
               {
                 "kind": "account",
-                "path": "glamState"
+                "path": "glam_state"
               }
             ]
           }
         },
         {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "glamConfig",
+          "name": "glam_config",
           "docs": [
             "and its discriminator is checked by AssetMetasRef before use."
           ],
@@ -991,27 +853,23 @@ export type ExtEpi = {
           }
         },
         {
-          "name": "solUsdOracle",
+          "name": "sol_usd_oracle",
           "docs": [
             "against GLAM global oracle metadata before price use."
           ],
           "optional": true
         },
         {
-          "name": "baseAssetOracle",
+          "name": "base_asset_oracle",
           "docs": [
             "GLAM global oracle metadata before price use."
           ],
           "optional": true
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
         }
       ],
       "args": [
         {
-          "name": "positionId",
+          "name": "position_id",
           "type": {
             "array": [
               "u8",
@@ -1024,7 +882,7 @@ export type ExtEpi = {
   ],
   "accounts": [
     {
-      "name": "observationState",
+      "name": "ObservationState",
       "discriminator": [
         122,
         174,
@@ -1037,7 +895,7 @@ export type ExtEpi = {
       ]
     },
     {
-      "name": "stateAccount",
+      "name": "StateAccount",
       "discriminator": [
         142,
         247,
@@ -1050,7 +908,7 @@ export type ExtEpi = {
       ]
     },
     {
-      "name": "wormholeHyperliquidObservationConfig",
+      "name": "WormholeHyperliquidObservationConfig",
       "discriminator": [
         34,
         225,
@@ -1063,7 +921,7 @@ export type ExtEpi = {
       ]
     },
     {
-      "name": "wormholeObservationConfig",
+      "name": "WormholeObservationConfig",
       "discriminator": [
         64,
         123,
@@ -1076,69 +934,226 @@ export type ExtEpi = {
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PositionNotFound",
+      "msg": "Registered position not found"
+    },
+    {
+      "code": 6001,
+      "name": "PositionAlreadyExists",
+      "msg": "Registered position already exists in the observation state"
+    },
+    {
+      "code": 6002,
+      "name": "PositionRegistryFull",
+      "msg": "Registered position registry is full"
+    },
+    {
+      "code": 6003,
+      "name": "PositionIdentityMismatch",
+      "msg": "Registered position identity fields cannot be changed"
+    },
+    {
+      "code": 6004,
+      "name": "PositionDisabled",
+      "msg": "Registered position is disabled"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidPositionSource",
+      "msg": "Registered position source type is invalid for this operation"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidPositionType",
+      "msg": "Registered position type is invalid for this operation"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidPositionDenomination",
+      "msg": "Registered position denomination is invalid for this operation"
+    },
+    {
+      "code": 6008,
+      "name": "UnsupportedObservationDenomination",
+      "msg": "Observation denomination is unsupported by the GLAM state"
+    },
+    {
+      "code": 6009,
+      "name": "ObservationStateMismatch",
+      "msg": "Observation state does not belong to this GLAM state"
+    },
+    {
+      "code": 6010,
+      "name": "ObservationNotFound",
+      "msg": "Observation entry not found"
+    },
+    {
+      "code": 6011,
+      "name": "PendingObservationNotFound",
+      "msg": "Pending observation not found"
+    },
+    {
+      "code": 6012,
+      "name": "ValidatedObservationNotFound",
+      "msg": "Validated observation not found"
+    },
+    {
+      "code": 6013,
+      "name": "ObservationTimestampInFuture",
+      "msg": "Observation timestamp is in the future"
+    },
+    {
+      "code": 6014,
+      "name": "ObservationStale",
+      "msg": "Observation is stale"
+    },
+    {
+      "code": 6015,
+      "name": "MissingExternalShares",
+      "msg": "Tokenized observations require external shares"
+    },
+    {
+      "code": 6016,
+      "name": "MissingGlamConfig",
+      "msg": "GLAM config account is required to normalize this observation"
+    },
+    {
+      "code": 6017,
+      "name": "MissingObservedMintOracle",
+      "msg": "Observed mint oracle account is required to normalize this observation"
+    },
+    {
+      "code": 6018,
+      "name": "MissingBaseAssetOracle",
+      "msg": "Base asset oracle account is required to normalize this observation"
+    },
+    {
+      "code": 6019,
+      "name": "MissingSolUsdOracle",
+      "msg": "SOL/USD oracle account is required to normalize this observation"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidWormholeConfig",
+      "msg": "Wormhole observation config is invalid"
+    },
+    {
+      "code": 6021,
+      "name": "UnsupportedWormholePayload",
+      "msg": "Unsupported Wormhole payload"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidWormholeVaa",
+      "msg": "Invalid Wormhole VAA body"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidWormholeEmitter",
+      "msg": "Invalid Wormhole emitter"
+    },
+    {
+      "code": 6024,
+      "name": "WormholeReplay",
+      "msg": "Wormhole VAA sequence was already processed"
+    },
+    {
+      "code": 6025,
+      "name": "InvalidWormholePayloadHeader",
+      "msg": "Invalid Wormhole payload header"
+    },
+    {
+      "code": 6026,
+      "name": "MissingWormholePayloadConfig",
+      "msg": "Missing Wormhole payload config account"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidWormholePayloadConfig",
+      "msg": "Invalid Wormhole payload config account"
+    },
+    {
+      "code": 6028,
+      "name": "InvalidHyperliquidConfig",
+      "msg": "Invalid Hyperliquid payload config"
+    },
+    {
+      "code": 6029,
+      "name": "InvalidHyperliquidNavPayload",
+      "msg": "Invalid Hyperliquid NAV payload"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidWormholeVerifyVaaShim",
+      "msg": "Invalid Wormhole Verification Shim program"
+    }
+  ],
   "types": [
     {
-      "name": "accountType",
+      "name": "AccountType",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "vault"
+            "name": "Vault"
           },
           {
-            "name": "tokenizedVault"
+            "name": "TokenizedVault"
           },
           {
-            "name": "mint"
+            "name": "Mint"
           },
           {
-            "name": "singleAssetVault"
+            "name": "SingleAssetVault"
           }
         ]
       }
     },
     {
-      "name": "accruedFees",
+      "name": "AccruedFees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "vaultSubscriptionFee",
+            "name": "vault_subscription_fee",
             "type": "u128"
           },
           {
-            "name": "vaultRedemptionFee",
+            "name": "vault_redemption_fee",
             "type": "u128"
           },
           {
-            "name": "managerSubscriptionFee",
+            "name": "manager_subscription_fee",
             "type": "u128"
           },
           {
-            "name": "managerRedemptionFee",
+            "name": "manager_redemption_fee",
             "type": "u128"
           },
           {
-            "name": "managementFee",
+            "name": "management_fee",
             "type": "u128"
           },
           {
-            "name": "performanceFee",
+            "name": "performance_fee",
             "type": "u128"
           },
           {
-            "name": "protocolBaseFee",
+            "name": "protocol_base_fee",
             "type": "u128"
           },
           {
-            "name": "protocolFlowFee",
+            "name": "protocol_flow_fee",
             "type": "u128"
           }
         ]
       }
     },
     {
-      "name": "createdModel",
+      "name": "CreatedModel",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1152,18 +1167,18 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "createdBy",
+            "name": "created_by",
             "type": "pubkey"
           },
           {
-            "name": "createdAt",
+            "name": "created_at",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "delegateAcl",
+      "name": "DelegateAcl",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1172,24 +1187,24 @@ export type ExtEpi = {
             "type": "pubkey"
           },
           {
-            "name": "integrationPermissions",
+            "name": "integration_permissions",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "integrationPermissions"
+                  "name": "IntegrationPermissions"
                 }
               }
             }
           },
           {
-            "name": "expiresAt",
+            "name": "expires_at",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "denomination",
+      "name": "Denomination",
       "docs": [
         "Denomination of an observation amount.",
         "Never reorder existing variants — append only."
@@ -1201,16 +1216,16 @@ export type ExtEpi = {
         "kind": "enum",
         "variants": [
           {
-            "name": "usd"
+            "name": "Usd"
           },
           {
-            "name": "mint"
+            "name": "Mint"
           }
         ]
       }
     },
     {
-      "name": "denominationSpec",
+      "name": "DenominationSpec",
       "docs": [
         "Full denomination spec: the discriminant plus an optional mint pubkey."
       ],
@@ -1221,7 +1236,7 @@ export type ExtEpi = {
             "name": "denom",
             "type": {
               "defined": {
-                "name": "denomination"
+                "name": "Denomination"
               }
             }
           },
@@ -1237,7 +1252,7 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "engineField",
+      "name": "EngineField",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1245,7 +1260,7 @@ export type ExtEpi = {
             "name": "name",
             "type": {
               "defined": {
-                "name": "engineFieldName"
+                "name": "EngineFieldName"
               }
             }
           },
@@ -1253,7 +1268,7 @@ export type ExtEpi = {
             "name": "value",
             "type": {
               "defined": {
-                "name": "engineFieldValue"
+                "name": "EngineFieldValue"
               }
             }
           }
@@ -1261,71 +1276,71 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "engineFieldName",
+      "name": "EngineFieldName",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "owner"
+            "name": "Owner"
           },
           {
-            "name": "portfolioManagerName"
+            "name": "PortfolioManagerName"
           },
           {
-            "name": "name"
+            "name": "Name"
           },
           {
-            "name": "uri"
+            "name": "Uri"
           },
           {
-            "name": "assets"
+            "name": "Assets"
           },
           {
-            "name": "delegateAcls"
+            "name": "DelegateAcls"
           },
           {
-            "name": "integrationAcls"
+            "name": "IntegrationAcls"
           },
           {
-            "name": "timelockDuration"
+            "name": "TimelockDuration"
           },
           {
-            "name": "borrowable"
+            "name": "Borrowable"
           },
           {
-            "name": "defaultAccountStateFrozen"
+            "name": "DefaultAccountStateFrozen"
           },
           {
-            "name": "permanentDelegate"
+            "name": "PermanentDelegate"
           },
           {
-            "name": "notifyAndSettle"
+            "name": "NotifyAndSettle"
           },
           {
-            "name": "feeStructure"
+            "name": "FeeStructure"
           },
           {
-            "name": "feeParams"
+            "name": "FeeParams"
           },
           {
-            "name": "claimableFees"
+            "name": "ClaimableFees"
           },
           {
-            "name": "claimedFees"
+            "name": "ClaimedFees"
           },
           {
-            "name": "oracleConfigs"
+            "name": "OracleConfigs"
           }
         ]
       }
     },
     {
-      "name": "engineFieldValue",
+      "name": "EngineFieldValue",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "boolean",
+            "name": "Boolean",
             "fields": [
               {
                 "name": "val",
@@ -1334,7 +1349,7 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "u8",
+            "name": "U8",
             "fields": [
               {
                 "name": "val",
@@ -1343,7 +1358,7 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "u32",
+            "name": "U32",
             "fields": [
               {
                 "name": "val",
@@ -1352,7 +1367,7 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "u64",
+            "name": "U64",
             "fields": [
               {
                 "name": "val",
@@ -1361,7 +1376,7 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "string",
+            "name": "String",
             "fields": [
               {
                 "name": "val",
@@ -1370,7 +1385,7 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "pubkey",
+            "name": "Pubkey",
             "fields": [
               {
                 "name": "val",
@@ -1379,7 +1394,7 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "vecPubkey",
+            "name": "VecPubkey",
             "fields": [
               {
                 "name": "val",
@@ -1390,7 +1405,7 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "vecU8",
+            "name": "VecU8",
             "fields": [
               {
                 "name": "val",
@@ -1399,7 +1414,7 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "vecU32",
+            "name": "VecU32",
             "fields": [
               {
                 "name": "val",
@@ -1410,14 +1425,14 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "vecDelegateAcl",
+            "name": "VecDelegateAcl",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "delegateAcl"
+                      "name": "DelegateAcl"
                     }
                   }
                 }
@@ -1425,14 +1440,14 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "vecIntegrationAcl",
+            "name": "VecIntegrationAcl",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "integrationAcl"
+                      "name": "IntegrationAcl"
                     }
                   }
                 }
@@ -1440,65 +1455,65 @@ export type ExtEpi = {
             ]
           },
           {
-            "name": "feeStructure",
+            "name": "FeeStructure",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "feeStructure"
+                    "name": "FeeStructure"
                   }
                 }
               }
             ]
           },
           {
-            "name": "feeParams",
+            "name": "FeeParams",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "feeParams"
+                    "name": "FeeParams"
                   }
                 }
               }
             ]
           },
           {
-            "name": "accruedFees",
+            "name": "AccruedFees",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "accruedFees"
+                    "name": "AccruedFees"
                   }
                 }
               }
             ]
           },
           {
-            "name": "notifyAndSettle",
+            "name": "NotifyAndSettle",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "notifyAndSettle"
+                    "name": "NotifyAndSettle"
                   }
                 }
               }
             ]
           },
           {
-            "name": "oracleConfigs",
+            "name": "OracleConfigs",
             "fields": [
               {
                 "name": "val",
                 "type": {
                   "defined": {
-                    "name": "oracleConfigs"
+                    "name": "OracleConfigs"
                   }
                 }
               }
@@ -1508,227 +1523,59 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "entryExitFees",
+      "name": "EntryExitFees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "subscriptionFeeBps",
+            "name": "subscription_fee_bps",
             "type": "u16"
           },
           {
-            "name": "redemptionFeeBps",
+            "name": "redemption_fee_bps",
             "type": "u16"
           }
         ]
       }
     },
     {
-      "name": "externalPositionConfig",
-      "docs": [
-        "Per-position configuration entry in the registry."
-      ],
+      "name": "FeeParams",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "positionId",
-            "docs": [
-              "Unique identifier for this position within the vault.",
-              "",
-              "Under the cleaner pricing model, this 32-byte id is also the canonical",
-              "coverage key published into `glam_state.external_positions` and",
-              "`PricedProtocol.positions`. For bridge-managed inflight transfers, this",
-              "should be the transfer-record pubkey bytes."
-            ],
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "positionType",
-            "docs": [
-              "Type of position (Valued or Tokenized)."
-            ],
-            "type": {
-              "defined": {
-                "name": "externalPositionType"
-              }
-            }
-          },
-          {
-            "name": "sourceType",
-            "docs": [
-              "Source type (Trusted or Native)."
-            ],
-            "type": {
-              "defined": {
-                "name": "externalSourceType"
-              }
-            }
-          },
-          {
-            "name": "denomination",
-            "docs": [
-              "Denomination rules for Trusted positions.",
-              "For Native positions this is ignored (denomination derived from custody)."
-            ],
-            "type": {
-              "defined": {
-                "name": "denominationSpec"
-              }
-            }
-          },
-          {
-            "name": "nativeCustodyAccount",
-            "docs": [
-              "Custody account for Native positions. `Pubkey::default()` for Trusted."
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "nativeCustodyKind",
-            "docs": [
-              "Custody kind for Native positions."
-            ],
-            "type": {
-              "defined": {
-                "name": "nativeCustodyKind"
-              }
-            }
-          },
-          {
-            "name": "enabled",
-            "docs": [
-              "Whether this position is enabled for observations."
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "freshnessOverrideSecs",
-            "docs": [
-              "Freshness override in seconds. 0 means use vault default."
-            ],
+            "name": "year_in_seconds",
             "type": "u32"
           },
           {
-            "name": "submitAllowlist",
-            "docs": [
-              "Per-position submit allowlist. Empty vec = use role-based access only."
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "validateAllowlist",
-            "docs": [
-              "Per-position validate allowlist. Empty vec = use role-based access only."
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "configureAllowlist",
-            "docs": [
-              "Per-position configure allowlist. Empty vec = use role-based access only.",
-              "This is intentionally more permissive than the protocol-wide asset",
-              "allowlist semantics where an empty allowlist means deny all."
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "externalPositionType",
-      "docs": [
-        "Type of external position.",
-        "Never reorder existing variants — append only."
-      ],
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "valued"
-          },
-          {
-            "name": "tokenized"
-          }
-        ]
-      }
-    },
-    {
-      "name": "externalSourceType",
-      "docs": [
-        "Source of observation data.",
-        "Never reorder existing variants — append only."
-      ],
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "trusted"
-          },
-          {
-            "name": "native"
-          },
-          {
-            "name": "wormhole"
-          }
-        ]
-      }
-    },
-    {
-      "name": "feeParams",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "yearInSeconds",
-            "type": "u32"
-          },
-          {
-            "name": "paHighWaterMark",
+            "name": "pa_high_water_mark",
             "type": "i128"
           },
           {
-            "name": "paLastNav",
+            "name": "pa_last_nav",
             "type": "i128"
           },
           {
-            "name": "lastAum",
+            "name": "last_aum",
             "type": "i128"
           },
           {
-            "name": "lastPerformanceFeeCrystallized",
+            "name": "last_performance_fee_crystallized",
             "type": "i64"
           },
           {
-            "name": "lastManagementFeeCrystallized",
+            "name": "last_management_fee_crystallized",
             "type": "i64"
           },
           {
-            "name": "lastProtocolFeeCrystallized",
+            "name": "last_protocol_fee_crystallized",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "feeStructure",
+      "name": "FeeStructure",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1736,7 +1583,7 @@ export type ExtEpi = {
             "name": "vault",
             "type": {
               "defined": {
-                "name": "entryExitFees"
+                "name": "EntryExitFees"
               }
             }
           },
@@ -1744,7 +1591,7 @@ export type ExtEpi = {
             "name": "manager",
             "type": {
               "defined": {
-                "name": "entryExitFees"
+                "name": "EntryExitFees"
               }
             }
           },
@@ -1752,7 +1599,7 @@ export type ExtEpi = {
             "name": "management",
             "type": {
               "defined": {
-                "name": "managementFee"
+                "name": "ManagementFee"
               }
             }
           },
@@ -1760,7 +1607,7 @@ export type ExtEpi = {
             "name": "performance",
             "type": {
               "defined": {
-                "name": "performanceFee"
+                "name": "PerformanceFee"
               }
             }
           },
@@ -1768,7 +1615,7 @@ export type ExtEpi = {
             "name": "protocol",
             "type": {
               "defined": {
-                "name": "protocolFees"
+                "name": "ProtocolFees"
               }
             }
           }
@@ -1776,21 +1623,21 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "hurdleType",
+      "name": "HurdleType",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "hard"
+            "name": "Hard"
           },
           {
-            "name": "soft"
+            "name": "Soft"
           }
         ]
       }
     },
     {
-      "name": "integrationAcl",
+      "name": "IntegrationAcl",
       "docs": [
         "An integration program can have multiple protocols supported.",
         "Enabled protocols are stored in a bitmask, and each protocol can have its own policy."
@@ -1799,19 +1646,19 @@ export type ExtEpi = {
         "kind": "struct",
         "fields": [
           {
-            "name": "integrationProgram",
+            "name": "integration_program",
             "type": "pubkey"
           },
           {
-            "name": "protocolsBitmask",
+            "name": "protocols_bitmask",
             "type": "u16"
           },
           {
-            "name": "protocolPolicies",
+            "name": "protocol_policies",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "protocolPolicy"
+                  "name": "ProtocolPolicy"
                 }
               }
             }
@@ -1820,7 +1667,7 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "integrationPermissions",
+      "name": "IntegrationPermissions",
       "docs": [
         "Stores delegate permissions for an integration program."
       ],
@@ -1828,15 +1675,15 @@ export type ExtEpi = {
         "kind": "struct",
         "fields": [
           {
-            "name": "integrationProgram",
+            "name": "integration_program",
             "type": "pubkey"
           },
           {
-            "name": "protocolPermissions",
+            "name": "protocol_permissions",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "protocolPermissions"
+                  "name": "ProtocolPermissions"
                 }
               }
             }
@@ -1845,19 +1692,19 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "managementFee",
+      "name": "ManagementFee",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "feeBps",
+            "name": "fee_bps",
             "type": "u16"
           }
         ]
       }
     },
     {
-      "name": "nativeCustodyKind",
+      "name": "NativeCustodyKind",
       "docs": [
         "Custody kind for Native source positions.",
         "Never reorder existing variants — append only."
@@ -1869,30 +1716,30 @@ export type ExtEpi = {
         "kind": "enum",
         "variants": [
           {
-            "name": "splToken"
+            "name": "SplToken"
           },
           {
-            "name": "nativeSol"
+            "name": "NativeSol"
           }
         ]
       }
     },
     {
-      "name": "noticePeriodType",
+      "name": "NoticePeriodType",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "hard"
+            "name": "Hard"
           },
           {
-            "name": "soft"
+            "name": "Soft"
           }
         ]
       }
     },
     {
-      "name": "notifyAndSettle",
+      "name": "NotifyAndSettle",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1900,64 +1747,64 @@ export type ExtEpi = {
             "name": "model",
             "type": {
               "defined": {
-                "name": "valuationModel"
+                "name": "ValuationModel"
               }
             }
           },
           {
-            "name": "permissionlessFulfillment",
+            "name": "permissionless_fulfillment",
             "type": "bool"
           },
           {
-            "name": "subscribeNoticePeriodType",
+            "name": "subscribe_notice_period_type",
             "type": {
               "defined": {
-                "name": "noticePeriodType"
+                "name": "NoticePeriodType"
               }
             }
           },
           {
-            "name": "subscribeNoticePeriod",
+            "name": "subscribe_notice_period",
             "type": "u64"
           },
           {
-            "name": "subscribeSettlementPeriod",
+            "name": "subscribe_settlement_period",
             "type": "u64"
           },
           {
-            "name": "subscribeCancellationWindow",
+            "name": "subscribe_cancellation_window",
             "type": "u64"
           },
           {
-            "name": "redeemNoticePeriodType",
+            "name": "redeem_notice_period_type",
             "type": {
               "defined": {
-                "name": "noticePeriodType"
+                "name": "NoticePeriodType"
               }
             }
           },
           {
-            "name": "redeemNoticePeriod",
+            "name": "redeem_notice_period",
             "type": "u64"
           },
           {
-            "name": "redeemSettlementPeriod",
+            "name": "redeem_settlement_period",
             "type": "u64"
           },
           {
-            "name": "redeemCancellationWindow",
+            "name": "redeem_cancellation_window",
             "type": "u64"
           },
           {
-            "name": "timeUnit",
+            "name": "time_unit",
             "type": {
               "defined": {
-                "name": "timeUnit"
+                "name": "TimeUnit"
               }
             }
           },
           {
-            "name": "padding",
+            "name": "_padding",
             "type": {
               "array": [
                 "u8",
@@ -1969,7 +1816,7 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "observation",
+      "name": "Observation",
       "docs": [
         "A single observation snapshot."
       ],
@@ -1987,7 +1834,7 @@ export type ExtEpi = {
             ],
             "type": {
               "defined": {
-                "name": "storedI128"
+                "name": "StoredI128"
               }
             }
           },
@@ -1998,12 +1845,12 @@ export type ExtEpi = {
             ],
             "type": {
               "defined": {
-                "name": "denominationSpec"
+                "name": "DenominationSpec"
               }
             }
           },
           {
-            "name": "padDenom",
+            "name": "_pad_denom",
             "docs": [
               "Alignment padding after denomination (to 8-byte boundary for i64)."
             ],
@@ -2015,28 +1862,28 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "observationTimestamp",
+            "name": "observation_timestamp",
             "docs": [
               "Unix timestamp of the observation."
             ],
             "type": "i64"
           },
           {
-            "name": "externalShares",
+            "name": "external_shares",
             "docs": [
               "External share count (for Tokenized positions)."
             ],
             "type": "u64"
           },
           {
-            "name": "submittedBy",
+            "name": "submitted_by",
             "docs": [
               "Signer who submitted this observation."
             ],
             "type": "pubkey"
           },
           {
-            "name": "submittedAtSlot",
+            "name": "submitted_at_slot",
             "docs": [
               "Slot at which this observation was submitted."
             ],
@@ -2046,9 +1893,9 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "observationState",
+      "name": "ObservationState",
       "docs": [
-        "Single PDA per vault that tracks all external position observations.",
+        "Single PDA per vault that tracks all registered position observations.",
         "Seeds: [SEED_OBSERVATION_STATE, glam_state.key()]"
       ],
       "serialization": "bytemuckunsafe",
@@ -2059,24 +1906,15 @@ export type ExtEpi = {
         "kind": "struct",
         "fields": [
           {
-            "name": "glamState",
-            "docs": [
-              "The glam_state this observation state belongs to."
-            ],
+            "name": "glam_state",
             "type": "pubkey"
           },
           {
             "name": "bump",
-            "docs": [
-              "PDA bump."
-            ],
             "type": "u8"
           },
           {
-            "name": "positionsLen",
-            "docs": [
-              "Number of active positions stored in `positions`."
-            ],
+            "name": "positions_len",
             "type": "u8"
           },
           {
@@ -2097,7 +1935,7 @@ export type ExtEpi = {
               "array": [
                 {
                   "defined": {
-                    "name": "positionObservation"
+                    "name": "PositionObservation"
                   }
                 },
                 16
@@ -2108,7 +1946,7 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "oracleConfigs",
+      "name": "OracleConfigs",
       "docs": [
         "Vault-specific oracle configs. If available, these configs are preferred over the global config."
       ],
@@ -2116,7 +1954,7 @@ export type ExtEpi = {
         "kind": "struct",
         "fields": [
           {
-            "name": "maxAgesSeconds",
+            "name": "max_ages_seconds",
             "type": {
               "vec": {
                 "array": [
@@ -2139,23 +1977,23 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "performanceFee",
+      "name": "PerformanceFee",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "feeBps",
+            "name": "fee_bps",
             "type": "u16"
           },
           {
-            "name": "hurdleRateBps",
+            "name": "hurdle_rate_bps",
             "type": "u16"
           },
           {
-            "name": "hurdleType",
+            "name": "hurdle_type",
             "type": {
               "defined": {
-                "name": "hurdleType"
+                "name": "HurdleType"
               }
             }
           }
@@ -2163,7 +2001,129 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "positionObservation",
+      "name": "PositionConfig",
+      "docs": [
+        "Per-position configuration entry in the registry."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "position_id",
+            "docs": [
+              "Unique identifier for this position within the vault.",
+              "",
+              "GLAM AUM coverage for RPI is represented by the vault's ObservationState",
+              "PDA. This id remains the per-position key inside the RPI policy and",
+              "observation state."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "position_type",
+            "docs": [
+              "Type of position (Valued or Tokenized)."
+            ],
+            "type": {
+              "defined": {
+                "name": "RegisteredPositionType"
+              }
+            }
+          },
+          {
+            "name": "source_type",
+            "docs": [
+              "Source type (Trusted or Native)."
+            ],
+            "type": {
+              "defined": {
+                "name": "RegisteredSourceType"
+              }
+            }
+          },
+          {
+            "name": "denomination",
+            "docs": [
+              "Denomination rules for Trusted positions.",
+              "For Native positions this is ignored (denomination derived from custody)."
+            ],
+            "type": {
+              "defined": {
+                "name": "DenominationSpec"
+              }
+            }
+          },
+          {
+            "name": "native_custody_account",
+            "docs": [
+              "Custody account for Native positions. `Pubkey::default()` for Trusted."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "native_custody_kind",
+            "docs": [
+              "Custody kind for Native positions."
+            ],
+            "type": {
+              "defined": {
+                "name": "NativeCustodyKind"
+              }
+            }
+          },
+          {
+            "name": "enabled",
+            "docs": [
+              "Whether this position is enabled for observations."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "freshness_override_secs",
+            "docs": [
+              "Freshness override in seconds. 0 means use vault default."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "submit_allowlist",
+            "docs": [
+              "Per-position submit allowlist. Empty vec = use role-based access only."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "validate_allowlist",
+            "docs": [
+              "Per-position validate allowlist. Empty vec = use role-based access only."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "configure_allowlist",
+            "docs": [
+              "Per-position configure allowlist. Empty vec = use role-based access only.",
+              "This is intentionally more permissive than the protocol-wide asset",
+              "allowlist semantics where an empty allowlist means deny all."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PositionObservation",
       "docs": [
         "Observation data for a single position, stored inline in `ObservationState`."
       ],
@@ -2175,7 +2135,7 @@ export type ExtEpi = {
         "kind": "struct",
         "fields": [
           {
-            "name": "positionId",
+            "name": "position_id",
             "docs": [
               "The position_id this entry tracks."
             ],
@@ -2187,14 +2147,14 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "hasPending",
+            "name": "has_pending",
             "docs": [
               "Whether a pending observation exists."
             ],
             "type": "bool"
           },
           {
-            "name": "padPending",
+            "name": "_pad_pending",
             "docs": [
               "Alignment padding after has_pending (to 8-byte boundary for Observation)."
             ],
@@ -2206,25 +2166,25 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "pendingObservation",
+            "name": "pending_observation",
             "docs": [
               "The pending observation (only valid when `has_pending == true`)."
             ],
             "type": {
               "defined": {
-                "name": "observation"
+                "name": "Observation"
               }
             }
           },
           {
-            "name": "hasValidated",
+            "name": "has_validated",
             "docs": [
               "Whether a validated observation exists."
             ],
             "type": "bool"
           },
           {
-            "name": "padValidated",
+            "name": "_pad_validated",
             "docs": [
               "Alignment padding after has_validated (to 8-byte boundary for Observation)."
             ],
@@ -2236,39 +2196,39 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "lastValidatedObservation",
+            "name": "last_validated_observation",
             "docs": [
               "The last validated observation (only valid when `has_validated == true`)."
             ],
             "type": {
               "defined": {
-                "name": "observation"
+                "name": "Observation"
               }
             }
           },
           {
-            "name": "validatedBy",
+            "name": "validated_by",
             "docs": [
               "Signer who last validated."
             ],
             "type": "pubkey"
           },
           {
-            "name": "validatedAtSlot",
+            "name": "validated_at_slot",
             "docs": [
               "Slot at which last validation occurred."
             ],
             "type": "u64"
           },
           {
-            "name": "validatedBaseAssetAmount",
+            "name": "validated_base_asset_amount",
             "docs": [
               "Base-asset-normalized amount from the last validated observation.",
               "This is the value that contributes to the aggregate priced protocol."
             ],
             "type": {
               "defined": {
-                "name": "storedI128"
+                "name": "StoredI128"
               }
             }
           }
@@ -2276,7 +2236,7 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "positionObservationInput",
+      "name": "PositionObservationInput",
       "docs": [
         "Observation data submitted by a caller."
       ],
@@ -2284,10 +2244,10 @@ export type ExtEpi = {
         "kind": "struct",
         "fields": [
           {
-            "name": "positionId",
+            "name": "position_id",
             "docs": [
               "The position being observed, identified by position_id.",
-              "The same 32-byte id is used as the canonical AUM coverage key."
+              "GLAM AUM coverage is tracked through the vault's ObservationState PDA."
             ],
             "type": {
               "array": [
@@ -2311,19 +2271,19 @@ export type ExtEpi = {
             ],
             "type": {
               "defined": {
-                "name": "denominationSpec"
+                "name": "DenominationSpec"
               }
             }
           },
           {
-            "name": "observationTimestamp",
+            "name": "observation_timestamp",
             "docs": [
               "Unix timestamp of the observation."
             ],
             "type": "i64"
           },
           {
-            "name": "externalShares",
+            "name": "external_shares",
             "docs": [
               "External share count (required > 0 for Tokenized positions, 0 for Valued)."
             ],
@@ -2345,7 +2305,7 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "pricedProtocol",
+      "name": "PricedProtocol",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2362,15 +2322,15 @@ export type ExtEpi = {
             "type": "u8"
           },
           {
-            "name": "lastUpdatedSlot",
+            "name": "last_updated_slot",
             "type": "u64"
           },
           {
-            "name": "integrationProgram",
+            "name": "integration_program",
             "type": "pubkey"
           },
           {
-            "name": "protocolBitflag",
+            "name": "protocol_bitflag",
             "type": "u16"
           },
           {
@@ -2383,23 +2343,23 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "protocolFees",
+      "name": "ProtocolFees",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "baseFeeBps",
+            "name": "base_fee_bps",
             "type": "u16"
           },
           {
-            "name": "flowFeeBps",
+            "name": "flow_fee_bps",
             "type": "u16"
           }
         ]
       }
     },
     {
-      "name": "protocolPermissions",
+      "name": "ProtocolPermissions",
       "docs": [
         "Represents a delegate's permissions for a specific protocol"
       ],
@@ -2407,18 +2367,18 @@ export type ExtEpi = {
         "kind": "struct",
         "fields": [
           {
-            "name": "protocolBitflag",
+            "name": "protocol_bitflag",
             "type": "u16"
           },
           {
-            "name": "permissionsBitmask",
+            "name": "permissions_bitmask",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "protocolPolicy",
+      "name": "ProtocolPolicy",
       "docs": [
         "Stores policy data for an integrated protocol.",
         "Integration programs serialize/deserialize this data."
@@ -2427,7 +2387,7 @@ export type ExtEpi = {
         "kind": "struct",
         "fields": [
           {
-            "name": "protocolBitflag",
+            "name": "protocol_bitflag",
             "type": "u16"
           },
           {
@@ -2438,15 +2398,60 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "stateAccount",
+      "name": "RegisteredPositionType",
+      "docs": [
+        "Type of registered position.",
+        "Never reorder existing variants — append only."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Valued"
+          },
+          {
+            "name": "Tokenized"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RegisteredSourceType",
+      "docs": [
+        "Source of observation data.",
+        "Never reorder existing variants — append only."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Trusted"
+          },
+          {
+            "name": "Native"
+          },
+          {
+            "name": "Wormhole"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StateAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "accountType",
+            "name": "account_type",
             "type": {
               "defined": {
-                "name": "accountType"
+                "name": "AccountType"
               }
             }
           },
@@ -2463,7 +2468,7 @@ export type ExtEpi = {
             "type": "pubkey"
           },
           {
-            "name": "portfolioManagerName",
+            "name": "portfolio_manager_name",
             "type": {
               "array": [
                 "u8",
@@ -2475,20 +2480,20 @@ export type ExtEpi = {
             "name": "created",
             "type": {
               "defined": {
-                "name": "createdModel"
+                "name": "CreatedModel"
               }
             }
           },
           {
-            "name": "baseAssetMint",
+            "name": "base_asset_mint",
             "type": "pubkey"
           },
           {
-            "name": "baseAssetDecimals",
+            "name": "base_asset_decimals",
             "type": "u8"
           },
           {
-            "name": "baseAssetTokenProgram",
+            "name": "base_asset_token_program",
             "type": "u8"
           },
           {
@@ -2501,11 +2506,11 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "timelockDuration",
+            "name": "timelock_duration",
             "type": "u32"
           },
           {
-            "name": "timelockExpiresAt",
+            "name": "timelock_expires_at",
             "type": "u64"
           },
           {
@@ -2519,37 +2524,37 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "integrationAcls",
+            "name": "integration_acls",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "integrationAcl"
+                  "name": "IntegrationAcl"
                 }
               }
             }
           },
           {
-            "name": "delegateAcls",
+            "name": "delegate_acls",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "delegateAcl"
+                  "name": "DelegateAcl"
                 }
               }
             }
           },
           {
-            "name": "externalPositions",
+            "name": "external_positions",
             "type": {
               "vec": "pubkey"
             }
           },
           {
-            "name": "pricedProtocols",
+            "name": "priced_protocols",
             "type": {
               "vec": {
                 "defined": {
-                  "name": "pricedProtocol"
+                  "name": "PricedProtocol"
                 }
               }
             }
@@ -2560,7 +2565,7 @@ export type ExtEpi = {
               "vec": {
                 "vec": {
                   "defined": {
-                    "name": "engineField"
+                    "name": "EngineField"
                   }
                 }
               }
@@ -2570,7 +2575,7 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "storedI128",
+      "name": "StoredI128",
       "docs": [
         "Byte-backed i128 storage that keeps the containing zero-copy account 8-byte aligned."
       ],
@@ -2594,44 +2599,44 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "timeUnit",
+      "name": "TimeUnit",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "second"
+            "name": "Second"
           },
           {
-            "name": "slot"
+            "name": "Slot"
           }
         ]
       }
     },
     {
-      "name": "valuationModel",
+      "name": "ValuationModel",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "continuous"
+            "name": "Continuous"
           },
           {
-            "name": "periodic"
+            "name": "Periodic"
           }
         ]
       }
     },
     {
-      "name": "wormholeHyperliquidObservationConfig",
+      "name": "WormholeHyperliquidObservationConfig",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "glamState",
+            "name": "glam_state",
             "type": "pubkey"
           },
           {
-            "name": "positionId",
+            "name": "position_id",
             "type": {
               "array": [
                 "u8",
@@ -2640,7 +2645,7 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "hyperliquidAccount",
+            "name": "hyperliquid_account",
             "type": {
               "array": [
                 "u8",
@@ -2649,7 +2654,7 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "accountMarginSummaryPrecompile",
+            "name": "account_margin_summary_precompile",
             "type": {
               "array": [
                 "u8",
@@ -2658,7 +2663,7 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "spotBalancePrecompile",
+            "name": "spot_balance_precompile",
             "type": {
               "array": [
                 "u8",
@@ -2667,11 +2672,11 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "perpDexIndex",
+            "name": "perp_dex_index",
             "type": "u32"
           },
           {
-            "name": "usdcSpotToken",
+            "name": "usdc_spot_token",
             "type": "u64"
           },
           {
@@ -2682,12 +2687,12 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "wormholeHyperliquidObservationConfigInput",
+      "name": "WormholeHyperliquidObservationConfigInput",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "positionId",
+            "name": "position_id",
             "type": {
               "array": [
                 "u8",
@@ -2696,7 +2701,7 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "hyperliquidAccount",
+            "name": "hyperliquid_account",
             "type": {
               "array": [
                 "u8",
@@ -2705,7 +2710,7 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "accountMarginSummaryPrecompile",
+            "name": "account_margin_summary_precompile",
             "type": {
               "array": [
                 "u8",
@@ -2714,7 +2719,7 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "spotBalancePrecompile",
+            "name": "spot_balance_precompile",
             "type": {
               "array": [
                 "u8",
@@ -2723,27 +2728,27 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "perpDexIndex",
+            "name": "perp_dex_index",
             "type": "u32"
           },
           {
-            "name": "usdcSpotToken",
+            "name": "usdc_spot_token",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "wormholeObservationConfig",
+      "name": "WormholeObservationConfig",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "glamState",
+            "name": "glam_state",
             "type": "pubkey"
           },
           {
-            "name": "positionId",
+            "name": "position_id",
             "type": {
               "array": [
                 "u8",
@@ -2752,11 +2757,11 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "emitterChain",
+            "name": "emitter_chain",
             "type": "u16"
           },
           {
-            "name": "emitterAddress",
+            "name": "emitter_address",
             "type": {
               "array": [
                 "u8",
@@ -2765,27 +2770,27 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "payloadVersion",
+            "name": "payload_version",
             "type": "u8"
           },
           {
-            "name": "payloadType",
+            "name": "payload_type",
             "type": "u8"
           },
           {
-            "name": "maxAgeSeconds",
+            "name": "max_age_seconds",
             "type": "u32"
           },
           {
-            "name": "hasLastSequence",
+            "name": "has_last_sequence",
             "type": "bool"
           },
           {
-            "name": "lastSequence",
+            "name": "last_sequence",
             "type": "u64"
           },
           {
-            "name": "lastVaaHash",
+            "name": "last_vaa_hash",
             "type": {
               "array": [
                 "u8",
@@ -2801,12 +2806,12 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "wormholeObservationConfigInput",
+      "name": "WormholeObservationConfigInput",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "positionId",
+            "name": "position_id",
             "type": {
               "array": [
                 "u8",
@@ -2815,11 +2820,11 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "emitterChain",
+            "name": "emitter_chain",
             "type": "u16"
           },
           {
-            "name": "emitterAddress",
+            "name": "emitter_address",
             "type": {
               "array": [
                 "u8",
@@ -2828,15 +2833,15 @@ export type ExtEpi = {
             }
           },
           {
-            "name": "payloadVersion",
+            "name": "payload_version",
             "type": "u8"
           },
           {
-            "name": "payloadType",
+            "name": "payload_type",
             "type": "u8"
           },
           {
-            "name": "maxAgeSeconds",
+            "name": "max_age_seconds",
             "type": "u32"
           }
         ]
@@ -2845,24 +2850,24 @@ export type ExtEpi = {
   ],
   "constants": [
     {
-      "name": "protoEpi",
+      "name": "PROTO_RPI",
       "type": "u16",
       "value": "1"
     },
     {
-      "name": "protoEpiPermConfigure",
+      "name": "PROTO_RPI_PERM_CONFIGURE",
       "type": "u64",
       "value": "1"
     },
     {
-      "name": "protoEpiPermSubmitObservation",
+      "name": "PROTO_RPI_PERM_SUBMIT_OBSERVATION",
       "type": "u64",
       "value": "2"
     },
     {
-      "name": "protoEpiPermValidateObservation",
+      "name": "PROTO_RPI_PERM_VALIDATE_OBSERVATION",
       "type": "u64",
       "value": "4"
     }
   ]
-};
+}

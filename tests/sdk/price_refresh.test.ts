@@ -18,11 +18,12 @@ import {
   ORCA_WHIRLPOOLS_PROGRAM_ID,
   PHOENIX_GLOBAL_CONFIG,
   PHOENIX_PROGRAM_ID,
+  SEED_OBSERVATION_STATE,
   USDC,
   WSOL,
 } from "../../src/constants";
 import {
-  EPI_PROTOCOL,
+  RPI_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
@@ -35,11 +36,15 @@ const VAULT = new PublicKey("31xmCqzfdYT4GHjo39BQiTHVPjpugw6JqXNwckVL9cEf");
 const STATE = new PublicKey("3XYX3QvpHQ7TqvjhZcoBBmykNDruV9PtrGXRxJFzsiCF");
 const EXT_KAMINO = PublicKey.unique();
 const EXT_BRIDGE = PublicKey.unique();
-const EXT_EPI = PublicKey.unique();
+const EXT_RPI = PublicKey.unique();
 const EXT_PHOENIX = PublicKey.unique();
 const EXT_ORCA = PublicKey.unique();
 const EXT_LOOPSCALE = PublicKey.unique();
 const EXT_NEUTRAL = PublicKey.unique();
+const OBSERVATION_STATE = PublicKey.findProgramAddressSync(
+  [Buffer.from(SEED_OBSERVATION_STATE), STATE.toBuffer()],
+  EXT_RPI,
+)[0];
 const OBLIGATION = new PublicKey(
   "65iwhmFa5mRSmeBGNGEzSfG6y66Pk6r5eksYDMFSMRb6",
 );
@@ -124,9 +129,9 @@ const BRIDGE_ACL = {
   integrationProgram: EXT_BRIDGE,
   protocolsBitmask: LAYERZERO_OFT_PROTOCOL,
 };
-const EPI_ACL = {
-  integrationProgram: EXT_EPI,
-  protocolsBitmask: EPI_PROTOCOL,
+const RPI_ACL = {
+  integrationProgram: EXT_RPI,
+  protocolsBitmask: RPI_PROTOCOL,
 };
 const PHOENIX_ACL = {
   integrationProgram: EXT_PHOENIX,
@@ -144,6 +149,7 @@ const NEUTRAL_ACL = {
 function makeClient(
   activeReservePubkeys: PublicKey[],
   integrationAcls = [KAMINO_LENDING_ACL],
+  externalPositions = [OBLIGATION],
 ) {
   const fetchAndParseReserves = jest.fn(async (pubkeys: PublicKey[]) =>
     pubkeys.map((pubkey) => reserve(pubkey)),
@@ -168,7 +174,7 @@ function makeClient(
       protocolProgram: { programId: PublicKey.unique() },
       extKaminoProgram: { programId: EXT_KAMINO },
       extBridgeProgram: { programId: EXT_BRIDGE },
-      extEpiProgram: { programId: EXT_EPI },
+      extRpiProgram: { programId: EXT_RPI },
       extPhoenixProgram: { programId: EXT_PHOENIX },
       extOrcaProgram: { programId: EXT_ORCA },
       extLoopscaleProgram: { programId: EXT_LOOPSCALE },
@@ -177,7 +183,7 @@ function makeClient(
         accountType: StateAccountType.VAULT,
         baseAssetMint: PublicKey.default,
         baseAssetTokenProgramId: TOKEN_PROGRAM_ID,
-        externalPositions: [OBLIGATION],
+        externalPositions,
         integrationAcls,
       })),
       fetchAssetMetas: jest.fn(async () => new PkMap()),
@@ -355,33 +361,34 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     ]);
   });
 
-  it("skips EPI validated position pricing when ext_epi is not enabled", async () => {
-    const epiIx = ix(4);
+  it("skips RPI registered position pricing when ext_rpi is not enabled", async () => {
+    const rpiIx = ix(4);
     const { client } = makeClient([RESERVE_A, RESERVE_C]);
-    const priceEpiSpy = jest
-      .spyOn(client as any, "priceEpiValidatedPositionsIx")
-      .mockResolvedValue(epiIx);
+    const priceRpiSpy = jest
+      .spyOn(client as any, "priceRpiRegisteredPositionsIx")
+      .mockResolvedValue(rpiIx);
 
     const ixs = await client.priceVaultIxs();
 
-    expect(priceEpiSpy).not.toHaveBeenCalled();
-    expect(ixs).not.toContain(epiIx);
+    expect(priceRpiSpy).not.toHaveBeenCalled();
+    expect(ixs).not.toContain(rpiIx);
   });
 
-  it("prices EPI validated positions when ext_epi is enabled", async () => {
-    const epiIx = ix(4);
+  it("prices RPI registered positions when ext_rpi is enabled and registered", async () => {
+    const rpiIx = ix(4);
     const { client } = makeClient(
       [RESERVE_A, RESERVE_C],
-      [KAMINO_LENDING_ACL, EPI_ACL],
+      [KAMINO_LENDING_ACL, RPI_ACL],
+      [OBSERVATION_STATE],
     );
-    const priceEpiSpy = jest
-      .spyOn(client as any, "priceEpiValidatedPositionsIx")
-      .mockResolvedValue(epiIx);
+    const priceRpiSpy = jest
+      .spyOn(client as any, "priceRpiRegisteredPositionsIx")
+      .mockResolvedValue(rpiIx);
 
     const ixs = await client.priceVaultIxs();
 
-    expect(priceEpiSpy).toHaveBeenCalledTimes(1);
-    expect(ixs).toContain(epiIx);
+    expect(priceRpiSpy).toHaveBeenCalledWith([OBSERVATION_STATE]);
+    expect(ixs).toContain(rpiIx);
   });
 
   it("skips Phoenix trader pricing when ext_phoenix is not enabled", async () => {

@@ -2,130 +2,32 @@
  * Program IDL in camelCase format in order to be used in JS/TS.
  *
  * Note that this is only a type helper and is not the actual IDL. The original
- * IDL can be found at `target/idl/ext_epi.json`.
+ * IDL can be found at `target/idl/ext_rpi.json`.
  */
-export type ExtEpi = {
-  "address": "G1NTew9pcXtYUTuTK4bJTUxKw2LghYmJCCDYxaKQN7oc",
+export type ExtRpi = {
+  "address": "gstge5RzNEGQwpwBPKTJbP9yczoFEzzm5upSSsie9fX",
   "metadata": {
-    "name": "extEpi",
+    "name": "extRpi",
     "version": "1.0.0",
     "spec": "0.1.0",
-    "description": "External Position Integration for GLAM Protocol"
+    "description": "Registered Position Integration for GLAM Protocol"
   },
   "instructions": [
     {
-      "name": "refreshPricedProtocol",
+      "name": "removeRegisteredPosition",
       "docs": [
-        "Republish the aggregate EPI priced protocol from already validated",
-        "observations at the current slot."
-      ],
-      "discriminator": [
-        229,
-        89,
-        39,
-        46,
-        5,
-        217,
-        10,
-        192
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamSigner",
-          "signer": true
-        },
-        {
-          "name": "observationState",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  111,
-                  98,
-                  115,
-                  101,
-                  114,
-                  118,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ]
-          }
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "removeExternalPosition",
-      "docs": [
-        "Remove an external position from the registry.",
+        "Remove a registered position from the registry.",
         "Closes the observation state PDA and refunds rent to the signer."
       ],
       "discriminator": [
-        97,
-        146,
-        246,
-        241,
-        130,
-        26,
-        108,
-        97
+        102,
+        188,
+        200,
+        90,
+        244,
+        35,
+        5,
+        7
       ],
       "accounts": [
         {
@@ -232,7 +134,7 @@ export type ExtEpi = {
         },
         {
           "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
         },
         {
           "name": "systemProgram",
@@ -252,20 +154,20 @@ export type ExtEpi = {
       ]
     },
     {
-      "name": "submitExternalObservation",
+      "name": "submitObservation",
       "docs": [
-        "Submit an observation for a configured external position.",
+        "Submit an observation for a configured registered position.",
         "Writes to pending slot; replaces any existing pending observation."
       ],
       "discriminator": [
-        100,
-        228,
-        147,
-        149,
+        109,
+        4,
         22,
-        28,
-        158,
-        163
+        163,
+        138,
+        215,
+        205,
+        180
       ],
       "accounts": [
         {
@@ -322,21 +224,21 @@ export type ExtEpi = {
       ]
     },
     {
-      "name": "submitExternalObservationWormhole",
+      "name": "submitObservationWormhole",
       "docs": [
-        "Submit a Wormhole Guardian-verified external observation.",
+        "Submit a Wormhole Guardian-verified registered observation.",
         "The caller only relays a VAA body whose signatures have already been",
         "posted to the Wormhole Verification Shim."
       ],
       "discriminator": [
-        124,
-        238,
-        191,
-        242,
-        222,
-        175,
-        91,
-        148
+        98,
+        36,
+        143,
+        5,
+        50,
+        123,
+        9,
+        67
       ],
       "accounts": [
         {
@@ -461,20 +363,20 @@ export type ExtEpi = {
       ]
     },
     {
-      "name": "upsertExternalPosition",
+      "name": "upsertRegisteredPosition",
       "docs": [
-        "Create or update an external position configuration.",
+        "Create or update a registered position configuration.",
         "Creates the observation state PDA on first call for a position."
       ],
       "discriminator": [
-        199,
-        33,
-        239,
-        150,
-        200,
-        123,
-        43,
-        70
+        89,
+        19,
+        168,
+        143,
+        107,
+        179,
+        125,
+        11
       ],
       "accounts": [
         {
@@ -581,7 +483,7 @@ export type ExtEpi = {
         },
         {
           "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
         },
         {
           "name": "systemProgram",
@@ -593,27 +495,27 @@ export type ExtEpi = {
           "name": "config",
           "type": {
             "defined": {
-              "name": "externalPositionConfig"
+              "name": "positionConfig"
             }
           }
         }
       ]
     },
     {
-      "name": "upsertExternalPositionWormholeConfig",
+      "name": "upsertRegisteredPositionWormholeConfig",
       "docs": [
         "Create or update Wormhole verification config for a Wormhole-sourced",
-        "external position."
+        "registered position."
       ],
       "discriminator": [
-        173,
-        64,
-        201,
-        39,
-        54,
-        49,
-        192,
-        89
+        139,
+        183,
+        73,
+        75,
+        245,
+        117,
+        75,
+        109
       ],
       "accounts": [
         {
@@ -689,20 +591,20 @@ export type ExtEpi = {
       ]
     },
     {
-      "name": "upsertExternalPositionWormholeHyperliquidConfig",
+      "name": "upsertRegisteredPositionWormholeHyperliquidConfig",
       "docs": [
         "Create or update Hyperliquid-specific payload config for a",
-        "Wormhole-sourced external position."
+        "Wormhole-sourced registered position."
       ],
       "discriminator": [
-        42,
-        13,
-        175,
-        7,
-        34,
-        137,
-        176,
-        108
+        163,
+        241,
+        249,
+        72,
+        43,
+        248,
+        96,
+        44
       ],
       "accounts": [
         {
@@ -828,10 +730,9 @@ export type ExtEpi = {
       ]
     },
     {
-      "name": "validateExternalObservation",
+      "name": "validateObservation",
       "docs": [
-        "Validate a pending observation, promote to active, and publish",
-        "the full aggregate priced protocol for ext_epi.",
+        "Validate a pending observation and promote it to active.",
         "",
         "Remaining accounts:",
         "- `remaining_accounts[0]` is required when the pending observation",
@@ -839,14 +740,14 @@ export type ExtEpi = {
         "account used for price normalization."
       ],
       "discriminator": [
-        88,
-        144,
-        219,
-        126,
-        79,
-        29,
-        43,
-        188
+        134,
+        150,
+        250,
+        52,
+        188,
+        156,
+        130,
+        122
       ],
       "accounts": [
         {
@@ -887,39 +788,6 @@ export type ExtEpi = {
               {
                 "kind": "account",
                 "path": "glamState"
-              }
-            ]
-          }
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
               }
             ]
           }
@@ -1003,10 +871,6 @@ export type ExtEpi = {
             "GLAM global oracle metadata before price use."
           ],
           "optional": true
-        },
-        {
-          "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
         }
       ],
       "args": [
@@ -1074,6 +938,163 @@ export type ExtEpi = {
         177,
         166
       ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "positionNotFound",
+      "msg": "Registered position not found"
+    },
+    {
+      "code": 6001,
+      "name": "positionAlreadyExists",
+      "msg": "Registered position already exists in the observation state"
+    },
+    {
+      "code": 6002,
+      "name": "positionRegistryFull",
+      "msg": "Registered position registry is full"
+    },
+    {
+      "code": 6003,
+      "name": "positionIdentityMismatch",
+      "msg": "Registered position identity fields cannot be changed"
+    },
+    {
+      "code": 6004,
+      "name": "positionDisabled",
+      "msg": "Registered position is disabled"
+    },
+    {
+      "code": 6005,
+      "name": "invalidPositionSource",
+      "msg": "Registered position source type is invalid for this operation"
+    },
+    {
+      "code": 6006,
+      "name": "invalidPositionType",
+      "msg": "Registered position type is invalid for this operation"
+    },
+    {
+      "code": 6007,
+      "name": "invalidPositionDenomination",
+      "msg": "Registered position denomination is invalid for this operation"
+    },
+    {
+      "code": 6008,
+      "name": "unsupportedObservationDenomination",
+      "msg": "Observation denomination is unsupported by the GLAM state"
+    },
+    {
+      "code": 6009,
+      "name": "observationStateMismatch",
+      "msg": "Observation state does not belong to this GLAM state"
+    },
+    {
+      "code": 6010,
+      "name": "observationNotFound",
+      "msg": "Observation entry not found"
+    },
+    {
+      "code": 6011,
+      "name": "pendingObservationNotFound",
+      "msg": "Pending observation not found"
+    },
+    {
+      "code": 6012,
+      "name": "validatedObservationNotFound",
+      "msg": "Validated observation not found"
+    },
+    {
+      "code": 6013,
+      "name": "observationTimestampInFuture",
+      "msg": "Observation timestamp is in the future"
+    },
+    {
+      "code": 6014,
+      "name": "observationStale",
+      "msg": "Observation is stale"
+    },
+    {
+      "code": 6015,
+      "name": "missingExternalShares",
+      "msg": "Tokenized observations require external shares"
+    },
+    {
+      "code": 6016,
+      "name": "missingGlamConfig",
+      "msg": "GLAM config account is required to normalize this observation"
+    },
+    {
+      "code": 6017,
+      "name": "missingObservedMintOracle",
+      "msg": "Observed mint oracle account is required to normalize this observation"
+    },
+    {
+      "code": 6018,
+      "name": "missingBaseAssetOracle",
+      "msg": "Base asset oracle account is required to normalize this observation"
+    },
+    {
+      "code": 6019,
+      "name": "missingSolUsdOracle",
+      "msg": "SOL/USD oracle account is required to normalize this observation"
+    },
+    {
+      "code": 6020,
+      "name": "invalidWormholeConfig",
+      "msg": "Wormhole observation config is invalid"
+    },
+    {
+      "code": 6021,
+      "name": "unsupportedWormholePayload",
+      "msg": "Unsupported Wormhole payload"
+    },
+    {
+      "code": 6022,
+      "name": "invalidWormholeVaa",
+      "msg": "Invalid Wormhole VAA body"
+    },
+    {
+      "code": 6023,
+      "name": "invalidWormholeEmitter",
+      "msg": "Invalid Wormhole emitter"
+    },
+    {
+      "code": 6024,
+      "name": "wormholeReplay",
+      "msg": "Wormhole VAA sequence was already processed"
+    },
+    {
+      "code": 6025,
+      "name": "invalidWormholePayloadHeader",
+      "msg": "Invalid Wormhole payload header"
+    },
+    {
+      "code": 6026,
+      "name": "missingWormholePayloadConfig",
+      "msg": "Missing Wormhole payload config account"
+    },
+    {
+      "code": 6027,
+      "name": "invalidWormholePayloadConfig",
+      "msg": "Invalid Wormhole payload config account"
+    },
+    {
+      "code": 6028,
+      "name": "invalidHyperliquidConfig",
+      "msg": "Invalid Hyperliquid payload config"
+    },
+    {
+      "code": 6029,
+      "name": "invalidHyperliquidNavPayload",
+      "msg": "Invalid Hyperliquid NAV payload"
+    },
+    {
+      "code": 6030,
+      "name": "invalidWormholeVerifyVaaShim",
+      "msg": "Invalid Wormhole Verification Shim program"
     }
   ],
   "types": [
@@ -1524,174 +1545,6 @@ export type ExtEpi = {
       }
     },
     {
-      "name": "externalPositionConfig",
-      "docs": [
-        "Per-position configuration entry in the registry."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "positionId",
-            "docs": [
-              "Unique identifier for this position within the vault.",
-              "",
-              "Under the cleaner pricing model, this 32-byte id is also the canonical",
-              "coverage key published into `glam_state.external_positions` and",
-              "`PricedProtocol.positions`. For bridge-managed inflight transfers, this",
-              "should be the transfer-record pubkey bytes."
-            ],
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "positionType",
-            "docs": [
-              "Type of position (Valued or Tokenized)."
-            ],
-            "type": {
-              "defined": {
-                "name": "externalPositionType"
-              }
-            }
-          },
-          {
-            "name": "sourceType",
-            "docs": [
-              "Source type (Trusted or Native)."
-            ],
-            "type": {
-              "defined": {
-                "name": "externalSourceType"
-              }
-            }
-          },
-          {
-            "name": "denomination",
-            "docs": [
-              "Denomination rules for Trusted positions.",
-              "For Native positions this is ignored (denomination derived from custody)."
-            ],
-            "type": {
-              "defined": {
-                "name": "denominationSpec"
-              }
-            }
-          },
-          {
-            "name": "nativeCustodyAccount",
-            "docs": [
-              "Custody account for Native positions. `Pubkey::default()` for Trusted."
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "nativeCustodyKind",
-            "docs": [
-              "Custody kind for Native positions."
-            ],
-            "type": {
-              "defined": {
-                "name": "nativeCustodyKind"
-              }
-            }
-          },
-          {
-            "name": "enabled",
-            "docs": [
-              "Whether this position is enabled for observations."
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "freshnessOverrideSecs",
-            "docs": [
-              "Freshness override in seconds. 0 means use vault default."
-            ],
-            "type": "u32"
-          },
-          {
-            "name": "submitAllowlist",
-            "docs": [
-              "Per-position submit allowlist. Empty vec = use role-based access only."
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "validateAllowlist",
-            "docs": [
-              "Per-position validate allowlist. Empty vec = use role-based access only."
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "configureAllowlist",
-            "docs": [
-              "Per-position configure allowlist. Empty vec = use role-based access only.",
-              "This is intentionally more permissive than the protocol-wide asset",
-              "allowlist semantics where an empty allowlist means deny all."
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "externalPositionType",
-      "docs": [
-        "Type of external position.",
-        "Never reorder existing variants — append only."
-      ],
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "valued"
-          },
-          {
-            "name": "tokenized"
-          }
-        ]
-      }
-    },
-    {
-      "name": "externalSourceType",
-      "docs": [
-        "Source of observation data.",
-        "Never reorder existing variants — append only."
-      ],
-      "repr": {
-        "kind": "rust"
-      },
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "trusted"
-          },
-          {
-            "name": "native"
-          },
-          {
-            "name": "wormhole"
-          }
-        ]
-      }
-    },
-    {
       "name": "feeParams",
       "type": {
         "kind": "struct",
@@ -2048,7 +1901,7 @@ export type ExtEpi = {
     {
       "name": "observationState",
       "docs": [
-        "Single PDA per vault that tracks all external position observations.",
+        "Single PDA per vault that tracks all registered position observations.",
         "Seeds: [SEED_OBSERVATION_STATE, glam_state.key()]"
       ],
       "serialization": "bytemuckunsafe",
@@ -2060,23 +1913,14 @@ export type ExtEpi = {
         "fields": [
           {
             "name": "glamState",
-            "docs": [
-              "The glam_state this observation state belongs to."
-            ],
             "type": "pubkey"
           },
           {
             "name": "bump",
-            "docs": [
-              "PDA bump."
-            ],
             "type": "u8"
           },
           {
             "name": "positionsLen",
-            "docs": [
-              "Number of active positions stored in `positions`."
-            ],
             "type": "u8"
           },
           {
@@ -2157,6 +2001,128 @@ export type ExtEpi = {
               "defined": {
                 "name": "hurdleType"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "positionConfig",
+      "docs": [
+        "Per-position configuration entry in the registry."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "positionId",
+            "docs": [
+              "Unique identifier for this position within the vault.",
+              "",
+              "GLAM AUM coverage for RPI is represented by the vault's ObservationState",
+              "PDA. This id remains the per-position key inside the RPI policy and",
+              "observation state."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "positionType",
+            "docs": [
+              "Type of position (Valued or Tokenized)."
+            ],
+            "type": {
+              "defined": {
+                "name": "registeredPositionType"
+              }
+            }
+          },
+          {
+            "name": "sourceType",
+            "docs": [
+              "Source type (Trusted or Native)."
+            ],
+            "type": {
+              "defined": {
+                "name": "registeredSourceType"
+              }
+            }
+          },
+          {
+            "name": "denomination",
+            "docs": [
+              "Denomination rules for Trusted positions.",
+              "For Native positions this is ignored (denomination derived from custody)."
+            ],
+            "type": {
+              "defined": {
+                "name": "denominationSpec"
+              }
+            }
+          },
+          {
+            "name": "nativeCustodyAccount",
+            "docs": [
+              "Custody account for Native positions. `Pubkey::default()` for Trusted."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "nativeCustodyKind",
+            "docs": [
+              "Custody kind for Native positions."
+            ],
+            "type": {
+              "defined": {
+                "name": "nativeCustodyKind"
+              }
+            }
+          },
+          {
+            "name": "enabled",
+            "docs": [
+              "Whether this position is enabled for observations."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "freshnessOverrideSecs",
+            "docs": [
+              "Freshness override in seconds. 0 means use vault default."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "submitAllowlist",
+            "docs": [
+              "Per-position submit allowlist. Empty vec = use role-based access only."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "validateAllowlist",
+            "docs": [
+              "Per-position validate allowlist. Empty vec = use role-based access only."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "configureAllowlist",
+            "docs": [
+              "Per-position configure allowlist. Empty vec = use role-based access only.",
+              "This is intentionally more permissive than the protocol-wide asset",
+              "allowlist semantics where an empty allowlist means deny all."
+            ],
+            "type": {
+              "vec": "pubkey"
             }
           }
         ]
@@ -2287,7 +2253,7 @@ export type ExtEpi = {
             "name": "positionId",
             "docs": [
               "The position being observed, identified by position_id.",
-              "The same 32-byte id is used as the canonical AUM coverage key."
+              "GLAM AUM coverage is tracked through the vault's ObservationState PDA."
             ],
             "type": {
               "array": [
@@ -2433,6 +2399,51 @@ export type ExtEpi = {
           {
             "name": "data",
             "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "registeredPositionType",
+      "docs": [
+        "Type of registered position.",
+        "Never reorder existing variants — append only."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "valued"
+          },
+          {
+            "name": "tokenized"
+          }
+        ]
+      }
+    },
+    {
+      "name": "registeredSourceType",
+      "docs": [
+        "Source of observation data.",
+        "Never reorder existing variants — append only."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "trusted"
+          },
+          {
+            "name": "native"
+          },
+          {
+            "name": "wormhole"
           }
         ]
       }
@@ -2845,22 +2856,22 @@ export type ExtEpi = {
   ],
   "constants": [
     {
-      "name": "protoEpi",
+      "name": "protoRpi",
       "type": "u16",
       "value": "1"
     },
     {
-      "name": "protoEpiPermConfigure",
+      "name": "protoRpiPermConfigure",
       "type": "u64",
       "value": "1"
     },
     {
-      "name": "protoEpiPermSubmitObservation",
+      "name": "protoRpiPermSubmitObservation",
       "type": "u64",
       "value": "2"
     },
     {
-      "name": "protoEpiPermValidateObservation",
+      "name": "protoRpiPermValidateObservation",
       "type": "u64",
       "value": "4"
     }

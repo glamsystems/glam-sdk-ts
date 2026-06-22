@@ -45,8 +45,8 @@ export const LAYERZERO_OFT_PROTOCOL = 1 << 2;
 // Synthetic priced-protocol key emitted by ext_bridge for aggregate managed transfers.
 export const BRIDGE_MANAGED_TRANSFERS_PROTOCOL = 0;
 
-// Mirror `SupportedProtocols` in anchor/programs/ext_epi/src/state/access.rs.
-export const EPI_PROTOCOL = 1 << 0;
+// Mirror `SupportedProtocols` in anchor/programs/ext_rpi/src/state/access.rs.
+export const RPI_PROTOCOL = 1 << 0;
 
 // Mirror `SupportedProtocols` in anchor/programs/ext_marinade/src/state/access.rs.
 export const MARINADE_PROTOCOL = 1 << 0;

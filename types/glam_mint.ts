@@ -3078,6 +3078,176 @@ export type GlamMint = {
       ]
     },
     {
+      "name": "priceRegisteredPositions",
+      "docs": [
+        "Price registered positions for a vault"
+      ],
+      "discriminator": [
+        90,
+        157,
+        162,
+        50,
+        236,
+        16,
+        188,
+        3
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "observationState",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                222,
+                247,
+                145,
+                123,
+                88,
+                29,
+                88,
+                103,
+                133,
+                152,
+                213,
+                154,
+                201,
+                194,
+                107,
+                110,
+                187,
+                45,
+                98,
+                54,
+                138,
+                78,
+                45,
+                198,
+                197,
+                243,
+                41,
+                215,
+                78,
+                248,
+                11,
+                31
+              ]
+            }
+          }
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "glamProtocol",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "eventAuthority",
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "eventProgram",
+          "optional": true,
+          "address": "GM1NtvvnSXUptTrMCqbogAdZJydZSNv98DoU5AZVLmGh"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "priceSingleAssetVault",
       "docs": [
         "Prices a single asset vault."
@@ -4687,6 +4857,19 @@ export type GlamMint = {
       ]
     },
     {
+      "name": "observationState",
+      "discriminator": [
+        122,
+        174,
+        197,
+        53,
+        129,
+        9,
+        165,
+        132
+      ]
+    },
+    {
       "name": "requestQueue",
       "discriminator": [
         172,
@@ -5013,6 +5196,54 @@ export type GlamMint = {
           {
             "name": "expiresAt",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "denomination",
+      "docs": [
+        "Denomination of an observation amount.",
+        "Never reorder existing variants — append only."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "usd"
+          },
+          {
+            "name": "mint"
+          }
+        ]
+      }
+    },
+    {
+      "name": "denominationSpec",
+      "docs": [
+        "Full denomination spec: the discriminant plus an optional mint pubkey."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "denom",
+            "type": {
+              "defined": {
+                "name": "denomination"
+              }
+            }
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "Only meaningful when `denom == Denomination::Mint`.",
+              "Set to `Pubkey::default()` for `Usd`."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -5799,6 +6030,136 @@ export type GlamMint = {
       }
     },
     {
+      "name": "observation",
+      "docs": [
+        "A single observation snapshot."
+      ],
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "docs": [
+              "Signed amount in the observation's denomination."
+            ],
+            "type": {
+              "defined": {
+                "name": "storedI128"
+              }
+            }
+          },
+          {
+            "name": "denomination",
+            "docs": [
+              "Denomination of the amount."
+            ],
+            "type": {
+              "defined": {
+                "name": "denominationSpec"
+              }
+            }
+          },
+          {
+            "name": "padDenom",
+            "docs": [
+              "Alignment padding after denomination (to 8-byte boundary for i64)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "observationTimestamp",
+            "docs": [
+              "Unix timestamp of the observation."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "externalShares",
+            "docs": [
+              "External share count (for Tokenized positions)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "submittedBy",
+            "docs": [
+              "Signer who submitted this observation."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "submittedAtSlot",
+            "docs": [
+              "Slot at which this observation was submitted."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "observationState",
+      "docs": [
+        "Single PDA per vault that tracks all registered position observations.",
+        "Seeds: [SEED_OBSERVATION_STATE, glam_state.key()]"
+      ],
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glamState",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "positionsLen",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                6
+              ]
+            }
+          },
+          {
+            "name": "positions",
+            "docs": [
+              "Per-position observation entries."
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "positionObservation"
+                  }
+                },
+                16
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "oracleConfigs",
       "docs": [
         "Vault-specific oracle configs. If available, these configs are preferred over the global config."
@@ -5973,6 +6334,119 @@ export type GlamMint = {
             "type": {
               "defined": {
                 "name": "hurdleType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "positionObservation",
+      "docs": [
+        "Observation data for a single position, stored inline in `ObservationState`."
+      ],
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "positionId",
+            "docs": [
+              "The position_id this entry tracks."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "hasPending",
+            "docs": [
+              "Whether a pending observation exists."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "padPending",
+            "docs": [
+              "Alignment padding after has_pending (to 8-byte boundary for Observation)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "pendingObservation",
+            "docs": [
+              "The pending observation (only valid when `has_pending == true`)."
+            ],
+            "type": {
+              "defined": {
+                "name": "observation"
+              }
+            }
+          },
+          {
+            "name": "hasValidated",
+            "docs": [
+              "Whether a validated observation exists."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "padValidated",
+            "docs": [
+              "Alignment padding after has_validated (to 8-byte boundary for Observation)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "lastValidatedObservation",
+            "docs": [
+              "The last validated observation (only valid when `has_validated == true`)."
+            ],
+            "type": {
+              "defined": {
+                "name": "observation"
+              }
+            }
+          },
+          {
+            "name": "validatedBy",
+            "docs": [
+              "Signer who last validated."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "validatedAtSlot",
+            "docs": [
+              "Slot at which last validation occurred."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "validatedBaseAssetAmount",
+            "docs": [
+              "Base-asset-normalized amount from the last validated observation.",
+              "This is the value that contributes to the aggregate priced protocol."
+            ],
+            "type": {
+              "defined": {
+                "name": "storedI128"
               }
             }
           }
@@ -6259,6 +6733,30 @@ export type GlamMint = {
                   }
                 }
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "storedI128",
+      "docs": [
+        "Byte-backed i128 storage that keeps the containing zero-copy account 8-byte aligned."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bytes",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
             }
           }
         ]

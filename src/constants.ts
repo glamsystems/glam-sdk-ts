@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import {
   getExtBridgeProgramId,
   getExtCctpProgramId,
-  getExtEpiProgramId,
+  getExtRpiProgramId,
   getExtJupiterProgramId,
   getExtKaminoProgramId,
   getExtLoopscaleProgramId,
@@ -17,7 +17,7 @@ import {
 } from "./glamExports";
 import {
   CCTP_PROTOCOL,
-  EPI_PROTOCOL,
+  RPI_PROTOCOL,
   GLAM_MINT_PROTOCOL,
   JUPITER_BORROW_PROTOCOL,
   JUPITER_EARN_PROTOCOL,
@@ -489,11 +489,11 @@ export const getProtocolsAndPermissions = (
       },
     },
   },
-  // EPI integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_epi/src/state/access.rs
-  [getExtEpiProgramId(staging).toBase58()]: {
-    [protocolBitflagKey(EPI_PROTOCOL)]: {
-      name: "Epi",
+  // RPI integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_rpi/src/state/access.rs
+  [getExtRpiProgramId(staging).toBase58()]: {
+    [protocolBitflagKey(RPI_PROTOCOL)]: {
+      name: "Rpi",
       staging: true,
       permissions: {
         [1 << 0]: "Configure",

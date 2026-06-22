@@ -1,7 +1,14 @@
 import { BN, Wallet } from "@coral-xyz/anchor";
 import { Keypair, PublicKey } from "@solana/web3.js";
 
-import { EPI_PROTOCOL, GlamClient, USDC, WSOL, nameToChars } from "../../src";
+import {
+  GLAM_MINT_PROTOCOL,
+  RPI_PROTOCOL,
+  GlamClient,
+  USDC,
+  WSOL,
+  stringToChars,
+} from "../../src";
 import {
   airdrop,
   createGlamStateForTest,
@@ -11,7 +18,7 @@ import {
 import { expectPublicKeyArrayEqual } from "../test-utils";
 
 const txOptions = { simulate: true };
-const delegate = Keypair.fromSeed(str2seed("ext_epi_delegate"));
+const delegate = Keypair.fromSeed(str2seed("ext_rpi_delegate"));
 const valuedPosition = Keypair.generate().publicKey;
 const usdPosition = Keypair.generate().publicKey;
 const tokenizedPosition = Keypair.generate().publicKey;
@@ -19,6 +26,7 @@ const valuedBaseAmount = new BN(2_000_000_000);
 const usdObservationAmount = new BN(125_000_000);
 const tokenizedObservationAmount = new BN(50_000_000);
 const tokenizedExternalShares = new BN(42);
+const testRunName = stringToChars(`Ext RPI ${Date.now().toString(36)}`);
 
 const baseAssetDenomination = {
   denom: { mint: {} },
@@ -53,7 +61,7 @@ const storedI128ToString = (value: { bytes: number[] }) => {
 
 const findPositionObservation = (
   observationState: Awaited<
-    ReturnType<GlamClient["epi"]["fetchObservationState"]>
+    ReturnType<GlamClient["rpi"]["fetchObservationState"]>
   >,
   position: PublicKey,
 ) => {
@@ -80,7 +88,7 @@ const buildValuedConfig = () => ({
   sourceType: { trusted: {} },
   denomination: baseAssetDenomination,
   submitAllowlist: [delegate.publicKey],
-  validateAllowlist: [],
+  validateAllowlist: [delegate.publicKey],
   configureAllowlist: [],
 });
 
@@ -105,9 +113,18 @@ const buildTokenizedConfig = (enabled = true) => ({
   configureAllowlist: [],
 });
 
-describe("ext_epi", () => {
+describe("ext_rpi", () => {
   const glamClient = new GlamClient();
   const glamClientDelegate = new GlamClient({ wallet: new Wallet(delegate) });
+
+  const priceVault = async () => {
+    const priceIxs = await glamClient.price.priceVaultIxs();
+    const priceTx = await glamClient.rpi.txBuilder.buildVersionedTx(
+      priceIxs,
+      txOptions,
+    );
+    await glamClient.sendAndConfirm(priceTx);
+  };
 
   beforeAll(async () => {
     await airdrop(
@@ -117,31 +134,37 @@ describe("ext_epi", () => {
     );
   });
 
-  it("Creates a vault with EPI access and a submit delegate", async () => {
+  it("Creates a vault with RPI access and a submit delegate", async () => {
     const integrationAcls = [
       {
-        integrationProgram: glamClient.extEpiProgram.programId,
-        protocolsBitmask: EPI_PROTOCOL,
+        integrationProgram: glamClient.mintProgram.programId,
+        protocolsBitmask: GLAM_MINT_PROTOCOL,
+        protocolPolicies: [],
+      },
+      {
+        integrationProgram: glamClient.extRpiProgram.programId,
+        protocolsBitmask: RPI_PROTOCOL,
         protocolPolicies: [],
       },
     ];
 
     const { statePda, vaultPda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: nameToChars("Ext EPI Tests"),
+      name: testRunName,
       assets: [WSOL, USDC],
       integrationAcls,
     });
 
     glamClientDelegate.statePda = statePda;
 
-    await glamClient.access.grantDelegatePermissions(
+    const txSig = await glamClient.access.grantDelegatePermissions(
       delegate.publicKey,
-      glamClient.extEpiProgram.programId,
-      EPI_PROTOCOL,
-      new BN(0b00000110),
+      glamClient.extRpiProgram.programId,
+      RPI_PROTOCOL,
+      new BN(0b00000110), // submit + validate
       txOptions,
     );
+    console.log("Grant delegate RPI permissions:", txSig);
 
     console.log("State PDA:", statePda.toBase58());
     console.log("Vault PDA:", vaultPda.toBase58());
@@ -152,22 +175,23 @@ describe("ext_epi", () => {
     expect(stateModel.externalPositions).toEqual([]);
   }, 30_000);
 
-  it("Upserts tracked positions and initializes the observation PDA", async () => {
-    await glamClient.epi.upsertExternalPosition(buildValuedConfig(), txOptions);
-    await glamClient.epi.upsertExternalPosition(buildUsdConfig(), txOptions);
-    await glamClient.epi.upsertExternalPosition(
+  it("Upserts RPI positions and initializes the observation PDA", async () => {
+    await glamClient.rpi.upsertRegisteredPosition(
+      buildValuedConfig(),
+      txOptions,
+    );
+    await glamClient.rpi.upsertRegisteredPosition(buildUsdConfig(), txOptions);
+    await glamClient.rpi.upsertRegisteredPosition(
       buildTokenizedConfig(),
       txOptions,
     );
 
     const stateModel = await glamClient.fetchStateModel();
     expectPublicKeyArrayEqual(stateModel.externalPositions, [
-      valuedPosition,
-      usdPosition,
-      tokenizedPosition,
+      glamClient.rpi.getObservationStatePda(),
     ]);
 
-    const observationState = await glamClient.epi.fetchObservationState();
+    const observationState = await glamClient.rpi.fetchObservationState();
     expect(observationState).not.toBeNull();
     expect(observationState?.glamState.equals(glamClient.statePda)).toBe(true);
     expect(observationState?.positionsLen).toBe(3);
@@ -192,10 +216,10 @@ describe("ext_epi", () => {
     );
     expect(usdObservation.hasPending).toBe(false);
     expect(usdObservation.hasValidated).toBe(false);
-  });
+  }, 30_000);
 
   it("Restricts submission using the configured position allowlist", async () => {
-    await glamClientDelegate.epi.submitExternalObservation(
+    await glamClientDelegate.rpi.submitObservation(
       {
         positionId: valuedPosition.toBytes(),
         amount: valuedBaseAmount,
@@ -206,7 +230,7 @@ describe("ext_epi", () => {
     );
 
     try {
-      const txSig = await glamClient.epi.submitExternalObservation(
+      const txSig = await glamClient.rpi.submitObservation(
         {
           positionId: valuedPosition.toBytes(),
           amount: valuedBaseAmount.addn(1),
@@ -220,7 +244,7 @@ describe("ext_epi", () => {
       expect(error.message).toBe("Signer is not authorized");
     }
 
-    const observationState = await glamClient.epi.fetchObservationState();
+    const observationState = await glamClient.rpi.fetchObservationState();
     const valuedObservation = findPositionObservation(
       observationState,
       valuedPosition,
@@ -237,13 +261,13 @@ describe("ext_epi", () => {
     ).not.toBe("0");
   });
 
-  it("Validates observations and publishes the EPI priced protocol", async () => {
-    await glamClientDelegate.epi.validateExternalObservation(
+  it("Validates observations and prices RPI through glam_mint", async () => {
+    await glamClientDelegate.rpi.validateObservation(
       valuedPosition.toBytes(),
       txOptions,
     );
 
-    await glamClient.epi.submitExternalObservation(
+    await glamClient.rpi.submitObservation(
       {
         positionId: usdPosition.toBytes(),
         amount: usdObservationAmount,
@@ -253,12 +277,9 @@ describe("ext_epi", () => {
       txOptions,
     );
 
-    await glamClient.epi.validateExternalObservation(
-      usdPosition.toBytes(),
-      txOptions,
-    );
+    await glamClient.rpi.validateObservation(usdPosition.toBytes(), txOptions);
 
-    await glamClient.epi.submitExternalObservation(
+    await glamClient.rpi.submitObservation(
       {
         positionId: tokenizedPosition.toBytes(),
         amount: tokenizedObservationAmount,
@@ -270,7 +291,7 @@ describe("ext_epi", () => {
     );
 
     try {
-      const txSig = await glamClient.epi.validateExternalObservation(
+      const txSig = await glamClient.rpi.validateObservation(
         {
           positionId: tokenizedPosition.toBytes(),
           observedMintOracle: await glamClient.getSolOracle(),
@@ -279,15 +300,15 @@ describe("ext_epi", () => {
       );
       expect(txSig).toBeUndefined();
     } catch (error: any) {
-      expect(error.message).toContain("Invalid pricing oracle");
+      expect(error.message).toContain("Invalid oracle for asset price");
     }
 
-    await glamClient.epi.validateExternalObservation(
+    await glamClient.rpi.validateObservation(
       tokenizedPosition.toBytes(),
       txOptions,
     );
 
-    const observationState = await glamClient.epi.fetchObservationState();
+    const observationState = await glamClient.rpi.fetchObservationState();
     const valuedObservation = findPositionObservation(
       observationState,
       valuedPosition,
@@ -328,12 +349,14 @@ describe("ext_epi", () => {
       tokenizedObservationAmount.toString(),
     );
 
+    await priceVault();
+
     const stateAccount = await glamClient.fetchStateAccount();
     const pricedProtocol = stateAccount.pricedProtocols.find(
       (protocol) =>
         protocol.integrationProgram.equals(
-          glamClient.extEpiProgram.programId,
-        ) && protocol.protocolBitflag === EPI_PROTOCOL,
+          glamClient.extRpiProgram.programId,
+        ) && protocol.protocolBitflag === RPI_PROTOCOL,
     );
 
     expect(pricedProtocol).toBeDefined();
@@ -344,25 +367,22 @@ describe("ext_epi", () => {
         .toString(),
     );
     expectPublicKeyArrayEqual(pricedProtocol?.positions || [], [
-      valuedPosition,
-      usdPosition,
-      tokenizedPosition,
+      glamClient.rpi.getObservationStatePda(),
     ]);
   });
 
   it("Clears disabled positions and refreshes the aggregate", async () => {
-    await glamClient.epi.upsertExternalPosition(
+    await glamClient.rpi.upsertRegisteredPosition(
       buildTokenizedConfig(false),
       txOptions,
     );
 
     const stateModel = await glamClient.fetchStateModel();
     expectPublicKeyArrayEqual(stateModel.externalPositions, [
-      valuedPosition,
-      usdPosition,
+      glamClient.rpi.getObservationStatePda(),
     ]);
 
-    let observationState = await glamClient.epi.fetchObservationState();
+    let observationState = await glamClient.rpi.fetchObservationState();
     const tokenizedObservation = findPositionObservation(
       observationState,
       tokenizedPosition,
@@ -373,9 +393,9 @@ describe("ext_epi", () => {
       storedI128ToString(tokenizedObservation.validatedBaseAssetAmount),
     ).toBe("0");
 
-    await glamClientDelegate.epi.refreshPricedProtocol(txOptions);
+    await priceVault();
 
-    observationState = await glamClient.epi.fetchObservationState();
+    observationState = await glamClient.rpi.fetchObservationState();
     const valuedObservation = findPositionObservation(
       observationState,
       valuedPosition,
@@ -391,19 +411,20 @@ describe("ext_epi", () => {
     const pricedProtocol = stateAccount.pricedProtocols.find(
       (protocol) =>
         protocol.integrationProgram.equals(
-          glamClient.extEpiProgram.programId,
-        ) && protocol.protocolBitflag === EPI_PROTOCOL,
+          glamClient.extRpiProgram.programId,
+        ) && protocol.protocolBitflag === RPI_PROTOCOL,
     );
 
     expect(pricedProtocol).toBeDefined();
     expect(pricedProtocol?.amount.toString()).toBe(
       new BN(valuedBaseAmount)
-        .add(new BN(storedI128ToString(usdObservation.validatedBaseAssetAmount)))
+        .add(
+          new BN(storedI128ToString(usdObservation.validatedBaseAssetAmount)),
+        )
         .toString(),
     );
     expectPublicKeyArrayEqual(pricedProtocol?.positions || [], [
-      valuedPosition,
-      usdPosition,
+      glamClient.rpi.getObservationStatePda(),
     ]);
   });
 });

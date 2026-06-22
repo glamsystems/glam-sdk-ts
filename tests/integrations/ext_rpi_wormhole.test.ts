@@ -2,7 +2,7 @@ import { BN } from "@coral-xyz/anchor";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 
 import {
-  EPI_PROTOCOL,
+  RPI_PROTOCOL,
   GlamClient,
   HYPEREVM_NAV_ADAPTER_V2,
   USDC,
@@ -70,7 +70,7 @@ const positionIdToPubkey = (positionId: number[]) =>
 
 const findPositionObservation = (
   observationState: Awaited<
-    ReturnType<GlamClient["epi"]["fetchObservationState"]>
+    ReturnType<GlamClient["rpi"]["fetchObservationState"]>
   >,
   position: PublicKey,
 ) => {
@@ -177,7 +177,7 @@ const buildMockSignedVaa = (vaaBody: Buffer) => {
   return Buffer.concat([header, Buffer.alloc(66, 1), vaaBody]);
 };
 
-describe("ext_epi wormhole", () => {
+describe("ext_rpi wormhole", () => {
   const glamClient = new GlamClient();
   const wormholePosition = Keypair.generate().publicKey;
   const emitterAddress = evmAddressToWormholeEmitterAddress(
@@ -192,15 +192,15 @@ describe("ext_epi wormhole", () => {
   beforeAll(async () => {
     const integrationAcls = [
       {
-        integrationProgram: glamClient.extEpiProgram.programId,
-        protocolsBitmask: EPI_PROTOCOL,
+        integrationProgram: glamClient.extRpiProgram.programId,
+        protocolsBitmask: RPI_PROTOCOL,
         protocolPolicies: [],
       },
     ];
 
     const { statePda } = await createGlamStateForTest(glamClient, {
       ...defaultInitStateParams,
-      name: stringToChars("Ext EPI Wormhole"),
+      name: stringToChars("Ext RPI Wormhole"),
       assets: [USDC],
       integrationAcls,
     });
@@ -209,7 +209,7 @@ describe("ext_epi wormhole", () => {
   }, 30_000);
 
   it("submits a Wormhole observation through the Verification Shim interface", async () => {
-    await glamClient.epi.upsertExternalPosition(
+    await glamClient.rpi.upsertRegisteredPosition(
       {
         positionId: wormholePosition.toBytes(),
         positionType: { valued: {} },
@@ -222,7 +222,7 @@ describe("ext_epi wormhole", () => {
       },
       txOptions,
     );
-    await glamClient.epi.upsertExternalPositionWormholeConfig(
+    await glamClient.rpi.upsertRegisteredPositionWormholeConfig(
       {
         positionId: wormholePosition.toBytes(),
         emitterChain: HYPEREVM_WORMHOLE_CHAIN_ID,
@@ -233,7 +233,7 @@ describe("ext_epi wormhole", () => {
       },
       txOptions,
     );
-    await glamClient.epi.upsertExternalPositionWormholeHyperliquidConfig(
+    await glamClient.rpi.upsertRegisteredPositionWormholeHyperliquidConfig(
       {
         positionId: wormholePosition.toBytes(),
         hyperliquidAccount,
@@ -275,33 +275,32 @@ describe("ext_epi wormhole", () => {
     });
     const signedVaa = buildMockSignedVaa(vaaBody);
 
-    const submitTx =
-      await glamClient.epi.txBuilder.submitExternalObservationWormholeTx(
-        {
-          positionId: wormholePosition.toBytes(),
-          signedVaa,
-          guardianSet: SystemProgram.programId,
-          wormholeVerifyVaaShimProgram: WORMHOLE_VERIFY_VAA_SHIM_PROGRAM,
-        },
-        SystemProgram.programId,
-        txOptions,
-        false,
-      );
+    const submitTx = await glamClient.rpi.txBuilder.submitObservationWormholeTx(
+      {
+        positionId: wormholePosition.toBytes(),
+        signedVaa,
+        guardianSet: SystemProgram.programId,
+        wormholeVerifyVaaShimProgram: WORMHOLE_VERIFY_VAA_SHIM_PROGRAM,
+      },
+      SystemProgram.programId,
+      txOptions,
+      false,
+    );
     await glamClient.sendAndConfirm(submitTx);
 
-    const wormholeConfig = await glamClient.epi.fetchWormholeObservationConfig(
+    const wormholeConfig = await glamClient.rpi.fetchWormholeObservationConfig(
       wormholePosition.toBytes(),
     );
     expect(wormholeConfig?.hasLastSequence).toBe(true);
     expect(wormholeConfig?.lastSequence.toString()).toBe("0");
     const hyperliquidConfig =
-      await glamClient.epi.fetchWormholeHyperliquidObservationConfig(
+      await glamClient.rpi.fetchWormholeHyperliquidObservationConfig(
         wormholePosition.toBytes(),
       );
     expect(hyperliquidConfig?.perpDexIndex).toBe(0);
     expect(hyperliquidConfig?.usdcSpotToken.toString()).toBe("0");
 
-    const observationState = await glamClient.epi.fetchObservationState();
+    const observationState = await glamClient.rpi.fetchObservationState();
     const observation = findPositionObservation(
       observationState,
       wormholePosition,

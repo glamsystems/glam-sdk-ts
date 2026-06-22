@@ -3229,235 +3229,6 @@ export type GlamMint = {
       ]
     },
     {
-      "name": "priceExternalPositions",
-      "docs": [
-        "Price external positions for a vault",
-        "",
-        "Extra accounts required:",
-        "- Observation state account"
-      ],
-      "discriminator": [
-        94,
-        199,
-        82,
-        243,
-        235,
-        193,
-        4,
-        144
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                10,
-                55,
-                49,
-                193,
-                142,
-                247,
-                75,
-                193,
-                33,
-                61,
-                5,
-                218,
-                254,
-                219,
-                143,
-                206,
-                156,
-                138,
-                14,
-                32,
-                89,
-                232,
-                248,
-                173,
-                46,
-                77,
-                46,
-                206,
-                189,
-                171,
-                68,
-                237
-              ]
-            }
-          }
-        },
-        {
-          "name": "signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "solUsdOracle"
-        },
-        {
-          "name": "baseAssetOracle"
-        },
-        {
-          "name": "integrationAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  105,
-                  110,
-                  116,
-                  101,
-                  103,
-                  114,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  45,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "glamConfig",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  108,
-                  111,
-                  98,
-                  97,
-                  108,
-                  45,
-                  99,
-                  111,
-                  110,
-                  102,
-                  105,
-                  103
-                ]
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                10,
-                11,
-                0,
-                83,
-                72,
-                16,
-                46,
-                144,
-                46,
-                42,
-                79,
-                22,
-                157,
-                123,
-                21,
-                242,
-                192,
-                146,
-                1,
-                78,
-                88,
-                59,
-                102,
-                9,
-                190,
-                226,
-                92,
-                189,
-                187,
-                232,
-                83,
-                220
-              ]
-            }
-          }
-        },
-        {
-          "name": "glamProtocol",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
-        },
-        {
-          "name": "eventAuthority",
-          "optional": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  95,
-                  95,
-                  101,
-                  118,
-                  101,
-                  110,
-                  116,
-                  95,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "eventProgram",
-          "optional": true,
-          "address": "gstgm1M39mhgnvgyScGUDRwNn5kNVSd97hTtyow1Et5"
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "priceKaminoObligations",
       "docs": [
         "Prices Kamino obligations. Reserves and obligations must be refreshed in the same slot before calling this ix.",
@@ -5288,6 +5059,176 @@ export type GlamMint = {
                 220
               ]
             }
+          }
+        },
+        {
+          "name": "glamProtocol",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "eventAuthority",
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "eventProgram",
+          "optional": true,
+          "address": "gstgm1M39mhgnvgyScGUDRwNn5kNVSd97hTtyow1Et5"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "priceRegisteredPositions",
+      "docs": [
+        "Price registered positions for a vault"
+      ],
+      "discriminator": [
+        90,
+        157,
+        162,
+        50,
+        236,
+        16,
+        188,
+        3
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "observationState",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  98,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                10,
+                55,
+                49,
+                189,
+                115,
+                88,
+                224,
+                145,
+                179,
+                50,
+                22,
+                26,
+                238,
+                54,
+                105,
+                211,
+                138,
+                78,
+                44,
+                43,
+                151,
+                4,
+                226,
+                76,
+                184,
+                205,
+                122,
+                119,
+                91,
+                154,
+                100,
+                50
+              ]
+            }
+          }
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
           }
         },
         {
@@ -7373,6 +7314,19 @@ export type GlamMint = {
       ]
     },
     {
+      "name": "observationState",
+      "discriminator": [
+        122,
+        174,
+        197,
+        53,
+        129,
+        9,
+        165,
+        132
+      ]
+    },
+    {
       "name": "requestQueue",
       "discriminator": [
         172,
@@ -7699,6 +7653,54 @@ export type GlamMint = {
           {
             "name": "expiresAt",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "denomination",
+      "docs": [
+        "Denomination of an observation amount.",
+        "Never reorder existing variants — append only."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "usd"
+          },
+          {
+            "name": "mint"
+          }
+        ]
+      }
+    },
+    {
+      "name": "denominationSpec",
+      "docs": [
+        "Full denomination spec: the discriminant plus an optional mint pubkey."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "denom",
+            "type": {
+              "defined": {
+                "name": "denomination"
+              }
+            }
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "Only meaningful when `denom == Denomination::Mint`.",
+              "Set to `Pubkey::default()` for `Usd`."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -8485,6 +8487,136 @@ export type GlamMint = {
       }
     },
     {
+      "name": "observation",
+      "docs": [
+        "A single observation snapshot."
+      ],
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "docs": [
+              "Signed amount in the observation's denomination."
+            ],
+            "type": {
+              "defined": {
+                "name": "storedI128"
+              }
+            }
+          },
+          {
+            "name": "denomination",
+            "docs": [
+              "Denomination of the amount."
+            ],
+            "type": {
+              "defined": {
+                "name": "denominationSpec"
+              }
+            }
+          },
+          {
+            "name": "padDenom",
+            "docs": [
+              "Alignment padding after denomination (to 8-byte boundary for i64)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "observationTimestamp",
+            "docs": [
+              "Unix timestamp of the observation."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "externalShares",
+            "docs": [
+              "External share count (for Tokenized positions)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "submittedBy",
+            "docs": [
+              "Signer who submitted this observation."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "submittedAtSlot",
+            "docs": [
+              "Slot at which this observation was submitted."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "observationState",
+      "docs": [
+        "Single PDA per vault that tracks all registered position observations.",
+        "Seeds: [SEED_OBSERVATION_STATE, glam_state.key()]"
+      ],
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glamState",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "positionsLen",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                6
+              ]
+            }
+          },
+          {
+            "name": "positions",
+            "docs": [
+              "Per-position observation entries."
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "positionObservation"
+                  }
+                },
+                16
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "oracleConfigs",
       "docs": [
         "Vault-specific oracle configs. If available, these configs are preferred over the global config."
@@ -8659,6 +8791,119 @@ export type GlamMint = {
             "type": {
               "defined": {
                 "name": "hurdleType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "positionObservation",
+      "docs": [
+        "Observation data for a single position, stored inline in `ObservationState`."
+      ],
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "positionId",
+            "docs": [
+              "The position_id this entry tracks."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "hasPending",
+            "docs": [
+              "Whether a pending observation exists."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "padPending",
+            "docs": [
+              "Alignment padding after has_pending (to 8-byte boundary for Observation)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "pendingObservation",
+            "docs": [
+              "The pending observation (only valid when `has_pending == true`)."
+            ],
+            "type": {
+              "defined": {
+                "name": "observation"
+              }
+            }
+          },
+          {
+            "name": "hasValidated",
+            "docs": [
+              "Whether a validated observation exists."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "padValidated",
+            "docs": [
+              "Alignment padding after has_validated (to 8-byte boundary for Observation)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "lastValidatedObservation",
+            "docs": [
+              "The last validated observation (only valid when `has_validated == true`)."
+            ],
+            "type": {
+              "defined": {
+                "name": "observation"
+              }
+            }
+          },
+          {
+            "name": "validatedBy",
+            "docs": [
+              "Signer who last validated."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "validatedAtSlot",
+            "docs": [
+              "Slot at which last validation occurred."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "validatedBaseAssetAmount",
+            "docs": [
+              "Base-asset-normalized amount from the last validated observation.",
+              "This is the value that contributes to the aggregate priced protocol."
+            ],
+            "type": {
+              "defined": {
+                "name": "storedI128"
               }
             }
           }
@@ -8945,6 +9190,30 @@ export type GlamMint = {
                   }
                 }
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "storedI128",
+      "docs": [
+        "Byte-backed i128 storage that keeps the containing zero-copy account 8-byte aligned."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bytes",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
             }
           }
         ]

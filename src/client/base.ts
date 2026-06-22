@@ -44,7 +44,7 @@ import {
 
 import {
   ExtBridgeProgram,
-  ExtEpiProgram,
+  ExtRpiProgram,
   ExtCctpProgram,
   ExtJupiterProgram,
   ExtKaminoProgram,
@@ -58,7 +58,7 @@ import {
   GlamMintProgram,
   GlamProtocolProgram,
   getExtBridgeProgram,
-  getExtEpiProgram,
+  getExtRpiProgram,
   getExtCctpProgram,
   getExtJupiterProgram,
   getExtKaminoProgram,
@@ -171,7 +171,7 @@ export class BaseClient {
   private _extStakePoolProgram?: ExtStakePoolProgram;
   private _extCctpProgram?: ExtCctpProgram;
   private _extBridgeProgram?: ExtBridgeProgram;
-  private _extEpiProgram?: ExtEpiProgram;
+  private _extRpiProgram?: ExtRpiProgram;
   private _extLoopscaleProgram?: ExtLoopscaleProgram;
   private _extPhoenixProgram?: ExtPhoenixProgram;
   private _extJupiterProgram?: ExtJupiterProgram;
@@ -287,11 +287,11 @@ export class BaseClient {
     return this._extBridgeProgram;
   }
 
-  get extEpiProgram(): ExtEpiProgram {
-    if (!this._extEpiProgram) {
-      this._extEpiProgram = getExtEpiProgram(this.provider, this.staging);
+  get extRpiProgram(): ExtRpiProgram {
+    if (!this._extRpiProgram) {
+      this._extRpiProgram = getExtRpiProgram(this.provider, this.staging);
     }
-    return this._extEpiProgram;
+    return this._extRpiProgram;
   }
 
   get extLoopscaleProgram(): ExtLoopscaleProgram {
