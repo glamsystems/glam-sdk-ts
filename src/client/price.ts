@@ -56,6 +56,8 @@ import {
   KAMINO_LENDING_PROTOCOL,
   KAMINO_VAULTS_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
+  JUPITER_BORROW_PROTOCOL,
+  JUPITER_EARN_PROTOCOL,
   LOOPSCALE_BORROW_PROTOCOL,
   LOOPSCALE_LENDING_PROTOCOL,
   LOOPSCALE_VAULT_PROTOCOL,
@@ -71,6 +73,18 @@ import {
   NeutralBundleAccount,
   NTBUNDLE_PROGRAM_ID,
 } from "./neutral";
+import {
+  MIN_TICK,
+  buildUpdateExchangePricesIx,
+  buildUpdateRateIx,
+  fetchLendingByFTokenMint,
+  fetchLendingReserveAndVault,
+  fetchPositionInfo,
+  fetchVaultConfigInfo,
+  getTickPda,
+  getVaultConfigPda,
+  getVaultStatePda,
+} from "./jupiter-lend/shared";
 
 const PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET = 360;
 const PUBKEY_LEN = 32;
@@ -825,6 +839,56 @@ export class PriceClient {
     return holdings;
   }
 
+  private async categorizeExternalPositions(externalPositions: PublicKey[]) {
+    const categorizer = new PositionCategorizer(this.base.connection);
+    return await categorizer.categorizePositions(
+      externalPositions,
+      "confirmed",
+    );
+  }
+
+  private addKaminoOracleReserve(
+    kaminoReserves: PkSet,
+    assetMeta: { oracle: PublicKey; oracleSource: string },
+  ) {
+    if (assetMeta.oracleSource === "KaminoReserve") {
+      kaminoReserves.add(assetMeta.oracle);
+    }
+  }
+
+  private async resolvePositionTokenAccount(
+    positionMint: PublicKey,
+  ): Promise<PublicKey> {
+    const candidateAtas = [TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID].map(
+      (programId) => ({
+        programId,
+        ata: this.base.getVaultAta(positionMint, programId),
+      }),
+    );
+    const accountsInfo = await this.base.connection.getMultipleAccountsInfo(
+      candidateAtas.map(({ ata }) => ata),
+    );
+
+    for (let i = 0; i < candidateAtas.length; i++) {
+      const accountInfo = accountsInfo[i];
+      if (
+        !accountInfo ||
+        !accountInfo.owner.equals(candidateAtas[i].programId)
+      ) {
+        continue;
+      }
+      const tokenAccount = AccountLayout.decode(accountInfo.data);
+      const mint = new PublicKey(tokenAccount.mint);
+      if (mint.equals(positionMint) && tokenAccount.amount === 1n) {
+        return candidateAtas[i].ata;
+      }
+    }
+
+    throw new Error(
+      `Jupiter Borrow position token account not found for mint ${positionMint.toBase58()}`,
+    );
+  }
+
   /**
    * Returns an instruction that prices Kamino obligations.
    * If there are no Kamino obligations, returns null.
@@ -998,6 +1062,174 @@ export class PriceClient {
       .instruction();
 
     return { ixs: [priceIx], kaminoReserves: reserves };
+  }
+
+  public async priceJupiterEarnPositionsIxs(
+    stateModel: StateModel | null = this.cachedStateModel,
+  ): Promise<PricingChunk> {
+    const methods = this.base.mintProgram.methods as any;
+    if (typeof methods.priceJupiterEarnPositions !== "function") {
+      return { ixs: [], kaminoReserves: [] };
+    }
+
+    const model = stateModel || (await this.base.fetchStateModel());
+    const { jupiterEarnAtas } = await this.categorizeExternalPositions(
+      model.externalPositions || [],
+    );
+    if (jupiterEarnAtas.length === 0) {
+      return { ixs: [], kaminoReserves: [] };
+    }
+
+    const accountsInfo =
+      await this.base.connection.getMultipleAccountsInfo(jupiterEarnAtas);
+    const remainingAccounts: AccountMeta[] = [];
+    const ixs: TransactionInstruction[] = [];
+    const updatedLendings = new PkSet();
+    const kaminoReserves = new PkSet();
+
+    for (let i = 0; i < jupiterEarnAtas.length; i++) {
+      const accountInfo = accountsInfo[i];
+      if (!accountInfo) {
+        throw new Error(
+          `Jupiter Earn fToken account not found: ${jupiterEarnAtas[i].toBase58()}`,
+        );
+      }
+      const tokenAccount = AccountLayout.decode(accountInfo.data);
+      const lending = await fetchLendingByFTokenMint(
+        this.base.connection,
+        new PublicKey(tokenAccount.mint),
+      );
+      if (!updatedLendings.has(lending.pubkey)) {
+        ixs.push(buildUpdateRateIx(lending));
+        updatedLendings.add(lending.pubkey);
+      }
+
+      const assetMeta = await this.base.getAssetMeta(lending.mint);
+      this.addKaminoOracleReserve(kaminoReserves, assetMeta);
+      remainingAccounts.push(
+        { pubkey: jupiterEarnAtas[i], isSigner: false, isWritable: false },
+        { pubkey: lending.pubkey, isSigner: false, isWritable: false },
+        { pubkey: assetMeta.oracle, isSigner: false, isWritable: false },
+      );
+    }
+
+    const [solUsdOracle, baseAssetOracle] = await Promise.all([
+      this.base.getSolOracle(),
+      this.getBaseAssetOracle(),
+    ]);
+    const priceIx = await methods
+      .priceJupiterEarnPositions()
+      .accounts({
+        glamState: this.base.statePda,
+        solUsdOracle,
+        baseAssetOracle,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+    ixs.push(priceIx);
+
+    return { ixs, kaminoReserves: Array.from(kaminoReserves) };
+  }
+
+  public async priceJupiterBorrowPositionsIxs(
+    stateModel: StateModel | null = this.cachedStateModel,
+  ): Promise<PricingChunk> {
+    const methods = this.base.mintProgram.methods as any;
+    if (typeof methods.priceJupiterBorrowPositions !== "function") {
+      return { ixs: [], kaminoReserves: [] };
+    }
+
+    const model = stateModel || (await this.base.fetchStateModel());
+    const { jupiterBorrowPositions } = await this.categorizeExternalPositions(
+      model.externalPositions || [],
+    );
+    if (jupiterBorrowPositions.length === 0) {
+      return { ixs: [], kaminoReserves: [] };
+    }
+
+    const remainingAccounts: AccountMeta[] = [];
+    const ixs: TransactionInstruction[] = [];
+    const updatedVaultStates = new PkSet();
+    const kaminoReserves = new PkSet();
+
+    for (const positionPubkey of jupiterBorrowPositions) {
+      const position = await fetchPositionInfo(
+        this.base.connection,
+        positionPubkey,
+      );
+      const vaultConfig = getVaultConfigPda(position.vaultId);
+      const vaultState = getVaultStatePda(position.vaultId);
+      const vaultConfigInfo = await fetchVaultConfigInfo(
+        this.base.connection,
+        vaultConfig,
+      );
+      const [
+        positionTokenAccount,
+        supplyReserveAndVault,
+        borrowReserveAndVault,
+        supplyAssetMeta,
+        borrowAssetMeta,
+      ] = await Promise.all([
+        this.resolvePositionTokenAccount(position.positionMint),
+        fetchLendingReserveAndVault(
+          this.base.connection,
+          vaultConfigInfo.supplyToken,
+        ),
+        fetchLendingReserveAndVault(
+          this.base.connection,
+          vaultConfigInfo.borrowToken,
+        ),
+        this.base.getAssetMeta(vaultConfigInfo.supplyToken),
+        this.base.getAssetMeta(vaultConfigInfo.borrowToken),
+      ]);
+
+      this.addKaminoOracleReserve(kaminoReserves, supplyAssetMeta);
+      this.addKaminoOracleReserve(kaminoReserves, borrowAssetMeta);
+
+      if (!updatedVaultStates.has(vaultState)) {
+        ixs.push(
+          buildUpdateExchangePricesIx(
+            position.vaultId,
+            vaultConfig,
+            vaultState,
+            supplyReserveAndVault.reserve,
+            borrowReserveAndVault.reserve,
+          ),
+        );
+        updatedVaultStates.add(vaultState);
+      }
+
+      const currentTick = getTickPda(
+        position.vaultId,
+        position.isSupplyOnlyPosition ? MIN_TICK : position.tick,
+      );
+      remainingAccounts.push(
+        { pubkey: positionPubkey, isSigner: false, isWritable: false },
+        { pubkey: positionTokenAccount, isSigner: false, isWritable: false },
+        { pubkey: vaultConfig, isSigner: false, isWritable: false },
+        { pubkey: vaultState, isSigner: false, isWritable: false },
+        { pubkey: currentTick, isSigner: false, isWritable: false },
+        { pubkey: supplyAssetMeta.oracle, isSigner: false, isWritable: false },
+        { pubkey: borrowAssetMeta.oracle, isSigner: false, isWritable: false },
+      );
+    }
+
+    const [solUsdOracle, baseAssetOracle] = await Promise.all([
+      this.base.getSolOracle(),
+      this.getBaseAssetOracle(),
+    ]);
+    const priceIx = await methods
+      .priceJupiterBorrowPositions()
+      .accounts({
+        glamState: this.base.statePda,
+        solUsdOracle,
+        baseAssetOracle,
+      })
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+    ixs.push(priceIx);
+
+    return { ixs, kaminoReserves: Array.from(kaminoReserves) };
   }
 
   /**
@@ -1797,6 +2029,28 @@ export class PriceClient {
       if (orcaIntegrationAcl) {
         const chunk = await this.priceOrcaWhirlpoolPositionsIxs(stateModel);
         if (chunk) chunks.push(chunk);
+      }
+
+      const extJupiterProgram = (this.base as any).extJupiterProgram;
+      if (extJupiterProgram) {
+        const jupiterIntegrationAcl = integrationAcls.find((acl) =>
+          acl.integrationProgram.equals(extJupiterProgram.programId),
+        );
+        if (jupiterIntegrationAcl) {
+          if (
+            (jupiterIntegrationAcl.protocolsBitmask & JUPITER_EARN_PROTOCOL) !==
+            0
+          ) {
+            chunks.push(await this.priceJupiterEarnPositionsIxs(stateModel));
+          }
+          if (
+            (jupiterIntegrationAcl.protocolsBitmask &
+              JUPITER_BORROW_PROTOCOL) !==
+            0
+          ) {
+            chunks.push(await this.priceJupiterBorrowPositionsIxs(stateModel));
+          }
+        }
       }
 
       const bridgeIntegrationAcl = integrationAcls.find(

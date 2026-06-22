@@ -1,11 +1,20 @@
 import { Commitment, Connection, PublicKey } from "@solana/web3.js";
-import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
+  AccountLayout,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import {
+  JUPITER_VAULTS_PROGRAM_ID,
   KAMINO_LENDING_PROGRAM,
   KAMINO_OBTRIGATION_SIZE,
   ORCA_POSITION_DISCRIMINATOR,
   ORCA_WHIRLPOOLS_PROGRAM_ID,
 } from "../constants";
+import {
+  findLendingByFTokenMint,
+  POSITION_DISCRIMINATOR,
+} from "../client/jupiter-lend/shared";
 
 /**
  * Categorized external positions by protocol type.
@@ -17,6 +26,10 @@ export interface CategorizedPositions {
   kaminoVaultShareAtas: PublicKey[];
   /** Orca Whirlpools position PDA accounts */
   orcaWhirlpoolPositions: PublicKey[];
+  /** Jupiter Earn fToken token accounts */
+  jupiterEarnAtas: PublicKey[];
+  /** Jupiter Borrow Position accounts */
+  jupiterBorrowPositions: PublicKey[];
   /** Positions that couldn't be categorized */
   unknown: PublicKey[];
 }
@@ -54,6 +67,8 @@ export class PositionCategorizer {
       kaminoObligations: [],
       kaminoVaultShareAtas: [],
       orcaWhirlpoolPositions: [],
+      jupiterEarnAtas: [],
+      jupiterBorrowPositions: [],
       unknown: [],
     };
 
@@ -104,12 +119,22 @@ export class PositionCategorizer {
       ) {
         result.orcaWhirlpoolPositions.push(pubkey);
       } else if (
+        owner.equals(JUPITER_VAULTS_PROGRAM_ID) &&
+        info.data.subarray(0, 8).equals(POSITION_DISCRIMINATOR)
+      ) {
+        result.jupiterBorrowPositions.push(pubkey);
+      } else if (
         owner.equals(TOKEN_PROGRAM_ID) ||
         owner.equals(TOKEN_2022_PROGRAM_ID)
       ) {
-        // Token accounts are assumed to be kamino vault share ATAs
-        // since they're in externalPositions (not regular token holdings)
-        result.kaminoVaultShareAtas.push(pubkey);
+        const tokenAccount = AccountLayout.decode(info.data);
+        const mint = new PublicKey(tokenAccount.mint);
+        const lending = await findLendingByFTokenMint(this.connection, mint);
+        if (lending) {
+          result.jupiterEarnAtas.push(pubkey);
+        } else {
+          result.kaminoVaultShareAtas.push(pubkey);
+        }
       } else {
         result.unknown.push(pubkey);
       }

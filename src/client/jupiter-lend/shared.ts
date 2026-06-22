@@ -1,8 +1,10 @@
+import { BN } from "@coral-xyz/anchor";
 import {
   AccountMeta,
   AddressLookupTableAccount,
   Connection,
   PublicKey,
+  TransactionInstruction,
 } from "@solana/web3.js";
 
 import {
@@ -69,14 +71,29 @@ export const LIQUIDITY_SUPPLY_POSITION_DISCRIMINATOR = Buffer.from([
 export const LIQUIDITY_BORROW_POSITION_DISCRIMINATOR = Buffer.from([
   73, 126, 65, 123, 220, 126, 197, 24,
 ]);
+export const UPDATE_RATE_DISCRIMINATOR = Buffer.from([
+  24, 225, 53, 189, 72, 212, 225, 178,
+]);
+export const UPDATE_EXCHANGE_PRICES_DISCRIMINATOR = Buffer.from([
+  209, 14, 188, 95, 242, 20, 119, 196,
+]);
 
 // `Lending` (Anchor) layout: discriminator(8) + mint(32) + f_token_mint(32) +
 //   lending_id(2) + decimals(1) + rewards_rate_model(32) + liquidity_exchange_price(8) +
 //   token_exchange_price(8) + last_update_timestamp(8) + token_reserves_liquidity(32) +
 //   supply_position_on_liquidity(32) + bump(1) = 196 bytes.
-export const LENDING_REWARDS_RATE_MODEL_OFFSET = 8 + 32 + 32 + 2 + 1;
+export const LENDING_ACCOUNT_SIZE = 196;
+export const LENDING_MINT_OFFSET = 8;
+export const LENDING_F_TOKEN_MINT_OFFSET = LENDING_MINT_OFFSET + PUBKEY_BYTES;
+export const LENDING_DECIMALS_OFFSET =
+  LENDING_F_TOKEN_MINT_OFFSET + PUBKEY_BYTES + 2;
+export const LENDING_REWARDS_RATE_MODEL_OFFSET = LENDING_DECIMALS_OFFSET + 1;
+export const LENDING_TOKEN_EXCHANGE_PRICE_OFFSET =
+  LENDING_REWARDS_RATE_MODEL_OFFSET + PUBKEY_BYTES + 8;
+export const LENDING_LAST_UPDATE_TIMESTAMP_OFFSET =
+  LENDING_TOKEN_EXCHANGE_PRICE_OFFSET + 8;
 export const LENDING_TOKEN_RESERVES_LIQUIDITY_OFFSET =
-  8 + 32 + 32 + 2 + 1 + 32 + 8 + 8 + 8;
+  LENDING_LAST_UPDATE_TIMESTAMP_OFFSET + 8;
 export const LENDING_SUPPLY_POSITION_OFFSET =
   LENDING_TOKEN_RESERVES_LIQUIDITY_OFFSET + 32;
 
@@ -113,6 +130,7 @@ export const POSITION_IS_SUPPLY_ONLY_OFFSET =
   POSITION_MINT_OFFSET + PUBKEY_BYTES;
 export const POSITION_TICK_OFFSET = POSITION_IS_SUPPLY_ONLY_OFFSET + 1;
 export const POSITION_TICK_ID_OFFSET = POSITION_TICK_OFFSET + 4;
+export const POSITION_SUPPLY_AMOUNT_OFFSET = POSITION_TICK_ID_OFFSET + 4;
 
 // Jupiter Vaults remaining-account layout for `operate`:
 //   <oracle sources> <branch accounts (unused here)> <tick_has_debt arrays>.
@@ -122,6 +140,7 @@ export const TICK_TOTAL_IDS_OFFSET = TICK_VALUE_OFFSET + 4 + 1;
 export const TICK_ID_VALUE_OFFSET = 8 + 2;
 export const TICK_ID_MAP_OFFSET = TICK_ID_VALUE_OFFSET + 4;
 export const MIN_TICK = -16383;
+export const MAX_TICK = 16383;
 export const TICKS_PER_TICK_HAS_DEBT_ARRAY = 2048;
 export const LIQUIDITY_POSITION_VAULT_CONFIG_OFFSET = 8;
 export const LIQUIDITY_POSITION_MINT_OFFSET =
@@ -147,6 +166,18 @@ export type JupiterVault = {
   oracle: PublicKey;
   supplyToken: PublicKey;
   borrowToken: PublicKey;
+};
+
+export type JupiterLendingInfo = {
+  pubkey: PublicKey;
+  mint: PublicKey;
+  fTokenMint: PublicKey;
+  decimals: number;
+  rewardsRateModel: PublicKey;
+  tokenExchangePrice: BN;
+  lastUpdateTimestamp: BN;
+  tokenReservesLiquidity: PublicKey;
+  supplyPositionOnLiquidity: PublicKey;
 };
 
 export type VaultStateInfo = {
@@ -179,6 +210,65 @@ export function decodePositionInfo(
     isSupplyOnlyPosition: data.readUInt8(POSITION_IS_SUPPLY_ONLY_OFFSET) !== 0,
     tick: data.readInt32LE(POSITION_TICK_OFFSET),
     tickId: data.readUInt32LE(POSITION_TICK_ID_OFFSET),
+  };
+}
+
+export function decodeLendingInfo(
+  pubkey: PublicKey,
+  data: Buffer,
+): JupiterLendingInfo {
+  if (data.length < LENDING_ACCOUNT_SIZE) {
+    throw new Error(`Lending account ${pubkey.toBase58()} is too small`);
+  }
+  if (!data.subarray(0, 8).equals(LENDING_DISCRIMINATOR)) {
+    throw new Error(`Account ${pubkey.toBase58()} is not a Jupiter Lending`);
+  }
+  return {
+    pubkey,
+    mint: new PublicKey(
+      data.subarray(LENDING_MINT_OFFSET, LENDING_MINT_OFFSET + PUBKEY_BYTES),
+    ),
+    fTokenMint: new PublicKey(
+      data.subarray(
+        LENDING_F_TOKEN_MINT_OFFSET,
+        LENDING_F_TOKEN_MINT_OFFSET + PUBKEY_BYTES,
+      ),
+    ),
+    decimals: data.readUInt8(LENDING_DECIMALS_OFFSET),
+    rewardsRateModel: new PublicKey(
+      data.subarray(
+        LENDING_REWARDS_RATE_MODEL_OFFSET,
+        LENDING_REWARDS_RATE_MODEL_OFFSET + PUBKEY_BYTES,
+      ),
+    ),
+    tokenExchangePrice: new BN(
+      Buffer.from(
+        data.subarray(
+          LENDING_TOKEN_EXCHANGE_PRICE_OFFSET,
+          LENDING_TOKEN_EXCHANGE_PRICE_OFFSET + 8,
+        ),
+      ).reverse(),
+    ),
+    lastUpdateTimestamp: new BN(
+      Buffer.from(
+        data.subarray(
+          LENDING_LAST_UPDATE_TIMESTAMP_OFFSET,
+          LENDING_LAST_UPDATE_TIMESTAMP_OFFSET + 8,
+        ),
+      ).reverse(),
+    ),
+    tokenReservesLiquidity: new PublicKey(
+      data.subarray(
+        LENDING_TOKEN_RESERVES_LIQUIDITY_OFFSET,
+        LENDING_TOKEN_RESERVES_LIQUIDITY_OFFSET + PUBKEY_BYTES,
+      ),
+    ),
+    supplyPositionOnLiquidity: new PublicKey(
+      data.subarray(
+        LENDING_SUPPLY_POSITION_OFFSET,
+        LENDING_SUPPLY_POSITION_OFFSET + PUBKEY_BYTES,
+      ),
+    ),
   };
 }
 
@@ -344,6 +434,16 @@ export function getTickHasDebtPda(vaultId: number, index: number): PublicKey {
   )[0];
 }
 
+export function getTickPda(vaultId: number, tick: number): PublicKey {
+  if (tick < MIN_TICK || tick > MAX_TICK || !Number.isInteger(tick)) {
+    throw new Error(`tick must be in [${MIN_TICK}, ${MAX_TICK}], got ${tick}`);
+  }
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("tick"), u16LeBytes(vaultId), u32LeBytes(tick - MIN_TICK)],
+    JUPITER_VAULTS_PROGRAM_ID,
+  )[0];
+}
+
 export function getTickHasDebtIndex(tick: number): number {
   return Math.floor((tick - MIN_TICK) / TICKS_PER_TICK_HAS_DEBT_ARRAY);
 }
@@ -429,6 +529,40 @@ export async function fetchVaultStateInfo(
     currentBranchId: data.readUInt32LE(VAULT_STATE_CURRENT_BRANCH_ID_OFFSET),
     nextPositionId: data.readUInt32LE(VAULT_STATE_NEXT_POSITION_ID_OFFSET),
   };
+}
+
+export async function findLendingByFTokenMint(
+  connection: Connection,
+  fTokenMint: PublicKey,
+): Promise<JupiterLendingInfo | null> {
+  const accounts = await getProgramAccounts(
+    connection,
+    JUPITER_LENDING_PROGRAM_ID,
+    {
+      filters: [
+        { dataSize: LENDING_ACCOUNT_SIZE },
+        memcmpFilter(0, LENDING_DISCRIMINATOR),
+        memcmpFilter(LENDING_F_TOKEN_MINT_OFFSET, fTokenMint.toBuffer()),
+      ],
+    },
+  );
+  if (accounts.length !== 1) {
+    return null;
+  }
+  return decodeLendingInfo(accounts[0].pubkey, accounts[0].account.data);
+}
+
+export async function fetchLendingByFTokenMint(
+  connection: Connection,
+  fTokenMint: PublicKey,
+): Promise<JupiterLendingInfo> {
+  const lending = await findLendingByFTokenMint(connection, fTokenMint);
+  if (!lending) {
+    throw new Error(
+      `Expected one Jupiter Lending account for fToken mint ${fTokenMint.toBase58()}`,
+    );
+  }
+  return lending;
 }
 
 export async function fetchVaultConfigInfo(
@@ -542,6 +676,56 @@ export async function fetchLendingReserveAndVault(
   );
   const vault = await fetchReserveVault(connection, reserve, mint);
   return { reserve, vault };
+}
+
+export function buildUpdateRateIx(
+  lending: JupiterLendingInfo,
+): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: JUPITER_LENDING_PROGRAM_ID,
+    keys: [
+      { pubkey: lending.pubkey, isSigner: false, isWritable: true },
+      { pubkey: lending.mint, isSigner: false, isWritable: false },
+      { pubkey: lending.fTokenMint, isSigner: false, isWritable: false },
+      {
+        pubkey: lending.tokenReservesLiquidity,
+        isSigner: false,
+        isWritable: false,
+      },
+      { pubkey: lending.rewardsRateModel, isSigner: false, isWritable: false },
+    ],
+    data: UPDATE_RATE_DISCRIMINATOR,
+  });
+}
+
+export function buildUpdateExchangePricesIx(
+  vaultId: number,
+  vaultConfig: PublicKey,
+  vaultState: PublicKey,
+  supplyTokenReservesLiquidity: PublicKey,
+  borrowTokenReservesLiquidity: PublicKey,
+): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: JUPITER_VAULTS_PROGRAM_ID,
+    keys: [
+      { pubkey: vaultState, isSigner: false, isWritable: true },
+      { pubkey: vaultConfig, isSigner: false, isWritable: false },
+      {
+        pubkey: supplyTokenReservesLiquidity,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: borrowTokenReservesLiquidity,
+        isSigner: false,
+        isWritable: false,
+      },
+    ],
+    data: Buffer.concat([
+      UPDATE_EXCHANGE_PRICES_DISCRIMINATOR,
+      u16LeBytes(vaultId),
+    ]),
+  });
 }
 
 export async function fetchLiquidityPosition(
