@@ -1,4 +1,4 @@
-import { BN, BorshAccountsCoder, type Idl } from "@coral-xyz/anchor";
+import { BN } from "@coral-xyz/anchor";
 import {
   AccountMeta,
   PublicKey,
@@ -13,7 +13,6 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
-import MarginfiIdlJson from "../../deps/marginfi/marginfi.json";
 import {
   BaseClient,
   BaseTxBuilder,
@@ -23,6 +22,10 @@ import {
 } from "./base";
 import { MarginfiPolicy } from "../deser/integrationPolicies";
 import {
+  decodeMarginfiBalances,
+  decodeMarginfiBank,
+} from "../deser/marginfiLayouts";
+import {
   KAMINO_FARM_PROGRAM,
   KAMINO_LENDING_PROGRAM,
   MARGINFI_PROGRAM_ID,
@@ -30,8 +33,6 @@ import {
 import { MARGINFI_PROTOCOL } from "../protocols";
 import { Reserve } from "../deser/kaminoLayouts";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
-
-const marginfiAccountsCoder = new BorshAccountsCoder(MarginfiIdlJson as Idl);
 
 function u16le(value: number): Buffer {
   const buffer = Buffer.alloc(2);
@@ -502,26 +503,17 @@ export class MarginfiClient implements ProtocolPolicyClient<MarginfiPolicy> {
       );
     }
 
-    const decoded = marginfiAccountsCoder.decode("Bank", account.data) as {
-      group: PublicKey;
-      mint: PublicKey;
-      liquidity_vault: PublicKey;
-      integration_acc_1: PublicKey;
-      integration_acc_2: PublicKey;
-      config?: {
-        oracle_keys?: PublicKey[];
-      };
-    };
+    const decoded = decodeMarginfiBank(account.data);
 
     return {
       address,
       group: decoded.group,
       mint: decoded.mint,
-      liquidityVault: decoded.liquidity_vault,
+      liquidityVault: decoded.liquidityVault,
       liquidityVaultAuthority: this.getLiquidityVaultAuthority(address),
-      integrationAcc1: decoded.integration_acc_1,
-      integrationAcc2: decoded.integration_acc_2,
-      oracleKeys: (decoded.config?.oracle_keys ?? []).filter(
+      integrationAcc1: decoded.integrationAcc1,
+      integrationAcc2: decoded.integrationAcc2,
+      oracleKeys: decoded.oracleKeys.filter(
         (oracleKey) => !oracleKey.equals(SystemProgram.programId),
       ),
     };
@@ -551,20 +543,9 @@ export class MarginfiClient implements ProtocolPolicyClient<MarginfiPolicy> {
       );
     }
 
-    const decoded = marginfiAccountsCoder.decode(
-      "MarginfiAccount",
-      account.data,
-    ) as {
-      lending_account: {
-        balances: Array<{
-          active: number;
-          bank_pk: PublicKey;
-        }>;
-      };
-    };
-    const activeBanks = decoded.lending_account.balances
+    const activeBanks = decodeMarginfiBalances(account.data)
       .filter((balance) => balance.active !== 0)
-      .map((balance) => balance.bank_pk)
+      .map((balance) => balance.bank)
       .filter((bank) => !bank.equals(SystemProgram.programId));
     const healthBanks = [
       ...activeBanks,
