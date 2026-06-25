@@ -1797,6 +1797,11 @@
       "msg": "Invalid authority"
     },
     {
+      "code": 48012,
+      "name": "CannotRemoveCancelTimelockDelegate",
+      "msg": "Cannot remove delegate with CancelTimelock permission via emergency update"
+    },
+    {
       "code": 49000,
       "name": "InvalidAccountType",
       "msg": "Invalid account type"
@@ -3336,6 +3341,11 @@
       "name": "PROTO_SYSTEM",
       "type": "u16",
       "value": "1"
+    },
+    {
+      "name": "PROTO_SYSTEM_PERM_CANCEL_TIMELOCK",
+      "type": "u64",
+      "value": "8"
     },
     {
       "name": "PROTO_SYSTEM_PERM_EMERGENCY_UPDATE",

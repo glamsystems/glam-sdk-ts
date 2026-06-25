@@ -51,7 +51,7 @@ describe("getProtocolsAndPermissions", () => {
           glamProtocolProgramId,
           protocolBitflagKey(SYSTEM_PROTOCOL),
         ),
-      ).toEqual(["WSOL", "Transfer"]);
+      ).toEqual(["WSOL", "Transfer", "EmergencyUpdate", "CancelTimelock"]);
       expect(
         getPermissionNames(
           staging,

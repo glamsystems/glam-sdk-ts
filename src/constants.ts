@@ -284,6 +284,8 @@ export const getProtocolsAndPermissions = (
       permissions: {
         [1 << 0]: "WSOL",
         [1 << 1]: "Transfer",
+        [1 << 2]: "EmergencyUpdate",
+        [1 << 3]: "CancelTimelock",
       },
     },
     [protocolBitflagKey(STAKE_PROTOCOL)]: {

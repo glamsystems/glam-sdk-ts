@@ -1803,6 +1803,11 @@ export type GlamProtocol = {
       "msg": "Invalid authority"
     },
     {
+      "code": 48012,
+      "name": "cannotRemoveCancelTimelockDelegate",
+      "msg": "Cannot remove delegate with CancelTimelock permission via emergency update"
+    },
+    {
       "code": 49000,
       "name": "invalidAccountType",
       "msg": "Invalid account type"
@@ -3342,6 +3347,11 @@ export type GlamProtocol = {
       "name": "protoSystem",
       "type": "u16",
       "value": "1"
+    },
+    {
+      "name": "protoSystemPermCancelTimelock",
+      "type": "u64",
+      "value": "8"
     },
     {
       "name": "protoSystemPermEmergencyUpdate",
