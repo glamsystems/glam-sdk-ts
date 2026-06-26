@@ -27,6 +27,22 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
     amount: BN,
     signer: PublicKey,
   ): Promise<TransactionInstruction[]> {
+    return this.subscribeIxsForMethod(amount, signer);
+  }
+
+  public async subscribeWithRefNavIxs(
+    amount: BN,
+    signer: PublicKey,
+    refNav: BN | null = null,
+  ): Promise<TransactionInstruction[]> {
+    return this.subscribeIxsForMethod(amount, signer, refNav);
+  }
+
+  private async subscribeIxsForMethod(
+    amount: BN,
+    signer: PublicKey,
+    refNav?: BN | null,
+  ): Promise<TransactionInstruction[]> {
     const { baseAssetMint: depositAsset } =
       await this.client.base.fetchStateModel();
 
@@ -88,8 +104,14 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
 
     const { tokenProgram: depositTokenProgram } =
       await fetchMintAndTokenProgram(this.client.base.connection, depositAsset);
-    const ix = await this.client.base.mintProgram.methods
-      .subscribe(amount)
+    const method =
+      refNav === undefined
+        ? this.client.base.mintProgram.methods.subscribe(amount)
+        : this.client.base.mintProgram.methods.subscribeWithRefNav(
+            amount,
+            refNav,
+          );
+    const ix = await method
       .accounts({
         glamState: this.client.base.statePda,
         glamMint,
@@ -109,6 +131,16 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
   ): Promise<VersionedTransaction> {
     const signer = txOptions.signer || this.client.base.signer;
     const ixs = await this.subscribeIxs(amount, signer);
+    return await this.buildVersionedTx(ixs, txOptions);
+  }
+
+  public async subscribeWithRefNavTx(
+    amount: BN,
+    txOptions: TxOptions = {},
+    refNav: BN | null = null,
+  ): Promise<VersionedTransaction> {
+    const signer = txOptions.signer || this.client.base.signer;
+    const ixs = await this.subscribeWithRefNavIxs(amount, signer, refNav);
     return await this.buildVersionedTx(ixs, txOptions);
   }
 
@@ -305,6 +337,22 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
     limit: number | null,
     signer: PublicKey,
   ): Promise<TransactionInstruction> {
+    return this.fulfillIxForMethod(limit, signer);
+  }
+
+  public async fulfillWithRefNavIx(
+    limit: number | null,
+    signer: PublicKey,
+    refNav: BN | null = null,
+  ): Promise<TransactionInstruction> {
+    return this.fulfillIxForMethod(limit, signer, refNav);
+  }
+
+  private async fulfillIxForMethod(
+    limit: number | null,
+    signer: PublicKey,
+    refNav?: BN | null,
+  ): Promise<TransactionInstruction> {
     const { baseAssetMint } = await this.client.base.fetchStateModel();
 
     const { tokenProgram: depositTokenProgram } =
@@ -312,8 +360,11 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
         this.client.base.connection,
         baseAssetMint,
       );
-    return await this.client.base.mintProgram.methods
-      .fulfill(limit)
+    const method =
+      refNav === undefined
+        ? this.client.base.mintProgram.methods.fulfill(limit)
+        : this.client.base.mintProgram.methods.fulfillWithRefNav(limit, refNav);
+    return await method
       .accounts({
         glamState: this.client.base.statePda,
         glamMint: this.client.base.mintPda,
@@ -330,6 +381,16 @@ class TxBuilder extends BaseTxBuilder<InvestClient> {
   ): Promise<VersionedTransaction> {
     const signer = txOptions.signer || this.client.base.signer;
     const ix = await this.fulfillIx(limit, signer);
+    return this.buildVersionedTx([ix], txOptions);
+  }
+
+  public async fulfillWithRefNavTx(
+    limit: number | null,
+    txOptions: TxOptions = {},
+    refNav: BN | null = null,
+  ): Promise<VersionedTransaction> {
+    const signer = txOptions.signer || this.client.base.signer;
+    const ix = await this.fulfillWithRefNavIx(limit, signer, refNav);
     return this.buildVersionedTx([ix], txOptions);
   }
 
@@ -474,6 +535,19 @@ export class InvestClient {
     return await this.base.sendAndConfirm(tx);
   }
 
+  public async subscribeWithRefNav(
+    amount: BN,
+    txOptions: TxOptions = {},
+    refNav: BN | null = null,
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.subscribeWithRefNavTx(
+      amount,
+      txOptions,
+      refNav,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
   public async queuedRedeem(
     amount: BN,
     txOptions: TxOptions = {},
@@ -502,6 +576,19 @@ export class InvestClient {
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const tx = await this.txBuilder.fulfillTx(limit, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  public async fulfillWithRefNav(
+    limit: number | null,
+    txOptions: TxOptions = {},
+    refNav: BN | null = null,
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.fulfillWithRefNavTx(
+      limit,
+      txOptions,
+      refNav,
+    );
     return await this.base.sendAndConfirm(tx);
   }
 
