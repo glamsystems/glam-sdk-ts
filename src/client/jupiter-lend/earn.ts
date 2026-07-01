@@ -132,6 +132,95 @@ class TxBuilder
       .instruction();
   }
 
+  async mintIx(
+    shares: BN | bigint | number,
+    accounts: JupiterEarnDepositAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
+    const fTokenProgram = accounts.fTokenProgram || tokenProgram;
+
+    return await this.client.base.extJupiterProgram.methods
+      .earnMint(toBn(shares))
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.getIntegrationAuthorityPda(),
+        cpiProgram: JUPITER_LENDING_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        depositorTokenAccount:
+          accounts.depositorTokenAccount ||
+          this.client.base.getVaultAta(accounts.mint, tokenProgram),
+        recipientTokenAccount:
+          accounts.recipientTokenAccount ||
+          this.client.base.getVaultAta(accounts.fTokenMint, fTokenProgram),
+        mint: accounts.mint,
+        lendingAdmin: accounts.lendingAdmin,
+        lending: accounts.lending,
+        fTokenMint: accounts.fTokenMint,
+        supplyTokenReservesLiquidity: accounts.supplyTokenReservesLiquidity,
+        lendingSupplyPositionOnLiquidity:
+          accounts.lendingSupplyPositionOnLiquidity,
+        rateModel: accounts.rateModel,
+        vault: accounts.vault,
+        liquidity: accounts.liquidity,
+        liquidityProgram:
+          accounts.liquidityProgram || JUPITER_LIQUIDITY_PROGRAM_ID,
+        rewardsRateModel: accounts.rewardsRateModel,
+        tokenProgram,
+        associatedTokenProgram:
+          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+  }
+
+  async mintWithMaxAssetsIx(
+    shares: BN | bigint | number,
+    maxAssets: BN | bigint | number,
+    accounts: JupiterEarnDepositAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
+    const fTokenProgram = accounts.fTokenProgram || tokenProgram;
+
+    return await this.client.base.extJupiterProgram.methods
+      .earnMintWithMaxAssets(toBn(shares), toBn(maxAssets))
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.getIntegrationAuthorityPda(),
+        cpiProgram: JUPITER_LENDING_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        depositorTokenAccount:
+          accounts.depositorTokenAccount ||
+          this.client.base.getVaultAta(accounts.mint, tokenProgram),
+        recipientTokenAccount:
+          accounts.recipientTokenAccount ||
+          this.client.base.getVaultAta(accounts.fTokenMint, fTokenProgram),
+        mint: accounts.mint,
+        lendingAdmin: accounts.lendingAdmin,
+        lending: accounts.lending,
+        fTokenMint: accounts.fTokenMint,
+        supplyTokenReservesLiquidity: accounts.supplyTokenReservesLiquidity,
+        lendingSupplyPositionOnLiquidity:
+          accounts.lendingSupplyPositionOnLiquidity,
+        rateModel: accounts.rateModel,
+        vault: accounts.vault,
+        liquidity: accounts.liquidity,
+        liquidityProgram:
+          accounts.liquidityProgram || JUPITER_LIQUIDITY_PROGRAM_ID,
+        rewardsRateModel: accounts.rewardsRateModel,
+        tokenProgram,
+        associatedTokenProgram:
+          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+  }
+
   async depositTx(
     amount: BN | bigint | number,
     minAmountOut: BN | bigint | number,
@@ -156,6 +245,58 @@ class TxBuilder
     return await this.buildVersionedTx([createRecipientAtaIx, ix], txOptions);
   }
 
+  async mintTx(
+    shares: BN | bigint | number,
+    accounts: JupiterEarnDepositAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const signer = txOptions.signer || this.client.base.signer;
+    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
+    const fTokenProgram = accounts.fTokenProgram || tokenProgram;
+    const recipientAta =
+      accounts.recipientTokenAccount ||
+      this.client.base.getVaultAta(accounts.fTokenMint, fTokenProgram);
+    const createRecipientAtaIx =
+      createAssociatedTokenAccountIdempotentInstruction(
+        signer,
+        recipientAta,
+        this.client.base.vaultPda,
+        accounts.fTokenMint,
+        fTokenProgram,
+      );
+    const ix = await this.mintIx(shares, accounts, signer);
+    return await this.buildVersionedTx([createRecipientAtaIx, ix], txOptions);
+  }
+
+  async mintWithMaxAssetsTx(
+    shares: BN | bigint | number,
+    maxAssets: BN | bigint | number,
+    accounts: JupiterEarnDepositAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const signer = txOptions.signer || this.client.base.signer;
+    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
+    const fTokenProgram = accounts.fTokenProgram || tokenProgram;
+    const recipientAta =
+      accounts.recipientTokenAccount ||
+      this.client.base.getVaultAta(accounts.fTokenMint, fTokenProgram);
+    const createRecipientAtaIx =
+      createAssociatedTokenAccountIdempotentInstruction(
+        signer,
+        recipientAta,
+        this.client.base.vaultPda,
+        accounts.fTokenMint,
+        fTokenProgram,
+      );
+    const ix = await this.mintWithMaxAssetsIx(
+      shares,
+      maxAssets,
+      accounts,
+      signer,
+    );
+    return await this.buildVersionedTx([createRecipientAtaIx, ix], txOptions);
+  }
+
   async withdrawIx(
     amount: BN | bigint | number,
     maxSharesBurn: BN | bigint | number,
@@ -167,6 +308,97 @@ class TxBuilder
 
     return await this.client.base.extJupiterProgram.methods
       .earnWithdraw(toBn(amount), toBn(maxSharesBurn))
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.getIntegrationAuthorityPda(),
+        cpiProgram: JUPITER_LENDING_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        ownerTokenAccount:
+          accounts.ownerTokenAccount ||
+          this.client.base.getVaultAta(accounts.fTokenMint, fTokenProgram),
+        recipientTokenAccount:
+          accounts.recipientTokenAccount ||
+          this.client.base.getVaultAta(accounts.mint, tokenProgram),
+        lendingAdmin: accounts.lendingAdmin,
+        lending: accounts.lending,
+        mint: accounts.mint,
+        fTokenMint: accounts.fTokenMint,
+        supplyTokenReservesLiquidity: accounts.supplyTokenReservesLiquidity,
+        lendingSupplyPositionOnLiquidity:
+          accounts.lendingSupplyPositionOnLiquidity,
+        rateModel: accounts.rateModel,
+        vault: accounts.vault,
+        claimAccount: accounts.claimAccount,
+        liquidity: accounts.liquidity,
+        liquidityProgram:
+          accounts.liquidityProgram || JUPITER_LIQUIDITY_PROGRAM_ID,
+        rewardsRateModel: accounts.rewardsRateModel,
+        tokenProgram,
+        associatedTokenProgram:
+          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+  }
+
+  async redeemIx(
+    shares: BN | bigint | number,
+    accounts: JupiterEarnWithdrawAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
+    const fTokenProgram = accounts.fTokenProgram || tokenProgram;
+
+    return await this.client.base.extJupiterProgram.methods
+      .earnRedeem(toBn(shares))
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamVault: this.client.base.vaultPda,
+        glamSigner: signer || this.client.base.signer,
+        integrationAuthority: this.client.getIntegrationAuthorityPda(),
+        cpiProgram: JUPITER_LENDING_PROGRAM_ID,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        systemProgram: SystemProgram.programId,
+        ownerTokenAccount:
+          accounts.ownerTokenAccount ||
+          this.client.base.getVaultAta(accounts.fTokenMint, fTokenProgram),
+        recipientTokenAccount:
+          accounts.recipientTokenAccount ||
+          this.client.base.getVaultAta(accounts.mint, tokenProgram),
+        lendingAdmin: accounts.lendingAdmin,
+        lending: accounts.lending,
+        mint: accounts.mint,
+        fTokenMint: accounts.fTokenMint,
+        supplyTokenReservesLiquidity: accounts.supplyTokenReservesLiquidity,
+        lendingSupplyPositionOnLiquidity:
+          accounts.lendingSupplyPositionOnLiquidity,
+        rateModel: accounts.rateModel,
+        vault: accounts.vault,
+        claimAccount: accounts.claimAccount,
+        liquidity: accounts.liquidity,
+        liquidityProgram:
+          accounts.liquidityProgram || JUPITER_LIQUIDITY_PROGRAM_ID,
+        rewardsRateModel: accounts.rewardsRateModel,
+        tokenProgram,
+        associatedTokenProgram:
+          accounts.associatedTokenProgram || ASSOCIATED_TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+  }
+
+  async redeemWithMinAmountOutIx(
+    shares: BN | bigint | number,
+    minAmountOut: BN | bigint | number,
+    accounts: JupiterEarnWithdrawAccounts,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
+    const fTokenProgram = accounts.fTokenProgram || tokenProgram;
+
+    return await this.client.base.extJupiterProgram.methods
+      .earnRedeemWithMinAmountOut(toBn(shares), toBn(minAmountOut))
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamVault: this.client.base.vaultPda,
@@ -222,6 +454,56 @@ class TxBuilder
         tokenProgram,
       );
     const ix = await this.withdrawIx(amount, maxSharesBurn, accounts, signer);
+    return await this.buildVersionedTx([createRecipientAtaIx, ix], txOptions);
+  }
+
+  async redeemTx(
+    shares: BN | bigint | number,
+    accounts: JupiterEarnWithdrawAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const signer = txOptions.signer || this.client.base.signer;
+    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
+    const recipientAta =
+      accounts.recipientTokenAccount ||
+      this.client.base.getVaultAta(accounts.mint, tokenProgram);
+    const createRecipientAtaIx =
+      createAssociatedTokenAccountIdempotentInstruction(
+        signer,
+        recipientAta,
+        this.client.base.vaultPda,
+        accounts.mint,
+        tokenProgram,
+      );
+    const ix = await this.redeemIx(shares, accounts, signer);
+    return await this.buildVersionedTx([createRecipientAtaIx, ix], txOptions);
+  }
+
+  async redeemWithMinAmountOutTx(
+    shares: BN | bigint | number,
+    minAmountOut: BN | bigint | number,
+    accounts: JupiterEarnWithdrawAccounts,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const signer = txOptions.signer || this.client.base.signer;
+    const tokenProgram = accounts.tokenProgram || TOKEN_PROGRAM_ID;
+    const recipientAta =
+      accounts.recipientTokenAccount ||
+      this.client.base.getVaultAta(accounts.mint, tokenProgram);
+    const createRecipientAtaIx =
+      createAssociatedTokenAccountIdempotentInstruction(
+        signer,
+        recipientAta,
+        this.client.base.vaultPda,
+        accounts.mint,
+        tokenProgram,
+      );
+    const ix = await this.redeemWithMinAmountOutIx(
+      shares,
+      minAmountOut,
+      accounts,
+      signer,
+    );
     return await this.buildVersionedTx([createRecipientAtaIx, ix], txOptions);
   }
 
@@ -295,6 +577,32 @@ export class JupiterEarnClient
     return await this.base.sendAndConfirm(tx);
   }
 
+  async mint(
+    mint: PublicKey,
+    shares: BN | bigint | number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const accounts = await this.resolveAccounts(mint);
+    const tx = await this.txBuilder.mintTx(shares, accounts, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async mintWithMaxAssets(
+    mint: PublicKey,
+    shares: BN | bigint | number,
+    maxAssets: BN | bigint | number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const accounts = await this.resolveAccounts(mint);
+    const tx = await this.txBuilder.mintWithMaxAssetsTx(
+      shares,
+      maxAssets,
+      accounts,
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
   async withdraw(
     mint: PublicKey,
     amount: BN | bigint | number,
@@ -306,6 +614,38 @@ export class JupiterEarnClient
     const tx = await this.txBuilder.withdrawTx(
       amount,
       maxSharesBurn,
+      { ...earnAccounts, claimAccount },
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async redeem(
+    mint: PublicKey,
+    shares: BN | bigint | number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const earnAccounts = await this.resolveAccounts(mint);
+    const claimAccount = getClaimAccountPda(mint, earnAccounts.lendingAdmin);
+    const tx = await this.txBuilder.redeemTx(
+      shares,
+      { ...earnAccounts, claimAccount },
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async redeemWithMinAmountOut(
+    mint: PublicKey,
+    shares: BN | bigint | number,
+    minAmountOut: BN | bigint | number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const earnAccounts = await this.resolveAccounts(mint);
+    const claimAccount = getClaimAccountPda(mint, earnAccounts.lendingAdmin);
+    const tx = await this.txBuilder.redeemWithMinAmountOutTx(
+      shares,
+      minAmountOut,
       { ...earnAccounts, claimAccount },
       txOptions,
     );

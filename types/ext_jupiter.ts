@@ -585,6 +585,674 @@ export type ExtJupiter = {
       ]
     },
     {
+      "name": "earnMint",
+      "docs": [
+        "Deposit enough underlying tokens into Jupiter Earn to mint exact jlToken shares.",
+        "",
+        "- Permission: `EarnPermissions::Deposit`.",
+        "- Policy: underlying `mint` must be in `EarnPolicy::mints_allowlist`."
+      ],
+      "discriminator": [
+        248,
+        245,
+        116,
+        167,
+        84,
+        254,
+        78,
+        58
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "jup3YeL8QhtSx1e253b2FDvsMNC87fDrgQZivbrndc9"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "depositorTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "recipientTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "lendingAdmin"
+        },
+        {
+          "name": "lending",
+          "writable": true
+        },
+        {
+          "name": "fTokenMint",
+          "writable": true
+        },
+        {
+          "name": "supplyTokenReservesLiquidity",
+          "writable": true
+        },
+        {
+          "name": "lendingSupplyPositionOnLiquidity",
+          "writable": true
+        },
+        {
+          "name": "rateModel"
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "liquidity",
+          "writable": true
+        },
+        {
+          "name": "liquidityProgram",
+          "writable": true,
+          "address": "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC"
+        },
+        {
+          "name": "rewardsRateModel"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        }
+      ],
+      "args": [
+        {
+          "name": "shares",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "earnMintWithMaxAssets",
+      "docs": [
+        "Deposit at most `max_assets` underlying tokens into Jupiter Earn to mint exact jlToken shares.",
+        "",
+        "- Permission: `EarnPermissions::Deposit`.",
+        "- Policy: underlying `mint` must be in `EarnPolicy::mints_allowlist`."
+      ],
+      "discriminator": [
+        180,
+        177,
+        204,
+        33,
+        230,
+        193,
+        220,
+        69
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "jup3YeL8QhtSx1e253b2FDvsMNC87fDrgQZivbrndc9"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "depositorTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "recipientTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "lendingAdmin"
+        },
+        {
+          "name": "lending",
+          "writable": true
+        },
+        {
+          "name": "fTokenMint",
+          "writable": true
+        },
+        {
+          "name": "supplyTokenReservesLiquidity",
+          "writable": true
+        },
+        {
+          "name": "lendingSupplyPositionOnLiquidity",
+          "writable": true
+        },
+        {
+          "name": "rateModel"
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "liquidity",
+          "writable": true
+        },
+        {
+          "name": "liquidityProgram",
+          "writable": true,
+          "address": "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC"
+        },
+        {
+          "name": "rewardsRateModel"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        }
+      ],
+      "args": [
+        {
+          "name": "shares",
+          "type": "u64"
+        },
+        {
+          "name": "maxAssets",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "earnRedeem",
+      "docs": [
+        "Redeem exact Jupiter Earn jlToken shares and withdraw underlying tokens to the GLAM vault.",
+        "",
+        "- Permission: `EarnPermissions::Withdraw`.",
+        "- Policy: underlying `mint` must be in `EarnPolicy::mints_allowlist`."
+      ],
+      "discriminator": [
+        93,
+        162,
+        58,
+        1,
+        75,
+        18,
+        212,
+        66
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "jup3YeL8QhtSx1e253b2FDvsMNC87fDrgQZivbrndc9"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "ownerTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "recipientTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "lendingAdmin"
+        },
+        {
+          "name": "lending",
+          "writable": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "fTokenMint",
+          "writable": true
+        },
+        {
+          "name": "supplyTokenReservesLiquidity",
+          "writable": true
+        },
+        {
+          "name": "lendingSupplyPositionOnLiquidity",
+          "writable": true
+        },
+        {
+          "name": "rateModel"
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "claimAccount",
+          "writable": true
+        },
+        {
+          "name": "liquidity",
+          "writable": true
+        },
+        {
+          "name": "liquidityProgram",
+          "writable": true,
+          "address": "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC"
+        },
+        {
+          "name": "rewardsRateModel"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        }
+      ],
+      "args": [
+        {
+          "name": "shares",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "earnRedeemWithMinAmountOut",
+      "docs": [
+        "Redeem Jupiter Earn jlToken shares for at least `min_amount_out` underlying tokens.",
+        "",
+        "- Permission: `EarnPermissions::Withdraw`.",
+        "- Policy: underlying `mint` must be in `EarnPolicy::mints_allowlist`."
+      ],
+      "discriminator": [
+        204,
+        196,
+        159,
+        42,
+        52,
+        107,
+        134,
+        153
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "jup3YeL8QhtSx1e253b2FDvsMNC87fDrgQZivbrndc9"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "ownerTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "recipientTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "lendingAdmin"
+        },
+        {
+          "name": "lending",
+          "writable": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "fTokenMint",
+          "writable": true
+        },
+        {
+          "name": "supplyTokenReservesLiquidity",
+          "writable": true
+        },
+        {
+          "name": "lendingSupplyPositionOnLiquidity",
+          "writable": true
+        },
+        {
+          "name": "rateModel"
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "claimAccount",
+          "writable": true
+        },
+        {
+          "name": "liquidity",
+          "writable": true
+        },
+        {
+          "name": "liquidityProgram",
+          "writable": true,
+          "address": "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC"
+        },
+        {
+          "name": "rewardsRateModel"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        }
+      ],
+      "args": [
+        {
+          "name": "shares",
+          "type": "u64"
+        },
+        {
+          "name": "minAmountOut",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "earnWithdraw",
       "docs": [
         "Burn Jupiter Earn jlTokens and withdraw underlying tokens to the GLAM vault.",
