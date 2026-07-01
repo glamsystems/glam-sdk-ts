@@ -41,6 +41,7 @@ const EXT_PHOENIX = PublicKey.unique();
 const EXT_ORCA = PublicKey.unique();
 const EXT_LOOPSCALE = PublicKey.unique();
 const EXT_NEUTRAL = PublicKey.unique();
+const EXT_MARGINFI = PublicKey.unique();
 const OBSERVATION_STATE = PublicKey.findProgramAddressSync(
   [Buffer.from(SEED_OBSERVATION_STATE), STATE.toBuffer()],
   EXT_RPI,
@@ -179,6 +180,7 @@ function makeClient(
       extOrcaProgram: { programId: EXT_ORCA },
       extLoopscaleProgram: { programId: EXT_LOOPSCALE },
       extNeutralProgram: { programId: EXT_NEUTRAL },
+      extMarginfiProgram: { programId: EXT_MARGINFI },
       fetchStateModel: jest.fn(async () => ({
         accountType: StateAccountType.VAULT,
         baseAssetMint: PublicKey.default,

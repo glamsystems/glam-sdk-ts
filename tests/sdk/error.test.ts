@@ -62,7 +62,7 @@ describe("resolveErrorCode", () => {
   it("resolves ext_neutral errors without falling through to Jupiter code collisions", () => {
     expect(
       resolveErrorCode(6008, getExtNeutralProgramId(false).toBase58(), false),
-    ).toBe("Neutral bundle permission mode does not match the instruction");
+    ).toBe("Estimated withdrawal value is below the caller minimum");
   });
 
   it("keeps Jupiter mappings for Jupiter program failures", () => {

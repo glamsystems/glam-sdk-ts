@@ -1,5 +1,9 @@
 import { PublicKey } from "@solana/web3.js";
-import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  AccountLayout,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import {
   deriveTickArrayForPosition,
   OrcaWhirlpoolsClient,
@@ -71,6 +75,27 @@ function accountInfo(owner: PublicKey, data: Buffer = Buffer.alloc(0)) {
     owner,
     rentEpoch: 0,
   };
+}
+
+function tokenAccountData(mint = PublicKey.unique(), owner = VAULT) {
+  const data = Buffer.alloc(AccountLayout.span);
+  AccountLayout.encode(
+    {
+      mint,
+      owner,
+      amount: 1n,
+      delegateOption: 0,
+      delegate: PublicKey.default,
+      state: 1,
+      isNativeOption: 0,
+      isNative: 0n,
+      delegatedAmount: 0n,
+      closeAuthorityOption: 0,
+      closeAuthority: PublicKey.default,
+    },
+    data,
+  );
+  return data;
 }
 
 function writeDiscriminator(data: Buffer, discriminator: readonly number[]) {
@@ -272,10 +297,11 @@ describe("Orca Whirlpool pricing SDK helpers", () => {
     const tokenAccount = PublicKey.unique();
     const unknown = PublicKey.unique();
     const categorizer = new PositionCategorizer({
+      getProgramAccounts: jest.fn(async () => []),
       getMultipleAccountsInfo: jest.fn(async () => [
         accountInfo(ORCA_WHIRLPOOLS_PROGRAM_ID, orcaPositionData()),
         accountInfo(ORCA_WHIRLPOOLS_PROGRAM_ID, Buffer.alloc(216)),
-        accountInfo(TOKEN_2022_PROGRAM_ID),
+        accountInfo(TOKEN_2022_PROGRAM_ID, tokenAccountData()),
         null,
       ]),
     } as any);

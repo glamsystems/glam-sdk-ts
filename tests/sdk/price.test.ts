@@ -72,6 +72,7 @@ function createPriceClient(params: {
     extPhoenixProgram: { programId: pk(46) },
     extOrcaProgram: { programId: pk(47) },
     extNeutralProgram: { programId: pk(48) },
+    extMarginfiProgram: { programId: pk(49) },
   } as any;
 
   const loopscaleBorrow = {
