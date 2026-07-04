@@ -504,6 +504,15 @@ export const getProtocolsAndPermissions = (
   // Bridge integration program protocols and permissions are defined in:
   // @anchor/programs/ext_bridge/src/state/access.rs
   [getExtBridgeProgramId(staging).toBase58()]: {
+    [protocolBitflagKey(CCTP_PROTOCOL)]: {
+      name: "CCTP",
+      staging: false,
+      permissions: {
+        [1 << 0]: "Send",
+        [1 << 1]: "Validate",
+        [1 << 2]: "Settle",
+      },
+    },
     [protocolBitflagKey(LAYERZERO_OFT_PROTOCOL)]: {
       name: "LayerZeroOft",
       staging: true,

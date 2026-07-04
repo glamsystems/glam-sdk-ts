@@ -53,6 +53,7 @@ import {
 } from "./loopscale";
 import {
   RPI_PROTOCOL,
+  BRIDGE_CCTP_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
   KAMINO_VAULTS_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
@@ -2056,7 +2057,9 @@ export class PriceClient {
       const bridgeIntegrationAcl = integrationAcls.find(
         (acl) =>
           acl.integrationProgram.equals(this.base.extBridgeProgram.programId) &&
-          (acl.protocolsBitmask & LAYERZERO_OFT_PROTOCOL) !== 0,
+          (acl.protocolsBitmask &
+            (BRIDGE_CCTP_PROTOCOL | LAYERZERO_OFT_PROTOCOL)) !==
+            0,
       );
       if (bridgeIntegrationAcl) {
         chunks.push(await this.priceManagedTransfersIxs());

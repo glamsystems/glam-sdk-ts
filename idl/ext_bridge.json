@@ -46,6 +46,165 @@
       ]
     },
     {
+      "name": "cctp_deposit_for_burn",
+      "docs": [
+        "Burns tokens through Circle CCTP without creating a managed inflight position."
+      ],
+      "discriminator": [
+        132,
+        90,
+        36,
+        35,
+        103,
+        197,
+        143,
+        91
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "sender_authority_pda"
+        },
+        {
+          "name": "burn_token_account",
+          "writable": true
+        },
+        {
+          "name": "denylist_account"
+        },
+        {
+          "name": "message_transmitter",
+          "writable": true
+        },
+        {
+          "name": "token_messenger"
+        },
+        {
+          "name": "remote_token_messenger"
+        },
+        {
+          "name": "token_minter"
+        },
+        {
+          "name": "local_token",
+          "writable": true
+        },
+        {
+          "name": "burn_token_mint",
+          "writable": true
+        },
+        {
+          "name": "message_sent_event_data",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "message_transmitter_program",
+          "address": "CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC"
+        },
+        {
+          "name": "token_messenger_minter_program",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CctpDepositForBurnArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "commit_oft_transfer",
       "docs": [
         "Verifies the OFT send completed and records the resulting transfer."
@@ -267,6 +426,197 @@
           "type": {
             "defined": {
               "name": "LayerzeroOftRoute"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "managed_cctp_deposit_for_burn",
+      "docs": [
+        "Burns tokens through Circle CCTP and records a managed inflight bridge position."
+      ],
+      "discriminator": [
+        120,
+        159,
+        100,
+        14,
+        2,
+        142,
+        128,
+        123
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glam_protocol_program"
+            }
+          }
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integration_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpi_program",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bridge_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "sender_authority_pda"
+        },
+        {
+          "name": "burn_token_account",
+          "writable": true
+        },
+        {
+          "name": "denylist_account"
+        },
+        {
+          "name": "message_transmitter",
+          "writable": true
+        },
+        {
+          "name": "token_messenger"
+        },
+        {
+          "name": "remote_token_messenger"
+        },
+        {
+          "name": "token_minter"
+        },
+        {
+          "name": "local_token",
+          "writable": true
+        },
+        {
+          "name": "burn_token_mint",
+          "writable": true
+        },
+        {
+          "name": "message_sent_event_data",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "message_transmitter_program",
+          "address": "CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC"
+        },
+        {
+          "name": "token_messenger_minter_program",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ManagedCctpDepositForBurnArgs"
             }
           }
         }
@@ -616,6 +966,44 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "set_cctp_policy",
+      "discriminator": [
+        32,
+        88,
+        254,
+        15,
+        2,
+        206,
+        222,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "glam_state",
+          "writable": true
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glam_protocol_program",
+          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "CctpPolicy"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "settle_managed_transfer",
@@ -1026,6 +1414,11 @@
       "code": 6024,
       "name": "InvalidBridgeRegistry",
       "msg": "The bridge registry does not belong to this vault"
+    },
+    {
+      "code": 6025,
+      "name": "InvalidDestinationChain",
+      "msg": "The destination identifier exceeds the supported range"
     }
   ],
   "types": [
@@ -1318,6 +1711,56 @@
       }
     },
     {
+      "name": "CctpDepositForBurnArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "params",
+            "type": {
+              "defined": {
+                "name": "DepositForBurnParams"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CctpDestination",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "domain",
+            "type": "u32"
+          },
+          {
+            "name": "address",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CctpPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "allowed_destinations",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "CctpDestination"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "CommitOftTransferArgs",
       "type": {
         "kind": "struct",
@@ -1376,6 +1819,38 @@
           {
             "name": "expires_at",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositForBurnParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination_domain",
+            "type": "u32"
+          },
+          {
+            "name": "mint_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination_caller",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_fee",
+            "type": "u64"
+          },
+          {
+            "name": "min_finality_threshold",
+            "type": "u32"
           }
         ]
       }
@@ -1859,6 +2334,26 @@
           {
             "name": "max_amount",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ManagedCctpDepositForBurnArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transfer_id",
+            "type": "pubkey"
+          },
+          {
+            "name": "params",
+            "type": {
+              "defined": {
+                "name": "DepositForBurnParams"
+              }
+            }
           }
         ]
       }
@@ -2366,6 +2861,11 @@
       "value": "2"
     },
     {
+      "name": "PROTO_CCTP",
+      "type": "u16",
+      "value": "1"
+    },
+    {
       "name": "PROTO_LAYERZERO_OFT",
       "type": "u16",
       "value": "4"
@@ -2373,7 +2873,7 @@
     {
       "name": "PROTO_MANAGED_INFLIGHT",
       "type": "u16",
-      "value": "4"
+      "value": "5"
     }
   ]
 }

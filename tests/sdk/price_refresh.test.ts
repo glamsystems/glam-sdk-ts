@@ -24,6 +24,7 @@ import {
 } from "../../src/constants";
 import {
   RPI_PROTOCOL,
+  BRIDGE_CCTP_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
@@ -129,6 +130,10 @@ const KAMINO_LENDING_ACL = {
 const BRIDGE_ACL = {
   integrationProgram: EXT_BRIDGE,
   protocolsBitmask: LAYERZERO_OFT_PROTOCOL,
+};
+const BRIDGE_CCTP_ACL = {
+  integrationProgram: EXT_BRIDGE,
+  protocolsBitmask: BRIDGE_CCTP_PROTOCOL,
 };
 const RPI_ACL = {
   integrationProgram: EXT_RPI,
@@ -630,6 +635,22 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     const { client } = makeClient(
       [RESERVE_A, RESERVE_C],
       [KAMINO_LENDING_ACL, BRIDGE_ACL],
+    );
+    const priceBridgeSpy = jest
+      .spyOn(client as any, "priceManagedTransfersIxs")
+      .mockResolvedValue({ ixs: [bridgeIx], kaminoReserves: [] });
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(priceBridgeSpy).toHaveBeenCalledTimes(1);
+    expect(ixs).toContain(bridgeIx);
+  });
+
+  it("prices bridge managed transfers when only bridge CCTP is enabled", async () => {
+    const bridgeIx = ix(4);
+    const { client } = makeClient(
+      [RESERVE_A, RESERVE_C],
+      [KAMINO_LENDING_ACL, BRIDGE_CCTP_ACL],
     );
     const priceBridgeSpy = jest
       .spyOn(client as any, "priceManagedTransfersIxs")

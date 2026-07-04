@@ -52,6 +52,165 @@ export type ExtBridge = {
       ]
     },
     {
+      "name": "cctpDepositForBurn",
+      "docs": [
+        "Burns tokens through Circle CCTP without creating a managed inflight position."
+      ],
+      "discriminator": [
+        132,
+        90,
+        36,
+        35,
+        103,
+        197,
+        143,
+        91
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "senderAuthorityPda"
+        },
+        {
+          "name": "burnTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "denylistAccount"
+        },
+        {
+          "name": "messageTransmitter",
+          "writable": true
+        },
+        {
+          "name": "tokenMessenger"
+        },
+        {
+          "name": "remoteTokenMessenger"
+        },
+        {
+          "name": "tokenMinter"
+        },
+        {
+          "name": "localToken",
+          "writable": true
+        },
+        {
+          "name": "burnTokenMint",
+          "writable": true
+        },
+        {
+          "name": "messageSentEventData",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "messageTransmitterProgram",
+          "address": "CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC"
+        },
+        {
+          "name": "tokenMessengerMinterProgram",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "cctpDepositForBurnArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "commitOftTransfer",
       "docs": [
         "Verifies the OFT send completed and records the resulting transfer."
@@ -273,6 +432,197 @@ export type ExtBridge = {
           "type": {
             "defined": {
               "name": "layerzeroOftRoute"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "managedCctpDepositForBurn",
+      "docs": [
+        "Burns tokens through Circle CCTP and records a managed inflight bridge position."
+      ],
+      "discriminator": [
+        120,
+        159,
+        100,
+        14,
+        2,
+        142,
+        128,
+        123
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "glamProtocolProgram"
+            }
+          }
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "integrationAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  116,
+                  101,
+                  103,
+                  114,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cpiProgram",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "bridgeRegistry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "senderAuthorityPda"
+        },
+        {
+          "name": "burnTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "denylistAccount"
+        },
+        {
+          "name": "messageTransmitter",
+          "writable": true
+        },
+        {
+          "name": "tokenMessenger"
+        },
+        {
+          "name": "remoteTokenMessenger"
+        },
+        {
+          "name": "tokenMinter"
+        },
+        {
+          "name": "localToken",
+          "writable": true
+        },
+        {
+          "name": "burnTokenMint",
+          "writable": true
+        },
+        {
+          "name": "messageSentEventData",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "messageTransmitterProgram",
+          "address": "CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC"
+        },
+        {
+          "name": "tokenMessengerMinterProgram",
+          "address": "CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe"
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "eventAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "managedCctpDepositForBurnArgs"
             }
           }
         }
@@ -622,6 +972,44 @@ export type ExtBridge = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "setCctpPolicy",
+      "discriminator": [
+        32,
+        88,
+        254,
+        15,
+        2,
+        206,
+        222,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "glamState",
+          "writable": true
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "glamProtocolProgram",
+          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "cctpPolicy"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "settleManagedTransfer",
@@ -1032,6 +1420,11 @@ export type ExtBridge = {
       "code": 6024,
       "name": "invalidBridgeRegistry",
       "msg": "The bridge registry does not belong to this vault"
+    },
+    {
+      "code": 6025,
+      "name": "invalidDestinationChain",
+      "msg": "The destination identifier exceeds the supported range"
     }
   ],
   "types": [
@@ -1324,6 +1717,56 @@ export type ExtBridge = {
       }
     },
     {
+      "name": "cctpDepositForBurnArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "params",
+            "type": {
+              "defined": {
+                "name": "depositForBurnParams"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "cctpDestination",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "domain",
+            "type": "u32"
+          },
+          {
+            "name": "address",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "cctpPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "allowedDestinations",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "cctpDestination"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "commitOftTransferArgs",
       "type": {
         "kind": "struct",
@@ -1382,6 +1825,38 @@ export type ExtBridge = {
           {
             "name": "expiresAt",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "depositForBurnParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destinationDomain",
+            "type": "u32"
+          },
+          {
+            "name": "mintRecipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "destinationCaller",
+            "type": "pubkey"
+          },
+          {
+            "name": "maxFee",
+            "type": "u64"
+          },
+          {
+            "name": "minFinalityThreshold",
+            "type": "u32"
           }
         ]
       }
@@ -1865,6 +2340,26 @@ export type ExtBridge = {
           {
             "name": "maxAmount",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "managedCctpDepositForBurnArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transferId",
+            "type": "pubkey"
+          },
+          {
+            "name": "params",
+            "type": {
+              "defined": {
+                "name": "depositForBurnParams"
+              }
+            }
           }
         ]
       }
@@ -2372,6 +2867,11 @@ export type ExtBridge = {
       "value": "2"
     },
     {
+      "name": "protoCctp",
+      "type": "u16",
+      "value": "1"
+    },
+    {
       "name": "protoLayerzeroOft",
       "type": "u16",
       "value": "4"
@@ -2379,7 +2879,7 @@ export type ExtBridge = {
     {
       "name": "protoManagedInflight",
       "type": "u16",
-      "value": "4"
+      "value": "5"
     }
   ]
 };

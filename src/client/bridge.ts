@@ -23,16 +23,25 @@ import {
   SerializableRouteAccountMeta,
   resolveCanonicalLayerzeroOftRouteProfile,
 } from "./bridgeRegistry";
+import { CctpClient } from "./cctp";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
 import { mergeLookupTables } from "../utils/lookupTables";
 import {
+  CctpPolicy,
   LayerzeroOftPolicy,
   LayerzeroOftRoute,
   RouteManagementMode,
 } from "../deser/integrationPolicies";
 import { getIntegrationAuthorityPda } from "../utils/glamPDAs";
-import { SEED_BRIDGE_REGISTRY, SEED_BRIDGE_SESSION } from "../constants";
-import { LAYERZERO_OFT_PROTOCOL } from "../protocols";
+import {
+  MESSAGE_TRANSMITTER_V2,
+  SEED_BRIDGE_REGISTRY,
+  SEED_BRIDGE_SESSION,
+  TOKEN_MESSENGER_MINTER_V2,
+  USDC,
+  USDC_DEVNET,
+} from "../constants";
+import { CCTP_PROTOCOL, LAYERZERO_OFT_PROTOCOL } from "../protocols";
 
 type BufferLike = Uint8Array | number[] | Buffer;
 
@@ -75,6 +84,17 @@ export type LayerzeroOftSendParams = {
   nonceAccount?: PublicKey;
   managed?: boolean;
   providerProgram?: PublicKey;
+};
+
+export type CctpBridgeSendParams = {
+  transferId?: PublicKey;
+  amount: BN;
+  domain: number;
+  destinationAddress: PublicKey;
+  maxFee: BN;
+  minFinalityThreshold: number;
+  destinationCaller?: PublicKey;
+  managed?: boolean;
 };
 
 type BridgeTransferStatusAccount =
@@ -441,6 +461,46 @@ class TxBuilder
     );
   }
 
+  async setCctpPolicyIx(
+    policy: CctpPolicy,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.client.base.extBridgeProgram.methods
+      .setCctpPolicy(policy)
+      .accountsPartial({
+        glamState: this.client.base.statePda,
+        glamSigner: signer || this.client.base.signer,
+        glamProtocolProgram: this.client.base.protocolProgram.programId,
+      })
+      .instruction();
+  }
+
+  async setCctpPolicyTx(
+    policy: CctpPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.setCctpPolicyIx(policy, txOptions.signer);
+    return await this.buildVersionedTx([ix], txOptions);
+  }
+
+  async clearCctpPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.extBridgeProgram.programId,
+      CCTP_PROTOCOL,
+      signer,
+    );
+  }
+
+  async clearCctpPolicyTx(
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    return await this.clearProtocolPolicyTx(
+      this.client.base.extBridgeProgram.programId,
+      CCTP_PROTOCOL,
+      txOptions,
+    );
+  }
+
   async addLayerzeroOftRouteIx(
     route: LayerzeroOftRouteInput,
     signer?: PublicKey,
@@ -623,12 +683,82 @@ class LayerzeroOftBridgeProtocolClient {
   }
 }
 
+class CctpBridgeProtocolClient {
+  public constructor(readonly bridge: BridgeClient) {}
+
+  private cctpClient() {
+    return new CctpClient(this.bridge.base);
+  }
+
+  async buildSendTx(params: CctpBridgeSendParams, txOptions: TxOptions = {}) {
+    return await this.bridge.buildCctpBridgeUsdcTx(params, txOptions);
+  }
+
+  async send(
+    params: CctpBridgeSendParams,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const { tx, additionalSigners } = await this.buildSendTx(params, txOptions);
+    return await this.bridge.base.sendAndConfirm(tx, additionalSigners);
+  }
+
+  async fetchPolicy() {
+    return await this.bridge.fetchCctpPolicy();
+  }
+
+  async setPolicy(policy: CctpPolicy, txOptions: TxOptions = {}) {
+    return await this.bridge.setCctpPolicy(policy, txOptions);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}) {
+    return await this.bridge.clearCctpPolicy(txOptions);
+  }
+
+  async receiveUsdc(
+    ...args: Parameters<CctpClient["receiveUsdc"]>
+  ): ReturnType<CctpClient["receiveUsdc"]> {
+    return this.cctpClient().receiveUsdc(...args);
+  }
+
+  async getIncomingBridgeEvents(
+    ...args: Parameters<CctpClient["getIncomingBridgeEvents"]>
+  ): ReturnType<CctpClient["getIncomingBridgeEvents"]> {
+    return this.cctpClient().getIncomingBridgeEvents(...args);
+  }
+
+  async getOutgoingBridgeEvents(
+    ...args: Parameters<CctpClient["getOutgoingBridgeEvents"]>
+  ): ReturnType<CctpClient["getOutgoingBridgeEvents"]> {
+    return this.cctpClient().getOutgoingBridgeEvents(...args);
+  }
+
+  async findV2Messages(
+    ...args: Parameters<CctpClient["findV2Messages"]>
+  ): ReturnType<CctpClient["findV2Messages"]> {
+    return this.cctpClient().findV2Messages(...args);
+  }
+
+  async fetchV2Messages(
+    ...args: Parameters<CctpClient["fetchV2Messages"]>
+  ): ReturnType<CctpClient["fetchV2Messages"]> {
+    return this.cctpClient().fetchV2Messages(...args);
+  }
+
+  async parseEventsFromAttestion(
+    ...args: Parameters<CctpClient["parseEventsFromAttestion"]>
+  ): ReturnType<CctpClient["parseEventsFromAttestion"]> {
+    return this.cctpClient().parseEventsFromAttestion(...args);
+  }
+}
+
 export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
   readonly txBuilder: TxBuilder;
+  readonly cctp: CctpBridgeProtocolClient;
   readonly oft: LayerzeroOftBridgeProtocolClient;
 
   public constructor(readonly base: BaseClient) {
     this.txBuilder = new TxBuilder(this);
+    this.cctp = new CctpBridgeProtocolClient(this);
     this.oft = new LayerzeroOftBridgeProtocolClient(this);
   }
 
@@ -867,6 +997,29 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
     return await this.fetchPolicy();
   }
 
+  async fetchCctpPolicy(): Promise<CctpPolicy | null> {
+    return await this.base.fetchProtocolPolicy(
+      this.base.extBridgeProgram.programId,
+      CCTP_PROTOCOL,
+      CctpPolicy,
+    );
+  }
+
+  async setCctpPolicy(
+    policy: CctpPolicy,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.setCctpPolicyTx(policy, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearCctpPolicy(
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.clearCctpPolicyTx(txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
   async setPolicy(
     policy: LayerzeroOftPolicy,
     txOptions: TxOptions = {},
@@ -1020,6 +1173,69 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
       txOptions,
     );
     return await this.base.sendAndConfirm(tx, additionalSigners);
+  }
+
+  async buildCctpBridgeUsdcTx(
+    params: CctpBridgeSendParams,
+    txOptions: TxOptions = {},
+  ) {
+    const cctpClient = new CctpClient(this.base);
+    const usdcAddress = this.base.isMainnet ? USDC : USDC_DEVNET;
+    const pdas = cctpClient.getDepositForBurnPdas(
+      MESSAGE_TRANSMITTER_V2,
+      TOKEN_MESSENGER_MINTER_V2,
+      usdcAddress,
+      params.domain,
+    );
+    const denylistAccount = PublicKey.findProgramAddressSync(
+      [Buffer.from("denylist_account"), this.base.vaultPda.toBuffer()],
+      TOKEN_MESSENGER_MINTER_V2,
+    )[0];
+    const messageSentEventAccountKeypair = Keypair.generate();
+    const depositForBurnParams = {
+      amount: params.amount,
+      destinationDomain: params.domain,
+      mintRecipient: params.destinationAddress,
+      destinationCaller: params.destinationCaller || PublicKey.default,
+      maxFee: params.maxFee,
+      minFinalityThreshold: params.minFinalityThreshold,
+    };
+    const bridgeRegistry = this.getRegistryPda();
+    const transferId = params.transferId || Keypair.generate().publicKey;
+    const method = params.managed
+      ? this.base.extBridgeProgram.methods.managedCctpDepositForBurn({
+          transferId,
+          params: depositForBurnParams,
+        })
+      : this.base.extBridgeProgram.methods.cctpDepositForBurn({
+          params: depositForBurnParams,
+        });
+
+    const ix = await method
+      .accounts({
+        glamState: this.base.statePda,
+        glamSigner: txOptions.signer || this.base.signer,
+        ...(params.managed ? { bridgeRegistry } : {}),
+        senderAuthorityPda: pdas.authorityPda,
+        burnTokenAccount: this.base.getVaultAta(usdcAddress),
+        denylistAccount,
+        messageTransmitter: pdas.messageTransmitterAccount,
+        tokenMessenger: pdas.tokenMessengerAccount,
+        remoteTokenMessenger: pdas.remoteTokenMessengerKey,
+        tokenMinter: pdas.tokenMinterAccount,
+        localToken: pdas.localToken,
+        burnTokenMint: usdcAddress,
+        messageSentEventData: messageSentEventAccountKeypair.publicKey,
+        eventAuthority: pdas.tokenMessengerEventAuthority,
+      })
+      .instruction();
+    const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
+
+    return {
+      tx,
+      additionalSigners: [messageSentEventAccountKeypair],
+      transferId,
+    };
   }
 
   private async extendLookupTables(

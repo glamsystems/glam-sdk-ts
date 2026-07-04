@@ -43,6 +43,7 @@ export const LOOPSCALE_VAULT_PROTOCOL = 1 << 2;
 export const MARGINFI_PROTOCOL = 1 << 0;
 
 // Mirror `SupportedProtocols` in anchor/programs/ext_bridge/src/state/access.rs.
+export const BRIDGE_CCTP_PROTOCOL = 1 << 0;
 export const LAYERZERO_OFT_PROTOCOL = 1 << 2;
 
 // Synthetic priced-protocol key emitted by ext_bridge for aggregate managed transfers.
