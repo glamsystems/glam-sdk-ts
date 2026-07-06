@@ -3,6 +3,7 @@ import {
   getExtBridgeProgramId,
   getExtCctpProgramId,
   getExtRpiProgramId,
+  getExtExponentProgramId,
   getExtJupiterProgramId,
   getExtKaminoProgramId,
   getExtLoopscaleProgramId,
@@ -19,6 +20,7 @@ import {
 import {
   CCTP_PROTOCOL,
   RPI_PROTOCOL,
+  EXPONENT_CORE_PROTOCOL,
   GLAM_MINT_PROTOCOL,
   JUPITER_BORROW_PROTOCOL,
   JUPITER_EARN_PROTOCOL,
@@ -167,6 +169,12 @@ export const PHOENIX_WITHDRAW_QUEUE = new PublicKey(
 );
 export const EMBER_PROGRAM_ID = new PublicKey(
   "EMBERpYNE6ehWmXymZZS2skiFmCa9V5dp14e1iduM5qy",
+);
+export const EXPONENT_CORE_PROGRAM_ID = new PublicKey(
+  "ExponentnaRg3CQbW6dqQNZKXp7gtZ9DGMp1cwC4HAS7",
+);
+export const EXPONENT_GENERIC_STANDARD_PROGRAM_ID = new PublicKey(
+  "XP1BRLn8eCYSygrd8er5P4GKdzqKbC3DLoSsS5UYVZy",
 );
 
 /**
@@ -498,6 +506,19 @@ export const getProtocolsAndPermissions = (
         [1 << 1]: "RequestDeposit",
         [1 << 2]: "RequestWithdrawal",
         [1 << 3]: "CloseUserBundleAccount",
+      },
+    },
+  },
+  // Exponent integration program protocols and permissions are defined in:
+  // @anchor/programs/ext_exponent/src/state/access.rs
+  [getExtExponentProgramId(staging).toBase58()]: {
+    [protocolBitflagKey(EXPONENT_CORE_PROTOCOL)]: {
+      name: "ExponentCore",
+      staging: true,
+      permissions: {
+        [1 << 0]: "BuyPt",
+        [1 << 1]: "SellPt",
+        [1 << 2]: "Merge",
       },
     },
   },

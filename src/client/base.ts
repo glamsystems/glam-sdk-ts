@@ -46,6 +46,7 @@ import {
   ExtBridgeProgram,
   ExtRpiProgram,
   ExtCctpProgram,
+  ExtExponentProgram,
   ExtJupiterProgram,
   ExtKaminoProgram,
   ExtMarinadeProgram,
@@ -61,6 +62,7 @@ import {
   getExtBridgeProgram,
   getExtRpiProgram,
   getExtCctpProgram,
+  getExtExponentProgram,
   getExtJupiterProgram,
   getExtKaminoProgram,
   getExtLoopscaleProgram,
@@ -180,6 +182,7 @@ export class BaseClient {
   private _extOrcaProgram?: ExtOrcaProgram;
   private _extNeutralProgram?: ExtNeutralProgram;
   private _extMarginfiProgram?: ExtMarginfiProgram;
+  private _extExponentProgram?: ExtExponentProgram;
 
   private _statePda?: PublicKey;
   private _globalConfig?: GlobalConfig;
@@ -352,6 +355,16 @@ export class BaseClient {
       );
     }
     return this._extMarginfiProgram;
+  }
+
+  get extExponentProgram(): ExtExponentProgram {
+    if (!this._extExponentProgram) {
+      this._extExponentProgram = getExtExponentProgram(
+        this.provider,
+        this.staging,
+      );
+    }
+    return this._extExponentProgram;
   }
 
   get isVaultConnected(): boolean {

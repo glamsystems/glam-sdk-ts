@@ -810,6 +810,44 @@ export class NtBundlePolicy {
   }
 }
 
+export const EXPONENT_MAX_ALLOWLIST = 32;
+
+export class ExponentPolicy {
+  marketsAllowlist: PublicKey[];
+  vaultsAllowlist: PublicKey[];
+
+  static _layout = struct([
+    vec(publicKey(), "marketsAllowlist"),
+    vec(publicKey(), "vaultsAllowlist"),
+  ]);
+
+  constructor(
+    marketsAllowlist: PublicKey[] = [],
+    vaultsAllowlist: PublicKey[] = [],
+  ) {
+    this.marketsAllowlist = marketsAllowlist;
+    this.vaultsAllowlist = vaultsAllowlist;
+  }
+
+  public static decode(buffer: Buffer<ArrayBufferLike>): ExponentPolicy {
+    const { marketsAllowlist, vaultsAllowlist } = ExponentPolicy._layout.decode(
+      buffer,
+    ) as ExponentPolicy;
+    return new ExponentPolicy(marketsAllowlist, vaultsAllowlist);
+  }
+
+  public encode(): Buffer {
+    const size =
+      4 +
+      this.marketsAllowlist.length * 32 +
+      4 +
+      this.vaultsAllowlist.length * 32;
+    const buffer = Buffer.alloc(size);
+    ExponentPolicy._layout.encode(this, buffer);
+    return buffer;
+  }
+}
+
 export class CctpPolicy {
   allowedDestinations: { domain: number; address: PublicKey }[];
 

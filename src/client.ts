@@ -31,6 +31,7 @@ import { JupiterBorrowClient, JupiterEarnClient } from "./client/jupiter-lend";
 import { OrcaWhirlpoolsClient } from "./client/orca";
 import { NeutralClient } from "./client/neutral";
 import { MarginfiClient } from "./client/marginfi";
+import { ExponentClient } from "./client/exponent";
 
 /**
  * Main entrypoint for the GLAM SDK
@@ -66,6 +67,7 @@ export class GlamClient extends BaseClient {
   private _orca?: OrcaWhirlpoolsClient;
   private _neutral?: NeutralClient;
   private _marginfi?: MarginfiClient;
+  private _exponent?: ExponentClient;
 
   public constructor(config?: GlamClientConfig) {
     super(config);
@@ -280,5 +282,12 @@ export class GlamClient extends BaseClient {
       this._marginfi = new MarginfiClient(this);
     }
     return this._marginfi;
+  }
+
+  get exponent(): ExponentClient {
+    if (!this._exponent) {
+      this._exponent = new ExponentClient(this);
+    }
+    return this._exponent;
   }
 }

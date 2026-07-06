@@ -1,6 +1,8 @@
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import {
+  EXPONENT_MAX_ALLOWLIST,
+  ExponentPolicy,
   JupiterBorrowPolicy,
   JupiterEarnPolicy,
   JupiterSwapPolicy,
@@ -445,5 +447,30 @@ describe("NtBundlePolicy", () => {
     const recovered = NtBundlePolicy.decode(policy.encode());
 
     expect(recovered.bundlesAllowlist).toEqual([]);
+  });
+});
+
+describe("ExponentPolicy", () => {
+  const market = new PublicKey("11111111111111111111111111111112");
+  const vault = new PublicKey("11111111111111111111111111111113");
+
+  it("exposes the onchain allowlist limit", () => {
+    expect(EXPONENT_MAX_ALLOWLIST).toBe(32);
+  });
+
+  it("round-trips both allowlists", () => {
+    const policy = new ExponentPolicy([market], [vault]);
+    const recovered = ExponentPolicy.decode(policy.encode());
+
+    expect(recovered.marketsAllowlist[0].toBase58()).toBe(market.toBase58());
+    expect(recovered.vaultsAllowlist[0].toBase58()).toBe(vault.toBase58());
+  });
+
+  it("round-trips empty allowlists", () => {
+    const policy = new ExponentPolicy([], []);
+    const recovered = ExponentPolicy.decode(policy.encode());
+
+    expect(recovered.marketsAllowlist).toEqual([]);
+    expect(recovered.vaultsAllowlist).toEqual([]);
   });
 });
