@@ -119,6 +119,8 @@ export class StateModel extends StateIdlModel {
     this.externalPositions = data.externalPositions ?? [];
     this.pricedProtocols = data.pricedProtocols ?? [];
     this.borrowable = data.borrowable ?? null;
+    this.integrationAcls = data.integrationAcls ?? [];
+    this.delegateAcls = data.delegateAcls ?? [];
   }
 
   get idStr() {
