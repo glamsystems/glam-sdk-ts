@@ -986,10 +986,6 @@ export type ExtPhoenix = {
           "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
         },
         {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
           "name": "logAuthority"
         },
         {
@@ -998,6 +994,10 @@ export type ExtPhoenix = {
         {
           "name": "traderAccount",
           "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [

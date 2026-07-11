@@ -1,6 +1,10 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { BN } from "@coral-xyz/anchor";
+import {
+  ExchangeSnapshotViewSchema,
+  type ExchangeSnapshotView,
+} from "@ellipsis-labs/rise";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { createAssociatedTokenAccountIdempotentInstruction } from "@solana/spl-token";
 
@@ -22,18 +26,10 @@ const SNAPSHOT_FIXTURE = resolve(
   "../../fixtures/accounts/phoenix/snapshot.json",
 );
 
-type PhoenixSnapshot = {
-  exchange: {
-    canonicalMint: string;
-    usdcMint: string;
-    perpAssetMap: string;
-    globalTraderIndex: string[];
-    activeTraderBuffer: string[];
-  };
-};
-
-function loadSnapshot(): PhoenixSnapshot {
-  return JSON.parse(readFileSync(SNAPSHOT_FIXTURE, "utf-8")) as PhoenixSnapshot;
+function loadSnapshot(): ExchangeSnapshotView {
+  return ExchangeSnapshotViewSchema.parse(
+    JSON.parse(readFileSync(SNAPSHOT_FIXTURE, "utf-8")),
+  );
 }
 
 describe("phoenix sdk integration", () => {
@@ -64,14 +60,14 @@ describe("phoenix sdk integration", () => {
   }, 60_000);
 
   it("registers the vault's Phoenix trader account", async () => {
-    const traderAccount = glamClient.phoenix.getTraderPda(
+    const traderAccount = await glamClient.phoenix.getTraderPda(
       traderIndexes.traderPdaIndex,
       traderIndexes.subaccountIndex,
     );
 
     await glamClient.phoenix.registerTrader(
       {
-        maxPositions: new BN(20),
+        maxPositions: new BN(128),
         traderPdaIndex: traderIndexes.traderPdaIndex,
         traderSubaccountIndex: traderIndexes.subaccountIndex,
       },

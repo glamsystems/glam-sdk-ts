@@ -1,3 +1,9 @@
+import {
+  EMBER_PROGRAM_ADDRESS,
+  PHOENIX_GLOBAL_CONFIGURATION_ADDRESS,
+  PHOENIX_LOG_AUTHORITY_ADDRESS,
+  PHOENIX_PROGRAM_ADDRESS,
+} from "@ellipsis-labs/rise";
 import { PublicKey } from "@solana/web3.js";
 import {
   getExtBridgeProgramId,
@@ -43,6 +49,7 @@ import {
   STAKE_PROTOCOL,
   SYSTEM_PROTOCOL,
 } from "./protocols";
+import { toWeb3PublicKey } from "./utils/phoenixRise";
 
 const protocolBitflagKey = (bitflag: number) =>
   bitflag.toString(2).padStart(16, "0");
@@ -155,21 +162,14 @@ export const HYPEREVM_NAV_ADAPTER_V2_EMITTER =
 export const LOOPSCALE_PROTOCOL_ADMIN_STATE = new PublicKey(
   "HcgXEnEsgvGowVnSjMmrzSewdx9yGvfXixiuMJPhyW2z",
 );
-export const PHOENIX_PROGRAM_ID = new PublicKey(
-  "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih",
+export const PHOENIX_PROGRAM_ID = toWeb3PublicKey(PHOENIX_PROGRAM_ADDRESS);
+export const PHOENIX_LOG_AUTHORITY = toWeb3PublicKey(
+  PHOENIX_LOG_AUTHORITY_ADDRESS,
 );
-export const PHOENIX_LOG_AUTHORITY = new PublicKey(
-  "GdxfTLSsdSY37G6fZoYtdGDSfgFnbT2EmRpuePZxWShS",
+export const PHOENIX_GLOBAL_CONFIG = toWeb3PublicKey(
+  PHOENIX_GLOBAL_CONFIGURATION_ADDRESS,
 );
-export const PHOENIX_GLOBAL_CONFIG = new PublicKey(
-  "2zskx2iyCvb6Stg7RBZkt1f6MrF4dpYtMG3yMvKwqtUZ",
-);
-export const PHOENIX_WITHDRAW_QUEUE = new PublicKey(
-  "3c3NTwpg7yW91FxijkHBXwVH1xUifun3Z8TC5eW5Si3K",
-);
-export const EMBER_PROGRAM_ID = new PublicKey(
-  "EMBERpYNE6ehWmXymZZS2skiFmCa9V5dp14e1iduM5qy",
-);
+export const EMBER_PROGRAM_ID = toWeb3PublicKey(EMBER_PROGRAM_ADDRESS);
 export const EXPONENT_CORE_PROGRAM_ID = new PublicKey(
   "ExponentnaRg3CQbW6dqQNZKXp7gtZ9DGMp1cwC4HAS7",
 );

@@ -1,4 +1,5 @@
 import { BN } from "@coral-xyz/anchor";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 export const MAX_SAFE_INTEGER_BN = new BN(Number.MAX_SAFE_INTEGER.toString());
 export const U8_MAX = 0xff;
@@ -145,4 +146,14 @@ export function fromUiAmount(amount: number | string, decimals: number): BN {
   // Combine: (integer * 10^decimals) + fractional
   const multiplier = new BN(10).pow(new BN(decimals));
   return integerBN.mul(multiplier).add(fractionalBN);
+}
+
+/**
+ * Formats an integer lamport amount as SOL without trailing fractional zeros.
+ */
+export function formatLamportsAsSol(lamports: number): string {
+  return (lamports / LAMPORTS_PER_SOL)
+    .toFixed(9)
+    .replace(/0+$/, "")
+    .replace(/\.$/, "");
 }

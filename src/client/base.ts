@@ -100,7 +100,8 @@ import {
   getVaultPda,
 } from "../utils/glamPDAs";
 import { TokenMetadata, unpack } from "@solana/spl-token-metadata";
-import { JupiterApiClient, PhoenixApiClient, PkMap } from "../utils";
+import { JupiterApiClient, PkMap } from "../utils";
+import type { PhoenixRiseClient } from "../utils/phoenixRise";
 import { WSOL } from "../constants";
 import { AssetMeta, ASSETS_MAINNET } from "../assets";
 
@@ -162,8 +163,7 @@ export class BaseClient {
   blockhashWithCache: BlockhashWithCache;
   jupiterApiKey?: string;
   jupiterApiClient?: JupiterApiClient;
-  phoenixApiUrl?: string;
-  phoenixApiClient?: PhoenixApiClient;
+  phoenixRiseClient?: PhoenixRiseClient;
   public onSentListeners = new Set<(sig: string) => void>();
   readonly staging: boolean;
 
@@ -219,8 +219,7 @@ export class BaseClient {
     this.staging = resolveStaging(config?.useStaging);
     this.jupiterApiKey = config?.jupiterApiKey;
     this.jupiterApiClient = config?.jupiterApiClient;
-    this.phoenixApiUrl = config?.phoenixApiUrl;
-    this.phoenixApiClient = config?.phoenixApiClient;
+    this.phoenixRiseClient = config?.phoenixRiseClient;
     this.blockhashWithCache = new BlockhashWithCache(this.provider);
 
     if (config?.statePda) {
