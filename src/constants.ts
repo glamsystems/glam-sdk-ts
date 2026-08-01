@@ -370,7 +370,7 @@ export const getProtocolsAndPermissions = (
     },
   },
   // Token integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_spl/src/state/acl.rs
+  // @anchor/programs/ext_spl/src/state/access.rs
   [getExtSplProgramId(staging).toBase58()]: {
     [protocolBitflagKey(SPL_TOKEN_PROTOCOL)]: {
       name: "SplToken",
@@ -381,7 +381,7 @@ export const getProtocolsAndPermissions = (
     },
   },
   // CCTP integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_cctp/src/state/acl.rs
+  // @anchor/programs/ext_cctp/src/state/access.rs
   [getExtCctpProgramId(staging).toBase58()]: {
     [protocolBitflagKey(CCTP_PROTOCOL)]: {
       name: "CCTP",

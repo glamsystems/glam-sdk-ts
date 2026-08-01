@@ -13,10 +13,10 @@ export const JUPITER_SWAP_PROTOCOL = 1 << 2;
 // Mirror `SupportedProtocols` in anchor/programs/glam_mint/src/state/acl.rs.
 export const GLAM_MINT_PROTOCOL = 1 << 0;
 
-// Mirror `SupportedProtocols` in anchor/programs/ext_spl/src/state/acl.rs.
+// Mirror `SupportedProtocols` in anchor/programs/ext_spl/src/state/access.rs.
 export const SPL_TOKEN_PROTOCOL = 1 << 0;
 
-// Mirror `SupportedProtocols` in anchor/programs/ext_cctp/src/state/acl.rs.
+// Mirror `SupportedProtocols` in anchor/programs/ext_cctp/src/state/access.rs.
 export const CCTP_PROTOCOL = 1 << 0;
 
 // Mirror `SupportedProtocols` in anchor/programs/ext_phoenix/src/state/access.rs.
