@@ -29,7 +29,11 @@ import {
   LoopscaleVaultClient,
   LOOPSCALE_STRATEGY_DISCRIMINATOR,
 } from "../../src/client/loopscale";
-import { LoopscaleCoreClient } from "../../src/client/loopscale/core";
+import {
+  getLoopscaleApiMessages,
+  LoopscaleCoreClient,
+  LOOPSCALE_CREATE_STRATEGY_DISCRIMINATOR,
+} from "../../src/client/loopscale/core";
 import { LOOPSCALE_PROGRAM_ID, USDC, USDT, WSOL } from "../../src/constants";
 import { LoopscaleLoan, LoopscaleStrategy } from "../../src/deser";
 import { LoopscaleVaultPolicy } from "../../src/deser/integrationPolicies";
@@ -300,6 +304,35 @@ function createInstructionOnlyLoopscaleCoreClient(): {
   return { core: new LoopscaleCoreClient(base), vaultPda };
 }
 
+function apiCreateStrategyParams() {
+  return {
+    amount: new BN(1),
+    collateralTerms: [],
+    originationCap: new BN(2),
+    liquidityBuffer: new BN(3),
+    interestFee: new BN(4),
+    originationFee: new BN(5),
+    originationsEnabled: true,
+    externalYieldSourceArgs: null,
+  };
+}
+
+function createApiCreateStrategyIx(
+  apiNonce: PublicKey,
+  apiStrategy: PublicKey,
+): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: LOOPSCALE_PROGRAM_ID,
+    keys: [
+      { pubkey: pk(94), isSigner: false, isWritable: false },
+      { pubkey: pk(95), isSigner: false, isWritable: false },
+      { pubkey: apiNonce, isSigner: true, isWritable: false },
+      { pubkey: apiStrategy, isSigner: false, isWritable: true },
+    ],
+    data: LOOPSCALE_CREATE_STRATEGY_DISCRIMINATOR,
+  });
+}
+
 function getSingleEnumField(variant: any): any {
   return Array.isArray(variant)
     ? variant[0]
@@ -307,6 +340,313 @@ function getSingleEnumField(variant: any): any {
 }
 
 describe("LoopscaleCoreClient", () => {
+  it("normalizes per-entry compatibility aliases without dropping plural work", () => {
+    expect(
+      getLoopscaleApiMessages({
+        message: "echoed-message",
+        transaction: { message: "echoed-message" },
+        transactions: [
+          { message: "setup-message" },
+          { message: "echoed-message" },
+          { message: "echoed-message" },
+          { message: "next-message" },
+          { message: "next-message" },
+        ],
+      }),
+    ).toEqual([
+      "setup-message",
+      "echoed-message",
+      "echoed-message",
+      "next-message",
+      "next-message",
+    ]);
+
+    expect(
+      getLoopscaleApiMessages({
+        message: "direct-echo",
+        transactions: [
+          { message: "direct-echo" },
+          { message: "plural-message" },
+        ],
+      }),
+    ).toEqual(["direct-echo", "plural-message"]);
+
+    expect(
+      getLoopscaleApiMessages({
+        message: "direct-message",
+        transaction: { message: "direct-message" },
+      }),
+    ).toEqual(["direct-message"]);
+  });
+
+  it("rejects disagreeing or non-canonical compatibility aliases", () => {
+    expect(() =>
+      getLoopscaleApiMessages({
+        message: "conflicting-alias",
+        transactions: [{ message: "canonical-message" }],
+      }),
+    ).toThrow(/matches none of its transactions\[\] entries/);
+
+    expect(() =>
+      getLoopscaleApiMessages({
+        transaction: { message: "conflicting-alias" },
+        transactions: [{ message: "canonical-message" }],
+      }),
+    ).toThrow(/matches none of its transactions\[\] entries/);
+
+    // A canonical list whose entries carry no message strings must not let the
+    // alias slip through as the whole work list.
+    expect(() =>
+      getLoopscaleApiMessages({
+        message: "conflicting-alias",
+        transactions: [{ signatures: [] }],
+      }),
+    ).toThrow(/matches none of its transactions\[\] entries/);
+
+    // The aliases are echoes of each other; a disagreement is contradictory
+    // even when no canonical list is present.
+    expect(() =>
+      getLoopscaleApiMessages({
+        message: "direct-message",
+        transaction: { message: "differently-serialized-message" },
+      }),
+    ).toThrow(/disagreeing direct and singular transaction aliases/);
+  });
+
+  it("preserves array-entry repeats and nested-array compatibility", () => {
+    expect(
+      getLoopscaleApiMessages([
+        {
+          transaction: { message: "repeated-message" },
+          transactions: [
+            { message: "repeated-message" },
+            { message: "repeated-message" },
+          ],
+        },
+        [{ transactions: [{ message: "repeated-message" }] }],
+      ]),
+    ).toEqual(["repeated-message", "repeated-message", "repeated-message"]);
+  });
+
+  it("attaches the strategy nonce to the transaction containing create_strategy", async () => {
+    const { core, lendClient } = createLoopscaleCoreClientForApiIxTests();
+    const nonce = Keypair.generate();
+    const apiNonce = pk(92);
+    const apiStrategy = pk(93);
+    const setupIx = new TransactionInstruction({
+      programId: LOOPSCALE_PROGRAM_ID,
+      keys: [],
+      data: Buffer.alloc(8),
+    });
+    const createStrategyIx = createApiCreateStrategyIx(apiNonce, apiStrategy);
+
+    (core as any).fetchApiTransaction = jest.fn().mockResolvedValue({
+      message: "create-message",
+      transactions: [
+        { message: "setup-message" },
+        { message: "create-message" },
+      ],
+    });
+    (core as any).decompileApiMessage = jest.fn(async (message: string) =>
+      message === "setup-message" ? [setupIx] : [createStrategyIx],
+    );
+    (core as any).mapApiIx = jest.fn((ix: TransactionInstruction) => ix);
+
+    const result = await lendClient.buildApiCreateStrategyTxs(
+      apiCreateStrategyParams(),
+      {
+        marketInformation: pk(96),
+        principalMint: USDC,
+        nonce,
+      },
+    );
+
+    expect((core as any).decompileApiMessage.mock.calls).toEqual([
+      ["setup-message"],
+      ["create-message"],
+    ]);
+    expect(result.txs).toHaveLength(2);
+    expect(result.txs[0].additionalSigners).toEqual([]);
+    expect(result.txs[1].additionalSigners).toEqual([nonce]);
+    expect(result.txs[1].ixs[0].keys[2].pubkey).toEqual(nonce.publicKey);
+    expect(result.txs[1].ixs[0].keys[3].pubkey).toEqual(result.strategy);
+  });
+
+  it("sends the API external-yield shape in the create-strategy request body", async () => {
+    const { core, lendClient, signer, vaultPda } =
+      createLoopscaleCoreClientForApiIxTests();
+    const nonce = Keypair.generate();
+    const createStrategyIx = createApiCreateStrategyIx(pk(94), pk(95));
+    (core as any).fetchApiTransaction = jest.fn().mockResolvedValue({
+      transactions: [{ message: "create-message" }],
+    });
+    (core as any).decompileApiMessage = jest.fn(async () => [createStrategyIx]);
+    (core as any).mapApiIx = jest.fn((ix: TransactionInstruction) => ix);
+
+    const market = pk(96);
+    await lendClient.buildApiCreateStrategyTxs(
+      {
+        ...apiCreateStrategyParams(),
+        externalYieldSourceArgs: {
+          newExternalYieldSource: 1,
+          createExternalYieldAccount: true,
+        },
+      },
+      { marketInformation: market, principalMint: USDC, nonce },
+    );
+
+    expect((core as any).fetchApiTransaction).toHaveBeenCalledWith(
+      "/markets/strategy/create",
+      expect.objectContaining({
+        headers: {
+          "content-type": "application/json",
+          "user-wallet": vaultPda.toBase58(),
+          payer: signer.toBase58(),
+        },
+      }),
+    );
+    const [, init] = (core as any).fetchApiTransaction.mock.calls[0];
+    expect(JSON.parse(init.body)).toEqual({
+      principalMint: USDC.toBase58(),
+      lender: vaultPda.toBase58(),
+      amount: 1,
+      originationsEnabled: true,
+      liquidityBuffer: 3,
+      interestFee: 4,
+      originationFee: 5,
+      originationCap: 2,
+      collateralTerms: [],
+      marketInformation: market.toBase58(),
+      externalYieldSourceArgs: {
+        newExternalYieldSource: 1,
+        createExternalYieldAccount: true,
+      },
+    });
+  });
+
+  it("rejects a runtime principalFee smuggled past the API type", async () => {
+    const { core, lendClient } = createLoopscaleCoreClientForApiIxTests();
+    const createStrategyIx = createApiCreateStrategyIx(pk(102), pk(103));
+    (core as any).fetchApiTransaction = jest.fn().mockResolvedValue({
+      transactions: [{ message: "create-message" }],
+    });
+    (core as any).decompileApiMessage = jest.fn(async () => [createStrategyIx]);
+    (core as any).mapApiIx = jest.fn((ix: TransactionInstruction) => ix);
+
+    // Values BN would lossily truncate to zero (0.5, NaN) must be refused on
+    // their representation, not their converted value.
+    for (const smuggled of [new BN(999_999), 0.5, -0.5, Number.NaN, "0"]) {
+      await expect(
+        lendClient.buildApiCreateStrategyTxs(
+          { ...apiCreateStrategyParams(), principalFee: smuggled } as any,
+          {
+            marketInformation: pk(104),
+            principalMint: USDC,
+            nonce: Keypair.generate(),
+          },
+        ),
+      ).rejects.toThrow(/no principal-fee field/);
+    }
+    expect((core as any).fetchApiTransaction).not.toHaveBeenCalled();
+
+    // An actual zero (BN or literal) is a no-op for the endpoint and stays
+    // accepted.
+    for (const zero of [new BN(0), 0]) {
+      await expect(
+        lendClient.buildApiCreateStrategyTxs(
+          { ...apiCreateStrategyParams(), principalFee: zero } as any,
+          {
+            marketInformation: pk(104),
+            principalMint: USDC,
+            nonce: Keypair.generate(),
+          },
+        ),
+      ).resolves.toBeDefined();
+    }
+  });
+
+  it("rejects multiple create_strategy instructions that survive alias normalization", async () => {
+    const { core, lendClient } = createLoopscaleCoreClientForApiIxTests();
+    const nonce = Keypair.generate();
+    const firstCreateIx = createApiCreateStrategyIx(pk(97), pk(98));
+    const secondCreateIx = createApiCreateStrategyIx(pk(99), pk(100));
+
+    (core as any).fetchApiTransaction = jest.fn().mockResolvedValue({
+      transactions: [
+        { message: "first-create-serialization" },
+        { message: "second-create-serialization" },
+      ],
+    });
+    (core as any).decompileApiMessage = jest.fn(async (message: string) =>
+      message === "first-create-serialization"
+        ? [firstCreateIx]
+        : [secondCreateIx],
+    );
+    (core as any).mapApiIx = jest.fn((ix: TransactionInstruction) => ix);
+
+    await expect(
+      lendClient.buildApiCreateStrategyTxs(apiCreateStrategyParams(), {
+        marketInformation: pk(101),
+        principalMint: USDC,
+        nonce,
+      }),
+    ).rejects.toThrow(
+      "Loopscale create strategy API response included multiple create_strategy instructions",
+    );
+  });
+
+  it("reports the create_strategy signature when setup precedes it", async () => {
+    const { core, lendClient } = createLoopscaleCoreClientForApiIxTests();
+    const nonce = Keypair.generate();
+    const setupIx = new TransactionInstruction({
+      programId: LOOPSCALE_PROGRAM_ID,
+      keys: [],
+      data: Buffer.alloc(8),
+    });
+    const createStrategyIx = createApiCreateStrategyIx(pk(102), pk(103));
+
+    (core as any).fetchApiTransaction = jest.fn().mockResolvedValue({
+      message: "create-message",
+      transactions: [
+        { message: "setup-message" },
+        { message: "create-message" },
+      ],
+    });
+    (core as any).decompileApiMessage = jest.fn(async (message: string) =>
+      message === "setup-message" ? [setupIx] : [createStrategyIx],
+    );
+    (core as any).mapApiIx = jest.fn((ix: TransactionInstruction) => ix);
+    (core as any).sendCosignedIxBatches = jest
+      .fn()
+      .mockResolvedValue(["setup-signature", "create-signature"]);
+
+    const result = await lendClient.createAndDepositStrategy(
+      apiCreateStrategyParams(),
+      {
+        marketInformation: pk(104),
+        principalMint: USDC,
+        nonce,
+      },
+    );
+
+    expect(result.signature).toBe("create-signature");
+    expect(result.signatures).toEqual(["setup-signature", "create-signature"]);
+  });
+
+  it("rejects create-loan payload arrays without top-level metadata", async () => {
+    const { borrowClient, core } = createLoopscaleCoreClientForApiIxTests();
+    (core as any).fetchApiTransaction = jest
+      .fn()
+      .mockResolvedValue([{ message: "create-loan-message" }]);
+
+    await expect(
+      borrowClient.buildApiCreateLoanIxs({ nonce: new BN(7) }),
+    ).rejects.toThrow(
+      "Loopscale create loan API response did not include a top-level loanAddress",
+    );
+    expect((core as any).mapApiMessagesToGlamIxs).not.toHaveBeenCalled();
+  });
+
   it("fetches and validates a Loopscale loan account", async () => {
     const fixture = loadLoopscaleFixtureAccount(
       "FbX2zTQ49sSmxDe4HfSowBM6uzWswcwvpVjtQ1aMyME6",

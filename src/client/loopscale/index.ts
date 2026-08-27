@@ -37,6 +37,7 @@ export type {
   DepositStrategyAccounts,
   DepositWithdrawUserVaultAccounts,
   LoopscaleApiCollateralTermUpdate,
+  LoopscaleApiCreateStrategyParams,
   LoopscaleApiUpdateStrategyParams,
   LoopscaleAssetIndexGuidance,
   LoopscaleBorrowPrincipalTerms,

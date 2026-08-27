@@ -28,6 +28,7 @@ import {
   DepositStrategyAccounts,
   getLoopscaleApiMessages,
   LoopscaleApiCollateralTermUpdate,
+  LoopscaleApiCreateStrategyParams,
   LoopscaleApiUpdateStrategyParams,
   LoopscaleCoreClient,
   LoopscaleLendTxBuilder,
@@ -375,8 +376,30 @@ export class LoopscaleLendClient
     return txs;
   }
 
+  /**
+   * @deprecated Current Tars create responses append an AddressLookupTable
+   * setup instruction that this builder fails closed on before signing, and
+   * strategy creation is converging on direct instruction building. There is
+   * no build-all-before-submit replacement — the direct workflow is staged:
+   * (1) build `txBuilder.createStrategyIx` (the direct create takes the
+   * onchain `CreateStrategyParams`, including the explicit `principalFee`
+   * this API-shaped type omits, and does not bake collateral terms in);
+   * (2) submit and confirm it — the later steps read the landed strategy
+   * on-chain; (3) only when the collateral terms are non-empty, fetch the
+   * strategy and market (`fetchStrategy` / `fetchStrategyMarket`), convert
+   * the terms with `buildLoopscaleApiCollateralTermUpdates` (it returns
+   * `undefined` for an empty array, and an update request with nothing to
+   * change is rejected), and build `buildApiUpdateStrategyTxs` with the
+   * result; (4) build `buildApiDepositStrategyIxs` to fund — with empty
+   * terms, a valid case, the workflow goes straight from confirmation to
+   * this step. The workflow covers strategies
+   * without an external yield source (`externalYieldSourceArgs: null`): the
+   * API create could initialize the yield account, while direct creation
+   * requires an existing `externalYieldVault` — that setup remains a
+   * raw-build operation.
+   */
   async buildApiCreateStrategyTxs(
-    params: CreateStrategyParams & {
+    params: LoopscaleApiCreateStrategyParams & {
       amount: BN;
       collateralTerms: LoopscaleMultiCollateralTermsUpdateParams[];
     },
@@ -390,6 +413,23 @@ export class LoopscaleLendClient
     strategy: PublicKey;
     txs: LoopscaleMappedTransaction[];
   }> {
+    // Omit<> strips principalFee only at compile time; a JavaScript caller (or
+    // a widened CreateStrategyParams object) can still supply it, and the
+    // endpoint silently ignores the field. Validate the representation without
+    // lossy conversion (new BN(0.5) truncates to a zero BN): only an absent
+    // value, an actual zero BN, or a literal 0 pass — anything else is refused
+    // instead of dropping the caller's fee intent into the server default.
+    const strayPrincipalFee = (params as { principalFee?: unknown })
+      .principalFee;
+    const principalFeeIsZero =
+      strayPrincipalFee == null ||
+      strayPrincipalFee === 0 ||
+      (BN.isBN(strayPrincipalFee) && strayPrincipalFee.isZero());
+    if (!principalFeeIsZero) {
+      throw new Error(
+        "Loopscale create strategy API has no principal-fee field and silently ignores it; set a principal fee via the direct createStrategy path",
+      );
+    }
     const { nonce, marketInformation, principalMint } = accounts;
     const strategy = this.getStrategyPda(nonce.publicKey);
     const lender = this.base.vaultPda;
@@ -415,7 +455,6 @@ export class LoopscaleLendClient
             params.originationFee,
             "origination fee",
           ),
-          principalFee: bnToSafeNumber(params.principalFee, "principal fee"),
           originationCap: bnToSafeNumber(
             params.originationCap,
             "origination cap",
@@ -429,9 +468,11 @@ export class LoopscaleLendClient
 
     let apiNonce: PublicKey | null = null;
     let apiStrategy: PublicKey | null = null;
+    let createStrategyInstructionCount = 0;
     const txs: LoopscaleMappedTransaction[] = [];
     for (const message of getLoopscaleApiMessages(payload)) {
       const ixs: TransactionInstruction[] = [];
+      let includesCreateStrategy = false;
       for (const ix of await this.core.decompileApiMessage(message)) {
         if (ix.programId.equals(ComputeBudgetProgram.programId)) {
           continue;
@@ -446,13 +487,23 @@ export class LoopscaleLendClient
             .subarray(0, LOOPSCALE_CREATE_STRATEGY_DISCRIMINATOR.length)
             .equals(LOOPSCALE_CREATE_STRATEGY_DISCRIMINATOR)
         ) {
+          createStrategyInstructionCount++;
+          if (createStrategyInstructionCount > 1) {
+            throw new Error(
+              "Loopscale create strategy API response included multiple create_strategy instructions",
+            );
+          }
+          includesCreateStrategy = true;
           apiNonce = ix.keys[2]?.pubkey ?? null;
           apiStrategy = ix.keys[3]?.pubkey ?? null;
         }
         ixs.push(this.core.mapApiIx(ix));
       }
       if (ixs.length > 0) {
-        txs.push({ ixs, additionalSigners: [] });
+        txs.push({
+          ixs,
+          additionalSigners: includesCreateStrategy ? [nonce] : [],
+        });
       }
     }
 
@@ -467,7 +518,7 @@ export class LoopscaleLendClient
       );
     }
 
-    const patchedTxs = txs.map(({ ixs, additionalSigners }, index) => ({
+    const patchedTxs = txs.map(({ ixs, additionalSigners }) => ({
       ixs: ixs.map((ix) =>
         this.replaceApiCreateStrategyAccounts(
           ix,
@@ -477,8 +528,7 @@ export class LoopscaleLendClient
           strategy,
         ),
       ),
-      additionalSigners:
-        index === 0 ? [nonce, ...additionalSigners] : additionalSigners,
+      additionalSigners,
     }));
     return { nonce, strategy, txs: patchedTxs };
   }
@@ -556,13 +606,31 @@ export class LoopscaleLendClient
   /**
    * Creates a strategy account and deposits initial principal using API
    *
+   * @deprecated Current Tars create responses append an AddressLookupTable
+   * setup instruction the build path fails closed on before signing, and
+   * strategy creation is converging on direct instruction building. The
+   * replacement is the same staged migration documented on
+   * {@link buildApiCreateStrategyTxs}, at the send level — these methods
+   * sign and submit, like this one: {@link createStrategy} (direct creation
+   * takes the onchain `CreateStrategyParams`, including the explicit
+   * `principalFee` this method's API-shaped params omit) must land first;
+   * then, only for non-empty collateral terms, fetch the landed strategy and
+   * market and convert this method's term array with
+   * `buildLoopscaleApiCollateralTermUpdates` before calling
+   * {@link updateStrategy} (it takes `LoopscaleApiCollateralTermUpdate`, not
+   * the term array); then {@link depositStrategy} to fund. The workflow
+   * covers strategies without an external yield source
+   * (`externalYieldSourceArgs: null`): the API create could initialize the
+   * yield account, while direct creation requires an existing
+   * `externalYieldVault` — that setup remains a raw-build operation.
+   *
    * @param params
    * @param accounts
    * @param txOptions
    * @returns
    */
   async createAndDepositStrategy(
-    params: CreateStrategyParams & {
+    params: LoopscaleApiCreateStrategyParams & {
       amount: BN;
       collateralTerms: LoopscaleMultiCollateralTermsUpdateParams[];
     },
@@ -581,11 +649,21 @@ export class LoopscaleLendClient
       principalMint,
       nonce: nonceSigner,
     });
+    const createStrategyTxIndex = txs.findIndex(({ additionalSigners }) =>
+      additionalSigners.some((signer) =>
+        signer.publicKey.equals(nonceSigner.publicKey),
+      ),
+    );
+    if (createStrategyTxIndex < 0) {
+      throw new Error(
+        "Loopscale create strategy transaction did not retain the nonce signer",
+      );
+    }
     const signatures = await this.core.sendCosignedIxBatches(txs, txOptions);
     return {
       nonce: nonceSigner.publicKey,
       strategy,
-      signature: signatures[0],
+      signature: signatures[createStrategyTxIndex],
       signatures,
     };
   }

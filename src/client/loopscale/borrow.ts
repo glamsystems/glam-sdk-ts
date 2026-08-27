@@ -31,7 +31,6 @@ import {
   LoopscaleBorrowQuoteTerms,
   LoopscaleBorrowTxBuilder,
   LoopscaleCoreClient,
-  LoopscaleApiTransactionResponse,
   LOOPSCALE_BORROW_PRINCIPAL_DISCRIMINATOR,
   LOOPSCALE_CREATE_LOAN_DISCRIMINATOR,
   LOOPSCALE_DEPOSIT_COLLATERAL_DISCRIMINATOR,
@@ -204,7 +203,7 @@ export class LoopscaleBorrowClient
   async buildApiCreateLoanIxs(
     params: CreateLoanParams,
   ): Promise<{ loan: PublicKey; ixs: TransactionInstruction[] }> {
-    const payload = (await this.core.fetchApiTransaction(
+    const payload = await this.core.fetchApiTransaction(
       "/markets/creditbook/create",
       {
         headers: {
@@ -220,13 +219,22 @@ export class LoopscaleBorrowClient
           loanNonce: params.nonce.toString(),
         }),
       },
-    )) as LoopscaleApiTransactionResponse;
+    );
+    if (
+      Array.isArray(payload) ||
+      typeof payload.loanAddress !== "string" ||
+      payload.loanAddress.length === 0
+    ) {
+      throw new Error(
+        "Loopscale create loan API response did not include a top-level loanAddress",
+      );
+    }
 
     const ixs = await this.core.mapApiMessagesToGlamIxs(
       getLoopscaleApiMessages(payload),
       LOOPSCALE_CREATE_LOAN_DISCRIMINATOR,
     );
-    return { loan: new PublicKey(payload.loanAddress!), ixs };
+    return { loan: new PublicKey(payload.loanAddress), ixs };
   }
 
   async buildApiDepositCollateralIxs(params: {

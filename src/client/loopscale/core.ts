@@ -185,7 +185,7 @@ export type LoopscaleApiTransactionResponse = LoopscaleApiTransaction & {
 
 export type LoopscaleApiTransactionPayload =
   | LoopscaleApiTransactionResponse
-  | LoopscaleApiTransactionResponse[];
+  | LoopscaleApiTransactionPayload[];
 
 /**
  * Account inputs for a Loopscale borrow that are derived from on-chain market
@@ -284,24 +284,39 @@ export function getLoopscaleApiMessages(
   response: LoopscaleApiTransactionPayload,
 ): string[] {
   if (Array.isArray(response)) {
-    return response.flatMap((transaction) =>
-      getLoopscaleApiMessages(transaction),
-    );
+    return response.flatMap(getLoopscaleApiMessages);
   }
 
-  const messages: string[] = [];
-  if (response.message) {
-    messages.push(response.message);
+  // Tars endpoints expose direct, singular, and plural compatibility shapes.
+  // The direct and singular fields are echoes — of each other, and, when the
+  // canonical transactions[] work list is present, of one of its entries.
+  // Observed responses only ever echo byte-identical serializations, so any
+  // disagreement is contradictory and fails closed rather than being guessed
+  // into extra work. Multiple work items come only from plural entries or
+  // separate response entries, which are intentionally retained (equal plural
+  // entries included).
+  const pluralMessages = (response.transactions ?? []).flatMap(({ message }) =>
+    message ? [message] : [],
+  );
+  const aliasMessages = new Set(
+    [response.message, response.transaction?.message].flatMap((message) =>
+      message ? [message] : [],
+    ),
+  );
+  if (aliasMessages.size > 1) {
+    throw new Error(
+      "Loopscale API response has disagreeing direct and singular transaction aliases",
+    );
   }
-  if (response.transaction?.message) {
-    messages.push(response.transaction.message);
+  for (const message of pluralMessages) {
+    aliasMessages.delete(message);
   }
-  for (const transaction of response.transactions ?? []) {
-    if (transaction.message) {
-      messages.push(transaction.message);
-    }
+  if ((response.transactions ?? []).length > 0 && aliasMessages.size > 0) {
+    throw new Error(
+      "Loopscale API response has a compatibility alias that matches none of its transactions[] entries",
+    );
   }
-  return messages;
+  return [...aliasMessages, ...pluralMessages];
 }
 
 /**
@@ -521,6 +536,23 @@ export type CreateStrategyParams = {
   principalFee: BN;
   originationsEnabled: boolean;
   externalYieldSourceArgs: LoopscaleOnchainExternalYieldSourceArgs | null;
+};
+
+/**
+ * API-shaped variant of {@link CreateStrategyParams} for the Tars
+ * /markets/strategy/create request: the endpoint expresses external yield as
+ * an intent flag (`createExternalYieldAccount`) and derives the yield vault
+ * itself, while the onchain instruction args carry the vault address. It has
+ * no principal-fee field — verified live: a supplied `principalFee` leaves the
+ * returned create_strategy instruction byte-identical, i.e. the server
+ * silently ignores it — so a nonzero principal fee needs the direct
+ * `createStrategy` path, whose onchain args carry it for real.
+ */
+export type LoopscaleApiCreateStrategyParams = Omit<
+  CreateStrategyParams,
+  "externalYieldSourceArgs" | "principalFee"
+> & {
+  externalYieldSourceArgs: LoopscaleExternalYieldSourceArgs | null;
 };
 
 export type LoopscaleCollateralTermsIndices = {
@@ -2935,7 +2967,13 @@ export class LoopscaleCoreClient {
       );
     }
     const payload = (await response.json()) as LoopscaleApiTransactionPayload;
-    if (getLoopscaleApiMessages(payload).length === 0) {
+    let messages: string[];
+    try {
+      messages = getLoopscaleApiMessages(payload);
+    } catch (error) {
+      throw new Error(`Loopscale API ${endpoint}: ${(error as Error).message}`);
+    }
+    if (messages.length === 0) {
       throw new Error(
         `Loopscale API ${endpoint} returned no transaction message`,
       );
