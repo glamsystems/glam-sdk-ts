@@ -421,10 +421,14 @@ export class LoopscaleLendClient
     // instead of dropping the caller's fee intent into the server default.
     const strayPrincipalFee = (params as { principalFee?: unknown })
       .principalFee;
+    // Explicit cast after the isBN check: whether BN.isBN narrows `unknown`
+    // depends on which bn.js type declarations resolve, and the gui's Docker
+    // build resolves a set where it narrows to `{}` (pre-prod deploy failure
+    // on the #1272 merge) while the SDK, CLI, and PR-CI configs all accept it.
     const principalFeeIsZero =
       strayPrincipalFee == null ||
       strayPrincipalFee === 0 ||
-      (BN.isBN(strayPrincipalFee) && strayPrincipalFee.isZero());
+      (BN.isBN(strayPrincipalFee) && (strayPrincipalFee as BN).isZero());
     if (!principalFeeIsZero) {
       throw new Error(
         "Loopscale create strategy API has no principal-fee field and silently ignores it; set a principal fee via the direct createStrategy path",
