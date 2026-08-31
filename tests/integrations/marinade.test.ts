@@ -60,7 +60,10 @@ describe("marinade", () => {
   it("Stake 10 SOL to a validator", async () => {
     try {
       const txSig = await glamClient.stake.initializeAndDelegateStake(
-        new PublicKey("GJQjnyhSG9jN1AdMHTSyTxUR44hJHEGCmNzkidw9z3y8"),
+        // A member of the refreshed marinade validator list (fixtures capture slot
+        // 443178787); GJQjny... was delisted upstream and now serves only the
+        // native-staking and stake-pool suites.
+        new PublicKey("HHLMTHR9YoyDNsWKVJBT5AKrX86iQjkiKRFRrnaFubgq"),
         new BN(10_000_000_000),
       );
       console.log("nativeStakeDeposit tx:", txSig);
