@@ -15,7 +15,7 @@ import {
   WSOL,
 } from "../../src";
 import { createAssociatedTokenAccountIdempotentInstruction } from "@solana/spl-token";
-import { Keypair, Transaction } from "@solana/web3.js";
+import { Keypair, SystemProgram, Transaction } from "@solana/web3.js";
 import { TransferPolicy } from "../../src/deser/integrationPolicies";
 
 const txOptions = { simulate: true };
@@ -104,10 +104,11 @@ describe("spl", () => {
       throw error;
     }
 
-    // 4 SOL, 0 wSOL
+    // 4 SOL, 0 wSOL: the close returned the 2 wrapped SOL to the vault
     const { uiAmount: wSolBalance } =
       await glamClient.getVaultTokenBalance(WSOL);
     expect(wSolBalance).toEqual(0);
+    expect(await glamClient.getVaultLamports()).toEqual(4_000_000_000);
   });
 
   it("Manager wraps 2 SOL", async () => {
@@ -263,6 +264,7 @@ describe("spl", () => {
     const txCreateAta = await glamClient.sendAndConfirm(tx);
     console.log("Create vault MSOL ata:", txCreateAta);
 
+    const vaultLamportsBefore = await glamClient.getVaultLamports();
     try {
       const txSig = await glamClientDelegate.vault.closeTokenAccounts(
         [
@@ -275,5 +277,46 @@ describe("spl", () => {
     } catch (error) {
       throw error;
     }
+
+    // The 1 wSOL left in the account came back to the vault; the two accounts'
+    // rent went to the delegate.
+    expect(await glamClient.getVaultLamports()).toEqual(
+      vaultLamportsBefore + 1_000_000_000,
+    );
+    const { uiAmount: wSolBalance } =
+      await glamClient.getVaultTokenBalance(WSOL);
+    expect(wSolBalance).toEqual(0);
+  });
+
+  it("Lamports credited to the vault wSOL account after its last sync return to the vault on unwrap", async () => {
+    const vaultAta = glamClient.getVaultAta(WSOL);
+    const vaultLamportsBefore = await glamClient.getVaultLamports();
+
+    // Wrap 1 SOL of vault lamports, then credit 0.5 SOL straight to the wSOL
+    // account without a sync: the token balance stays at 1 wSOL while the
+    // account's lamports grow.
+    await glamClient.vault.wrap(1_000_000_000, txOptions);
+    const tx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: glamClient.signer,
+        toPubkey: vaultAta,
+        lamports: 500_000_000,
+      }),
+    );
+    await glamClient.sendAndConfirm(tx);
+    expect((await glamClient.getVaultTokenBalance(WSOL)).uiAmount).toEqual(1);
+    expect(await glamClient.getVaultLamports()).toEqual(
+      vaultLamportsBefore - 1_000_000_000,
+    );
+
+    const txSig = await glamClient.vault.unwrap(txOptions);
+    console.log("Unwrap with unsynced lamports:", txSig);
+
+    // The wrapped 1 SOL and the unsynced 0.5 SOL both return to the vault; the
+    // signer keeps only the account's rent-exempt reserve.
+    expect(await glamClient.getVaultLamports()).toEqual(
+      vaultLamportsBefore + 500_000_000,
+    );
+    expect((await glamClient.getVaultTokenBalance(WSOL)).uiAmount).toEqual(0);
   });
 });

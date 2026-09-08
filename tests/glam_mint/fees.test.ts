@@ -1,7 +1,14 @@
-import { Transaction } from "@solana/web3.js";
-import { GlamClient, nameToChars, StateAccountType, WSOL } from "../../src";
-import { airdrop, sleep } from "../test-utils";
-import { BN } from "@coral-xyz/anchor";
+import { Keypair, Transaction } from "@solana/web3.js";
+import {
+  AccruedFees,
+  GlamClient,
+  nameToChars,
+  StateAccountType,
+  WSOL,
+  fetchMintAndTokenProgram,
+} from "../../src";
+import { airdrop, sleep, str2seed } from "../test-utils";
+import { BN, Wallet } from "@coral-xyz/anchor";
 
 const txOptions = {
   simulate: true,
@@ -13,6 +20,36 @@ const initTxOptions = {
 
 describe("fees", () => {
   const glamClient = new GlamClient();
+  const investor = Keypair.fromSeed(str2seed("fees-investor"));
+  const glamClientInvestor = new GlamClient({ wallet: new Wallet(investor) });
+
+  const precision = new BN(1_000_000_000);
+  const delta = (after: AccruedFees, before: AccruedFees) =>
+    Object.fromEntries(
+      (Object.keys(after) as Array<keyof AccruedFees>).map((category) => [
+        category,
+        new BN(after[category]).sub(new BN(before[category])),
+      ]),
+    ) as Record<keyof AccruedFees, BN>;
+
+  // After a claim each recipient holds less than one whole share: fractions
+  // stay in the ledger until later accrual makes another share payable.
+  const expectRecipientsSettled = (claimableFees: AccruedFees) => {
+    const managerRemaining = [
+      claimableFees.managerSubscriptionFee,
+      claimableFees.managerRedemptionFee,
+      claimableFees.managementFee,
+      claimableFees.performanceFee,
+    ]
+      .reduce((total, fee) => total.add(new BN(fee)), new BN(0))
+      .sub(new BN(claimableFees.protocolFlowFee));
+    const protocolRemaining = new BN(claimableFees.protocolBaseFee).add(
+      new BN(claimableFees.protocolFlowFee),
+    );
+    for (const remaining of [managerRemaining, protocolRemaining]) {
+      expect(remaining.gte(new BN(0)) && remaining.lt(precision)).toBeTruthy();
+    }
+  };
 
   it("Initialize mint", async () => {
     const name = "GLAM Mint Test Fees";
@@ -111,20 +148,77 @@ describe("fees", () => {
     );
   });
 
-  it("Crystallize fees", async () => {
-    // Airdrop 1000 SOL to vault and wrap it (vault pays fees in wSOL)
+  it("Investor subscribes with 1000 SOL", async () => {
+    // AUM-based fees accrue on share supply, so an empty vault accrues none
+    // (GLAM-867). The suite needs an investor before it can measure accrual.
     await airdrop(
       glamClient.provider.connection,
-      glamClient.vaultPda,
-      1_000_000_000_000,
+      investor.publicKey,
+      1_001_000_000_000,
     );
-    const txWrapSolSig = await glamClient.vault.wrap(new BN(1_000_000_000_000));
-    console.log("Wrap vault SOL -> wSOL:", txWrapSolSig);
+    glamClientInvestor.statePda = glamClient.statePda;
+    const preInstructions = await glamClientInvestor.price.priceVaultIxs();
+    try {
+      const txSig = await glamClientInvestor.invest.subscribe(
+        new BN(1_000_000_000_000),
+        false,
+        { ...txOptions, preInstructions },
+      );
+      console.log("Investor subscribes:", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
 
+    // The first deposit is priced at 1 share per SOL. The 0.1% vault
+    // subscription fee is never minted; the 0.1% manager subscription fee
+    // sits in escrow as one whole share.
+    const { mint } = await fetchMintAndTokenProgram(
+      glamClient.connection,
+      glamClient.mintPda,
+    );
+    expect(mint.supply.toString()).toEqual("999000000000");
+    const { claimableFees } = (await glamClient.fetchStateModel()).mintModel!;
+    expect(new BN(claimableFees!.managerSubscriptionFee).toString()).toEqual(
+      "1000000000000000000", // precision adjusted
+    );
+    expect(new BN(claimableFees!.managementFee).eq(new BN(0))).toBeTruthy();
+    expect(new BN(claimableFees!.performanceFee).eq(new BN(0))).toBeTruthy();
+  }, 15_000);
+
+  it("Settle entry-time fees", async () => {
+    // The vault subscription fee stayed in the vault, so NAV sits above the
+    // 1.0 benchmark: the first crystallization charges a performance fee on
+    // that uplift and raises the high-water mark. Claiming everything here
+    // leaves the next two tests measuring time-based accrual alone.
+    try {
+      const txSig = await glamClient.fees.crystallizeFees(txOptions);
+      console.log("Settle entry-time fees, crystallize:", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+    const crystallized = (await glamClient.fetchStateModel()).mintModel!
+      .claimableFees!;
+    expect(new BN(crystallized.performanceFee).gt(new BN(0))).toBeTruthy();
+
+    try {
+      const txSig = await glamClient.fees.claimFees(txOptions);
+      console.log("Settle entry-time fees, claim:", txSig);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+    const { claimableFees } = (await glamClient.fetchStateModel()).mintModel!;
+    expectRecipientsSettled(claimableFees!);
+  }, 10_000);
+
+  it("Crystallize fees", async () => {
     await sleep(10_000); // more time elapsed, more fees generated
 
     const before = (await glamClient.fetchStateModel()).mintModel!;
     const beforeClaimableFees = before.claimableFees!;
+    const beforeClaimedFees = before.claimedFees!;
 
     try {
       const txSig = await glamClient.fees.crystallizeFees(txOptions);
@@ -134,45 +228,34 @@ describe("fees", () => {
       throw e;
     }
 
-    // AUM-based fees should be >0, but perf fee should still be 0
-    const stateModel = await glamClient.fetchStateModel();
-    const mintModel = stateModel.mintModel!;
-    const claimableFees = mintModel.claimableFees!;
-    const claimedFees = mintModel.claimedFees!;
-    Object.values(claimedFees).forEach((fee) => {
-      expect(new BN(fee).eq(new BN(0))).toBeTruthy();
+    // AUM-based fees accrue. NAV is below the high-water mark set when the
+    // entry-time fees settled, so no performance fee accrues, and
+    // crystallization never moves the claimed ledger.
+    const mintModel = (await glamClient.fetchStateModel()).mintModel!;
+    const accrued = delta(mintModel.claimableFees!, beforeClaimableFees);
+    const claimed = delta(mintModel.claimedFees!, beforeClaimedFees);
+    Object.values(claimed).forEach((fee) => {
+      expect(fee.eq(new BN(0))).toBeTruthy();
     });
-    expect(new BN(claimableFees.managementFee).gt(new BN(0))).toBeTruthy();
-    expect(new BN(claimableFees.performanceFee).eq(new BN(0))).toBeTruthy();
-    expect(new BN(claimableFees.protocolBaseFee).gt(new BN(0))).toBeTruthy();
-    expect(new BN(claimableFees.protocolFlowFee).gt(new BN(0))).toBeTruthy();
+    expect(accrued.managementFee.gt(new BN(0))).toBeTruthy();
+    expect(accrued.performanceFee.eq(new BN(0))).toBeTruthy();
+    expect(accrued.protocolBaseFee.gt(new BN(0))).toBeTruthy();
+    expect(accrued.protocolFlowFee.gt(new BN(0))).toBeTruthy();
 
-    const managementAccrual = new BN(claimableFees.managementFee).sub(
-      new BN(beforeClaimableFees.managementFee),
-    );
-    const performanceAccrual = new BN(claimableFees.performanceFee).sub(
-      new BN(beforeClaimableFees.performanceFee),
-    );
-    const flowAccrual = new BN(claimableFees.protocolFlowFee).sub(
-      new BN(beforeClaimableFees.protocolFlowFee),
-    );
     const flowRateBps = mintModel.feeStructure!.protocol.flowFeeBps;
-    const flowNumerator = managementAccrual
-      .add(performanceAccrual)
+    const flowNumerator = accrued.managementFee
+      .add(accrued.performanceFee)
       .mul(new BN(flowRateBps));
-
     expect(flowRateBps).toEqual(2_000);
-    expect(managementAccrual.gt(new BN(0))).toBeTruthy();
-    expect(performanceAccrual.eq(new BN(0))).toBeTruthy();
     expect(flowNumerator.gt(new BN(0))).toBeTruthy();
     // Validator time determines this live accrual's remainder. The deterministic
     // nondivisible floor-versus-ceiling regression remains in the native and LiteSVM suites.
-    expect(flowAccrual.eq(flowNumerator.div(new BN(10_000)))).toBeTruthy();
+    expect(
+      accrued.protocolFlowFee.eq(flowNumerator.div(new BN(10_000))),
+    ).toBeTruthy();
   }, 15_000);
 
   it("Claim fees", async () => {
-    // In this test there's no shares minted for subscriptions.
-    // All shares are issued as fees.
     const before = (await glamClient.fetchStateModel()).mintModel!;
     const beforeClaimableFees = before.claimableFees!;
     const beforeClaimedFees = before.claimedFees!;
@@ -187,21 +270,7 @@ describe("fees", () => {
     const mintModel = (await glamClient.fetchStateModel()).mintModel!;
     const claimableFees = mintModel.claimableFees!;
     const claimedFees = mintModel.claimedFees!;
-    const precision = new BN(1_000_000_000);
-    const managerRemaining = [
-      claimableFees.managerSubscriptionFee,
-      claimableFees.managerRedemptionFee,
-      claimableFees.managementFee,
-      claimableFees.performanceFee,
-    ]
-      .reduce((total, fee) => total.add(new BN(fee)), new BN(0))
-      .sub(new BN(claimableFees.protocolFlowFee));
-    const protocolRemaining = new BN(claimableFees.protocolBaseFee).add(
-      new BN(claimableFees.protocolFlowFee),
-    );
-    for (const remaining of [managerRemaining, protocolRemaining]) {
-      expect(remaining.gte(new BN(0)) && remaining.lt(precision)).toBeTruthy();
-    }
+    expectRecipientsSettled(claimableFees);
     for (const category of Object.keys(claimableFees) as Array<
       keyof typeof claimableFees
     >) {
@@ -216,12 +285,17 @@ describe("fees", () => {
       ).toBeTruthy();
     }
 
-    // Claimed amounts are attributed in draw order. This suite has no entry or
-    // exit fees ahead of management, so the whole manager payout lands here.
-    expect(new BN(claimedFees.managementFee).gt(new BN(0))).toBeTruthy();
-    expect(new BN(claimedFees.performanceFee).eq(new BN(0))).toBeTruthy();
-    expect(new BN(claimedFees.protocolBaseFee).gt(new BN(0))).toBeTruthy();
-    expect(new BN(claimedFees.protocolFlowFee).gt(new BN(0))).toBeTruthy();
+    // Claimed amounts are attributed in draw order: entry fees, exit fees,
+    // management, then performance for the manager; flow, then base for the
+    // protocol. The entry fees settled earlier, so this manager payout draws
+    // from management. Whatever the performance category gives up is the
+    // leftover of that settlement (the manager's fraction plus flow carve-out
+    // the protocol had not drawn yet); no performance fee accrued, as the
+    // crystallization step pinned.
+    const claimed = delta(claimedFees, beforeClaimedFees);
+    expect(claimed.managementFee.gt(new BN(0))).toBeTruthy();
+    expect(claimed.protocolBaseFee.gt(new BN(0))).toBeTruthy();
+    expect(claimed.protocolFlowFee.gt(new BN(0))).toBeTruthy();
   });
 
   it("Update fee structure", async () => {

@@ -111,6 +111,12 @@ class TxBuilder
     return await this.buildVersionedTx(ixs, txOptions);
   }
 
+  /**
+   * Returns an instruction that unwraps all vault wSOL by closing the vault's
+   * wSOL token account. Every lamport above the account's rent-exempt reserve
+   * returns to the vault, whether or not it was synced into the token balance;
+   * the reserve itself goes to the signer.
+   */
   public async unwrapIx(
     glamSigner: PublicKey,
   ): Promise<TransactionInstruction> {
@@ -159,7 +165,15 @@ class TxBuilder
   }
 
   /**
-   * Returns an instruction that closes the specified vault token account
+   * Returns an instruction that closes the specified vault token account.
+   *
+   * The token program credits the account's whole lamport balance to the
+   * signer. For a native (wrapped SOL) account under either token program the
+   * signer keeps exactly the rent-exempt reserve the account records, and
+   * every other lamport is transferred back to the vault, including lamports
+   * credited to the account after its last sync that its token balance does
+   * not reflect. For a non-native account the signer keeps that whole
+   * balance: the rent, plus any lamports credited to the account since.
    */
   public async closeTokenAccountIx(
     tokenAccount: PublicKey,
@@ -401,7 +415,9 @@ export class VaultClient implements ProtocolPolicyClient<TransferPolicy> {
   }
 
   /**
-   * Unwraps vault wSOL to SOL
+   * Unwraps vault wSOL to SOL by closing the vault's wSOL token account.
+   * Every lamport above the account's rent-exempt reserve returns to the
+   * vault; the reserve goes to the signer.
    *
    * @param txOptions
    */
@@ -455,7 +471,10 @@ export class VaultClient implements ProtocolPolicyClient<TransferPolicy> {
   }
 
   /**
-   * Closes multiple vault token accounts
+   * Closes multiple vault token accounts. Each closed account's lamports go
+   * to the signer, except that a native (wrapped SOL) account's wrapped
+   * lamports, synced or not, return to the vault and the signer keeps only
+   * that account's rent-exempt reserve.
    *
    * @param tokenAccounts
    * @param txOptions
