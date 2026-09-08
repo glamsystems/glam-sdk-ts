@@ -1012,7 +1012,8 @@
       ],
       "accounts": [
         {
-          "name": "glam_state"
+          "name": "glam_state",
+          "writable": true
         },
         {
           "name": "glam_vault",
@@ -8935,6 +8936,11 @@
       "code": 6021,
       "name": "NavDeviationTooLarge",
       "msg": "NAV deviation from reference exceeds tolerance"
+    },
+    {
+      "code": 6022,
+      "name": "EscrowSourceNotAllowed",
+      "msg": "Escrow shares cannot be burned or force-transferred by a manager"
     }
   ],
   "types": [

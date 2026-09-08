@@ -503,7 +503,8 @@ export type GlamMint = {
       ],
       "accounts": [
         {
-          "name": "glamState"
+          "name": "glamState",
+          "writable": true
         },
         {
           "name": "glamVault",
@@ -6484,6 +6485,11 @@ export type GlamMint = {
       "code": 6021,
       "name": "navDeviationTooLarge",
       "msg": "NAV deviation from reference exceeds tolerance"
+    },
+    {
+      "code": 6022,
+      "name": "escrowSourceNotAllowed",
+      "msg": "Escrow shares cannot be burned or force-transferred by a manager"
     }
   ],
   "types": [

@@ -123,6 +123,9 @@ describe("fees", () => {
 
     await sleep(10_000); // more time elapsed, more fees generated
 
+    const before = (await glamClient.fetchStateModel()).mintModel!;
+    const beforeClaimableFees = before.claimableFees!;
+
     try {
       const txSig = await glamClient.fees.crystallizeFees(txOptions);
       console.log("Crystallize fees txSig", txSig);
@@ -133,7 +136,9 @@ describe("fees", () => {
 
     // AUM-based fees should be >0, but perf fee should still be 0
     const stateModel = await glamClient.fetchStateModel();
-    const { claimableFees, claimedFees } = stateModel.mintModel!;
+    const mintModel = stateModel.mintModel!;
+    const claimableFees = mintModel.claimableFees!;
+    const claimedFees = mintModel.claimedFees!;
     Object.values(claimedFees).forEach((fee) => {
       expect(new BN(fee).eq(new BN(0))).toBeTruthy();
     });
@@ -141,11 +146,36 @@ describe("fees", () => {
     expect(new BN(claimableFees.performanceFee).eq(new BN(0))).toBeTruthy();
     expect(new BN(claimableFees.protocolBaseFee).gt(new BN(0))).toBeTruthy();
     expect(new BN(claimableFees.protocolFlowFee).gt(new BN(0))).toBeTruthy();
+
+    const managementAccrual = new BN(claimableFees.managementFee).sub(
+      new BN(beforeClaimableFees.managementFee),
+    );
+    const performanceAccrual = new BN(claimableFees.performanceFee).sub(
+      new BN(beforeClaimableFees.performanceFee),
+    );
+    const flowAccrual = new BN(claimableFees.protocolFlowFee).sub(
+      new BN(beforeClaimableFees.protocolFlowFee),
+    );
+    const flowRateBps = mintModel.feeStructure!.protocol.flowFeeBps;
+    const flowNumerator = managementAccrual
+      .add(performanceAccrual)
+      .mul(new BN(flowRateBps));
+
+    expect(flowRateBps).toEqual(2_000);
+    expect(managementAccrual.gt(new BN(0))).toBeTruthy();
+    expect(performanceAccrual.eq(new BN(0))).toBeTruthy();
+    expect(flowNumerator.gt(new BN(0))).toBeTruthy();
+    // Validator time determines this live accrual's remainder. The deterministic
+    // nondivisible floor-versus-ceiling regression remains in the native and LiteSVM suites.
+    expect(flowAccrual.eq(flowNumerator.div(new BN(10_000)))).toBeTruthy();
   }, 15_000);
 
   it("Claim fees", async () => {
     // In this test there's no shares minted for subscriptions.
     // All shares are issued as fees.
+    const before = (await glamClient.fetchStateModel()).mintModel!;
+    const beforeClaimableFees = before.claimableFees!;
+    const beforeClaimedFees = before.claimedFees!;
     try {
       const txSig = await glamClient.fees.claimFees(txOptions);
       console.log("Claim fees", txSig);
@@ -154,12 +184,40 @@ describe("fees", () => {
       throw e;
     }
 
-    const stateModel = await glamClient.fetchStateModel();
-    const { claimableFees, claimedFees } = stateModel.mintModel!;
-    Object.values(claimableFees).forEach((fee) => {
-      expect(new BN(fee).eq(new BN(0))).toBeTruthy();
-    });
+    const mintModel = (await glamClient.fetchStateModel()).mintModel!;
+    const claimableFees = mintModel.claimableFees!;
+    const claimedFees = mintModel.claimedFees!;
+    const precision = new BN(1_000_000_000);
+    const managerRemaining = [
+      claimableFees.managerSubscriptionFee,
+      claimableFees.managerRedemptionFee,
+      claimableFees.managementFee,
+      claimableFees.performanceFee,
+    ]
+      .reduce((total, fee) => total.add(new BN(fee)), new BN(0))
+      .sub(new BN(claimableFees.protocolFlowFee));
+    const protocolRemaining = new BN(claimableFees.protocolBaseFee).add(
+      new BN(claimableFees.protocolFlowFee),
+    );
+    for (const remaining of [managerRemaining, protocolRemaining]) {
+      expect(remaining.gte(new BN(0)) && remaining.lt(precision)).toBeTruthy();
+    }
+    for (const category of Object.keys(claimableFees) as Array<
+      keyof typeof claimableFees
+    >) {
+      expect(
+        new BN(claimedFees[category])
+          .add(new BN(claimableFees[category]))
+          .eq(
+            new BN(beforeClaimedFees[category]).add(
+              new BN(beforeClaimableFees[category]),
+            ),
+          ),
+      ).toBeTruthy();
+    }
 
+    // Claimed amounts are attributed in draw order. This suite has no entry or
+    // exit fees ahead of management, so the whole manager payout lands here.
     expect(new BN(claimedFees.managementFee).gt(new BN(0))).toBeTruthy();
     expect(new BN(claimedFees.performanceFee).eq(new BN(0))).toBeTruthy();
     expect(new BN(claimedFees.protocolBaseFee).gt(new BN(0))).toBeTruthy();

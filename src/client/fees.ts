@@ -232,7 +232,16 @@ export class FeesClient {
   }
 
   /**
-   * Returns claimed fees object
+   * Returns the claimed fees ledger.
+   *
+   * Per-category values are settlement attributions, not ledger-exact
+   * accruals. A claim pays whole shares only and draws them in a fixed
+   * order (protocol flow before base; manager subscription, redemption,
+   * management, then performance). The draw stops in the first category
+   * that exhausts the payable amount: earlier categories record their full
+   * balance, that category records the part paid, and later categories
+   * record nothing. Every unpaid amount stays in its own claimable category
+   * until a later claim pays it.
    */
   public async getClaimedFees(): Promise<any> {
     const stateAccount = await this.base.fetchStateAccount();

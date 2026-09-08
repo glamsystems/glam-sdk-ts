@@ -418,8 +418,6 @@ describe("invest", () => {
     }
 
     const glamMintSupplyAfter = await fetchGlamMintSupply();
-    const stateModel = await glamClientManager.fetchStateModel();
-    const claimableFees = await glamClientManager.fees.getClaimableFees();
     const claimedFees = await glamClientManager.fees.getClaimedFees();
 
     // Fulfilled Bob's 5 SOL subscription and Alice's 1 share redemption
@@ -427,27 +425,6 @@ describe("invest", () => {
     const sharesMinted = glamMintSupplyAfter - glamMintSupplyBefore;
     expect(sharesMinted).toBeLessThan(4_000_000_000);
     expect(sharesMinted).toBeGreaterThan(3_990_000_000);
-
-    const paManagerSubscriptionFee = new BN(
-      claimableFees.managerSubscriptionFee,
-    );
-    const paManagerRedemptionFee = new BN(claimableFees.managerRedemptionFee);
-    const paManagementFee = new BN(claimableFees.managementFee);
-    const paPerformanceFee = new BN(claimableFees.performanceFee);
-    const paAllManagerFees = paManagerSubscriptionFee
-      .add(paManagerRedemptionFee)
-      .add(paManagementFee)
-      .add(paPerformanceFee);
-
-    const paProtocolFlowFee = new BN(claimableFees.protocolFlowFee);
-    const protocolFlowFeeBps =
-      stateModel.mintModel?.feeStructure.protocol.flowFeeBps ?? 0;
-    expect(
-      paAllManagerFees
-        .mul(new BN(protocolFlowFeeBps))
-        .div(new BN(10_000))
-        .toString(),
-    ).toEqual(paProtocolFlowFee.toString());
 
     // Vault redemption fee is considered immediately claimed after crystallization
     expect(claimedFees.vaultRedemptionFee.toString()).toEqual(
