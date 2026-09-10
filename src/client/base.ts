@@ -655,7 +655,7 @@ export class BaseClient {
     // if the tx fails, throw an error including logs
     if (res.value.err) {
       const errTx = await this.connection.getTransaction(txSig, {
-        maxSupportedTransactionVersion: 0,
+        maxSupportedTransactionVersion: 1,
       });
       const logs = errTx?.meta?.logMessages || [];
       throw new GlamError(

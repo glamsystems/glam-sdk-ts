@@ -715,7 +715,7 @@ export class CctpClient implements ProtocolPolicyClient<CctpPolicy> {
       const promises = signatures.slice(i, i + batchSize).map((sig) =>
         this.base.connection.getTransaction(sig, {
           commitment,
-          maxSupportedTransactionVersion: 0,
+          maxSupportedTransactionVersion: 1,
         }),
       );
       const batchTransactions = await Promise.all(promises);

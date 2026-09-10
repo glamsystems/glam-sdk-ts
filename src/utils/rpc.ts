@@ -166,7 +166,7 @@ export async function getTransactionsForAddress(
   const transactions = await Promise.all(
     signatures.map((sig) =>
       connection.getTransaction(sig.signature, {
-        maxSupportedTransactionVersion: 0,
+        maxSupportedTransactionVersion: 1,
       }),
     ),
   );

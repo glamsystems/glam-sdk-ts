@@ -226,6 +226,9 @@ export async function heliusGetTransactionsForAddress(
         {
           transactionDetails,
           limit,
+          // Without a ceiling Helius returns legacy transactions only; 1
+          // admits legacy, version 0 and version 1 on every page.
+          maxSupportedTransactionVersion: 1,
           ...(paginationToken && { paginationToken }),
           ...(commitment && { commitment }),
         },
