@@ -1561,6 +1561,11 @@ export type ExtJupiter = {
       "code": 6007,
       "name": "noopOperate",
       "msg": "Jupiter operate instruction must request at least one position change"
+    },
+    {
+      "code": 6008,
+      "name": "glamAccountInRemainingAccounts",
+      "msg": "Remaining accounts must not include the GLAM state, the vault, the integration authority, or a token account the vault owns"
     }
   ],
   "types": [
