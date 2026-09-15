@@ -2096,6 +2096,11 @@ export type GlamProtocol = {
       "code": 52005,
       "name": "unsupportedOracleSource",
       "msg": "Oracle source not supported in this context"
+    },
+    {
+      "code": 52006,
+      "name": "invalidNotifyAndSettle",
+      "msg": "Notify-and-settle period exceeds the maximum"
     }
   ],
   "types": [

@@ -2090,6 +2090,11 @@
       "code": 52005,
       "name": "UnsupportedOracleSource",
       "msg": "Oracle source not supported in this context"
+    },
+    {
+      "code": 52006,
+      "name": "InvalidNotifyAndSettle",
+      "msg": "Notify-and-settle period exceeds the maximum"
     }
   ],
   "types": [
