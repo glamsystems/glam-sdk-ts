@@ -23,7 +23,6 @@ import GlamProtocolIdlJson from "../target/idl/glam_protocol.json";
 import GlamConfigIdlJson from "../target/idl/glam_config.json";
 import GlamMintIdlJson from "../target/idl/glam_mint.json";
 import ExtSplIdlJson from "../target/idl/ext_spl.json";
-import ExtDriftIdlJson from "../target/idl/ext_drift.json";
 import ExtKaminoIdlJson from "../target/idl/ext_kamino.json";
 import ExtMarinadeIdlJson from "../target/idl/ext_marinade.json";
 import ExtStakePoolIdlJson from "../target/idl/ext_stake_pool.json";
@@ -67,9 +66,6 @@ export {
   ExtMarginfi,
   ExtExponent,
 };
-
-const EXT_DRIFT_STAGING_PROGRAM_ID =
-  "gstgdpMFXKobURsFtStdaMLRSuwdmDUsrndov7kyu9h";
 
 export type GlamProtocolProgram = Program<GlamProtocol>;
 export type GlamConfigProgram = Program<GlamConfig>;
@@ -182,12 +178,6 @@ export function getGlamMintProgramId(staging: boolean) {
 
 export function getExtSplProgramId(staging: boolean) {
   return new PublicKey(getExtSplIdl(staging).address);
-}
-
-export function getExtDriftProgramId(staging: boolean) {
-  return new PublicKey(
-    staging ? EXT_DRIFT_STAGING_PROGRAM_ID : ExtDriftIdlJson.address,
-  );
 }
 
 export function getExtKaminoProgramId(staging: boolean) {
