@@ -17,6 +17,7 @@ import {
   type ProtocolPolicyTxBuilder,
   type TxOptions,
 } from "./base";
+import type { TransactionVersion } from "../utils/messageV1";
 import { WSOL } from "../constants";
 import { JUPITER_SWAP_PROTOCOL } from "../protocols";
 import { JupiterSwapPolicy } from "../deser/integrationPolicies";
@@ -52,12 +53,32 @@ export type JupiterSwapV2Options = JupiterSwapOptions & {
   skipQuotePriceCheck?: boolean;
 };
 
+/**
+ * The most accounts a route may name on the version 1 path.
+ *
+ * A version 1 transaction names at most 64 accounts and has no address lookup
+ * tables to move any of them into, so the route has to fit in what is left
+ * after GLAM's own accounts. A swap v2 transaction costs 20 accounts beside
+ * its route at the worst case tests/sdk/kamino_refresh_tx_size.test.ts
+ * measures - the state and the vault, both vault token accounts and their
+ * token programs, both mints, the protocol and klend programs, and up to three
+ * Kamino reserves with their lending markets and Scope feeds - which leaves 44.
+ * Jupiter treats maxAccounts as an estimate rather than a bound, so the quote
+ * asks for 40 and keeps four accounts of margin. A caller that asks for fewer
+ * is left alone; one that asks for more is capped here.
+ *
+ * The version 0 path keeps today's request: its lookup tables absorb the
+ * route, and capping it there would only cost routing quality.
+ */
+export const JUPITER_V1_MAX_QUOTE_ACCOUNTS = 40;
+
 class TxBuilder
   extends BaseTxBuilder<JupiterSwapClient>
   implements ProtocolPolicyTxBuilder<JupiterSwapPolicy>
 {
   private async resolveSwapInstructionContext(
     options: JupiterSwapOptions,
+    transactionVersion?: TransactionVersion,
   ): Promise<{
     inputMint: PublicKey;
     outputMint: PublicKey;
@@ -80,8 +101,21 @@ class TxBuilder
             "quoteParams must be specified when quoteResponse and swapInstructions are not specified.",
           );
         }
-        resolvedQuoteResponse =
-          await this.client.jupApi.getQuoteResponse(quoteParams);
+        // Only a quote the SDK fetches itself can be capped, so the version
+        // is resolved here rather than on every call.
+        const version =
+          transactionVersion ?? this.client.base.resolveTransactionVersion();
+        resolvedQuoteResponse = await this.client.jupApi.getQuoteResponse(
+          version === 1
+            ? {
+                ...quoteParams,
+                maxAccounts: Math.min(
+                  quoteParams.maxAccounts ?? JUPITER_V1_MAX_QUOTE_ACCOUNTS,
+                  JUPITER_V1_MAX_QUOTE_ACCOUNTS,
+                ),
+              }
+            : quoteParams,
+        );
       }
       const finalQuoteResponse = resolvedQuoteResponse!;
 
@@ -179,9 +213,10 @@ class TxBuilder
   async swapIxs(
     options: JupiterSwapOptions,
     glamSigner: PublicKey,
+    transactionVersion?: TransactionVersion,
   ): Promise<[TransactionInstruction[], PublicKey[]]> {
     const { inputMint, outputMint, amount, swapIx, lookupTables } =
-      await this.resolveSwapInstructionContext(options);
+      await this.resolveSwapInstructionContext(options, transactionVersion);
 
     const { tokenProgram: outputTokenProgram } = await fetchMintAndTokenProgram(
       this.client.base.connection,
@@ -215,9 +250,10 @@ class TxBuilder
   async swapV2Ixs(
     options: JupiterSwapV2Options,
     glamSigner: PublicKey,
+    transactionVersion?: TransactionVersion,
   ): Promise<[TransactionInstruction[], PublicKey[]]> {
     const { inputMint, outputMint, amount, swapIx, lookupTables } =
-      await this.resolveSwapInstructionContext(options);
+      await this.resolveSwapInstructionContext(options, transactionVersion);
 
     const { skipQuotePriceCheck = false } = options;
     const oracleAccounts = await this.getSwapV2OracleAccounts(
@@ -276,7 +312,11 @@ class TxBuilder
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const glamSigner = txOptions.signer || this.client.base.signer;
-    const [ixs, lookupTables] = await this.swapIxs(options, glamSigner);
+    const [ixs, lookupTables] = await this.swapIxs(
+      options,
+      glamSigner,
+      this.client.base.resolveTransactionVersion(txOptions.transactionVersion),
+    );
     return await this.buildVersionedTx(ixs, {
       ...txOptions,
       lookupTables: mergeLookupTables(
@@ -291,7 +331,11 @@ class TxBuilder
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
     const glamSigner = txOptions.signer || this.client.base.signer;
-    const [ixs, lookupTables] = await this.swapV2Ixs(options, glamSigner);
+    const [ixs, lookupTables] = await this.swapV2Ixs(
+      options,
+      glamSigner,
+      this.client.base.resolveTransactionVersion(txOptions.transactionVersion),
+    );
     return await this.buildVersionedTx(ixs, {
       ...txOptions,
       lookupTables: mergeLookupTables(

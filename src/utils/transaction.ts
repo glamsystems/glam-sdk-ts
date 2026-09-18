@@ -10,6 +10,12 @@ import {
   SimulatedTransactionResponse,
 } from "@solana/web3.js";
 import { resolveErrorCode, extractFailedProgramId } from "../error";
+import {
+  RUNTIME_COMPUTE_UNIT_LIMIT,
+  V1Transaction,
+  compileToV1Message,
+  type TransactionVersion,
+} from "./messageV1";
 
 /**
  * Parses program logs to extract error message.
@@ -59,29 +65,54 @@ export const getSimulationResult = async (
   payer: PublicKey,
   lookupTables?: Array<AddressLookupTableAccount>,
   staging: boolean = false,
+  transactionVersion: TransactionVersion = 0,
+  loadedAccountsDataSizeLimit?: number,
 ): Promise<{
   unitsConsumed?: number;
+  /**
+   * The account bytes the simulation actually loaded, program data included,
+   * as the RPC reports them. @solana/web3.js 1.99.0 passes the field through
+   * without declaring it, so it is read off the response here. Reported, not
+   * acted on: a version 1 message states the runtime ceiling, because a limit
+   * taken from a simulation can be outgrown between simulating and executing.
+   */
+  loadedAccountsDataSize?: number;
   error?: Error;
   serializedTx?: String;
 }> => {
-  const testIxs = [
-    // Set an arbitrarily high number in simulation so we can be sure the transaction will succeed
-    // and we get the real compute units used
-    ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 }),
-    ...instructions,
-  ];
-
   let serializedTx;
   try {
-    const testTx = new VersionedTransaction(
-      new TransactionMessage({
-        instructions: testIxs,
-        payerKey: payer,
-        // RecentBlockhash can by any public key during simulation
-        // since 'replaceRecentBlockhash' is set to 'true' below
-        recentBlockhash: PublicKey.default.toString(),
-      }).compileToV0Message(lookupTables),
-    );
+    // An arbitrarily high compute unit limit, so the simulation succeeds and
+    // reports the units the transaction really uses. A version 1 message
+    // states it in its own field; a version 0 message asks for it with a
+    // Compute Budget instruction.
+    // RecentBlockhash can be any public key during simulation, since
+    // 'replaceRecentBlockhash' is set to 'true' below.
+    const testTx =
+      transactionVersion === 1
+        ? new V1Transaction(
+            compileToV1Message({
+              payerKey: payer,
+              recentBlockhash: PublicKey.default.toString(),
+              instructions,
+              config: {
+                computeUnitLimit: RUNTIME_COMPUTE_UNIT_LIMIT,
+                loadedAccountsDataSizeLimit,
+              },
+            }),
+          )
+        : new VersionedTransaction(
+            new TransactionMessage({
+              instructions: [
+                ComputeBudgetProgram.setComputeUnitLimit({
+                  units: RUNTIME_COMPUTE_UNIT_LIMIT,
+                }),
+                ...instructions,
+              ],
+              payerKey: payer,
+              recentBlockhash: PublicKey.default.toString(),
+            }).compileToV0Message(lookupTables),
+          );
     serializedTx = Buffer.from(testTx.serialize()).toString("base64");
 
     const rpcResponse = await connection.simulateTransaction(testTx, {
@@ -92,6 +123,9 @@ export const getSimulationResult = async (
 
     return {
       unitsConsumed: rpcResponse.value.unitsConsumed,
+      loadedAccountsDataSize: (
+        rpcResponse.value as { loadedAccountsDataSize?: number }
+      ).loadedAccountsDataSize,
       serializedTx,
     };
   } catch (e) {

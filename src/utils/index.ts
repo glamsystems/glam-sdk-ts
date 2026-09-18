@@ -6,6 +6,7 @@ export * from "./evm";
 export * from "./common";
 export * from "./glamPDAs";
 export * from "./lookupTables";
+export * from "./messageV1";
 export * from "./rpc";
 export * from "./timelock";
 export * from "./transaction";

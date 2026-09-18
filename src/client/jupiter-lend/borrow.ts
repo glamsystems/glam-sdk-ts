@@ -635,6 +635,8 @@ export class JupiterBorrowClient
       { ...accounts, remainingAccounts: probeRemainingAccounts.accounts },
       this.base.signer,
     );
+    // A version 0 message, built only to be simulated for the expected tick it
+    // logs and never sent: its lookup tables are what let the probe fit.
     const tx = new VersionedTransaction(
       new TransactionMessage({
         payerKey: this.base.signer,

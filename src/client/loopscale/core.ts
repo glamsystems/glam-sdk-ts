@@ -2997,6 +2997,17 @@ export class LoopscaleCoreClient {
 
     const { tx, identifier } = params;
 
+    // Loopscale's MPC signer is not verified to parse or co-sign a version 1
+    // message, and the co-signed transaction comes back through
+    // `VersionedTransaction.deserialize`, which cannot write one at all. This
+    // path is version 0 only; `coSignAndSend` builds it that way and a
+    // caller-built transaction is checked here.
+    if (tx.message.version === 1) {
+      throw new Error(
+        "This transaction holds a version 1 message and Loopscale's MPC co-signer takes version 0 bytes only. Nothing was signed or sent. Build the transaction with transactionVersion: 0, or go through coSignAndSend, which does.",
+      );
+    }
+
     // Sign with wallet first, then send to Loopscale for MPC co-signing
     const walletSignedTx = await this.base.wallet.signTransaction(tx);
     const transaction = Buffer.from(walletSignedTx.serialize()).toString(
@@ -3068,9 +3079,12 @@ export class LoopscaleCoreClient {
     additionalSigners: Keypair[] = [],
     identifierSuffix = "",
   ): Promise<TransactionSignature> {
+    // Version 0: a foreign signer co-signs these bytes and returns them through
+    // `VersionedTransaction.deserialize`, and neither step is verified for a
+    // version 1 message. This pin holds whatever the client or the caller asks.
     const versionedTx = await this.base.intoVersionedTransaction(
       new Transaction().add(...ixs),
-      txOptions,
+      { ...txOptions, transactionVersion: 0 },
     );
     if (additionalSigners.length > 0) {
       versionedTx.sign(additionalSigners);

@@ -1,5 +1,6 @@
 import { Provider, Wallet } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
+import type { TransactionVersion } from "./utils/messageV1";
 import { JupiterApiClient } from "./utils";
 import type { PhoenixRiseClient } from "./utils/phoenixRise";
 
@@ -59,4 +60,10 @@ export type GlamClientConfig = {
   jupiterApiClient?: JupiterApiClient;
   phoenixRiseClient?: PhoenixRiseClient;
   useStaging?: boolean;
+  /**
+   * The transaction version this host builds, for every transaction it does
+   * not state one for. Absent, GLAM_TRANSACTION_VERSION decides, and under
+   * that the cluster: version 1 everywhere but localnet.
+   */
+  transactionVersion?: TransactionVersion;
 };

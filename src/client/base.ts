@@ -15,9 +15,20 @@ import {
 } from "@solana/web3.js";
 import { getSimulationResult, parseProgramLogs } from "../utils/transaction";
 import {
-  buildComputeBudgetInstructions,
+  computeBudgetInstructions,
+  resolveComputeBudget,
   ComputeBudgetOptions,
+  type ComputeBudget,
 } from "../utils/computeBudget";
+import {
+  V1Transaction,
+  assertLoadedAccountsDataSizeLimit,
+  assertV1Envelope,
+  assertV1TransactionLimits,
+  compileToV1Message,
+  transactionVersionFromEnv,
+  type TransactionVersion,
+} from "../utils/messageV1";
 import {
   fetchAddressLookupTableAccounts,
   mergeLookupTables,
@@ -118,10 +129,24 @@ export type TxOptions = {
   getPriorityFeeMicroLamports?: (tx: VersionedTransaction) => Promise<number>;
   maxFeeLamports?: number;
   useMaxFee?: boolean;
+  /**
+   * The account bytes this transaction may load, program data included. Only a
+   * version 1 transaction can state it, in its message header. Absent, the
+   * runtime ceiling is stated, which costs the payer nothing and cannot be
+   * outgrown between simulating and executing.
+   */
+  loadedAccountsDataSizeLimit?: number;
   preInstructions?: TransactionInstruction[];
   postInstructions?: TransactionInstruction[];
   lookupTables?: LookupTableInput[];
   simulate?: boolean;
+  /**
+   * The transaction version to build. Version 1 states its compute budget in
+   * the message's own fields and uses no address lookup tables; version 0 uses
+   * Compute Budget instructions and lookup tables. Absent, the client's default
+   * decides.
+   */
+  transactionVersion?: TransactionVersion;
 };
 
 export interface ProtocolPolicyTxBuilder<TPolicy> {
@@ -166,6 +191,8 @@ export class BaseClient {
   phoenixRiseClient?: PhoenixRiseClient;
   public onSentListeners = new Set<(sig: string) => void>();
   readonly staging: boolean;
+  /** This host's default transaction version, when it states one. */
+  readonly transactionVersion?: TransactionVersion;
 
   private _protocolProgram?: GlamProtocolProgram;
   private _mintProgram?: GlamMintProgram;
@@ -217,6 +244,7 @@ export class BaseClient {
       config?.cluster ||
       ClusterNetwork.fromUrl(this.provider.connection.rpcEndpoint);
     this.staging = resolveStaging(config?.useStaging);
+    this.transactionVersion = config?.transactionVersion;
     this.jupiterApiKey = config?.jupiterApiKey;
     this.jupiterApiClient = config?.jupiterApiClient;
     this.phoenixRiseClient = config?.phoenixRiseClient;
@@ -469,21 +497,14 @@ export class BaseClient {
   /**
    * Converts a legacy transaction into a versioned transaction.
    */
-  public async intoVersionedTransaction(
-    tx: Transaction,
-    {
-      lookupTables = [],
-      signer,
-      computeUnitLimit,
-      getPriorityFeeMicroLamports,
-      maxFeeLamports,
-      useMaxFee = false,
-      simulate = false,
-    }: TxOptions,
-  ): Promise<VersionedTransaction> {
-    signer = signer || this.signer;
-
-    const instructions = tx.instructions;
+  /**
+   * The address lookup tables a version 0 message compiles against: the
+   * caller's, the default mainnet ones and the vault's own. A version 1
+   * message has none, so this is not called on that path.
+   */
+  private async resolveLookupTableAccounts(
+    lookupTables: LookupTableInput[],
+  ): Promise<AddressLookupTableAccount[]> {
     // Default (mainnet-only) lookup tables are cached for the session. Start
     // the fetch in parallel with caller-provided lookups and GLAM ALT discovery;
     // swallow failures so an RPC hiccup doesn't fail tx building.
@@ -528,6 +549,41 @@ export class BaseClient {
       );
     }
 
+    return lookupTableAccounts;
+  }
+
+  public async intoVersionedTransaction(
+    tx: Transaction,
+    {
+      lookupTables = [],
+      signer,
+      computeUnitLimit,
+      getPriorityFeeMicroLamports,
+      maxFeeLamports,
+      useMaxFee = false,
+      simulate = false,
+      transactionVersion,
+      loadedAccountsDataSizeLimit,
+    }: TxOptions,
+  ): Promise<VersionedTransaction> {
+    signer = signer || this.signer;
+    const version = this.resolveTransactionVersion(transactionVersion);
+
+    if (loadedAccountsDataSizeLimit !== undefined) {
+      assertLoadedAccountsDataSizeLimit(loadedAccountsDataSizeLimit);
+      if (version !== 1) {
+        throw new Error(
+          `loadedAccountsDataSizeLimit was given for a version ${version} transaction, which has no field to state it in. Nothing was built. Build this transaction as version 1, or drop the option.`,
+        );
+      }
+    }
+
+    const instructions = tx.instructions;
+    // A version 1 message carries no address table lookups, so on that path
+    // none are resolved and none are fetched.
+    const lookupTableAccounts =
+      version === 1 ? [] : await this.resolveLookupTableAccounts(lookupTables);
+
     const recentBlockhash = (await this.blockhashWithCache.get()).blockhash;
 
     const { unitsConsumed, error, serializedTx } = await getSimulationResult(
@@ -536,6 +592,8 @@ export class BaseClient {
       signer,
       lookupTableAccounts,
       this.staging,
+      version,
+      loadedAccountsDataSizeLimit,
     );
     computeUnitLimit = unitsConsumed;
 
@@ -551,28 +609,62 @@ export class BaseClient {
       throw error;
     }
 
-    // Add CU instructions if computeUnitLimit is provided
+    // The compute unit limit and the priority fee, as numbers, from the one
+    // owner of that arithmetic. A version 0 transaction turns them into the two
+    // Compute Budget instructions it has always used; a version 1 transaction
+    // writes them into the message header, where the runtime reads them, and
+    // builds no Compute Budget instruction at all.
+    let budget: ComputeBudget | undefined;
     if (computeUnitLimit) {
       let cuOptions = { maxFeeLamports, useMaxFee } as ComputeBudgetOptions;
       if (getPriorityFeeMicroLamports) {
-        const vTx = new VersionedTransaction(
-          new TransactionMessage({
-            payerKey: signer,
-            recentBlockhash,
-            instructions,
-          }).compileToV0Message(lookupTableAccounts),
-        );
+        const vTx =
+          version === 1
+            ? new V1Transaction(
+                compileToV1Message({
+                  payerKey: signer,
+                  recentBlockhash,
+                  instructions,
+                  config: { loadedAccountsDataSizeLimit },
+                }),
+              )
+            : new VersionedTransaction(
+                new TransactionMessage({
+                  payerKey: signer,
+                  recentBlockhash,
+                  instructions,
+                }).compileToV0Message(lookupTableAccounts),
+              );
         cuOptions = {
           ...cuOptions,
           vTx,
           getPriorityFeeMicroLamports,
         };
       }
-      const cuIxs = await buildComputeBudgetInstructions(
-        computeUnitLimit,
-        cuOptions,
+      budget = await resolveComputeBudget(computeUnitLimit, cuOptions);
+      if (version !== 1) {
+        instructions.unshift(...computeBudgetInstructions(budget));
+      }
+    }
+
+    if (version === 1) {
+      const v1Tx = new V1Transaction(
+        compileToV1Message({
+          payerKey: signer,
+          recentBlockhash,
+          instructions,
+          config: {
+            loadedAccountsDataSizeLimit,
+            ...(budget && {
+              computeUnitLimit: budget.computeUnitLimit,
+              priorityFee: budget.priorityFeeLamports,
+            }),
+          },
+        }),
       );
-      instructions.unshift(...cuIxs);
+      // The last word before the transaction is handed over to be signed.
+      assertV1TransactionLimits(v1Tx);
+      return v1Tx;
     }
 
     return new VersionedTransaction(
@@ -582,6 +674,26 @@ export class BaseClient {
         instructions,
       }).compileToV0Message(lookupTableAccounts),
     );
+  }
+
+  /**
+   * The transaction version this client builds, most specific first: what this
+   * transaction asked for, then this client's own default, then
+   * GLAM_TRANSACTION_VERSION, then the cluster.
+   *
+   * Version 1 is the default. Localnet is the exception: the validator this
+   * repository's suites run is Agave 3.1.9, which cannot take a version 1
+   * transaction, so a client pointed at localnet builds version 0 unless it is
+   * told otherwise.
+   */
+  public resolveTransactionVersion(
+    transactionVersion?: TransactionVersion,
+  ): TransactionVersion {
+    if (transactionVersion !== undefined) return transactionVersion;
+    if (this.transactionVersion !== undefined) return this.transactionVersion;
+    const fromEnv = transactionVersionFromEnv();
+    if (fromEnv !== undefined) return fromEnv;
+    return this.cluster === ClusterNetwork.Localnet ? 0 : 1;
   }
 
   /**
@@ -612,6 +724,12 @@ export class BaseClient {
 
     const isLegacyTx = typeof (tx as Transaction).partialSign === "function";
 
+    // A version 1 message is only correct on the wire while the transaction
+    // holding it writes the version 1 envelope. Checked before the wallet is
+    // asked to sign, so a transaction that lost that on the way here is
+    // refused with what happened rather than with the library's own error.
+    assertV1Envelope(tx);
+
     // Anchor provider.sendAndConfirm forces a signature with the wallet, which we don't want
     // https://github.com/coral-xyz/anchor/blob/v0.30.0/ts/packages/anchor/src/provider.ts#L159
     if (isLegacyTx) {
@@ -630,6 +748,9 @@ export class BaseClient {
       (signedTx as VersionedTransaction).sign(additionalSigners);
     }
     const serializedTx = signedTx.serialize();
+    // And again on what is about to be sent: a wallet may return a transaction
+    // it rebuilt, which keeps the message and drops the envelope.
+    assertV1Envelope(signedTx, serializedTx);
 
     // skip simulation since we just did it to compute CUs
     // however this means that we need to reconstruct the error, if

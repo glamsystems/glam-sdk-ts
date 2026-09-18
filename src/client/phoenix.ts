@@ -866,6 +866,8 @@ class TxBuilder
       );
     const { blockhash, lastValidBlockHeight } =
       await this.client.base.connection.getLatestBlockhash("confirmed");
+    // A version 0 message: Phoenix's onboarder co-signs these bytes, and its
+    // signer is not verified to sign a version 1 message.
     const transaction = new VersionedTransaction(
       new TransactionMessage({
         payerKey: txFeePayer,

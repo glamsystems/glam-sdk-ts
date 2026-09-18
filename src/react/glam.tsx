@@ -162,6 +162,8 @@ export function GlamProvider({
       }),
       cluster: cluster.network,
       statePda: activeGlamState?.pubkey,
+      // Browser wallets are not verified to sign a version 1 message yet.
+      transactionVersion: 0,
     });
     if (typeof window !== "undefined") {
       window.glam = glamClient;
