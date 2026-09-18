@@ -160,6 +160,14 @@ function makeClient(
   const fetchAndParseReserves = jest.fn(async (pubkeys: PublicKey[]) =>
     pubkeys.map((pubkey) => reserve(pubkey)),
   );
+  const refreshObligationIx = jest.fn(
+    ({ obligation }: { obligation: PublicKey; reserves: PublicKey[] }) =>
+      new TransactionInstruction({
+        programId: KAMINO_LENDING_PROGRAM,
+        keys: [{ pubkey: obligation, isSigner: false, isWritable: true }],
+        data: Buffer.from([3]),
+      }),
+  );
   const refreshReservesBatchIx = jest.fn(
     (reserves: ReturnType<typeof reserve>[]) =>
       new TransactionInstruction({
@@ -218,14 +226,7 @@ function makeClient(
       ]),
       txBuilder: {
         refreshReservesBatchIx,
-        refreshObligationIx: jest.fn(
-          ({ obligation }: { obligation: PublicKey }) =>
-            new TransactionInstruction({
-              programId: KAMINO_LENDING_PROGRAM,
-              keys: [{ pubkey: obligation, isSigner: false, isWritable: true }],
-              data: Buffer.from([3]),
-            }),
-        ),
+        refreshObligationIx,
       },
     } as any,
     {} as any,
@@ -245,6 +246,7 @@ function makeClient(
     client,
     fetchAndParseReserves,
     refreshReservesBatchIx,
+    refreshObligationIx,
   };
 }
 
@@ -334,6 +336,20 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     expectPubkeys(chunk.kaminoReserves, [RESERVE_A, RESERVE_C]);
     expect(fetchAndParseReserves).not.toHaveBeenCalled();
     expect(refreshReservesBatchIx).not.toHaveBeenCalled();
+  });
+
+  // klend's refresh_obligation takes one account per active deposit, then one per active
+  // borrow; an obligation may deposit into and borrow from the same reserve.
+  it("lists a reserve once per deposit and once per borrow for the obligation refresh", async () => {
+    const { client, refreshObligationIx } = makeClient([RESERVE_A, RESERVE_A]);
+
+    const chunk = await client.priceKaminoObligationsIxs();
+
+    expectPubkeys(refreshObligationIx.mock.calls[0][0].reserves, [
+      RESERVE_A,
+      RESERVE_A,
+    ]);
+    expectPubkeys(chunk.kaminoReserves, [RESERVE_A]);
   });
 
   it("coalesces all kamino reserves into a single front-loaded refresh ix", async () => {

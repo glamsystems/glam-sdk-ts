@@ -19,7 +19,6 @@ import {
 } from "../utils";
 import { Decodable } from "./base";
 import Decimal from "decimal.js";
-import { KAMINO_LENDING_PROGRAM } from "../constants";
 
 const MAX_RESERVES = 25;
 
@@ -483,11 +482,11 @@ export class Reserve extends Decodable {
     return this.config.tokenInfo.scopeConfiguration.priceFeed;
   }
 
+  // klend binds the fee receiver to this field. Deriving it from the reserve address is wrong
+  // for reserves created under the older [fee_receiver, market, mint] seeds, which include the
+  // main market's SOL and USDC reserves.
   get liquidityFeeReceiver(): PublicKey {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("fee_receiver"), this._address.toBuffer()],
-      KAMINO_LENDING_PROGRAM,
-    )[0];
+    return this.liquidity.feeVault;
   }
 
   get farmDebtNullable(): PublicKey | null {

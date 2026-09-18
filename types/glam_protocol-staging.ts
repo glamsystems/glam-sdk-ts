@@ -2101,6 +2101,21 @@ export type GlamProtocol = {
       "code": 52006,
       "name": "invalidNotifyAndSettle",
       "msg": "Notify-and-settle period exceeds the maximum"
+    },
+    {
+      "code": 52007,
+      "name": "obligationStale",
+      "msg": "Kamino obligation is stale or its price status is incomplete"
+    },
+    {
+      "code": 52008,
+      "name": "reserveStale",
+      "msg": "Kamino reserve is stale or its price status is incomplete"
+    },
+    {
+      "code": 52009,
+      "name": "invalidObligationOwner",
+      "msg": "Kamino obligation is not owned by the vault"
     }
   ],
   "types": [

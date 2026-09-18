@@ -1516,6 +1516,21 @@
       "code": 52006,
       "name": "InvalidNotifyAndSettle",
       "msg": "Notify-and-settle period exceeds the maximum"
+    },
+    {
+      "code": 52007,
+      "name": "ObligationStale",
+      "msg": "Kamino obligation is stale or its price status is incomplete"
+    },
+    {
+      "code": 52008,
+      "name": "ReserveStale",
+      "msg": "Kamino reserve is stale or its price status is incomplete"
+    },
+    {
+      "code": 52009,
+      "name": "InvalidObligationOwner",
+      "msg": "Kamino obligation is not owned by the vault"
     }
   ],
   "types": [

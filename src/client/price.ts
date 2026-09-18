@@ -208,21 +208,20 @@ export class PriceClient {
   private getKaminoObligationReserveSets(
     parsedObligations: ParsedKaminoObligation[],
   ) {
-    const obligationReservesMap = new PkMap<PkSet>();
+    // klend's refresh_obligation takes one account per active deposit and then one per active
+    // borrow, so a reserve an obligation both deposits into and borrows from appears twice.
+    // Only the set handed to the batch reserve refresh is deduplicated.
+    const obligationReservesMap = new PkMap<PublicKey[]>();
     const reservesSet = new PkSet();
 
     parsedObligations.forEach((obligation) => {
       const { activeDeposits, activeBorrows } = obligation;
-      const address = obligation.getAddress();
-      obligationReservesMap.set(address, new PkSet());
-      activeDeposits.forEach(({ depositReserve }) => {
-        reservesSet.add(depositReserve);
-        obligationReservesMap.get(address)?.add(depositReserve);
-      });
-      activeBorrows.forEach(({ borrowReserve }) => {
-        reservesSet.add(borrowReserve);
-        obligationReservesMap.get(address)?.add(borrowReserve);
-      });
+      const reserves = [
+        ...activeDeposits.map(({ depositReserve }) => depositReserve),
+        ...activeBorrows.map(({ borrowReserve }) => borrowReserve),
+      ];
+      reserves.forEach((reserve) => reservesSet.add(reserve));
+      obligationReservesMap.set(obligation.getAddress(), reserves);
     });
 
     return { obligationReservesMap, reservesSet };
@@ -916,7 +915,7 @@ export class PriceClient {
         this.klend.txBuilder.refreshObligationIx({
           obligation: address,
           lendingMarket,
-          reserves: Array.from(obligationReservesMap.get(address) || []),
+          reserves: obligationReservesMap.get(address) || [],
         }),
       );
     });
