@@ -30,6 +30,7 @@ import {
   UnstakeUserVaultLpAccounts,
 } from "./core";
 import { PkSet } from "../../utils/pkset";
+import { collectKaminoReserveOracles } from "../kamino/oracles";
 
 export type LoopscaleVaultDepositWithdrawAmounts =
   | {
@@ -259,6 +260,7 @@ export class LoopscaleVaultClient
     const vaultStakeAccounts: PublicKey[] = [];
     const oracleAccounts: PublicKey[] = [];
     const seenOracles = new PkSet();
+    const kaminoReserves = new PkSet();
 
     for (let i = 0; i < vaultAllowlist.length; i++) {
       const vault = vaultAllowlist[i];
@@ -289,6 +291,7 @@ export class LoopscaleVaultClient
           `Oracle unavailable for Loopscale vault principal ${principalMint.toBase58()}`,
         );
       }
+      collectKaminoReserveOracles([assetMeta], kaminoReserves);
       if (!seenOracles.has(assetMeta.oracle)) {
         seenOracles.add(assetMeta.oracle);
         oracleAccounts.push(assetMeta.oracle);
@@ -311,6 +314,7 @@ export class LoopscaleVaultClient
       userLpTokenAccounts,
       vaultStakeAccounts,
       oracleAccounts,
+      kaminoReserves: Array.from(kaminoReserves),
     };
   }
 }

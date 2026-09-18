@@ -42,6 +42,7 @@ import {
   RefreshObligationFarmsForReserveArgs,
   RefreshObligationFarmsForReserveAccounts,
 } from "./types";
+import { buildRefreshReservesBatchIx } from "./oracles";
 
 class TxBuilder
   extends BaseTxBuilder<KaminoLendingClient>
@@ -144,40 +145,7 @@ class TxBuilder
   }
 
   refreshReservesBatchIx(reserves: Reserve[], skipPriceUpdates: boolean) {
-    const keys: Array<AccountMeta> = [];
-    for (const reserve of reserves) {
-      const { lendingMarket, scopePriceFeed } = reserve;
-      keys.push({
-        pubkey: reserve.getAddress(),
-        isSigner: false,
-        isWritable: true,
-      });
-      keys.push({
-        pubkey: lendingMarket,
-        isSigner: false,
-        isWritable: true,
-      });
-      if (!skipPriceUpdates) {
-        [
-          KAMINO_LENDING_PROGRAM, // pyth oracle, null
-          KAMINO_LENDING_PROGRAM, // switchboard price oracle, null
-          KAMINO_LENDING_PROGRAM, // switchboard twap oracle, null
-          scopePriceFeed,
-        ].forEach((p) =>
-          keys.push({ pubkey: p, isSigner: false, isWritable: false }),
-        );
-      }
-    }
-    const identifier = Buffer.from([144, 110, 26, 103, 162, 204, 252, 147]);
-    const buffer = Buffer.alloc(1000);
-    const layout = borsh.struct([borsh.bool("skipPriceUpdates")]);
-    const len = layout.encode({ skipPriceUpdates }, buffer);
-    const data = Buffer.concat([identifier, buffer]).subarray(0, 8 + len);
-    return new TransactionInstruction({
-      keys,
-      programId: KAMINO_LENDING_PROGRAM,
-      data,
-    });
+    return buildRefreshReservesBatchIx(reserves, skipPriceUpdates);
   }
 
   refreshReservesIxs(reserves: Reserve[]) {

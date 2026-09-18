@@ -1,5 +1,4 @@
 import { BN } from "@coral-xyz/anchor";
-import * as borsh from "@coral-xyz/borsh";
 import {
   AccountMeta,
   PublicKey,
@@ -23,7 +22,7 @@ import {
   type TxOptions,
 } from "./base";
 import {
-  KAMINO_LENDING_PROGRAM,
+  WSOL,
   ORCA_DYNAMIC_TICK_ARRAY_DISCRIMINATOR,
   MEMO_PROGRAM,
   ORCA_POSITION_DISCRIMINATOR,
@@ -32,7 +31,12 @@ import {
   ORCA_WHIRLPOOLS_PROGRAM_ID,
 } from "../constants";
 import { ORCA_WHIRLPOOLS_PROTOCOL } from "../protocols";
-import { Reserve } from "../deser";
+import { AssetMeta } from "../assets";
+import {
+  collectKaminoReserveOracles,
+  connectionKaminoReserveRefresher,
+  kaminoReserveRefreshIx,
+} from "./kamino/oracles";
 import { WhirlpoolsPolicy } from "../deser/integrationPolicies";
 import {
   getGlobalConfigPda,
@@ -1241,85 +1245,78 @@ class TxBuilder
       .map((pubkey) => ({ pubkey, isSigner: false, isWritable: false }));
   }
 
+  /**
+   * The price-deviation check reads the two pool token oracles and, when it is
+   * passed, the SOL/USD oracle. Each can be a Kamino reserve that klend has
+   * marked stale, so the transaction carries one batch refresh for them. The
+   * reserves are derived from the priced mints here; a caller that derived them
+   * itself passes them in kaminoReserves and both sets go into the same
+   * instruction. A priced mint whose asset meta cannot be resolved fails the
+   * build, because its reserve would otherwise go unrefreshed and the
+   * transaction be refused on chain.
+   */
   private async withKaminoReserveRefreshTxOptions(
     txOptions: TxOptions,
-    ...sources: Array<Partial<OrcaPriceDeviationRemainingAccounts>>
+    ...sources: Array<
+      Partial<OrcaPriceDeviationRemainingAccounts> & {
+        tokenMintA?: PublicKey;
+        tokenMintB?: PublicKey;
+      }
+    >
   ): Promise<TxOptions> {
-    const reserveKeys = new PkSet();
-    sources.forEach((source) => {
-      source.priceDeviationAccounts?.kaminoReserves?.forEach((reserve) => {
-        reserveKeys.add(reserve);
-      });
-    });
-
-    if (reserveKeys.size === 0) {
+    const priceDeviationAccounts = sources.find(
+      (source) => source.priceDeviationAccounts !== undefined,
+    )?.priceDeviationAccounts;
+    if (!priceDeviationAccounts) {
+      // No oracle accounts in the instruction, so nothing reads a reserve.
       return txOptions;
     }
 
-    const reserves = await this.fetchAndParseKaminoReserves(
-      Array.from(reserveKeys),
+    const reserveKeys = new PkSet(priceDeviationAccounts.kaminoReserves ?? []);
+    const pricedMints = new PkSet();
+    sources.forEach(({ tokenMintA, tokenMintB }) => {
+      if (tokenMintA) pricedMints.add(tokenMintA);
+      if (tokenMintB) pricedMints.add(tokenMintB);
+    });
+    if (priceDeviationAccounts.solUsdOracle) {
+      pricedMints.add(WSOL);
+    }
+    if (pricedMints.size > 0) {
+      collectKaminoReserveOracles(
+        await Promise.all(
+          Array.from(pricedMints).map((mint) => this.pricedAssetMeta(mint)),
+        ),
+        reserveKeys,
+      );
+    }
+
+    const refreshIx = await kaminoReserveRefreshIx(
+      connectionKaminoReserveRefresher(this.client.base.connection),
+      reserveKeys,
     );
+    if (!refreshIx) {
+      return txOptions;
+    }
+
     return {
       ...txOptions,
-      preInstructions: [
-        ...(txOptions.preInstructions || []),
-        this.refreshKaminoReservesBatchIx(reserves, false),
-      ],
+      preInstructions: [...(txOptions.preInstructions || []), refreshIx],
     };
   }
 
-  private async fetchAndParseKaminoReserves(
-    reserveKeys: PublicKey[],
-  ): Promise<Reserve[]> {
-    const reserveAccounts =
-      await this.client.base.connection.getMultipleAccountsInfo(reserveKeys);
-    if (reserveAccounts.some((account) => !account)) {
-      throw new Error("Not all Kamino reserves can be found");
+  /**
+   * The asset meta behind a mint the price-deviation check prices, resolved
+   * through BaseClient.getAssetMeta so its mainnet fallback counts, and failing
+   * with the sentence the Whirlpool pricing path uses for the same asset.
+   */
+  private async pricedAssetMeta(mint: PublicKey): Promise<AssetMeta> {
+    const assetMeta = await this.client.base
+      .getAssetMeta(mint)
+      .catch(() => null);
+    if (!assetMeta?.oracle) {
+      throw new Error(`Oracle unavailable for Orca asset ${mint}`);
     }
-    return reserveAccounts.map((account, i) =>
-      Reserve.decode(reserveKeys[i], account!.data),
-    );
-  }
-
-  private refreshKaminoReservesBatchIx(
-    reserves: Reserve[],
-    skipPriceUpdates: boolean,
-  ): TransactionInstruction {
-    const keys: AccountMeta[] = [];
-    for (const reserve of reserves) {
-      keys.push({
-        pubkey: reserve.getAddress(),
-        isSigner: false,
-        isWritable: true,
-      });
-      keys.push({
-        pubkey: reserve.lendingMarket,
-        isSigner: false,
-        isWritable: true,
-      });
-      if (!skipPriceUpdates) {
-        [
-          KAMINO_LENDING_PROGRAM,
-          KAMINO_LENDING_PROGRAM,
-          KAMINO_LENDING_PROGRAM,
-          reserve.scopePriceFeed,
-        ].forEach((pubkey) => {
-          keys.push({ pubkey, isSigner: false, isWritable: false });
-        });
-      }
-    }
-
-    const identifier = Buffer.from([144, 110, 26, 103, 162, 204, 252, 147]);
-    const buffer = Buffer.alloc(1000);
-    const layout = borsh.struct([borsh.bool("skipPriceUpdates")]);
-    const len = layout.encode({ skipPriceUpdates }, buffer);
-    const data = Buffer.concat([identifier, buffer]).subarray(0, 8 + len);
-
-    return new TransactionInstruction({
-      keys,
-      programId: KAMINO_LENDING_PROGRAM,
-      data,
-    });
+    return assetMeta;
   }
 }
 
@@ -1454,9 +1451,7 @@ export class OrcaWhirlpoolsClient
       if (!assetMeta || !assetMeta.oracle) {
         throw new Error(`Oracle unavailable for Orca asset ${mint}`);
       }
-      if (assetMeta.oracleSource === "KaminoReserve") {
-        kaminoReserves.add(assetMeta.oracle);
-      }
+      collectKaminoReserveOracles([assetMeta], kaminoReserves);
       return assetMeta;
     };
 

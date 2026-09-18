@@ -542,12 +542,23 @@ describe("PriceClient Kamino reserve refresh planning", () => {
   it("builds Phoenix trader pricing remaining accounts from registered external positions", async () => {
     const phoenixPriceIx = ix(5);
     const pricePhoenixBuilder = methodBuilder(phoenixPriceIx);
+    // The pricing instruction reads the SOL/USD oracle as a named account, so
+    // its asset meta is looked up here alongside the base asset's.
     const getAssetMeta = jest.fn(async (mint: PublicKey) => {
       if (mint.equals(USDC)) {
         return {
           asset: USDC,
           decimals: 6,
           oracle: USDC_ORACLE,
+          programId: TOKEN_PROGRAM_ID,
+          oracleSource: "Pyth",
+        };
+      }
+      if (mint.equals(WSOL)) {
+        return {
+          asset: WSOL,
+          decimals: 9,
+          oracle: SOL_USD_ORACLE,
           programId: TOKEN_PROGRAM_ID,
           oracleSource: "Pyth",
         };

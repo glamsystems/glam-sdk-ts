@@ -33,7 +33,10 @@ import {
   SwapInstructions,
 } from "../utils/jupiterApi";
 import { KaminoLendingClient } from "./kamino";
-import { PkSet } from "../utils";
+import {
+  collectKaminoReserveOracles,
+  kaminoReserveRefreshIx,
+} from "./kamino/oracles";
 
 export type JupiterSwapOptions = {
   quoteParams?: QuoteParams;
@@ -174,17 +177,18 @@ class TxBuilder
       outputAssetMeta = await glamClient.getAssetMeta(outputMint);
     } catch {}
 
-    // Input and output asset metas might be kaminoReserve, which we need to refresh
-    const kaminoReservesSet = new PkSet();
-    if (inputAssetMeta?.oracleSource === "KaminoReserve") {
-      kaminoReservesSet.add(inputAssetMeta.oracle);
-    }
-    if (outputAssetMeta?.oracleSource === "KaminoReserve") {
-      kaminoReservesSet.add(outputAssetMeta.oracle);
-    }
+    // swap-v2 reads the SOL/USD oracle as well as the input and output
+    // oracles, and any of the three can be a Kamino reserve that needs a
+    // refresh; take SOL from its asset meta so its source is visible here.
+    const solAssetMeta = await glamClient.getAssetMeta(WSOL);
+    const kaminoReservesSet = collectKaminoReserveOracles([
+      inputAssetMeta,
+      outputAssetMeta,
+      solAssetMeta,
+    ]);
 
     const oracleAccounts = {
-      solUsdOracle: await glamClient.getSolOracle(),
+      solUsdOracle: solAssetMeta.oracle,
       inputTokenOracle: inputAssetMeta?.oracle,
       outputTokenOracle: outputAssetMeta?.oracle,
       kaminoReservesToRefresh: Array.from(kaminoReservesSet),
@@ -279,15 +283,11 @@ class TxBuilder
       outputTokenProgram,
     );
 
-    if (oracleAccounts.kaminoReservesToRefresh.length > 0) {
-      const reserves = await this.client.klend.fetchAndParseReserves(
-        oracleAccounts.kaminoReservesToRefresh,
-      );
-      const refreshReservesIx =
-        this.client.klend.txBuilder.refreshReservesBatchIx(
-          reserves,
-          false, // always update prices
-        );
+    const refreshReservesIx = await kaminoReserveRefreshIx(
+      this.client.klend,
+      oracleAccounts.kaminoReservesToRefresh,
+    );
+    if (refreshReservesIx) {
       preInstructions.push(refreshReservesIx);
     }
 

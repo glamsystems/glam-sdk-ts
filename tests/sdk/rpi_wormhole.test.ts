@@ -1,7 +1,7 @@
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import { RpiClient, parseWormholeSignedVaa } from "../../src/client/rpi";
-import { USDC } from "../../src/constants";
+import { USDC, WSOL } from "../../src/constants";
 
 const EXT_RPI_PROGRAM = PublicKey.unique();
 const STATE = PublicKey.unique();
@@ -149,7 +149,7 @@ describe("RPI Wormhole SDK helpers", () => {
       denomination: { denom: { usd: {} }, mint: PublicKey.default },
       observationTimestamp: new BN(1),
     });
-    await client.txBuilder.validateObservationIx(positionId);
+    await client.txBuilder.validateObservationIxs(positionId);
     await client.txBuilder.removeRegisteredPositionTx(positionId);
 
     expect(upsertBuilder.accountsPartial).toHaveBeenCalledWith(
@@ -180,10 +180,13 @@ describe("RPI Wormhole SDK helpers", () => {
     const positionId = Buffer.alloc(32, 4);
     const solUsdOracle = PublicKey.unique();
     const baseAssetOracle = PublicKey.unique();
-    const getAssetMeta = jest.fn(async () => ({
-      oracle: baseAssetOracle,
-      oracleSource: "KaminoReserve",
-    }));
+    // The SOL/USD oracle is read through the WSOL asset meta so its source is
+    // visible; here it is a Pyth feed and only the base asset is a reserve.
+    const getAssetMeta = jest.fn(async (mint: PublicKey) =>
+      mint.equals(WSOL)
+        ? { oracle: solUsdOracle, oracleSource: "Pyth" }
+        : { oracle: baseAssetOracle, oracleSource: "KaminoReserve" },
+    );
     const client = new RpiClient({
       statePda: STATE,
       signer: SIGNER,
@@ -227,5 +230,6 @@ describe("RPI Wormhole SDK helpers", () => {
     expect(accounts.remainingAccounts).toHaveLength(0);
     expect(accounts.kaminoReservesToRefresh).toEqual([baseAssetOracle]);
     expect(getAssetMeta).toHaveBeenCalledWith(USDC);
+    expect(getAssetMeta).toHaveBeenCalledWith(WSOL);
   });
 });

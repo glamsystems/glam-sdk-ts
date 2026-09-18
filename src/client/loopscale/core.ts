@@ -843,6 +843,8 @@ export function getLoopscaleUserRewardsInfoPda(
 export type PriceLoansAccounts = {
   loanAccounts: PublicKey[];
   oracleAccounts: PublicKey[];
+  /** The subset of oracleAccounts that are Kamino reserves and need a refresh. */
+  kaminoReserves: PublicKey[];
   solUsdOracle?: PublicKey;
   baseAssetOracle?: PublicKey;
   glamConfig?: PublicKey;
@@ -851,6 +853,8 @@ export type PriceLoansAccounts = {
 export type PriceStrategiesAccounts = {
   strategyAccounts: PublicKey[];
   oracleAccounts: PublicKey[];
+  /** The subset of oracleAccounts that are Kamino reserves and need a refresh. */
+  kaminoReserves: PublicKey[];
   solUsdOracle?: PublicKey;
   baseAssetOracle?: PublicKey;
   glamConfig?: PublicKey;
@@ -863,6 +867,8 @@ export type PriceVaultsAccounts = {
   userLpTokenAccounts: PublicKey[];
   vaultStakeAccounts: PublicKey[];
   oracleAccounts: PublicKey[];
+  /** The subset of oracleAccounts that are Kamino reserves and need a refresh. */
+  kaminoReserves: PublicKey[];
   solUsdOracle?: PublicKey;
   baseAssetOracle?: PublicKey;
   glamConfig?: PublicKey;

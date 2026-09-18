@@ -10,6 +10,11 @@ import {
 import { fetchAddressLookupTableAccounts } from "../utils/lookupTables";
 import { BN } from "@coral-xyz/anchor";
 import { KaminoLendingClient, KaminoVaultsClient } from "./kamino";
+import {
+  collectKaminoReserveOracleOverrides,
+  collectKaminoReserveOracles,
+  kaminoReserveRefreshIx,
+} from "./kamino/oracles";
 import { OrcaWhirlpoolsClient } from "./orca";
 import { MarginfiClient } from "./marginfi";
 
@@ -851,9 +856,7 @@ export class PriceClient {
     kaminoReserves: PkSet,
     assetMeta: { oracle: PublicKey; oracleSource: string },
   ) {
-    if (assetMeta.oracleSource === "KaminoReserve") {
-      kaminoReserves.add(assetMeta.oracle);
-    }
+    collectKaminoReserveOracles([assetMeta], kaminoReserves);
   }
 
   private async resolvePositionTokenAccount(
@@ -1351,12 +1354,14 @@ export class PriceClient {
   }
 
   /**
-   * Returns the program instruction that prices Phoenix trader external positions.
-   * If there are no registered Phoenix trader accounts, returns null.
+   * Returns Phoenix trader pricing instructions with the required compute
+   * budget pre-instruction, and the Kamino reserves behind the oracles the
+   * pricing instruction reads. If there are no registered Phoenix trader
+   * accounts, returns null.
    */
-  public async pricePhoenixTradersIx(
+  public async pricePhoenixTradersIxs(
     stateModel: StateModel | null = this.cachedStateModel,
-  ): Promise<TransactionInstruction | null> {
+  ): Promise<PricingChunk | null> {
     const methods = this.base.mintProgram.methods as any;
     if (typeof methods.pricePhoenixTraders !== "function") {
       return null;
@@ -1370,12 +1375,11 @@ export class PriceClient {
       return null;
     }
 
-    const [solUsdOracle, baseAssetMeta, phoenixPerpAssetMap] =
-      await Promise.all([
-        this.base.getSolOracle(),
-        this.base.getAssetMeta(model.baseAssetMint),
-        this.getPhoenixPerpAssetMap(),
-      ]);
+    const [oracleAccounts, phoenixPerpAssetMap] = await Promise.all([
+      this.pricingOracleAccounts({ baseAssetMint: model.baseAssetMint }),
+      this.getPhoenixPerpAssetMap(),
+    ]);
+    const { solUsdOracle, baseAssetOracle, kaminoReserves } = oracleAccounts;
 
     const remainingAccounts: AccountMeta[] = [
       {
@@ -1398,8 +1402,11 @@ export class PriceClient {
       ),
     ];
 
+    // Phoenix quotes are USDC-denominated: a vault with another base asset
+    // also reads the USDC oracle, which can be a Kamino reserve of its own.
     if (!model.baseAssetMint.equals(USDC)) {
       const usdcAssetMeta = await this.base.getAssetMeta(USDC);
+      collectKaminoReserveOracles([usdcAssetMeta], kaminoReserves);
       remainingAccounts.push({
         pubkey: usdcAssetMeta.oracle,
         isSigner: false,
@@ -1407,28 +1414,15 @@ export class PriceClient {
       });
     }
 
-    return await methods
+    const priceIx = await methods
       .pricePhoenixTraders()
       .accounts({
         glamState: this.base.statePda,
         solUsdOracle,
-        baseAssetOracle: baseAssetMeta.oracle,
+        baseAssetOracle,
       })
       .remainingAccounts(remainingAccounts)
       .instruction();
-  }
-
-  /**
-   * Returns Phoenix trader pricing instructions with required compute budget pre-instructions.
-   * If there are no registered Phoenix trader accounts, returns null.
-   */
-  public async pricePhoenixTradersIxs(
-    stateModel: StateModel | null = this.cachedStateModel,
-  ): Promise<PricingChunk | null> {
-    const priceIx = await this.pricePhoenixTradersIx(stateModel);
-    if (!priceIx) {
-      return null;
-    }
 
     return {
       ixs: [
@@ -1437,7 +1431,7 @@ export class PriceClient {
         }),
         priceIx,
       ],
-      kaminoReserves: [],
+      kaminoReserves: Array.from(kaminoReserves),
     };
   }
 
@@ -1448,7 +1442,7 @@ export class PriceClient {
    * Remaining accounts are laid out as N loan accounts followed by the oracle
    * accounts needed to price the loans' collateral and debt.
    */
-  public async priceLoopscaleLoansIx(): Promise<TransactionInstruction | null> {
+  public async priceLoopscaleLoansIxs(): Promise<PricingChunk | null> {
     const methods = this.base.mintProgram.methods as any;
     if (typeof methods.priceLoopscaleLoans !== "function") {
       return null;
@@ -1459,14 +1453,11 @@ export class PriceClient {
       return null;
     }
 
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      accounts.solUsdOracle
-        ? Promise.resolve(accounts.solUsdOracle)
-        : this.base.getSolOracle(),
-      accounts.baseAssetOracle
-        ? Promise.resolve(accounts.baseAssetOracle)
-        : this.getBaseAssetOracle(),
-    ]);
+    const { solUsdOracle, baseAssetOracle, kaminoReserves } =
+      await this.pricingOracleAccounts(accounts);
+    (accounts.kaminoReserves ?? []).forEach((reserve) =>
+      kaminoReserves.add(reserve),
+    );
 
     const remainingAccounts: AccountMeta[] = [
       ...accounts.loanAccounts,
@@ -1477,7 +1468,7 @@ export class PriceClient {
       isWritable: false,
     }));
 
-    return await methods
+    const ix = await methods
       .priceLoopscaleLoans()
       .accounts({
         glamState: this.base.statePda,
@@ -1486,6 +1477,8 @@ export class PriceClient {
       })
       .remainingAccounts(remainingAccounts)
       .instruction();
+
+    return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
 
   /**
@@ -1495,7 +1488,7 @@ export class PriceClient {
    * Remaining accounts are laid out as N strategy accounts followed by the
    * oracle accounts needed to price the strategies' principal mints.
    */
-  public async priceLoopscaleStrategiesIx(): Promise<TransactionInstruction | null> {
+  public async priceLoopscaleStrategiesIxs(): Promise<PricingChunk | null> {
     const methods = this.base.mintProgram.methods as any;
     if (typeof methods.priceLoopscaleStrategies !== "function") {
       return null;
@@ -1506,14 +1499,11 @@ export class PriceClient {
       return null;
     }
 
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      accounts.solUsdOracle
-        ? Promise.resolve(accounts.solUsdOracle)
-        : this.base.getSolOracle(),
-      accounts.baseAssetOracle
-        ? Promise.resolve(accounts.baseAssetOracle)
-        : this.getBaseAssetOracle(),
-    ]);
+    const { solUsdOracle, baseAssetOracle, kaminoReserves } =
+      await this.pricingOracleAccounts(accounts);
+    (accounts.kaminoReserves ?? []).forEach((reserve) =>
+      kaminoReserves.add(reserve),
+    );
 
     const remainingAccounts: AccountMeta[] = [
       ...accounts.strategyAccounts,
@@ -1524,7 +1514,7 @@ export class PriceClient {
       isWritable: false,
     }));
 
-    return await methods
+    const ix = await methods
       .priceLoopscaleStrategies()
       .accounts({
         glamState: this.base.statePda,
@@ -1533,6 +1523,8 @@ export class PriceClient {
       })
       .remainingAccounts(remainingAccounts)
       .instruction();
+
+    return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
 
   /**
@@ -1544,7 +1536,7 @@ export class PriceClient {
    * ATA) groups for vaults with tracked LP or stake positions, followed by
    * VaultStake accounts, followed by oracle accounts.
    */
-  public async priceLoopscaleVaultPositionsIx(): Promise<TransactionInstruction | null> {
+  public async priceLoopscaleVaultPositionsIxs(): Promise<PricingChunk | null> {
     const methods = this.base.mintProgram.methods as any;
     if (typeof methods.priceLoopscaleVaultPositions !== "function") {
       return null;
@@ -1555,14 +1547,11 @@ export class PriceClient {
       return null;
     }
 
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      accounts.solUsdOracle
-        ? Promise.resolve(accounts.solUsdOracle)
-        : this.base.getSolOracle(),
-      accounts.baseAssetOracle
-        ? Promise.resolve(accounts.baseAssetOracle)
-        : this.getBaseAssetOracle(),
-    ]);
+    const { solUsdOracle, baseAssetOracle, kaminoReserves } =
+      await this.pricingOracleAccounts(accounts);
+    (accounts.kaminoReserves ?? []).forEach((reserve) =>
+      kaminoReserves.add(reserve),
+    );
 
     const vaultAccountGroups = accounts.vaultAccounts.flatMap((vault, i) => [
       vault,
@@ -1579,7 +1568,7 @@ export class PriceClient {
       isWritable: false,
     }));
 
-    return await methods
+    const ix = await methods
       .priceLoopscaleVaultPositions(accounts.numVaults)
       .accounts({
         glamState: this.base.statePda,
@@ -1588,6 +1577,8 @@ export class PriceClient {
       })
       .remainingAccounts(remainingAccounts)
       .instruction();
+
+    return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
 
   public async priceOrcaWhirlpoolPositionsIxs(
@@ -1684,14 +1675,10 @@ export class PriceClient {
     const integrationAuthority = getIntegrationAuthorityPda(
       this.base.extBridgeProgram.programId,
     );
-    const kaminoReserves = new PkSet();
-    [baseAssetMeta, ...assetMetas.map(({ assetMeta }) => assetMeta)].forEach(
-      (assetMeta) => {
-        if (assetMeta.oracleSource === "KaminoReserve") {
-          kaminoReserves.add(assetMeta.oracle);
-        }
-      },
-    );
+    const kaminoReserves = collectKaminoReserveOracles([
+      baseAssetMeta,
+      ...assetMetas.map(({ assetMeta }) => assetMeta),
+    ]);
 
     const remainingAccounts = assetMetas.map(
       ({ assetMeta }) =>
@@ -1762,10 +1749,7 @@ export class PriceClient {
       this.base.getAssetMeta(stateModel.baseAssetMint),
     ]);
 
-    const kaminoReserves = new PkSet();
-    if (baseAssetMeta.oracleSource === "KaminoReserve") {
-      kaminoReserves.add(baseAssetMeta.oracle);
-    }
+    const kaminoReserves = collectKaminoReserveOracles([baseAssetMeta]);
 
     const remainingAccounts: AccountMeta[] = [];
     for (let i = 0; i < positions.length; i++) {
@@ -1783,9 +1767,7 @@ export class PriceClient {
       const bundleAssetMeta = await this.base.getAssetMeta(
         bundleAccount.assetAddress,
       );
-      if (bundleAssetMeta.oracleSource === "KaminoReserve") {
-        kaminoReserves.add(bundleAssetMeta.oracle);
-      }
+      collectKaminoReserveOracles([bundleAssetMeta], kaminoReserves);
 
       [
         userBundle,
@@ -1859,10 +1841,10 @@ export class PriceClient {
       return null;
     }
 
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      this.base.getSolOracle(),
-      this.getBaseAssetOracle(),
-    ]);
+    const { solUsdOracle, baseAssetOracle, kaminoReserves } =
+      await this.pricingOracleAccounts({
+        baseAssetMint: stateModel.baseAssetMint,
+      });
     const preInstructions: TransactionInstruction[] = [];
     for (const marginfiAccount of marginfiAccounts) {
       const { ixs } = await this.marginfi.pulseHealthIx(marginfiAccount);
@@ -1885,7 +1867,10 @@ export class PriceClient {
       )
       .instruction();
 
-    return { ixs: [...preInstructions, ix], kaminoReserves: [] };
+    return {
+      ixs: [...preInstructions, ix],
+      kaminoReserves: Array.from(kaminoReserves),
+    };
   }
 
   private async _priceVaultIxsImpl(): Promise<TransactionInstruction[]> {
@@ -1960,28 +1945,26 @@ export class PriceClient {
             LOOPSCALE_VAULT_PROTOCOL) !==
             0)
       ) {
-        const [loansIx, strategiesIx, vaultsIx] = await Promise.all([
+        const [loansChunk, strategiesChunk, vaultsChunk] = await Promise.all([
           (loopscaleIntegrationAcl.protocolsBitmask &
             LOOPSCALE_BORROW_PROTOCOL) !==
           0
-            ? this.priceLoopscaleLoansIx()
+            ? this.priceLoopscaleLoansIxs()
             : null,
           (loopscaleIntegrationAcl.protocolsBitmask &
             LOOPSCALE_LENDING_PROTOCOL) !==
           0
-            ? this.priceLoopscaleStrategiesIx()
+            ? this.priceLoopscaleStrategiesIxs()
             : null,
           (loopscaleIntegrationAcl.protocolsBitmask &
             LOOPSCALE_VAULT_PROTOCOL) !==
           0
-            ? this.priceLoopscaleVaultPositionsIx()
+            ? this.priceLoopscaleVaultPositionsIxs()
             : null,
         ]);
-        if (loansIx) chunks.push({ ixs: [loansIx], kaminoReserves: [] });
-        if (strategiesIx) {
-          chunks.push({ ixs: [strategiesIx], kaminoReserves: [] });
-        }
-        if (vaultsIx) chunks.push({ ixs: [vaultsIx], kaminoReserves: [] });
+        if (loansChunk) chunks.push(loansChunk);
+        if (strategiesChunk) chunks.push(strategiesChunk);
+        if (vaultsChunk) chunks.push(vaultsChunk);
       }
 
       const nativeIntegrationAcl = integrationAcls.find((acl) =>
@@ -2091,11 +2074,9 @@ export class PriceClient {
     chunks.forEach((c) => c.kaminoReserves.forEach((r) => allReserves.add(r)));
 
     const ixs: TransactionInstruction[] = [];
-    if (allReserves.size > 0) {
-      const reserves = await this.klend.fetchAndParseReserves(
-        Array.from(allReserves),
-      );
-      ixs.push(this.klend.txBuilder.refreshReservesBatchIx(reserves, false));
+    const refreshIx = await kaminoReserveRefreshIx(this.klend, allReserves);
+    if (refreshIx) {
+      ixs.push(refreshIx);
     }
     chunks.forEach((c) => ixs.push(...c.ixs));
     return ixs;
@@ -2108,6 +2089,54 @@ export class PriceClient {
         glamState: this.base.statePda,
       })
       .instruction();
+  }
+
+  /**
+   * Resolves the SOL/USD and base asset oracles a pricing instruction passes
+   * as named accounts, together with the Kamino reserves among them. Callers
+   * take both from here so the oracle and its source are read once.
+   * A caller-supplied override is used as given, and its source is looked up
+   * among the fetched asset metas, because a reserve reads the same whoever
+   * passed it.
+   */
+  private async pricingOracleAccounts(
+    overrides: {
+      solUsdOracle?: PublicKey | null;
+      baseAssetOracle?: PublicKey | null;
+      baseAssetMint?: PublicKey;
+    } = {},
+  ): Promise<{
+    solUsdOracle: PublicKey;
+    baseAssetOracle: PublicKey;
+    kaminoReserves: PkSet;
+  }> {
+    const baseAssetMint =
+      overrides.baseAssetMint ??
+      (this.cachedStateModel ?? (await this.base.fetchStateModel()))
+        .baseAssetMint;
+    const [solAssetMeta, baseAssetMeta] = await Promise.all([
+      overrides.solUsdOracle ? null : this.base.getAssetMeta(WSOL),
+      overrides.baseAssetOracle ? null : this.base.getAssetMeta(baseAssetMint),
+    ]);
+
+    const kaminoReserves = collectKaminoReserveOracles([
+      solAssetMeta,
+      baseAssetMeta,
+    ]);
+    if (overrides.solUsdOracle || overrides.baseAssetOracle) {
+      const assetMetas = await this.base.fetchAssetMetas();
+      collectKaminoReserveOracleOverrides(
+        [overrides.solUsdOracle, overrides.baseAssetOracle],
+        assetMetas.values(),
+        kaminoReserves,
+      );
+    }
+
+    return {
+      solUsdOracle: overrides.solUsdOracle ?? solAssetMeta!.oracle,
+      baseAssetOracle: overrides.baseAssetOracle ?? baseAssetMeta!.oracle,
+      kaminoReserves,
+    };
   }
 
   async getBaseAssetOracle() {
@@ -2123,16 +2152,11 @@ export class PriceClient {
       this.cachedStateModel ?? (await this.base.fetchStateModel());
     const assetMetas = await this.base.fetchAssetMetas();
     const kaminoReserves = new PkSet();
-    const mayAddKaminoReserve = ({
-      oracle,
-      oracleSource,
-    }: {
+    const mayAddKaminoReserve = (assetMeta: {
       oracle: PublicKey;
       oracleSource: string;
     }) => {
-      if (oracleSource === "KaminoReserve") {
-        kaminoReserves.add(oracle);
-      }
+      collectKaminoReserveOracles([assetMeta], kaminoReserves);
     };
 
     const accMetas = stateModel.assetsForPricing

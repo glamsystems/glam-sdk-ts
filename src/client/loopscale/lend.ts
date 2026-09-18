@@ -14,6 +14,7 @@ import { BaseClient, type ProtocolPolicyClient, type TxOptions } from "../base";
 import { LoopscaleLendingPolicy } from "../../deser/integrationPolicies";
 import { LOOPSCALE_LENDING_PROTOCOL } from "../../protocols";
 import { PkSet } from "../../utils/pkset";
+import { collectKaminoReserveOracles } from "../kamino/oracles";
 import { LOOPSCALE_PROGRAM_ID } from "../../constants";
 import { bnToSafeNumber } from "../../utils/common";
 import {
@@ -57,12 +58,6 @@ export type CreateStrategyResult = {
   strategy: PublicKey;
   signature: TransactionSignature;
   signatures: TransactionSignature[];
-};
-
-export type PriceStrategiesParams = {
-  commitment?: Commitment;
-  solUsdOracle?: PublicKey;
-  baseAssetOracle?: PublicKey;
 };
 
 export class LoopscaleLendClient
@@ -743,67 +738,6 @@ export class LoopscaleLendClient
     return await this.core.coSignAndSend(ixs, txOptions);
   }
 
-  // FIXME: why in this module? should be part of price sub-client
-  async priceStrategiesIx(
-    params: PriceStrategiesParams = {},
-  ): Promise<TransactionInstruction | null> {
-    const methods = this.base.mintProgram.methods as any;
-    if (typeof methods.priceLoopscaleStrategies !== "function") {
-      return null;
-    }
-
-    const accounts = await this.getPriceStrategiesAccounts(params.commitment);
-    if (!accounts) {
-      return null;
-    }
-
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      params.solUsdOracle
-        ? Promise.resolve(params.solUsdOracle)
-        : accounts.solUsdOracle
-          ? Promise.resolve(accounts.solUsdOracle)
-          : this.base.getSolOracle(),
-      params.baseAssetOracle
-        ? Promise.resolve(params.baseAssetOracle)
-        : accounts.baseAssetOracle
-          ? Promise.resolve(accounts.baseAssetOracle)
-          : this.core.getBaseAssetOracle(),
-    ]);
-
-    const remainingAccounts = [
-      ...accounts.strategyAccounts,
-      ...accounts.oracleAccounts,
-    ].map((pubkey) => ({
-      pubkey,
-      isSigner: false,
-      isWritable: false,
-    }));
-
-    return await methods
-      .priceLoopscaleStrategies()
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
-  }
-
-  // FIXME: why in this module? should be part of price sub-client
-  async priceStrategies(
-    params: PriceStrategiesParams = {},
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature | null> {
-    const ix = await this.priceStrategiesIx(params);
-    if (!ix) {
-      return null;
-    }
-
-    const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
-    return await this.base.sendAndConfirm(tx);
-  }
-
   async getPriceStrategiesAccounts(
     commitment?: Commitment,
   ): Promise<PriceStrategiesAccounts | null> {
@@ -845,12 +779,14 @@ export class LoopscaleLendClient
     const assetMetas = await this.base.fetchAssetMetas();
     const oracleAccounts: PublicKey[] = [];
     const seenOracles = new PkSet();
+    const kaminoReserves = new PkSet();
 
     for (const mint of oracleMints) {
       const assetMeta = assetMetas.get(mint);
       if (!assetMeta?.oracle) {
         throw new Error(`Oracle unavailable for asset ${mint.toBase58()}`);
       }
+      collectKaminoReserveOracles([assetMeta], kaminoReserves);
       if (!seenOracles.has(assetMeta.oracle)) {
         seenOracles.add(assetMeta.oracle);
         oracleAccounts.push(assetMeta.oracle);
@@ -860,6 +796,7 @@ export class LoopscaleLendClient
     return {
       strategyAccounts,
       oracleAccounts,
+      kaminoReserves: Array.from(kaminoReserves),
     };
   }
 }

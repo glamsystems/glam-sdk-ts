@@ -13,6 +13,7 @@ import { BaseClient, type ProtocolPolicyClient, type TxOptions } from "../base";
 import { LoopscaleBorrowPolicy } from "../../deser/integrationPolicies";
 import { LOOPSCALE_BORROW_PROTOCOL } from "../../protocols";
 import { PkSet } from "../../utils/pkset";
+import { collectKaminoReserveOracles } from "../kamino/oracles";
 import {
   LoopscaleLoan,
   LoopscaleMarketInformation,
@@ -583,12 +584,14 @@ export class LoopscaleBorrowClient
     const assetMetas = await this.base.fetchAssetMetas();
     const oracleAccounts: PublicKey[] = [];
     const seenOracles = new PkSet();
+    const kaminoReserves = new PkSet();
 
     for (const mint of oracleMints) {
       const assetMeta = assetMetas.get(mint);
       if (!assetMeta?.oracle) {
         throw new Error(`Oracle unavailable for asset ${mint.toBase58()}`);
       }
+      collectKaminoReserveOracles([assetMeta], kaminoReserves);
       if (!seenOracles.has(assetMeta.oracle)) {
         seenOracles.add(assetMeta.oracle);
         oracleAccounts.push(assetMeta.oracle);
@@ -598,6 +601,7 @@ export class LoopscaleBorrowClient
     return {
       loanAccounts,
       oracleAccounts,
+      kaminoReserves: Array.from(kaminoReserves),
     };
   }
 }

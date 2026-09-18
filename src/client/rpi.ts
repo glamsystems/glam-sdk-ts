@@ -12,6 +12,7 @@ import {
 import {
   SEED_INTEGRATION_AUTHORITY,
   SEED_OBSERVATION_STATE,
+  WSOL,
   SEED_WORMHOLE_HYPERLIQUID_OBSERVATION_CONFIG,
   SEED_WORMHOLE_OBSERVATION_CONFIG,
   WORMHOLE_CORE_BRIDGE_PROGRAM,
@@ -20,6 +21,11 @@ import {
 import { getGlobalConfigPda } from "../utils/glamPDAs";
 import { PkSet } from "../utils";
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import {
+  collectKaminoReserveOracleOverrides,
+  collectKaminoReserveOracles,
+  kaminoReserveRefreshIx,
+} from "./kamino/oracles";
 
 type BufferLike = Uint8Array | number[] | Buffer;
 type BufferLike32 = BufferLike;
@@ -505,6 +511,15 @@ class TxBuilder extends BaseTxBuilder<RpiClient> {
       .instruction();
   }
 
+  /**
+   * The bare validate_observation instruction.
+   *
+   * @deprecated Use validateObservationIxs. Its caller gets neither the batch
+   * refresh that unstales the Kamino reserves behind the instruction's oracles
+   * nor the list of those reserves, so a transaction assembled from this
+   * instruction alone is refused with ReserveStale whenever one of them is a
+   * reserve klend has marked stale.
+   */
   async validateObservationIx(
     paramsOrPositionId: BufferLike32 | ValidateObservationParams,
     signer?: PublicKey,
@@ -517,6 +532,36 @@ class TxBuilder extends BaseTxBuilder<RpiClient> {
       accounts,
       signer,
     );
+  }
+
+  /**
+   * validate_observation preceded by the single batch refresh that unstales
+   * the Kamino reserves it reads as oracles, with those reserves reported so a
+   * caller assembling a larger transaction can merge them into its own refresh
+   * instead of adding a second one.
+   */
+  async validateObservationIxs(
+    paramsOrPositionId: BufferLike32 | ValidateObservationParams,
+    signer?: PublicKey,
+  ): Promise<{
+    ixs: TransactionInstruction[];
+    kaminoReserves: PublicKey[];
+  }> {
+    const params = validateParams(paramsOrPositionId);
+    const accounts =
+      await this.client.resolveValidateObservationAccounts(params);
+    const refreshIxs = await this.refreshKaminoReserveOracleIxs(
+      accounts.kaminoReservesToRefresh,
+    );
+    const ix = await this.validateObservationIxWithAccounts(
+      params,
+      accounts,
+      signer,
+    );
+    return {
+      ixs: [...refreshIxs, ix],
+      kaminoReserves: accounts.kaminoReservesToRefresh,
+    };
   }
 
   private async validateObservationIxWithAccounts(
@@ -552,8 +597,8 @@ class TxBuilder extends BaseTxBuilder<RpiClient> {
       );
     }
 
-    const reserves = await kaminoLending.fetchAndParseReserves(reserveKeys);
-    return [kaminoLending.txBuilder.refreshReservesBatchIx(reserves, false)];
+    const refreshIx = await kaminoReserveRefreshIx(kaminoLending, reserveKeys);
+    return refreshIx ? [refreshIx] : [];
   }
 
   async submitObservationTx(
@@ -641,21 +686,11 @@ class TxBuilder extends BaseTxBuilder<RpiClient> {
     paramsOrPositionId: BufferLike32 | ValidateObservationParams,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    const params = validateParams(paramsOrPositionId);
-    const accounts =
-      await this.client.resolveValidateObservationAccounts(params);
-    const refreshIxs = await this.refreshKaminoReserveOracleIxs(
-      accounts.kaminoReservesToRefresh,
-    );
-    const ix = await this.validateObservationIxWithAccounts(
-      params,
-      accounts,
+    const { ixs } = await this.validateObservationIxs(
+      paramsOrPositionId,
       txOptions.signer,
     );
-    return await this.buildVersionedTx([ix], {
-      ...txOptions,
-      preInstructions: [...(txOptions.preInstructions || []), ...refreshIxs],
-    });
+    return await this.buildVersionedTx(ixs, txOptions);
   }
 }
 
@@ -851,9 +886,7 @@ export class RpiClient {
       oracle?: PublicKey;
       oracleSource?: string;
     }) => {
-      if (assetMeta?.oracleSource === "KaminoReserve" && assetMeta.oracle) {
-        kaminoReservesToRefresh.add(assetMeta.oracle);
-      }
+      collectKaminoReserveOracles([assetMeta], kaminoReservesToRefresh);
     };
 
     const observationState = await this.fetchObservationState();
@@ -884,20 +917,27 @@ export class RpiClient {
       return nullAccounts;
     }
 
-    const [solUsdOracle, baseAssetMeta] = await Promise.all([
+    // validate_observation reads the SOL/USD oracle as a named account: take it
+    // from the WSOL asset meta so a Kamino reserve behind it is refreshed too.
+    const [solAssetMeta, baseAssetMeta] = await Promise.all([
       overrides.solUsdOracle
-        ? Promise.resolve(overrides.solUsdOracle)
-        : this.base.getSolOracle(),
+        ? Promise.resolve({ oracle: overrides.solUsdOracle })
+        : this.base.getAssetMeta(WSOL),
       overrides.baseAssetOracle
         ? Promise.resolve({ oracle: overrides.baseAssetOracle })
         : this.base.getAssetMeta(stateAccount.baseAssetMint),
     ]);
+    const solUsdOracle = solAssetMeta.oracle;
+    addKaminoReserveToRefresh(solAssetMeta);
     addKaminoReserveToRefresh(baseAssetMeta);
 
     const remainingAccounts: AccountMeta[] = [];
+    let overriddenObservedMintOracle: PublicKey | undefined;
     if (isMintDenomination(pendingObservation.denomination)) {
       let observedMintOracle = overrides.observedMintOracle;
-      if (!observedMintOracle) {
+      if (observedMintOracle) {
+        overriddenObservedMintOracle = observedMintOracle;
+      } else {
         const observedMintMeta = await this.base.getAssetMeta(observedMint);
         addKaminoReserveToRefresh(observedMintMeta);
         observedMintOracle = observedMintMeta.oracle;
@@ -909,6 +949,23 @@ export class RpiClient {
       });
     } else if (!isUsdDenomination(pendingObservation.denomination)) {
       return nullAccounts;
+    }
+
+    // An override arrives as a bare address, without the asset meta its source
+    // would be read from. klend stales a reserve whoever passes it, so the
+    // source is looked up among the fetched asset metas instead.
+    const overriddenOracles = [
+      overrides.solUsdOracle,
+      overrides.baseAssetOracle,
+      overriddenObservedMintOracle,
+    ];
+    if (overriddenOracles.some((oracle) => !!oracle)) {
+      const assetMetas = await this.base.fetchAssetMetas();
+      collectKaminoReserveOracleOverrides(
+        overriddenOracles,
+        assetMetas.values(),
+        kaminoReservesToRefresh,
+      );
     }
 
     return {
