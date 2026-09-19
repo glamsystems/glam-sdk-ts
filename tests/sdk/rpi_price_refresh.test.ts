@@ -138,6 +138,9 @@ function makeClient(
     }),
     getAssetMeta,
     fetchAssetMetas: jest.fn(async () => assetMetas),
+    fetchRegisteredOracles: jest.fn(async () =>
+      Array.from(assetMetas.values()),
+    ),
     kaminoLending: {
       fetchAndParseReserves,
       txBuilder: { refreshReservesBatchIx },

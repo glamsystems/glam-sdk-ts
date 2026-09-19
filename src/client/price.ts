@@ -2096,8 +2096,8 @@ export class PriceClient {
    * as named accounts, together with the Kamino reserves among them. Callers
    * take both from here so the oracle and its source are read once.
    * A caller-supplied override is used as given, and its source is looked up
-   * among the fetched asset metas, because a reserve reads the same whoever
-   * passed it.
+   * among every registration, deprecated ones included, because a reserve
+   * reads the same whoever passed it.
    */
   private async pricingOracleAccounts(
     overrides: {
@@ -2124,10 +2124,9 @@ export class PriceClient {
       baseAssetMeta,
     ]);
     if (overrides.solUsdOracle || overrides.baseAssetOracle) {
-      const assetMetas = await this.base.fetchAssetMetas();
       collectKaminoReserveOracleOverrides(
         [overrides.solUsdOracle, overrides.baseAssetOracle],
-        assetMetas.values(),
+        await this.base.fetchRegisteredOracles(),
         kaminoReserves,
       );
     }

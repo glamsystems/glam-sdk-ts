@@ -1087,7 +1087,13 @@ export class BaseClient {
 
     const fetchPromise = this.fetchGlobalConfig(options)
       .then(async (globalConfig) => {
-        const assets = globalConfig.assetMetas.map((am) => am.asset);
+        // A negative priority marks a deprecated registration (glam_config sets
+        // -1): it never enters the map. Several active registrations of one
+        // mint keep array order, the last one read; their ranking is undecided.
+        const activeAssetMetas = globalConfig.assetMetas.filter(
+          ({ priority }) => priority >= 0,
+        );
+        const assets = activeAssetMetas.map((am) => am.asset);
         const tokenProgramsByAsset = new PkMap<PublicKey>();
 
         try {
@@ -1121,7 +1127,7 @@ export class BaseClient {
 
         // Transforms onchain asset meta to client asset meta
         const assetMetaEntries: [PublicKey, AssetMeta][] = [];
-        globalConfig.assetMetas.forEach(
+        activeAssetMetas.forEach(
           ({ asset, decimals, oracle, oracleSourceOrdinal }) => {
             const programId = tokenProgramsByAsset.get(asset);
             if (!programId) {
@@ -1156,6 +1162,25 @@ export class BaseClient {
       });
 
     return await fetchPromise;
+  }
+
+  /**
+   * Oracle and source of every registration, deprecated ones included. The
+   * programs accept a registered (mint, oracle) pair whatever its priority, so
+   * a caller-supplied oracle is matched against these, not against the mint
+   * keyed map of `fetchAssetMetas`.
+   */
+  public async fetchRegisteredOracles(): Promise<
+    Pick<AssetMeta, "asset" | "oracle" | "oracleSource">[]
+  > {
+    const globalConfig = await this.fetchGlobalConfig();
+    return globalConfig.assetMetas.map(
+      ({ asset, oracle, oracleSourceOrdinal }) => ({
+        asset,
+        oracle,
+        oracleSource: getOracleName(oracleSourceOrdinal),
+      }),
+    );
   }
 
   public async refreshAssetMetaCache(): Promise<PkMap<AssetMeta>> {

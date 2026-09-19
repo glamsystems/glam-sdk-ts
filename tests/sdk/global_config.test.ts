@@ -1,7 +1,9 @@
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
+import { ASSETS_MAINNET } from "../../src/assets";
 import { BaseClient } from "../../src/client/base";
 import { ClusterNetwork } from "../../src/clientConfig";
+import { MSOL, WSOL } from "../../src/constants";
 import { fetchGlobalConfig, GlobalConfig } from "../../src/globalConfig";
 import { fetchMintsAndTokenPrograms } from "../../src/utils/accounts";
 
@@ -167,5 +169,132 @@ describe("BaseClient asset meta cache", () => {
       TOKEN_2022_PROGRAM_ID.toBase58(),
     );
     expect(fetchMintsAndTokenProgramsMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("BaseClient asset metas with deprecated registrations", () => {
+  const asset = new PublicKey("2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH");
+  const activeOracle = new PublicKey(
+    "6JkZmXGgWnzsyTQaqRARzP64iFYnpMNT4siiuUDUaB8s",
+  );
+  const otherOracle = new PublicKey(
+    "5QZMnsyndmphvZF4BNgoMHwVZaREXeE2rpBoCPMxgCCd",
+  );
+  // glam_config `deprecate_asset_meta` sets the priority to -1.
+  const DEPRECATED = -1;
+
+  const registration = (
+    mint: PublicKey,
+    oracle: PublicKey,
+    priority: number,
+  ) => ({
+    asset: mint,
+    decimals: 6,
+    oracle,
+    oracleSourceOrdinal: 1,
+    maxAgeSeconds: 30,
+    priority,
+    padding: [0, 0, 0],
+  });
+
+  const clientWith = (
+    registrations: ReturnType<typeof registration>[],
+  ): BaseClient => {
+    jest.mocked(fetchGlobalConfig).mockResolvedValue({
+      admin: PublicKey.default,
+      feeAuthority: PublicKey.default,
+      referrer: PublicKey.default,
+      baseFeeBps: 0,
+      flowFeeBps: 0,
+      assetMetas: registrations,
+    } as unknown as GlobalConfig);
+    // One result per requested mint, whatever the client asks for.
+    jest
+      .mocked(fetchMintsAndTokenPrograms)
+      .mockImplementation(async (_connection, mints) =>
+        mints.map(() => ({
+          mint: {} as any,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
+        })),
+      );
+
+    return Object.assign(Object.create(BaseClient.prototype), {
+      cluster: ClusterNetwork.Mainnet,
+      provider: { connection: {} },
+    }) as BaseClient;
+  };
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it("keeps the active registration when a deprecated one follows it", async () => {
+    const client = clientWith([
+      registration(asset, activeOracle, 0),
+      registration(asset, otherOracle, DEPRECATED),
+    ]);
+
+    const assetMeta = await client.getAssetMeta(asset);
+
+    expect(assetMeta.oracle.toBase58()).toBe(activeOracle.toBase58());
+  });
+
+  it("keeps the active registration when a deprecated one precedes it", async () => {
+    const client = clientWith([
+      registration(asset, otherOracle, DEPRECATED),
+      registration(asset, activeOracle, 0),
+    ]);
+
+    const assetMeta = await client.getAssetMeta(asset);
+
+    expect(assetMeta.oracle.toBase58()).toBe(activeOracle.toBase58());
+  });
+
+  it("resolves the SOL oracle from the active registration", async () => {
+    const client = clientWith([
+      registration(WSOL, activeOracle, 0),
+      registration(WSOL, otherOracle, DEPRECATED),
+    ]);
+
+    expect((await client.getSolOracle()).toBase58()).toBe(
+      activeOracle.toBase58(),
+    );
+  });
+
+  it("refuses a mint whose registrations are all deprecated", async () => {
+    const client = clientWith([
+      registration(asset, activeOracle, DEPRECATED),
+      registration(asset, otherOracle, DEPRECATED),
+    ]);
+
+    expect((await client.fetchAssetMetas()).get(asset)).toBeUndefined();
+    await expect(client.getAssetMeta(asset)).rejects.toThrow(
+      `Asset not supported: ${asset.toBase58()}`,
+    );
+  });
+
+  it("falls back to the built in asset list when every registration is deprecated", async () => {
+    const client = clientWith([registration(MSOL, otherOracle, DEPRECATED)]);
+
+    const assetMeta = await client.getAssetMeta(MSOL);
+
+    expect(assetMeta).toBe(ASSETS_MAINNET.get(MSOL));
+    expect(assetMeta.oracle.toBase58()).not.toBe(otherOracle.toBase58());
+  });
+
+  // Records today's behaviour, not a ruling: how the priority number ranks
+  // several active registrations of one mint is an open owner decision.
+  it("leaves several active registrations in array order, the last one read", async () => {
+    const lowLast = await clientWith([
+      registration(asset, otherOracle, 5),
+      registration(asset, activeOracle, 0),
+    ]).getAssetMeta(asset);
+    const highLast = await clientWith([
+      registration(asset, activeOracle, 0),
+      registration(asset, otherOracle, 5),
+    ]).getAssetMeta(asset);
+
+    expect(lowLast.oracle.toBase58()).toBe(activeOracle.toBase58());
+    expect(highLast.oracle.toBase58()).toBe(otherOracle.toBase58());
   });
 });

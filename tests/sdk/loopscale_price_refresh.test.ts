@@ -148,6 +148,9 @@ function makeClient(
       ],
     })),
     fetchAssetMetas: jest.fn(async () => assetMetas),
+    fetchRegisteredOracles: jest.fn(async () =>
+      Array.from(assetMetas.values()),
+    ),
     getAssetMeta,
     mintProgram: {
       methods: {

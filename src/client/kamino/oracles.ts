@@ -54,18 +54,19 @@ export function collectKaminoReserveOracles(
 /**
  * Adds the Kamino reserves behind caller-supplied oracle overrides to `into`.
  * An override arrives as a bare address, with no source attached: it is a
- * reserve when one of the fetched asset metas prices its own mint through that
- * same address as a Kamino reserve, whichever mint that is.
+ * reserve when one of the given registrations prices its own mint through that
+ * same address as a Kamino reserve, whichever mint that is. Pass every
+ * registration (`BaseClient.fetchRegisteredOracles`), deprecated ones included.
  */
 export function collectKaminoReserveOracleOverrides(
   overrides: Array<PublicKey | null | undefined>,
-  assetMetas: Iterable<OracleSourcedAssetMeta | null | undefined>,
+  registrations: Iterable<OracleSourcedAssetMeta | null | undefined>,
   into: PkSet = new PkSet(),
 ): PkSet {
   if (overrides.every((oracle) => !oracle)) {
     return into;
   }
-  const reserveOracles = collectKaminoReserveOracles(Array.from(assetMetas));
+  const reserveOracles = collectKaminoReserveOracles(Array.from(registrations));
   overrides.forEach((oracle) => {
     if (oracle && reserveOracles.has(oracle)) {
       into.add(oracle);

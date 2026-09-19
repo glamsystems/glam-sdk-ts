@@ -953,17 +953,16 @@ export class RpiClient {
 
     // An override arrives as a bare address, without the asset meta its source
     // would be read from. klend stales a reserve whoever passes it, so the
-    // source is looked up among the fetched asset metas instead.
+    // source is looked up among every registration, deprecated ones included.
     const overriddenOracles = [
       overrides.solUsdOracle,
       overrides.baseAssetOracle,
       overriddenObservedMintOracle,
     ];
     if (overriddenOracles.some((oracle) => !!oracle)) {
-      const assetMetas = await this.base.fetchAssetMetas();
       collectKaminoReserveOracleOverrides(
         overriddenOracles,
-        assetMetas.values(),
+        await this.base.fetchRegisteredOracles(),
         kaminoReservesToRefresh,
       );
     }
