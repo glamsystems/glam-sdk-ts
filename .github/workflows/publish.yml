@@ -4,112 +4,66 @@ on:
   push:
     tags:
       - "v*"
+  # Dispatch at an existing release tag to recover a partial run.
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
-  group: npm-publish-glam-sdk-${{ github.ref }}
+  group: npm-publish-glam-sdk
   cancel-in-progress: false
 
 jobs:
   publish:
+    name: Publish SDK
+    if: >-
+      github.repository == 'glamsystems/glam-sdk-ts' &&
+      github.ref_type == 'tag' &&
+      vars.SDK_RELEASE_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: npm-production
+    permissions:
+      contents: write
+      id-token: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout exact tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-          cache: "npm"
+          package-manager-cache: false
+
+      - name: Validate immutable release identity
+        run: node scripts/release-sdk.mjs validate
 
       - name: Use npm with trusted publishing support
-        # npm 12.0.0 installs sigstore under the workspace copy of libnpmpublish,
-        # but npm publish --provenance loads the runtime copy and fails to resolve it.
+        # npm 12.0.0 fails to resolve sigstore when publishing provenance.
         run: npm install -g npm@11.18.0
 
-      - name: Install dependencies
+      - name: Install locked dependencies
         run: npm ci
-
-      - name: Validate release ref
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          PACKAGE_NAME="$(node -p "require('./package.json').name")"
-          VERSION="$(node -p "require('./package.json').version")"
-
-          if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "Release commit must be on origin/main" >&2
-            exit 1
-          fi
-
-          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "v${VERSION}" ]]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match package version v${VERSION}" >&2
-            exit 1
-          fi
-
-          if npm view "${PACKAGE_NAME}@${VERSION}" version >/dev/null 2>&1; then
-            echo "${PACKAGE_NAME}@${VERSION} already exists on npm" >&2
-            exit 1
-          fi
 
       - name: Build package
         run: npm run build
 
-      - name: Dry-run pack
-        run: npm pack --dry-run --json > npm-pack-dry-run.json
+      - name: Publish, verify, and finish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-sdk.mjs publish
 
       - name: Upload pack manifest
-        uses: actions/upload-artifact@v4
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: npm-pack-dry-run
-          path: npm-pack-dry-run.json
-
-      - name: Publish
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          VERSION="$(node -p "require('./package.json').version")"
-          DIST_TAG="latest"
-
-          if [[ "${VERSION}" == *"-test"* ]]; then
-            DIST_TAG="test"
-          fi
-
-          npm publish --access public --provenance --tag "${DIST_TAG}"
-
-      - name: Verify published signatures
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          PACKAGE_NAME="$(node -p "require('./package.json').name")"
-          VERSION="$(node -p "require('./package.json').version")"
-          TMP_DIR="$(mktemp -d)"
-
-          cd "${TMP_DIR}"
-          npm init -y
-
-          for attempt in {1..10}; do
-            if npm install "${PACKAGE_NAME}@${VERSION}"; then
-              break
-            fi
-
-            if [[ "${attempt}" == "10" ]]; then
-              exit 1
-            fi
-
-            sleep 15
-          done
-
-          npm audit signatures
+          name: npm-release-pack
+          path: .build/release-pack.json
+          if-no-files-found: ignore
