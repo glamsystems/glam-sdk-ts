@@ -2990,6 +2990,34 @@ export class LoopscaleCoreClient {
   /**
    * Signs a built transaction with the client wallet, has it co-signed by the
    * Loopscale MPC, and returns the co-signed transaction.
+   *
+   * Every ext_loopscale instruction that invokes the Loopscale program names
+   * Loopscale's protocol admin `bs_auth` as a signer. The policy setters and
+   * the three pricers (`price_loopscale_loans`, `price_loopscale_strategies`,
+   * `price_loopscale_vault_positions`, which call only GLAM) do not, and go
+   * out like any other transaction. On mainnet that signer is Loopscale's
+   * MPC service (`LOOPSCALE_BS_AUTH`), and
+   * it co-signs only transactions whose GLAM signer is the key Loopscale
+   * allowlisted for GLAM (`GLAM_SIGNER`); a transaction signed by any other
+   * key fails signature verification before it reaches the program, whatever
+   * the state's ACL says. So a live run on staging or production needs:
+   *
+   * 1. `GLAM_SIGNER`'s keypair as the client wallet and fee payer, with a few
+   *    hundredths of a SOL on it for fees (the operator's GLAM key directory
+   *    holds it; a script reads it, nothing prints it).
+   * 2. That key as owner or delegate on the state with the ext_loopscale
+   *    permissions the run needs: `grant_revoke_delegate_permissions` with the
+   *    protocol and permission bits from the ext_loopscale IDL constants
+   *    (`PROTO_LOOPSCALE_VAULT`, `PROTO_LOOPSCALE_VAULT_PERM_DEPOSIT_USER_VAULT`,
+   *    …), signed by the owner.
+   * 3. A version 0 transaction, simulated with signature verification off
+   *    while the co-signer's slot is still empty, then passed through here and
+   *    sent (`coSignAndSend` does the last two steps).
+   *
+   * Localnet and LiteSVM have no co-signer: the svm-tests load Loopscale's
+   * protocol-admin account with its active authority patched to a test keypair
+   * (`anchor_v1/svm-tests/tests/loopscale_flow.rs`) and sign `bs_auth`
+   * themselves, so a localnet run never exercises the real gate.
    */
   async cosignTransaction(params: {
     tx: VersionedTransaction;
