@@ -3,6 +3,7 @@ export * from "./bitmask";
 export * from "./blockhash";
 export * from "./computeBudget";
 export * from "./evm";
+export * from "./extPricing";
 export * from "./common";
 export * from "./glamPDAs";
 export * from "./lookupTables";

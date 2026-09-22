@@ -9,7 +9,12 @@ import {
 } from "../../src/protocols";
 import { WSOL } from "../../src/constants";
 import { StateAccountType } from "../../src/models";
-import { PkMap } from "../../src/utils";
+import {
+  EXT_PRICER_DISCRIMINATORS,
+  PkMap,
+  getGlobalConfigPda,
+  getIntegrationAuthorityPda,
+} from "../../src/utils";
 
 const LOOPSCALE_PROTOCOLS =
   LOOPSCALE_BORROW_PROTOCOL |
@@ -24,6 +29,30 @@ function pk(seed: number): PublicKey {
 
 function ix(programId: PublicKey): TransactionInstruction {
   return new TransactionInstruction({ keys: [], programId });
+}
+
+/** The keys of an ext-hosted pricer: the program's named accounts, then the remaining ones. */
+function extPricerKeys(expected: {
+  programId: PublicKey;
+  statePda: PublicKey;
+  vaultPda: PublicKey;
+  solUsdOracle: PublicKey;
+  baseAssetOracle: PublicKey;
+  protocolProgramId: PublicKey;
+  remaining: PublicKey[];
+}) {
+  return [
+    { pubkey: expected.statePda, isSigner: false, isWritable: true },
+    ...[
+      expected.vaultPda,
+      expected.solUsdOracle,
+      expected.baseAssetOracle,
+      getIntegrationAuthorityPda(expected.programId),
+      getGlobalConfigPda(),
+      expected.protocolProgramId,
+      ...expected.remaining,
+    ].map((pubkey) => ({ pubkey, isSigner: false, isWritable: false })),
+  ];
 }
 
 function tokenAccountData(mint: PublicKey, amount: bigint): Buffer {
@@ -240,7 +269,7 @@ describe("PriceClient", () => {
     expect(ixs).toEqual([priceVaultIx]);
   });
 
-  it("priceLoopscaleLoansIxs builds via the mint program with ordered loan and oracle accounts", async () => {
+  it("priceLoopscaleLoansIxs builds on the ext_loopscale program with ordered loan and oracle accounts", async () => {
     const statePda = pk(91);
     const solUsdOracle = pk(92);
     const baseAssetOracle = pk(93);
@@ -249,18 +278,14 @@ describe("PriceClient", () => {
     const loanB = pk(95);
     const oracleA = pk(96);
     const oracleB = pk(97);
-    const builtIx = ix(pk(98));
-
-    const instructionBuilder = {
-      accounts: jest.fn().mockReturnThis(),
-      remainingAccounts: jest.fn().mockReturnThis(),
-      instruction: jest.fn().mockResolvedValue(builtIx),
-    };
-    const priceLoopscaleLoans = jest.fn().mockReturnValue(instructionBuilder);
+    const vaultPda = pk(89);
+    const protocolProgramId = pk(88);
 
     const base = {
       statePda,
-      mintProgram: { methods: { priceLoopscaleLoans } },
+      vaultPda,
+      protocolProgram: { programId: protocolProgramId },
+      extLoopscaleProgram: { programId: pk(41) },
       fetchStateModel: jest.fn().mockResolvedValue({ baseAssetMint }),
       getAssetMeta: jest.fn(async (mint: PublicKey) =>
         mint.equals(WSOL)
@@ -288,28 +313,32 @@ describe("PriceClient", () => {
     );
     const result = await client.priceLoopscaleLoansIxs();
 
-    expect(result?.ixs).toEqual([builtIx]);
+    expect(result?.ixs).toHaveLength(1);
     expect(result?.kaminoReserves).toEqual([]);
     expect(loopscaleBorrow.getPriceLoansAccounts).toHaveBeenCalled();
     expect(base.getAssetMeta).toHaveBeenCalledWith(WSOL);
-    expect(instructionBuilder.accounts).toHaveBeenCalledWith({
-      glamState: statePda,
-      solUsdOracle,
-      baseAssetOracle,
-    });
-    expect(instructionBuilder.remainingAccounts).toHaveBeenCalledWith([
-      { pubkey: loanA, isSigner: false, isWritable: false },
-      { pubkey: loanB, isSigner: false, isWritable: false },
-      { pubkey: oracleA, isSigner: false, isWritable: false },
-      { pubkey: oracleB, isSigner: false, isWritable: false },
-    ]);
+    const built = result!.ixs[0];
+    expect(built.programId.equals(pk(41))).toBe(true);
+    expect(built.data).toEqual(
+      Buffer.from(EXT_PRICER_DISCRIMINATORS.price_loopscale_loans),
+    );
+    expect(built.keys).toEqual(
+      extPricerKeys({
+        programId: pk(41),
+        statePda,
+        vaultPda,
+        solUsdOracle,
+        baseAssetOracle,
+        protocolProgramId,
+        remaining: [loanA, loanB, oracleA, oracleB],
+      }),
+    );
   });
 
   it("priceLoopscaleLoansIxs returns null when there are no loopscale loans", async () => {
-    const priceLoopscaleLoans = jest.fn();
     const base = {
       statePda: pk(91),
-      mintProgram: { methods: { priceLoopscaleLoans } },
+      extLoopscaleProgram: { programId: pk(41) },
       getSolOracle: jest.fn(),
     } as any;
     const loopscaleBorrow = {
@@ -329,10 +358,9 @@ describe("PriceClient", () => {
     );
 
     expect(await client.priceLoopscaleLoansIxs()).toBeNull();
-    expect(priceLoopscaleLoans).not.toHaveBeenCalled();
   });
 
-  it("priceLoopscaleStrategiesIxs builds via the mint program with ordered strategy and oracle accounts", async () => {
+  it("priceLoopscaleStrategiesIxs builds on the ext_loopscale program with ordered strategy and oracle accounts", async () => {
     const statePda = pk(101);
     const solUsdOracle = pk(102);
     const baseAssetOracle = pk(103);
@@ -341,20 +369,14 @@ describe("PriceClient", () => {
     const strategyB = pk(105);
     const oracleA = pk(106);
     const oracleB = pk(107);
-    const builtIx = ix(pk(108));
-
-    const instructionBuilder = {
-      accounts: jest.fn().mockReturnThis(),
-      remainingAccounts: jest.fn().mockReturnThis(),
-      instruction: jest.fn().mockResolvedValue(builtIx),
-    };
-    const priceLoopscaleStrategies = jest
-      .fn()
-      .mockReturnValue(instructionBuilder);
+    const vaultPda = pk(119);
+    const protocolProgramId = pk(118);
 
     const base = {
       statePda,
-      mintProgram: { methods: { priceLoopscaleStrategies } },
+      vaultPda,
+      protocolProgram: { programId: protocolProgramId },
+      extLoopscaleProgram: { programId: pk(41) },
       fetchStateModel: jest.fn().mockResolvedValue({ baseAssetMint }),
       getAssetMeta: jest.fn(async (mint: PublicKey) =>
         mint.equals(WSOL)
@@ -382,28 +404,32 @@ describe("PriceClient", () => {
     );
     const result = await client.priceLoopscaleStrategiesIxs();
 
-    expect(result?.ixs).toEqual([builtIx]);
+    expect(result?.ixs).toHaveLength(1);
     expect(result?.kaminoReserves).toEqual([]);
     expect(loopscaleLend.getPriceStrategiesAccounts).toHaveBeenCalled();
     expect(base.getAssetMeta).toHaveBeenCalledWith(WSOL);
-    expect(instructionBuilder.accounts).toHaveBeenCalledWith({
-      glamState: statePda,
-      solUsdOracle,
-      baseAssetOracle,
-    });
-    expect(instructionBuilder.remainingAccounts).toHaveBeenCalledWith([
-      { pubkey: strategyA, isSigner: false, isWritable: false },
-      { pubkey: strategyB, isSigner: false, isWritable: false },
-      { pubkey: oracleA, isSigner: false, isWritable: false },
-      { pubkey: oracleB, isSigner: false, isWritable: false },
-    ]);
+    const built = result!.ixs[0];
+    expect(built.programId.equals(pk(41))).toBe(true);
+    expect(built.data).toEqual(
+      Buffer.from(EXT_PRICER_DISCRIMINATORS.price_loopscale_strategies),
+    );
+    expect(built.keys).toEqual(
+      extPricerKeys({
+        programId: pk(41),
+        statePda,
+        vaultPda,
+        solUsdOracle,
+        baseAssetOracle,
+        protocolProgramId,
+        remaining: [strategyA, strategyB, oracleA, oracleB],
+      }),
+    );
   });
 
   it("priceLoopscaleStrategiesIxs returns null when there are no loopscale strategies", async () => {
-    const priceLoopscaleStrategies = jest.fn();
     const base = {
       statePda: pk(111),
-      mintProgram: { methods: { priceLoopscaleStrategies } },
+      extLoopscaleProgram: { programId: pk(41) },
       getSolOracle: jest.fn(),
     } as any;
     const loopscaleLend = {
@@ -423,10 +449,9 @@ describe("PriceClient", () => {
     );
 
     expect(await client.priceLoopscaleStrategiesIxs()).toBeNull();
-    expect(priceLoopscaleStrategies).not.toHaveBeenCalled();
   });
 
-  it("priceLoopscaleVaultPositionsIxs builds via the mint program with ordered vault, stake, and oracle accounts", async () => {
+  it("priceLoopscaleVaultPositionsIxs builds on the ext_loopscale program with ordered vault, stake, and oracle accounts", async () => {
     const statePda = pk(121);
     const solUsdOracle = pk(122);
     const baseAssetOracle = pk(123);
@@ -439,20 +464,14 @@ describe("PriceClient", () => {
     const userLpB = pk(129);
     const stakeA = pk(130);
     const oracleA = pk(131);
-    const builtIx = ix(pk(132));
-
-    const instructionBuilder = {
-      accounts: jest.fn().mockReturnThis(),
-      remainingAccounts: jest.fn().mockReturnThis(),
-      instruction: jest.fn().mockResolvedValue(builtIx),
-    };
-    const priceLoopscaleVaultPositions = jest
-      .fn()
-      .mockReturnValue(instructionBuilder);
+    const vaultPda = pk(139);
+    const protocolProgramId = pk(138);
 
     const base = {
       statePda,
-      mintProgram: { methods: { priceLoopscaleVaultPositions } },
+      vaultPda,
+      protocolProgram: { programId: protocolProgramId },
+      extLoopscaleProgram: { programId: pk(41) },
       fetchStateModel: jest.fn().mockResolvedValue({ baseAssetMint }),
       getAssetMeta: jest.fn(async (mint: PublicKey) =>
         mint.equals(WSOL)
@@ -484,32 +503,44 @@ describe("PriceClient", () => {
     );
     const result = await client.priceLoopscaleVaultPositionsIxs();
 
-    expect(result?.ixs).toEqual([builtIx]);
+    expect(result?.ixs).toHaveLength(1);
     expect(result?.kaminoReserves).toEqual([]);
     expect(loopscaleVault.getPriceVaultsAccounts).toHaveBeenCalled();
-    expect(priceLoopscaleVaultPositions).toHaveBeenCalledWith(2);
-    expect(instructionBuilder.accounts).toHaveBeenCalledWith({
-      glamState: statePda,
-      solUsdOracle,
-      baseAssetOracle,
-    });
-    expect(instructionBuilder.remainingAccounts).toHaveBeenCalledWith([
-      { pubkey: vaultA, isSigner: false, isWritable: false },
-      { pubkey: strategyA, isSigner: false, isWritable: false },
-      { pubkey: userLpA, isSigner: false, isWritable: false },
-      { pubkey: vaultB, isSigner: false, isWritable: false },
-      { pubkey: strategyB, isSigner: false, isWritable: false },
-      { pubkey: userLpB, isSigner: false, isWritable: false },
-      { pubkey: stakeA, isSigner: false, isWritable: false },
-      { pubkey: oracleA, isSigner: false, isWritable: false },
-    ]);
+    const built = result!.ixs[0];
+    expect(built.programId.equals(pk(41))).toBe(true);
+    // num_vaults follows the discriminator.
+    expect(built.data).toEqual(
+      Buffer.from([
+        ...EXT_PRICER_DISCRIMINATORS.price_loopscale_vault_positions,
+        2,
+      ]),
+    );
+    expect(built.keys).toEqual(
+      extPricerKeys({
+        programId: pk(41),
+        statePda,
+        vaultPda,
+        solUsdOracle,
+        baseAssetOracle,
+        protocolProgramId,
+        remaining: [
+          vaultA,
+          strategyA,
+          userLpA,
+          vaultB,
+          strategyB,
+          userLpB,
+          stakeA,
+          oracleA,
+        ],
+      }),
+    );
   });
 
   it("priceLoopscaleVaultPositionsIxs returns null when there are no loopscale vault LP tokens", async () => {
-    const priceLoopscaleVaultPositions = jest.fn();
     const base = {
       statePda: pk(133),
-      mintProgram: { methods: { priceLoopscaleVaultPositions } },
+      extLoopscaleProgram: { programId: pk(41) },
       getSolOracle: jest.fn(),
     } as any;
     const loopscaleVault = {
@@ -529,7 +560,6 @@ describe("PriceClient", () => {
     );
 
     expect(await client.priceLoopscaleVaultPositionsIxs()).toBeNull();
-    expect(priceLoopscaleVaultPositions).not.toHaveBeenCalled();
   });
 
   it("uses mint account decimals when token price fallback is unavailable", async () => {

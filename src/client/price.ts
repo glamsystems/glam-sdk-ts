@@ -28,6 +28,9 @@ import {
   getProgramAccounts,
   getGlobalConfigPda,
   getIntegrationAuthorityPda,
+  extPricerIx,
+  extRegisteredPositionsPricerIx,
+  ExtPositionPricerName,
   PkMap,
   PkSet,
   PositionCategorizer,
@@ -1070,11 +1073,6 @@ export class PriceClient {
   public async priceJupiterEarnPositionsIxs(
     stateModel: StateModel | null = this.cachedStateModel,
   ): Promise<PricingChunk> {
-    const methods = this.base.mintProgram.methods as any;
-    if (typeof methods.priceJupiterEarnPositions !== "function") {
-      return { ixs: [], kaminoReserves: [] };
-    }
-
     const model = stateModel || (await this.base.fetchStateModel());
     const { jupiterEarnAtas } = await this.categorizeExternalPositions(
       model.externalPositions || [],
@@ -1120,15 +1118,12 @@ export class PriceClient {
       this.base.getSolOracle(),
       this.getBaseAssetOracle(),
     ]);
-    const priceIx = await methods
-      .priceJupiterEarnPositions()
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
+    const priceIx = this.extPricerIx(
+      this.base.extJupiterProgram,
+      "price_jupiter_earn_positions",
+      { solUsdOracle, baseAssetOracle },
+      remainingAccounts,
+    );
     ixs.push(priceIx);
 
     return { ixs, kaminoReserves: Array.from(kaminoReserves) };
@@ -1137,11 +1132,6 @@ export class PriceClient {
   public async priceJupiterBorrowPositionsIxs(
     stateModel: StateModel | null = this.cachedStateModel,
   ): Promise<PricingChunk> {
-    const methods = this.base.mintProgram.methods as any;
-    if (typeof methods.priceJupiterBorrowPositions !== "function") {
-      return { ixs: [], kaminoReserves: [] };
-    }
-
     const model = stateModel || (await this.base.fetchStateModel());
     const { jupiterBorrowPositions } = await this.categorizeExternalPositions(
       model.externalPositions || [],
@@ -1221,15 +1211,12 @@ export class PriceClient {
       this.base.getSolOracle(),
       this.getBaseAssetOracle(),
     ]);
-    const priceIx = await methods
-      .priceJupiterBorrowPositions()
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
+    const priceIx = this.extPricerIx(
+      this.base.extJupiterProgram,
+      "price_jupiter_borrow_positions",
+      { solUsdOracle, baseAssetOracle },
+      remainingAccounts,
+    );
     ixs.push(priceIx);
 
     return { ixs, kaminoReserves: Array.from(kaminoReserves) };
@@ -1362,11 +1349,6 @@ export class PriceClient {
   public async pricePhoenixTradersIxs(
     stateModel: StateModel | null = this.cachedStateModel,
   ): Promise<PricingChunk | null> {
-    const methods = this.base.mintProgram.methods as any;
-    if (typeof methods.pricePhoenixTraders !== "function") {
-      return null;
-    }
-
     const model = stateModel || (await this.base.fetchStateModel());
     const traderAccounts = await this.findPhoenixTraderAccounts(
       model.externalPositions || [],
@@ -1414,15 +1396,12 @@ export class PriceClient {
       });
     }
 
-    const priceIx = await methods
-      .pricePhoenixTraders()
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
+    const priceIx = this.extPricerIx(
+      this.base.extPhoenixProgram,
+      "price_phoenix_traders",
+      { solUsdOracle, baseAssetOracle },
+      remainingAccounts,
+    );
 
     return {
       ixs: [
@@ -1443,11 +1422,6 @@ export class PriceClient {
    * accounts needed to price the loans' collateral and debt.
    */
   public async priceLoopscaleLoansIxs(): Promise<PricingChunk | null> {
-    const methods = this.base.mintProgram.methods as any;
-    if (typeof methods.priceLoopscaleLoans !== "function") {
-      return null;
-    }
-
     const accounts = await this.loopscaleBorrow.getPriceLoansAccounts();
     if (!accounts) {
       return null;
@@ -1468,15 +1442,12 @@ export class PriceClient {
       isWritable: false,
     }));
 
-    const ix = await methods
-      .priceLoopscaleLoans()
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
+    const ix = this.extPricerIx(
+      this.base.extLoopscaleProgram,
+      "price_loopscale_loans",
+      { solUsdOracle, baseAssetOracle },
+      remainingAccounts,
+    );
 
     return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
@@ -1489,11 +1460,6 @@ export class PriceClient {
    * oracle accounts needed to price the strategies' principal mints.
    */
   public async priceLoopscaleStrategiesIxs(): Promise<PricingChunk | null> {
-    const methods = this.base.mintProgram.methods as any;
-    if (typeof methods.priceLoopscaleStrategies !== "function") {
-      return null;
-    }
-
     const accounts = await this.loopscaleLend.getPriceStrategiesAccounts();
     if (!accounts) {
       return null;
@@ -1514,15 +1480,12 @@ export class PriceClient {
       isWritable: false,
     }));
 
-    const ix = await methods
-      .priceLoopscaleStrategies()
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
+    const ix = this.extPricerIx(
+      this.base.extLoopscaleProgram,
+      "price_loopscale_strategies",
+      { solUsdOracle, baseAssetOracle },
+      remainingAccounts,
+    );
 
     return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
@@ -1537,11 +1500,6 @@ export class PriceClient {
    * VaultStake accounts, followed by oracle accounts.
    */
   public async priceLoopscaleVaultPositionsIxs(): Promise<PricingChunk | null> {
-    const methods = this.base.mintProgram.methods as any;
-    if (typeof methods.priceLoopscaleVaultPositions !== "function") {
-      return null;
-    }
-
     const accounts = await this.loopscaleVault.getPriceVaultsAccounts();
     if (!accounts) {
       return null;
@@ -1568,15 +1526,13 @@ export class PriceClient {
       isWritable: false,
     }));
 
-    const ix = await methods
-      .priceLoopscaleVaultPositions(accounts.numVaults)
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
+    const ix = this.extPricerIx(
+      this.base.extLoopscaleProgram,
+      "price_loopscale_vault_positions",
+      { solUsdOracle, baseAssetOracle },
+      remainingAccounts,
+      accounts.numVaults,
+    );
 
     return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
@@ -1584,11 +1540,6 @@ export class PriceClient {
   public async priceOrcaWhirlpoolPositionsIxs(
     stateModel: StateModel | null = this.cachedStateModel,
   ): Promise<PricingChunk | null> {
-    const methods = this.base.mintProgram.methods as any;
-    if (typeof methods.priceOrcaWhirlpoolPositions !== "function") {
-      return null;
-    }
-
     const model = stateModel || (await this.base.fetchStateModel());
     const categorizer = new PositionCategorizer(this.base.connection);
     const { orcaWhirlpoolPositions } = await categorizer.categorizePositions(
@@ -1611,15 +1562,13 @@ export class PriceClient {
       this.getBaseAssetOracle(),
     ]);
 
-    const priceIx: TransactionInstruction = await methods
-      .priceOrcaWhirlpoolPositions(accounts.numPositions)
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(accounts.remainingAccounts)
-      .instruction();
+    const priceIx: TransactionInstruction = this.extPricerIx(
+      this.base.extOrcaProgram,
+      "price_orca_whirlpool_positions",
+      { solUsdOracle, baseAssetOracle },
+      accounts.remainingAccounts,
+      accounts.numPositions,
+    );
 
     const accountKeyCount = new PkSet([
       priceIx.programId,
@@ -1783,15 +1732,12 @@ export class PriceClient {
       });
     }
 
-    const ix = await (this.base.mintProgram.methods as any)
-      .priceNeutralBundleDepositors()
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(remainingAccounts)
-      .instruction();
+    const ix = this.extPricerIx(
+      this.base.extNeutralProgram,
+      "price_neutral_bundle_depositors",
+      { solUsdOracle, baseAssetOracle },
+      remainingAccounts,
+    );
 
     return { ixs: [ix], kaminoReserves: Array.from(kaminoReserves) };
   }
@@ -1808,20 +1754,12 @@ export class PriceClient {
       return null;
     }
 
-    const integrationAuthority = getIntegrationAuthorityPda(
-      this.base.mintProgram.programId,
-    );
-
-    return await this.base.mintProgram.methods
-      .priceRegisteredPositions()
-      .accountsPartial({
-        glamState: this.base.statePda,
-        signer: this.base.signer,
-        observationState,
-        integrationAuthority,
-        glamProtocol: this.base.protocolProgram.programId,
-      })
-      .instruction();
+    return extRegisteredPositionsPricerIx({
+      programId: this.base.extRpiProgram.programId,
+      glamState: this.base.statePda,
+      observationState,
+      glamProtocolProgram: this.base.protocolProgram.programId,
+    });
   }
 
   private async priceMarginfiAccountsIx(
@@ -1851,21 +1789,16 @@ export class PriceClient {
       preInstructions.push(...ixs);
     }
 
-    const ix = await (this.base.mintProgram.methods as any)
-      .priceMarginfiAccounts()
-      .accounts({
-        glamState: this.base.statePda,
-        solUsdOracle,
-        baseAssetOracle,
-      })
-      .remainingAccounts(
-        marginfiAccounts.map((pubkey) => ({
-          pubkey,
-          isSigner: false,
-          isWritable: false,
-        })),
-      )
-      .instruction();
+    const ix = this.extPricerIx(
+      this.base.extMarginfiProgram,
+      "price_marginfi_accounts",
+      { solUsdOracle, baseAssetOracle },
+      marginfiAccounts.map((pubkey) => ({
+        pubkey,
+        isSigner: false,
+        isWritable: false,
+      })),
+    );
 
     return {
       ixs: [...preInstructions, ix],
@@ -1873,6 +1806,37 @@ export class PriceClient {
     };
   }
 
+  /**
+   * A pricing instruction hosted by the integration program `program`, over
+   * this vault, the two named oracles and the positions in `remainingAccounts`.
+   */
+  private extPricerIx(
+    program: { programId: PublicKey },
+    name: ExtPositionPricerName,
+    oracles: { solUsdOracle: PublicKey; baseAssetOracle: PublicKey },
+    remainingAccounts: AccountMeta[],
+    count?: number,
+  ): TransactionInstruction {
+    return extPricerIx({
+      programId: program.programId,
+      name,
+      accounts: {
+        glamState: this.base.statePda,
+        glamVault: this.base.vaultPda,
+        solUsdOracle: oracles.solUsdOracle,
+        baseAssetOracle: oracles.baseAssetOracle,
+        glamProtocolProgram: this.base.protocolProgram.programId,
+      },
+      remainingAccounts,
+      count,
+    });
+  }
+
+  // Vault tokens, stake accounts, the single-asset profile and Kamino are
+  // priced by glam_mint; every other integration's positions are priced by the
+  // ext program that owns them, under its own integration authority
+  // (anchor_v1/PRICING.md). One pricer per integration: the same key priced
+  // twice in one slot is summed twice by `aum()`.
   private async _priceVaultIxsImpl(): Promise<TransactionInstruction[]> {
     const stateModel = await this.base.fetchStateModel();
     this.cachedStateModel = stateModel;

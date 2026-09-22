@@ -51,19 +51,6 @@ function expectSameReserves(actual: PublicKey[], expected: PublicKey[]) {
   );
 }
 
-function methodBuilder(instruction: TransactionInstruction) {
-  const builder: {
-    accounts: jest.Mock;
-    remainingAccounts: jest.Mock;
-    instruction: jest.Mock;
-  } = {
-    accounts: jest.fn(() => builder),
-    remainingAccounts: jest.fn(() => builder),
-    instruction: jest.fn(async () => instruction),
-  };
-  return builder;
-}
-
 /**
  * The Loopscale pricing instructions read one oracle per priced asset plus the
  * SOL/USD and base asset oracles. Any of those can be a Kamino reserve, and
@@ -78,22 +65,6 @@ function makeClient(
     vaults?: any;
   } = {},
 ) {
-  const loansIx = new TransactionInstruction({
-    programId: PublicKey.unique(),
-    keys: [],
-    data: Buffer.from([1]),
-  });
-  const strategiesIx = new TransactionInstruction({
-    programId: PublicKey.unique(),
-    keys: [],
-    data: Buffer.from([2]),
-  });
-  const vaultsIx = new TransactionInstruction({
-    programId: PublicKey.unique(),
-    keys: [],
-    data: Buffer.from([3]),
-  });
-
   const getAssetMeta = jest.fn(async (mint: PublicKey) => {
     const spec = oracles.get(mint.toBase58());
     if (!spec) {
@@ -152,13 +123,6 @@ function makeClient(
       Array.from(assetMetas.values()),
     ),
     getAssetMeta,
-    mintProgram: {
-      methods: {
-        priceLoopscaleLoans: jest.fn(() => methodBuilder(loansIx)),
-        priceLoopscaleStrategies: jest.fn(() => methodBuilder(strategiesIx)),
-        priceLoopscaleVaultPositions: jest.fn(() => methodBuilder(vaultsIx)),
-      },
-    },
   };
 
   const klend = {
@@ -192,9 +156,6 @@ function makeClient(
 
   return {
     client,
-    loansIx,
-    strategiesIx,
-    vaultsIx,
     fetchAndParseReserves,
     refreshReservesBatchIx,
   };
@@ -402,7 +363,7 @@ describe("Loopscale pricing Kamino reserve reporting", () => {
   });
 
   it("puts one refresh ahead of the Loopscale pricing instruction in the vault transaction", async () => {
-    const { client, loansIx, fetchAndParseReserves, refreshReservesBatchIx } =
+    const { client, fetchAndParseReserves, refreshReservesBatchIx } =
       makeClient(
         oracleMap([
           [COLLATERAL_MINT, KAMINO(COLLATERAL_RESERVE)],
@@ -436,6 +397,7 @@ describe("Loopscale pricing Kamino reserve reporting", () => {
       COLLATERAL_RESERVE,
       BASE_RESERVE,
     ]);
+    const loansIx = ixs.find((ix) => ix.programId.equals(EXT_LOOPSCALE))!;
     expect(ixs.indexOf(refreshes[0])).toBeLessThan(ixs.indexOf(loansIx));
   });
 });

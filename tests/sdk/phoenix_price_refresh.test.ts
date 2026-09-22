@@ -66,19 +66,6 @@ function expectSameReserves(actual: PublicKey[], expected: PublicKey[]) {
   );
 }
 
-function methodBuilder(instruction: TransactionInstruction) {
-  const builder: {
-    accounts: jest.Mock;
-    remainingAccounts: jest.Mock;
-    instruction: jest.Mock;
-  } = {
-    accounts: jest.fn(() => builder),
-    remainingAccounts: jest.fn(() => builder),
-    instruction: jest.fn(async () => instruction),
-  };
-  return builder;
-}
-
 /**
  * pricePhoenixTraders reads the SOL/USD oracle, the base asset oracle and,
  * when the base asset is not USDC, the USDC oracle that denominates the
@@ -88,13 +75,6 @@ function makeClient(
   oracles: Map<string, OracleSpec>,
   baseAssetMint: PublicKey,
 ) {
-  const phoenixIx = new TransactionInstruction({
-    programId: PublicKey.unique(),
-    keys: [],
-    data: Buffer.from([5]),
-  });
-  const builder = methodBuilder(phoenixIx);
-
   const getAssetMeta = jest.fn(async (mint: PublicKey) => {
     const spec = oracles.get(mint.toBase58());
     if (!spec) {
@@ -168,9 +148,6 @@ function makeClient(
           : null,
       ),
     },
-    mintProgram: {
-      methods: { pricePhoenixTraders: jest.fn(() => builder) },
-    },
   };
 
   const klend = {
@@ -191,7 +168,7 @@ function makeClient(
     (() => undefined) as any,
   );
 
-  return { client, phoenixIx, builder, fetchAndParseReserves };
+  return { client, fetchAndParseReserves };
 }
 
 function oracleMap(entries: Array<[PublicKey, OracleSpec]>) {
@@ -200,7 +177,7 @@ function oracleMap(entries: Array<[PublicKey, OracleSpec]>) {
 
 describe("Phoenix trader pricing Kamino reserve reporting", () => {
   it("reports the USDC quote oracle's reserve when the base asset is not USDC", async () => {
-    const { client, builder } = makeClient(
+    const { client } = makeClient(
       oracleMap([
         [USDC, KAMINO(USDC_RESERVE)],
         [BASE_MINT, PYTH],
@@ -212,11 +189,13 @@ describe("Phoenix trader pricing Kamino reserve reporting", () => {
     const chunk = await client.pricePhoenixTradersIxs();
 
     expectSameReserves(chunk!.kaminoReserves, [USDC_RESERVE]);
-    // The USDC oracle is passed as the last remaining account.
-    const remainingAccounts = builder.remainingAccounts.mock.calls[0][0];
-    expect(
-      remainingAccounts[remainingAccounts.length - 1].pubkey.toBase58(),
-    ).toBe(USDC_RESERVE.toBase58());
+    // The USDC oracle is passed as the last remaining account of the pricing
+    // instruction, which follows the heap frame.
+    const pricing = chunk!.ixs[1];
+    expect(pricing.programId.equals(EXT_PHOENIX)).toBe(true);
+    expect(pricing.keys[pricing.keys.length - 1].pubkey.toBase58()).toBe(
+      USDC_RESERVE.toBase58(),
+    );
   });
 
   it("reports the SOL and base asset reserves the instruction reads", async () => {
@@ -280,7 +259,7 @@ describe("Phoenix trader pricing Kamino reserve reporting", () => {
   });
 
   it("puts one refresh ahead of the Phoenix pricing instruction in the vault transaction", async () => {
-    const { client, phoenixIx, fetchAndParseReserves } = makeClient(
+    const { client, fetchAndParseReserves } = makeClient(
       oracleMap([
         [USDC, KAMINO(USDC_RESERVE)],
         [BASE_MINT, KAMINO(BASE_RESERVE)],
@@ -304,6 +283,7 @@ describe("Phoenix trader pricing Kamino reserve reporting", () => {
       BASE_RESERVE,
       USDC_RESERVE,
     ]);
+    const phoenixIx = ixs.find((ix) => ix.programId.equals(EXT_PHOENIX))!;
     expect(ixs.indexOf(refreshes[0])).toBeLessThan(ixs.indexOf(phoenixIx));
   });
 });

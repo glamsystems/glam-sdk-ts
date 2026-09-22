@@ -45,30 +45,12 @@ function expectSameReserves(actual: PublicKey[], expected: PublicKey[]) {
   );
 }
 
-function methodBuilder(instruction: TransactionInstruction) {
-  const builder: {
-    accounts: jest.Mock;
-    remainingAccounts: jest.Mock;
-    instruction: jest.Mock;
-  } = {
-    accounts: jest.fn(() => builder),
-    remainingAccounts: jest.fn(() => builder),
-    instruction: jest.fn(async () => instruction),
-  };
-  return builder;
-}
-
 /**
  * price_marginfi_accounts passes the SOL/USD and base asset oracles as named
  * accounts; both can be Kamino reserves. The chunk is covered today only
  * because its one caller also prices vault tokens, which reports them.
  */
 function makeClient(oracles: Map<string, OracleSpec>) {
-  const marginfiIx = new TransactionInstruction({
-    programId: PublicKey.unique(),
-    keys: [],
-    data: Buffer.from([9]),
-  });
   const pulseIx = new TransactionInstruction({
     programId: MARGINFI_PROGRAM_ID,
     keys: [],
@@ -151,11 +133,6 @@ function makeClient(oracles: Map<string, OracleSpec>) {
         })),
       ),
     },
-    mintProgram: {
-      methods: {
-        priceMarginfiAccounts: jest.fn(() => methodBuilder(marginfiIx)),
-      },
-    },
   };
 
   const klend = {
@@ -177,7 +154,7 @@ function makeClient(oracles: Map<string, OracleSpec>) {
     (() => undefined) as any,
   );
 
-  return { client, stateModel, marginfiIx, fetchAndParseReserves };
+  return { client, stateModel, fetchAndParseReserves };
 }
 
 function oracleMap(entries: Array<[PublicKey, OracleSpec]>) {
@@ -226,7 +203,7 @@ describe("Marginfi account pricing Kamino reserve reporting", () => {
   });
 
   it("puts one refresh ahead of the marginfi pricing instruction in the vault transaction", async () => {
-    const { client, marginfiIx, fetchAndParseReserves } = makeClient(
+    const { client, fetchAndParseReserves } = makeClient(
       oracleMap([
         [WSOL, KAMINO(SOL_RESERVE)],
         [BASE_MINT, KAMINO(BASE_RESERVE)],
@@ -247,6 +224,7 @@ describe("Marginfi account pricing Kamino reserve reporting", () => {
       SOL_RESERVE,
       BASE_RESERVE,
     ]);
+    const marginfiIx = ixs.find((ix) => ix.programId.equals(EXT_MARGINFI))!;
     expect(ixs.indexOf(refreshes[0])).toBeLessThan(ixs.indexOf(marginfiIx));
   });
 });

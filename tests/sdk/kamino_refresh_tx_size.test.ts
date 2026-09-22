@@ -49,7 +49,7 @@ import {
   STAKE_PROTOCOL,
 } from "../../src/protocols";
 import { StateAccountType } from "../../src/models";
-import { PkMap, PkSet } from "../../src/utils";
+import { PkMap, PkSet, getIntegrationAuthorityPda } from "../../src/utils";
 import {
   V1Transaction,
   V1_MAX_ACCOUNT_KEYS,
@@ -554,11 +554,11 @@ function makePriceClient(setup: PricingSetup) {
   );
 
   const extKaminoProgram = { programId: PublicKey.unique() };
-  const extLoopscaleProgram = { programId: PublicKey.unique() };
-  const extPhoenixProgram = { programId: PublicKey.unique() };
-  const extOrcaProgram = { programId: PublicKey.unique() };
-  const extMarginfiProgram = { programId: PublicKey.unique() };
-  const extNeutralProgram = { programId: PublicKey.unique() };
+  const extLoopscaleProgram = programs.extLoopscaleProgram;
+  const extPhoenixProgram = programs.extPhoenixProgram;
+  const extOrcaProgram = programs.extOrcaProgram;
+  const extMarginfiProgram = programs.extMarginfiProgram;
+  const extNeutralProgram = programs.extNeutralProgram;
 
   const integrationAcls: Array<{
     integrationProgram: PublicKey;
@@ -1055,6 +1055,30 @@ describe("Kamino reserve refresh transaction sizes", () => {
     // Loopscale loans, stake accounts, RPI, the Phoenix heap frame and its
     // pricing, Orca, bridge, Neutral, the marginfi pulse and its pricing.
     expect(ixs).toHaveLength(14);
+    // Each integration is priced by its own program under its own
+    // integration authority (anchor_v1/PRICING.md); glam_mint prices the
+    // vault tokens, the Kamino obligations and the stake accounts.
+    for (const program of [
+      programs.extLoopscaleProgram,
+      programs.extRpiProgram,
+      programs.extPhoenixProgram,
+      programs.extOrcaProgram,
+      programs.extBridgeProgram,
+      programs.extNeutralProgram,
+      programs.extMarginfiProgram,
+    ]) {
+      const own = ixs.filter((ix) => ix.programId.equals(program.programId));
+      expect(own).toHaveLength(1);
+      const integrationAuthority = getIntegrationAuthorityPda(
+        program.programId,
+      );
+      expect(
+        own[0].keys.some(({ pubkey }) => pubkey.equals(integrationAuthority)),
+      ).toBe(true);
+    }
+    expect(
+      ixs.filter((ix) => ix.programId.equals(programs.mintProgram.programId)),
+    ).toHaveLength(3);
     // Documented limit: a vault with this many integrations priced in one
     // transaction needs its lookup tables, before the refresh and after it.
     expect(row.before).toBeGreaterThan(TRANSACTION_SIZE_LIMIT);

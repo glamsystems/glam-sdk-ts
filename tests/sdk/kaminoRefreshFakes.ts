@@ -12,7 +12,12 @@ import { MINT_SIZE, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 import {
   getExtBridgeProgram,
+  getExtJupiterProgram,
+  getExtLoopscaleProgram,
+  getExtMarginfiProgram,
+  getExtNeutralProgram,
   getExtOrcaProgram,
+  getExtPhoenixProgram,
   getExtRpiProgram,
   getGlamMintProgram,
   getGlamProtocolProgram,
@@ -122,5 +127,10 @@ export function realPrograms(
     extRpiProgram: getExtRpiProgram(provider, staging),
     extOrcaProgram: getExtOrcaProgram(provider, staging),
     extBridgeProgram: getExtBridgeProgram(provider, staging),
+    extLoopscaleProgram: getExtLoopscaleProgram(provider, staging),
+    extPhoenixProgram: getExtPhoenixProgram(provider, staging),
+    extMarginfiProgram: getExtMarginfiProgram(provider, staging),
+    extNeutralProgram: getExtNeutralProgram(provider, staging),
+    extJupiterProgram: getExtJupiterProgram(provider, staging),
   };
 }

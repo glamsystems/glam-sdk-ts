@@ -13,6 +13,11 @@ import {
   KAMINO_OBTRIGATION_SIZE,
 } from "../../src/constants";
 import { StateAccountType } from "../../src/models";
+import {
+  EXT_PRICER_DISCRIMINATORS,
+  getGlobalConfigPda,
+  getIntegrationAuthorityPda,
+} from "../../src/utils";
 import { PositionCategorizer } from "../../src/utils/positionCategorizer";
 import {
   LENDING_ACCOUNT_SIZE,
@@ -48,11 +53,8 @@ const STATE = PublicKey.unique();
 const VAULT = PublicKey.unique();
 const BASE_ORACLE = PublicKey.unique();
 const SOL_ORACLE = PublicKey.unique();
-const PRICE_IX = new TransactionInstruction({
-  programId: PublicKey.unique(),
-  keys: [],
-  data: Buffer.from([9]),
-});
+const EXT_JUPITER = PublicKey.unique();
+const PROTOCOL_PROGRAM = PublicKey.unique();
 
 function accountInfo(owner: PublicKey, data: Buffer = Buffer.alloc(0)) {
   return {
@@ -144,13 +146,23 @@ function tokenReserveData(mint: PublicKey, vault = PublicKey.unique()) {
   return data;
 }
 
-function methodBuilder(instruction: TransactionInstruction) {
-  const builder = {
-    accounts: jest.fn(() => builder),
-    remainingAccounts: jest.fn(() => builder),
-    instruction: jest.fn(async () => instruction),
-  };
-  return builder;
+/** The named accounts of an ext-hosted pricer over this test's vault. */
+function extPricerNamedKeys(
+  programId: PublicKey,
+  solUsdOracle: PublicKey,
+  baseAssetOracle: PublicKey,
+) {
+  return [
+    { pubkey: STATE, isSigner: false, isWritable: true },
+    ...[
+      VAULT,
+      solUsdOracle,
+      baseAssetOracle,
+      getIntegrationAuthorityPda(programId),
+      getGlobalConfigPda(),
+      PROTOCOL_PROGRAM,
+    ].map((pubkey) => ({ pubkey, isSigner: false, isWritable: false })),
+  ];
 }
 
 describe("PositionCategorizer Jupiter lend branches", () => {
@@ -226,7 +238,6 @@ describe("PriceClient Jupiter lend pricing builders", () => {
     const lending = PublicKey.unique();
     const reserve = PublicKey.unique();
     const underlyingOracle = PublicKey.unique();
-    const priceBuilder = methodBuilder(PRICE_IX);
 
     const client = new PriceClient(
       {
@@ -258,11 +269,8 @@ describe("PriceClient Jupiter lend pricing builders", () => {
           decimals: 6,
         })),
         getSolOracle: jest.fn(async () => SOL_ORACLE),
-        mintProgram: {
-          methods: {
-            priceJupiterEarnPositions: jest.fn(() => priceBuilder),
-          },
-        },
+        protocolProgram: { programId: PROTOCOL_PROGRAM },
+        extJupiterProgram: { programId: EXT_JUPITER },
       } as any,
       {} as any,
       {} as any,
@@ -282,13 +290,15 @@ describe("PriceClient Jupiter lend pricing builders", () => {
       true,
     );
     expect(chunk.ixs[0].data.equals(UPDATE_RATE_DISCRIMINATOR)).toBe(true);
-    expect(chunk.ixs[1]).toBe(PRICE_IX);
-    expect(priceBuilder.accounts).toHaveBeenCalledWith({
-      glamState: STATE,
-      solUsdOracle: SOL_ORACLE,
-      baseAssetOracle: BASE_ORACLE,
-    });
-    expect(priceBuilder.remainingAccounts).toHaveBeenCalledWith([
+    const pricing = chunk.ixs[1];
+    expect(pricing.programId.equals(EXT_JUPITER)).toBe(true);
+    expect(pricing.data).toEqual(
+      Buffer.from(EXT_PRICER_DISCRIMINATORS.price_jupiter_earn_positions),
+    );
+    expect(pricing.keys.slice(0, 7)).toEqual(
+      extPricerNamedKeys(EXT_JUPITER, SOL_ORACLE, BASE_ORACLE),
+    );
+    expect(pricing.keys.slice(7)).toEqual([
       { pubkey: fTokenAta, isSigner: false, isWritable: false },
       { pubkey: lending, isSigner: false, isWritable: false },
       { pubkey: underlyingOracle, isSigner: false, isWritable: false },
@@ -316,7 +326,6 @@ describe("PriceClient Jupiter lend pricing builders", () => {
       borrowToken,
       getFTokenMintPda(borrowToken),
     );
-    const priceBuilder = methodBuilder(PRICE_IX);
 
     const accountByKey = new Map<string, ReturnType<typeof accountInfo>>([
       [
@@ -405,11 +414,8 @@ describe("PriceClient Jupiter lend pricing builders", () => {
           decimals: 6,
         })),
         getSolOracle: jest.fn(async () => SOL_ORACLE),
-        mintProgram: {
-          methods: {
-            priceJupiterBorrowPositions: jest.fn(() => priceBuilder),
-          },
-        },
+        protocolProgram: { programId: PROTOCOL_PROGRAM },
+        extJupiterProgram: { programId: EXT_JUPITER },
       } as any,
       {} as any,
       {} as any,
@@ -431,8 +437,15 @@ describe("PriceClient Jupiter lend pricing builders", () => {
         .subarray(0, 8)
         .equals(UPDATE_EXCHANGE_PRICES_DISCRIMINATOR),
     ).toBe(true);
-    expect(chunk.ixs[1]).toBe(PRICE_IX);
-    expect(priceBuilder.remainingAccounts.mock.calls[0][0]).toEqual([
+    const pricing = chunk.ixs[1];
+    expect(pricing.programId.equals(EXT_JUPITER)).toBe(true);
+    expect(pricing.data).toEqual(
+      Buffer.from(EXT_PRICER_DISCRIMINATORS.price_jupiter_borrow_positions),
+    );
+    expect(pricing.keys.slice(0, 7)).toEqual(
+      extPricerNamedKeys(EXT_JUPITER, SOL_ORACLE, BASE_ORACLE),
+    );
+    expect(pricing.keys.slice(7)).toEqual([
       { pubkey: position, isSigner: false, isWritable: false },
       { pubkey: positionTokenAccount, isSigner: false, isWritable: false },
       { pubkey: vaultConfig, isSigner: false, isWritable: false },

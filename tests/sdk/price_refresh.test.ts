@@ -31,7 +31,12 @@ import {
   PHOENIX_PROTOCOL,
 } from "../../src/protocols";
 import { StateAccountType } from "../../src/models";
-import { PkMap } from "../../src/utils";
+import {
+  EXT_PRICER_DISCRIMINATORS,
+  PkMap,
+  getGlobalConfigPda,
+  getIntegrationAuthorityPda,
+} from "../../src/utils";
 
 const VAULT = new PublicKey("31xmCqzfdYT4GHjo39BQiTHVPjpugw6JqXNwckVL9cEf");
 const STATE = new PublicKey("3XYX3QvpHQ7TqvjhZcoBBmykNDruV9PtrGXRxJFzsiCF");
@@ -43,6 +48,7 @@ const EXT_ORCA = PublicKey.unique();
 const EXT_LOOPSCALE = PublicKey.unique();
 const EXT_NEUTRAL = PublicKey.unique();
 const EXT_MARGINFI = PublicKey.unique();
+const PROTOCOL_PROGRAM = PublicKey.unique();
 const OBSERVATION_STATE = PublicKey.findProgramAddressSync(
   [Buffer.from(SEED_OBSERVATION_STATE), STATE.toBuffer()],
   EXT_RPI,
@@ -84,6 +90,26 @@ function methodBuilder(instruction: TransactionInstruction) {
     instruction: jest.fn(async () => instruction),
   };
   return builder;
+}
+
+/** The named accounts of an ext-hosted pricer over this test's vault. */
+function extPricerNamedKeys(
+  programId: PublicKey,
+  protocolProgramId: PublicKey,
+  solUsdOracle: PublicKey,
+  baseAssetOracle: PublicKey,
+) {
+  return [
+    { pubkey: STATE, isSigner: false, isWritable: true },
+    ...[
+      VAULT,
+      solUsdOracle,
+      baseAssetOracle,
+      getIntegrationAuthorityPda(programId),
+      getGlobalConfigPda(),
+      protocolProgramId,
+    ].map((pubkey) => ({ pubkey, isSigner: false, isWritable: false })),
+  ];
 }
 
 function reserve(pubkey: PublicKey) {
@@ -414,6 +440,67 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     expect(ixs).toContain(rpiIx);
   });
 
+  it("builds RPI registered position pricing on ext_rpi under its own integration authority", async () => {
+    const protocolProgramId = PublicKey.unique();
+    const client = new PriceClient(
+      {
+        statePda: STATE,
+        protocolProgram: { programId: protocolProgramId },
+        extRpiProgram: { programId: EXT_RPI },
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { getObservationStatePda: () => OBSERVATION_STATE } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => undefined) as any,
+    );
+
+    const built = await (client as any).priceRpiRegisteredPositionsIx([
+      PublicKey.unique(),
+      OBSERVATION_STATE,
+    ]);
+
+    expect(built.programId.equals(EXT_RPI)).toBe(true);
+    expect(built.data).toEqual(
+      Buffer.from(EXT_PRICER_DISCRIMINATORS.price_registered_positions),
+    );
+    expect(built.keys).toEqual([
+      { pubkey: STATE, isSigner: false, isWritable: true },
+      ...[
+        OBSERVATION_STATE,
+        getIntegrationAuthorityPda(EXT_RPI),
+        protocolProgramId,
+      ].map((pubkey) => ({ pubkey, isSigner: false, isWritable: false })),
+    ]);
+  });
+
+  it("builds no RPI pricing when the observation state is not a tracked position", async () => {
+    const client = new PriceClient(
+      {
+        statePda: STATE,
+        protocolProgram: { programId: PublicKey.unique() },
+        extRpiProgram: { programId: EXT_RPI },
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { getObservationStatePda: () => OBSERVATION_STATE } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => undefined) as any,
+    );
+
+    expect(
+      await (client as any).priceRpiRegisteredPositionsIx([PublicKey.unique()]),
+    ).toBeNull();
+  });
+
   it("skips Phoenix trader pricing when ext_phoenix is not enabled", async () => {
     const phoenixIx = ix(5);
     const { client } = makeClient([RESERVE_A, RESERVE_C]);
@@ -480,17 +567,6 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       externalPositions: [ORCA_POSITION],
       integrationAcls: [ORCA_ACL],
     };
-    const priceOrcaBuilder = methodBuilder(
-      new TransactionInstruction({
-        programId: PublicKey.unique(),
-        keys: Array.from({ length: 64 }, () => ({
-          pubkey: PublicKey.unique(),
-          isSigner: false,
-          isWritable: false,
-        })),
-        data: Buffer.from([6]),
-      }),
-    );
     const client = new PriceClient(
       {
         vaultPda: VAULT,
@@ -503,11 +579,8 @@ describe("PriceClient Kamino reserve refresh planning", () => {
         fetchStateModel: jest.fn(async () => stateModel),
         fetchAssetMetas: jest.fn(async () => new PkMap()),
         getSolOracle: jest.fn(async () => SOL_USD_ORACLE),
-        mintProgram: {
-          methods: {
-            priceOrcaWhirlpoolPositions: jest.fn(() => priceOrcaBuilder),
-          },
-        },
+        protocolProgram: { programId: PROTOCOL_PROGRAM },
+        extOrcaProgram: { programId: EXT_ORCA },
       } as any,
       {} as any,
       {} as any,
@@ -526,7 +599,13 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       )
       .mockResolvedValue({
         numPositions: 1,
-        remainingAccounts: [],
+        // With the program id and the seven named accounts, one key over the
+        // budget.
+        remainingAccounts: Array.from({ length: 57 }, () => ({
+          pubkey: PublicKey.unique(),
+          isSigner: false,
+          isWritable: false,
+        })),
         kaminoReserves: [],
       });
 
@@ -540,8 +619,6 @@ describe("PriceClient Kamino reserve refresh planning", () => {
   });
 
   it("builds Phoenix trader pricing remaining accounts from registered external positions", async () => {
-    const phoenixPriceIx = ix(5);
-    const pricePhoenixBuilder = methodBuilder(phoenixPriceIx);
     // The pricing instruction reads the SOL/USD oracle as a named account, so
     // its asset meta is looked up here alongside the base asset's.
     const getAssetMeta = jest.fn(async (mint: PublicKey) => {
@@ -590,11 +667,8 @@ describe("PriceClient Kamino reserve refresh planning", () => {
               : null,
           ),
         },
-        mintProgram: {
-          methods: {
-            pricePhoenixTraders: jest.fn(() => pricePhoenixBuilder),
-          },
-        },
+        protocolProgram: { programId: PROTOCOL_PROGRAM },
+        extPhoenixProgram: { programId: EXT_PHOENIX },
       } as any,
       {} as any,
       {} as any,
@@ -618,14 +692,21 @@ describe("PriceClient Kamino reserve refresh planning", () => {
         ComputeBudgetProgram.requestHeapFrame({ bytes: 256 * 1024 }).data,
       ),
     ).toBe(true);
-    expect(chunk?.ixs[1]).toBe(phoenixPriceIx);
+    const pricing = chunk!.ixs[1];
+    expect(pricing.programId.equals(EXT_PHOENIX)).toBe(true);
+    expect(pricing.data).toEqual(
+      Buffer.from(EXT_PRICER_DISCRIMINATORS.price_phoenix_traders),
+    );
     expect(getAssetMeta).toHaveBeenCalledWith(USDC);
-    expect(pricePhoenixBuilder.accounts).toHaveBeenCalledWith({
-      glamState: STATE,
-      solUsdOracle: SOL_USD_ORACLE,
-      baseAssetOracle: USDC_ORACLE,
-    });
-    expect(pricePhoenixBuilder.remainingAccounts).toHaveBeenCalledWith([
+    expect(pricing.keys.slice(0, 7)).toEqual(
+      extPricerNamedKeys(
+        EXT_PHOENIX,
+        PROTOCOL_PROGRAM,
+        SOL_USD_ORACLE,
+        USDC_ORACLE,
+      ),
+    );
+    expect(pricing.keys.slice(7)).toEqual([
       {
         pubkey: PHOENIX_GLOBAL_CONFIG,
         isSigner: false,
@@ -726,8 +807,6 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     const bundleAssetOracle = PublicKey.unique();
     const baseAssetOracle = PublicKey.unique();
     const solUsdOracle = PublicKey.unique();
-    const neutralIx = ix(6);
-    const builder = methodBuilder(neutralIx);
     const decodeSpy = jest
       .spyOn(NeutralBundleAccount, "decode")
       .mockReturnValue({ assetAddress: bundleAsset } as NeutralBundleAccount);
@@ -736,6 +815,7 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       {
         vaultPda: VAULT,
         statePda: STATE,
+        protocolProgram: { programId: PROTOCOL_PROGRAM },
         extNeutralProgram: { programId: EXT_NEUTRAL },
         fetchStateModel: jest.fn(async () => ({
           accountType: StateAccountType.VAULT,
@@ -761,11 +841,6 @@ describe("PriceClient Kamino reserve refresh planning", () => {
           programId: TOKEN_PROGRAM_ID,
           oracleSource: "Pyth",
         })),
-        mintProgram: {
-          methods: {
-            priceNeutralBundleDepositors: jest.fn(() => builder),
-          },
-        },
       } as any,
       {} as any,
       {} as any,
@@ -777,14 +852,22 @@ describe("PriceClient Kamino reserve refresh planning", () => {
 
     const chunk = await (client as any).priceNeutralBundleDepositorsIx();
 
-    expect(chunk.ixs).toEqual([neutralIx]);
+    expect(chunk.ixs).toHaveLength(1);
     expect(chunk.kaminoReserves).toEqual([]);
-    expect(builder.accounts).toHaveBeenCalledWith({
-      glamState: STATE,
-      solUsdOracle,
-      baseAssetOracle,
-    });
-    const remainingAccounts = builder.remainingAccounts.mock.calls[0][0];
+    const pricing = chunk.ixs[0];
+    expect(pricing.programId.equals(EXT_NEUTRAL)).toBe(true);
+    expect(pricing.data).toEqual(
+      Buffer.from(EXT_PRICER_DISCRIMINATORS.price_neutral_bundle_depositors),
+    );
+    expect(pricing.keys.slice(0, 7)).toEqual(
+      extPricerNamedKeys(
+        EXT_NEUTRAL,
+        PROTOCOL_PROGRAM,
+        solUsdOracle,
+        baseAssetOracle,
+      ),
+    );
+    const remainingAccounts = pricing.keys.slice(7);
     expectPubkeys(
       remainingAccounts.map(({ pubkey }: { pubkey: PublicKey }) => pubkey),
       [userBundle, bundle, oracleData, bundleAssetOracle],
