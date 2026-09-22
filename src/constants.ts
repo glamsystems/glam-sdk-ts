@@ -119,8 +119,19 @@ export const MARINADE_PROGRAM_ID = new PublicKey(
 export const JUPITER_PROGRAM_ID = new PublicKey(
   "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
 );
+// The three programs that speak the SPL stake pool interface, the same set as
+// StakePoolProgramInterface::ids() in anchor_v1/libs/common/src/interfaces.rs.
+// SANCTUM_SINGLE_VALIDATOR in anchor_v1/libs/common/src/constants.rs.
 export const SANCTUM_STAKE_POOL_PROGRAM_ID = new PublicKey(
   "SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY",
+);
+// SANCTUM_MULTI_VALIDATOR in anchor_v1/libs/common/src/constants.rs.
+export const SANCTUM_MULTI_VALIDATOR_STAKE_POOL_PROGRAM_ID = new PublicKey(
+  "SPMBzsVUuoHA4Jm6KunbsotaahvVikZs1JyTW6iJvbn",
+);
+// The reference program, pinned in anchor_v1/deps/abi_locks/src/spl_stake_pool.rs.
+export const SPL_STAKE_POOL_PROGRAM_ID = new PublicKey(
+  "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy",
 );
 export const KAMINO_LENDING_PROGRAM = new PublicKey(
   "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",

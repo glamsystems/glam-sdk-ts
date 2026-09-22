@@ -1,4 +1,5 @@
 import {
+  AccountInfo,
   AccountMeta,
   AddressLookupTableAccount,
   Commitment,
@@ -47,11 +48,16 @@ import { KVaultState, Obligation, Reserve } from "../deser";
 import { JupiterApiClient, TokenListItem } from "../utils/jupiterApi";
 import {
   MARGINFI_PROGRAM_ID,
+  MARINADE_PROGRAM_ID,
   PHOENIX_GLOBAL_CONFIG,
   PHOENIX_PROGRAM_ID,
+  SANCTUM_MULTI_VALIDATOR_STAKE_POOL_PROGRAM_ID,
+  SANCTUM_STAKE_POOL_PROGRAM_ID,
+  SPL_STAKE_POOL_PROGRAM_ID,
   USDC,
   WSOL,
 } from "../constants";
+import { STAKE_POOLS_MAP } from "../assets";
 import { BridgeClient, getActiveRegistryTransfers } from "./bridge";
 import { RpiClient } from "./rpi";
 import {
@@ -103,6 +109,175 @@ const ORCA_PRICING_MAX_ACCOUNT_KEYS = 64;
 const NT_BUNDLE_ACCOUNT_DISCRIMINATOR = Buffer.from([
   15, 82, 167, 230, 37, 214, 82, 80,
 ]);
+// The owners glam_protocol accepts for a stake pool state, StakePoolProgramInterface::ids()
+// in anchor_v1/libs/common/src/interfaces.rs.
+const STAKE_POOL_PROGRAM_IDS = [
+  SPL_STAKE_POOL_PROGRAM_ID,
+  SANCTUM_STAKE_POOL_PROGRAM_ID,
+  SANCTUM_MULTI_VALIDATOR_STAKE_POOL_PROGRAM_ID,
+];
+// The StakePool prefix glam_protocol reads, anchor_v1/libs/common/src/stake_pool.rs:
+// AccountType::StakePool in byte 0, pool_mint at 162, 282 bytes of fixed prefix. The
+// audited anchor/ copy reaches the same verdict for a live pool account by borsh
+// deserializing the whole StakePool (anchor/programs/glam_protocol/src/state/price/oracle.rs,
+// validate_oracle's StakePool::deserialize call).
+const STAKE_POOL_ACCOUNT_TYPE = 1;
+const STAKE_POOL_POOL_MINT_OFFSET = 162;
+const STAKE_POOL_FIXED_PREFIX_LEN = 282;
+// The Marinade State account, anchor_v1/deps/gen/marinade/finance_gen/src/lib.rs:
+// the discriminator, then msol_mint as the first field.
+const MARINADE_STATE_DISCRIMINATOR = Buffer.from([
+  216, 146, 107, 94, 104, 75, 182, 177,
+]);
+const MARINADE_STATE_MSOL_MINT_OFFSET = 8;
+
+/**
+ * States what stopped the pricing of an unregistered liquid staking token, what
+ * is still true, and what to do next.
+ */
+function lstPricingError(
+  mint: PublicKey,
+  poolState: PublicKey,
+  found: string,
+): Error {
+  return new Error(
+    `Pricing ${mint} through pool state ${poolState} stopped because ${found}. ` +
+      `No pricing instruction was built, so the vault's pricing is unchanged. ` +
+      `Register ${mint} in GlobalConfig or check that ${poolState} is the pool state of that token.`,
+  );
+}
+
+/**
+ * Checks a pool state account the way glam_protocol's validate_oracle checks it
+ * before it reads GlobalConfig: a stake pool account owned by one of the stake
+ * pool programs whose pool_mint is the mint, or a Marinade state whose msol_mint
+ * is the mint.
+ */
+function validateLstPoolState(
+  mint: PublicKey,
+  poolState: PublicKey,
+  accountInfo: AccountInfo<Buffer> | null,
+) {
+  if (!accountInfo) {
+    throw lstPricingError(mint, poolState, "that account was not found");
+  }
+
+  const { data, owner } = accountInfo;
+  if (STAKE_POOL_PROGRAM_IDS.some((programId) => owner.equals(programId))) {
+    if (data.length < STAKE_POOL_FIXED_PREFIX_LEN) {
+      throw lstPricingError(
+        mint,
+        poolState,
+        `that account holds ${data.length} bytes and a stake pool prefix needs ${STAKE_POOL_FIXED_PREFIX_LEN}`,
+      );
+    }
+    if (data[0] !== STAKE_POOL_ACCOUNT_TYPE) {
+      throw lstPricingError(
+        mint,
+        poolState,
+        `its account type byte is ${data[0]} and a stake pool is ${STAKE_POOL_ACCOUNT_TYPE}`,
+      );
+    }
+    const poolMint = new PublicKey(
+      data.subarray(
+        STAKE_POOL_POOL_MINT_OFFSET,
+        STAKE_POOL_POOL_MINT_OFFSET + PUBKEY_LEN,
+      ),
+    );
+    if (!poolMint.equals(mint)) {
+      throw lstPricingError(
+        mint,
+        poolState,
+        `the pool mint it names is ${poolMint}`,
+      );
+    }
+    return;
+  }
+
+  if (owner.equals(MARINADE_PROGRAM_ID)) {
+    if (data.length < MARINADE_STATE_MSOL_MINT_OFFSET + PUBKEY_LEN) {
+      throw lstPricingError(
+        mint,
+        poolState,
+        `that account holds ${data.length} bytes and a Marinade state needs ${MARINADE_STATE_MSOL_MINT_OFFSET + PUBKEY_LEN}`,
+      );
+    }
+    if (
+      !data
+        .subarray(0, MARINADE_STATE_DISCRIMINATOR.length)
+        .equals(MARINADE_STATE_DISCRIMINATOR)
+    ) {
+      throw lstPricingError(
+        mint,
+        poolState,
+        "its first bytes are not the Marinade state discriminator",
+      );
+    }
+    const msolMint = new PublicKey(
+      data.subarray(
+        MARINADE_STATE_MSOL_MINT_OFFSET,
+        MARINADE_STATE_MSOL_MINT_OFFSET + PUBKEY_LEN,
+      ),
+    );
+    if (!msolMint.equals(mint)) {
+      throw lstPricingError(
+        mint,
+        poolState,
+        `the mSOL mint it names is ${msolMint}`,
+      );
+    }
+    return;
+  }
+
+  throw lstPricingError(
+    mint,
+    poolState,
+    `that account is owned by ${owner} and not by a stake pool program or the Marinade program`,
+  );
+}
+
+/**
+ * States what stopped the pricing because the mint account itself is missing or is
+ * owned by neither token program, and what to check about that mint account.
+ */
+function lstMintAccountError(
+  mint: PublicKey,
+  poolState: PublicKey,
+  found: string,
+): Error {
+  return new Error(
+    `Pricing ${mint} through pool state ${poolState} stopped because ${found}. ` +
+      `No pricing instruction was built, so the vault's pricing is unchanged. ` +
+      `Check that ${mint} is a token mint owned by the Token or Token 2022 program.`,
+  );
+}
+
+/**
+ * Returns the token program that owns the mint, which is the program its vault
+ * ata is derived under.
+ */
+function lstMintTokenProgram(
+  mint: PublicKey,
+  poolState: PublicKey,
+  accountInfo: AccountInfo<Buffer> | null,
+): PublicKey {
+  if (!accountInfo) {
+    throw lstMintAccountError(
+      mint,
+      poolState,
+      "its mint account was not found",
+    );
+  }
+  const { owner } = accountInfo;
+  if (!owner.equals(TOKEN_PROGRAM_ID) && !owner.equals(TOKEN_2022_PROGRAM_ID)) {
+    throw lstMintAccountError(
+      mint,
+      poolState,
+      `its mint account is owned by ${owner} and not by a token program`,
+    );
+  }
+  return owner;
+}
 
 /**
  * Represents a single asset holding within a vault.
@@ -2108,6 +2283,53 @@ export class PriceClient {
     return (await this.base.getAssetMeta(baseAssetMint)).oracle;
   }
 
+  /**
+   * Resolves the pool state that prices each asset GlobalConfig does not register.
+   * glam_protocol's validate_oracle accepts, before it reads GlobalConfig at all,
+   * a stake pool account owned by one of the stake pool programs whose pool_mint
+   * is the mint, or a Marinade state whose msol_mint is the mint. The same
+   * predicate is checked here over one batch of [pool state, mint] reads, so a
+   * liquid staking token the vault holds is priced without a registration.
+   */
+  private async lstPoolStateOracles(
+    mints: PublicKey[],
+  ): Promise<PkMap<{ ata: PublicKey; poolState: PublicKey }>> {
+    const oracles = new PkMap<{ ata: PublicKey; poolState: PublicKey }>();
+    // The static list supplies the candidate address only. Every fact the
+    // program checks is read from the accounts themselves.
+    const candidates = mints.map((mint) => {
+      const poolState = STAKE_POOLS_MAP.get(mint.toBase58())?.poolState;
+      if (!poolState) {
+        throw new Error(
+          `Asset meta not found for ${mint}. The mint is neither registered in GlobalConfig nor a known liquid staking token, so no pricing instruction was built. Register it in GlobalConfig before pricing this vault.`,
+        );
+      }
+      return { mint, poolState };
+    });
+    if (candidates.length === 0) {
+      return oracles;
+    }
+
+    const accountsInfo = await this.base.connection.getMultipleAccountsInfo(
+      candidates.flatMap(({ mint, poolState }) => [poolState, mint]),
+    );
+
+    candidates.forEach(({ mint, poolState }, i) => {
+      validateLstPoolState(mint, poolState, accountsInfo[2 * i]);
+      const tokenProgram = lstMintTokenProgram(
+        mint,
+        poolState,
+        accountsInfo[2 * i + 1],
+      );
+      oracles.set(mint, {
+        ata: this.base.getVaultAta(mint, tokenProgram),
+        poolState,
+      });
+    });
+
+    return oracles;
+  }
+
   async remainingAccountsForPricingVaultAssets(): Promise<
     [AccountMeta[], PublicKey[]]
   > {
@@ -2122,11 +2344,28 @@ export class PriceClient {
       collectKaminoReserveOracles([assetMeta], kaminoReserves);
     };
 
+    const lstOracles = await this.lstPoolStateOracles(
+      stateModel.assetsForPricing.filter(
+        (mint) => !assetMetas.get(mint.toBase58()),
+      ),
+    );
+
+    // The program maps aggIndexes by position, so every mint keeps its place
+    // whether it is priced by a registration or by a pool state.
     const accMetas = stateModel.assetsForPricing
       .map((mint) => {
         const assetMeta = assetMetas.get(mint.toBase58());
         if (!assetMeta) {
-          throw new Error(`Asset meta not found for ${mint}`);
+          const lstOracle = lstOracles.get(mint);
+          if (!lstOracle) {
+            throw new Error(
+              `Pricing ${mint} stopped because its pool state lookup did not resolve. ` +
+                `No pricing instruction was built, so the vault's pricing is unchanged. ` +
+                `Register ${mint} in GlobalConfig or report this mismatch.`,
+            );
+          }
+          const { ata, poolState } = lstOracle;
+          return [ata, mint, poolState];
         }
         mayAddKaminoReserve(assetMeta);
         const ata = this.base.getVaultAta(mint, assetMeta.programId);
