@@ -1,6 +1,7 @@
 import { BN } from "@coral-xyz/anchor";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import {
+  fetchMintAndTokenProgram,
   GlamClient,
   nameToChars,
   StateAccountType,
@@ -41,13 +42,13 @@ program
       const glamClient = new GlamClient();
 
       // Initialize the vault, convert name from string to char array
-      const txSig = await glamClient.state.create(
+      const txSig = await glamClient.state.initialize(
         {
           name: nameToChars(name),
           enabled,
           accountType: StateAccountType.VAULT,
+          baseAssetMint: new PublicKey(baseAsset),
         },
-        new PublicKey(baseAsset),
         txOptions,
       );
 
@@ -82,7 +83,10 @@ program
   .action(async (vault: PublicKey, tokenMint: PublicKey, amount: number) => {
     const glamClient = await createGlamClient(vault);
 
-    const { mint } = await glamClient.fetchMintAndTokenProgram(tokenMint);
+    const { mint } = await fetchMintAndTokenProgram(
+      glamClient.connection,
+      tokenMint,
+    );
     const amountBN = new BN(amount * 10 ** mint.decimals);
 
     const txSig = await glamClient.vault.deposit(
@@ -109,7 +113,10 @@ program
     ) => {
       const glamClient = await createGlamClient(vault);
 
-      const { mint } = await glamClient.fetchMintAndTokenProgram(tokenMint);
+      const { mint } = await fetchMintAndTokenProgram(
+        glamClient.connection,
+        tokenMint,
+      );
       const amountBN = new BN(amount * 10 ** mint.decimals);
 
       const txSig = await glamClient.vault.tokenTransfer(
