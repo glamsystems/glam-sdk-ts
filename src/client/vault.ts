@@ -27,6 +27,18 @@ import {
 } from "@solana/spl-token";
 import { PkMap } from "../utils";
 
+/** Validate base units before coercion and snapshot caller-owned BN values. */
+function toUnsignedAmount(value: number | BN, label = "amount"): BN {
+  if (typeof value === "number" && !Number.isSafeInteger(value)) {
+    throw new RangeError(`${label} must be an unsigned 64-bit integer`);
+  }
+  const amount = BN.isBN(value) ? value.clone() : new BN(value);
+  if (amount.isNeg() || amount.bitLength() > 64) {
+    throw new RangeError(`${label} must be an unsigned 64-bit integer`);
+  }
+  return amount;
+}
+
 class TxBuilder
   extends BaseTxBuilder<VaultClient>
   implements ProtocolPolicyTxBuilder<TransferPolicy>
@@ -75,6 +87,7 @@ class TxBuilder
     amount: BN,
     glamSigner: PublicKey,
   ): Promise<TransactionInstruction[]> {
+    const validatedAmount = toUnsignedAmount(amount);
     const vaultAta = this.client.base.getVaultAta(WSOL);
 
     const preIx = createAssociatedTokenAccountIdempotentInstruction(
@@ -84,7 +97,7 @@ class TxBuilder
       WSOL,
     );
     const ix = await this.client.base.protocolProgram.methods
-      .systemTransfer(amount)
+      .systemTransfer(validatedAmount)
       .accounts({
         glamState: this.client.base.statePda,
         glamSigner,
@@ -144,8 +157,9 @@ class TxBuilder
     to: PublicKey,
     glamSigner: PublicKey,
   ): Promise<TransactionInstruction> {
+    const validatedAmount = toUnsignedAmount(amount);
     return await this.client.base.protocolProgram.methods
-      .systemTransfer(amount)
+      .systemTransfer(validatedAmount)
       .accounts({
         glamState: this.client.base.statePda,
         glamSigner,
@@ -239,9 +253,9 @@ class TxBuilder
     wrap: boolean,
     glamSigner: PublicKey,
   ): Promise<TransactionInstruction[]> {
+    const amount = toUnsignedAmount(lamports, "lamports");
     const glamVault = this.client.base.vaultPda;
-    const _lamports =
-      lamports instanceof BN ? BigInt(lamports.toString()) : lamports;
+    const _lamports = BigInt(amount.toString());
 
     if (!wrap) {
       const ix = SystemProgram.transfer({
@@ -284,6 +298,7 @@ class TxBuilder
     amount: number | BN,
     glamSigner: PublicKey,
   ): Promise<TransactionInstruction[]> {
+    const validatedAmount = toUnsignedAmount(amount);
     const { mint, tokenProgram } = await fetchMintAndTokenProgram(
       this.client.base.connection,
       asset,
@@ -305,7 +320,7 @@ class TxBuilder
         asset,
         vaultAta,
         glamSigner,
-        new BN(amount).toNumber(),
+        validatedAmount.toNumber(),
         mint.decimals,
         [],
         tokenProgram,
@@ -332,6 +347,7 @@ class TxBuilder
     to: PublicKey,
     glamSigner: PublicKey,
   ): Promise<TransactionInstruction[]> {
+    const validatedAmount = toUnsignedAmount(amount);
     const { mint: mintObj, tokenProgram } = await fetchMintAndTokenProgram(
       this.client.base.connection,
       mint,
@@ -346,7 +362,7 @@ class TxBuilder
       tokenProgram,
     );
     const ix = await this.client.base.extSplProgram.methods
-      .tokenTransferChecked(new BN(amount), mintObj.decimals)
+      .tokenTransferChecked(validatedAmount, mintObj.decimals)
       .accounts({
         glamState: this.client.base.statePda,
         glamSigner,
@@ -410,7 +426,7 @@ export class VaultClient implements ProtocolPolicyClient<TransferPolicy> {
     amount: BN | number,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.wrapTx(new BN(amount), txOptions);
+    const tx = await this.txBuilder.wrapTx(toUnsignedAmount(amount), txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 
@@ -441,7 +457,7 @@ export class VaultClient implements ProtocolPolicyClient<TransferPolicy> {
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const tx = await this.txBuilder.systemTransferTx(
-      new BN(amount),
+      toUnsignedAmount(amount),
       new PublicKey(to),
       txOptions,
     );
@@ -536,6 +552,7 @@ export class VaultClient implements ProtocolPolicyClient<TransferPolicy> {
     lamports: number | BN,
     signer?: PublicKey,
   ): Promise<TransactionInstruction[]> {
+    const amount = toUnsignedAmount(lamports, "lamports");
     const glamSigner = signer || this.base.signer;
     const vaultWsolAta = this.base.getVaultAta(WSOL);
     let wsolBalance = new BN(0);
@@ -547,7 +564,7 @@ export class VaultClient implements ProtocolPolicyClient<TransferPolicy> {
     const solBalance = new BN(
       await this.base.connection.getBalance(this.base.vaultPda),
     );
-    const delta = new BN(lamports).sub(wsolBalance); // wSOL amount needed
+    const delta = amount.sub(wsolBalance); // wSOL amount needed
     if (solBalance.lt(delta)) {
       throw new Error(
         "Insufficient lamports in vault to complete the transaction.",
