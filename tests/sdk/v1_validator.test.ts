@@ -35,7 +35,7 @@ const TOKEN_2022_PROGRAM_ID = new PublicKey(
 //
 //   solana-test-validator --reset            # from an Agave 4.2.x release
 //   GLAM_V1_VALIDATOR_URL=http://127.0.0.1:8899 \
-//     npx nx run --skip-nx-cache anchor:jest --testPathPattern tests/sdk/v1_validator
+//     npx nx run --skip-nx-cache anchor:jest --testFile tests/sdk/v1_validator
 //
 // It funds a throwaway keypair from the validator's faucet and signs with
 // nothing else. Without the variable every case is skipped.
