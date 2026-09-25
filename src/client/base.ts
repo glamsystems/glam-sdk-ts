@@ -776,12 +776,13 @@ export class BaseClient {
     // if the tx fails, throw an error including logs
     if (res.value.err) {
       const errTx = await this.connection.getTransaction(txSig, {
+        commitment: "confirmed",
         maxSupportedTransactionVersion: 1,
       });
       const logs = errTx?.meta?.logMessages || [];
       throw new GlamError(
         parseProgramLogs(logs, this.staging),
-        errTx?.meta?.err,
+        errTx?.meta?.err ?? res.value.err,
         logs,
       );
     }
@@ -805,10 +806,19 @@ export class BaseClient {
     if (useWebSocket) {
       const latestBlockhash = await this.blockhashWithCache.get();
       try {
-        return await this.connection.confirmTransaction({
-          ...latestBlockhash,
-          signature: txSig,
-        });
+        const configuredCommitment = this.connection.commitment;
+        const confirmationCommitment =
+          configuredCommitment === undefined ||
+          configuredCommitment === "finalized"
+            ? "confirmed"
+            : configuredCommitment;
+        return await this.connection.confirmTransaction(
+          {
+            ...latestBlockhash,
+            signature: txSig,
+          },
+          confirmationCommitment,
+        );
       } catch (err) {
         if (typeof Event !== "undefined" && err instanceof Event) {
           throw new Error(
