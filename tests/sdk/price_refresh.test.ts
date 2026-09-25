@@ -29,6 +29,7 @@ import {
   LAYERZERO_OFT_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
+  STAKE_PROTOCOL,
 } from "../../src/protocols";
 import { StateAccountType } from "../../src/models";
 import {
@@ -70,6 +71,37 @@ const PHOENIX_PERP_ASSET_MAP = new PublicKey(
 );
 const SOL_USD_ORACLE = PublicKey.unique();
 const USDC_ORACLE = PublicKey.unique();
+const STAKE_ACCOUNT = PublicKey.unique();
+
+type OracleSpec = { oracle: PublicKey; oracleSource: string };
+
+const KAMINO = (oracle: PublicKey): OracleSpec => ({
+  oracle,
+  oracleSource: "KaminoReserve",
+});
+const PYTH = (oracle: PublicKey): OracleSpec => ({
+  oracle,
+  oracleSource: "Pyth",
+});
+
+/**
+ * The asset meta lookups of a client that registers `oracles` by mint. Any
+ * other mint reads PublicKey.default from Pyth. getSolOracle reads the WSOL
+ * meta, as BaseClient's does.
+ */
+function oracleLookups(oracles: Array<[PublicKey, OracleSpec]>) {
+  const oracleByMint = new Map(
+    oracles.map(([mint, spec]) => [mint.toBase58(), spec]),
+  );
+  const getAssetMeta = jest.fn(async (mint: PublicKey) => ({
+    asset: mint,
+    decimals: 6,
+    programId: TOKEN_PROGRAM_ID,
+    ...(oracleByMint.get(mint.toBase58()) ?? PYTH(PublicKey.default)),
+  }));
+  const getSolOracle = jest.fn(async () => (await getAssetMeta(WSOL)).oracle);
+  return { getAssetMeta, getSolOracle };
+}
 
 function ix(data: number): TransactionInstruction {
   return new TransactionInstruction({
@@ -126,6 +158,16 @@ function expectPubkeys(actual: PublicKey[], expected: PublicKey[]) {
   );
 }
 
+/**
+ * The refresh covers a set of reserves, and their order in it carries no
+ * meaning.
+ */
+function expectSameReserves(actual: PublicKey[], expected: PublicKey[]) {
+  expect(actual.map((pubkey) => pubkey.toBase58()).sort()).toEqual(
+    expected.map((pubkey) => pubkey.toBase58()).sort(),
+  );
+}
+
 function accountInfo(owner: PublicKey, data: Buffer = Buffer.alloc(0)) {
   return {
     data,
@@ -177,11 +219,20 @@ const NEUTRAL_ACL = {
   integrationProgram: EXT_NEUTRAL,
   protocolsBitmask: 0b01,
 };
+const STAKE_ACL = {
+  integrationProgram: PROTOCOL_PROGRAM,
+  protocolsBitmask: STAKE_PROTOCOL,
+};
 
+/**
+ * `oracles` registers mints by their oracle. Any other mint, the vault's base
+ * asset PublicKey.default included, reads PublicKey.default from Pyth.
+ */
 function makeClient(
   activeReservePubkeys: PublicKey[],
   integrationAcls = [KAMINO_LENDING_ACL],
   externalPositions = [OBLIGATION],
+  oracles: Array<[PublicKey, OracleSpec]> = [],
 ) {
   const fetchAndParseReserves = jest.fn(async (pubkeys: PublicKey[]) =>
     pubkeys.map((pubkey) => reserve(pubkey)),
@@ -211,7 +262,13 @@ function makeClient(
     {
       vaultPda: VAULT,
       statePda: STATE,
-      protocolProgram: { programId: PublicKey.unique() },
+      protocolProgram: { programId: PROTOCOL_PROGRAM },
+      connection: {
+        getParsedProgramAccounts: jest.fn(async () => [
+          { pubkey: STAKE_ACCOUNT, account: { lamports: 1 } },
+        ]),
+        getProgramAccounts: jest.fn(async () => []),
+      },
       extKaminoProgram: { programId: EXT_KAMINO },
       extBridgeProgram: { programId: EXT_BRIDGE },
       extRpiProgram: { programId: EXT_RPI },
@@ -228,11 +285,12 @@ function makeClient(
         integrationAcls,
       })),
       fetchAssetMetas: jest.fn(async () => new PkMap()),
-      getSolOracle: jest.fn(async () => PublicKey.default),
+      ...oracleLookups(oracles),
       mintProgram: {
         methods: {
           priceVaultTokens: jest.fn(() => methodBuilder(ix(1))),
           priceKaminoObligations: jest.fn(() => methodBuilder(ix(2))),
+          priceStakeAccounts: jest.fn(() => methodBuilder(ix(4))),
         },
       },
     } as any,
@@ -266,7 +324,6 @@ function makeClient(
   jest
     .spyOn(client, "remainingAccountsForPricingVaultAssets")
     .mockResolvedValue([[], [RESERVE_A, RESERVE_B]]);
-  jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(PublicKey.default);
 
   return {
     client,
@@ -578,7 +635,10 @@ describe("PriceClient Kamino reserve refresh planning", () => {
         },
         fetchStateModel: jest.fn(async () => stateModel),
         fetchAssetMetas: jest.fn(async () => new PkMap()),
-        getSolOracle: jest.fn(async () => SOL_USD_ORACLE),
+        ...oracleLookups([
+          [WSOL, PYTH(SOL_USD_ORACLE)],
+          [PublicKey.default, PYTH(USDC_ORACLE)],
+        ]),
         protocolProgram: { programId: PROTOCOL_PROGRAM },
         extOrcaProgram: { programId: EXT_ORCA },
       } as any,
@@ -591,7 +651,6 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       {} as any,
       (() => undefined) as any,
     );
-    jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(USDC_ORACLE);
     const remainingAccountsSpy = jest
       .spyOn(
         OrcaWhirlpoolsClient.prototype,
@@ -831,16 +890,11 @@ describe("PriceClient Kamino reserve refresh planning", () => {
             },
           ]),
         },
-        getSolOracle: jest.fn(async () => solUsdOracle),
-        getAssetMeta: jest.fn(async (asset: PublicKey) => ({
-          asset,
-          decimals: 6,
-          oracle: asset.equals(bundleAsset)
-            ? bundleAssetOracle
-            : PublicKey.default,
-          programId: TOKEN_PROGRAM_ID,
-          oracleSource: "Pyth",
-        })),
+        ...oracleLookups([
+          [WSOL, PYTH(solUsdOracle)],
+          [PublicKey.default, PYTH(baseAssetOracle)],
+          [bundleAsset, PYTH(bundleAssetOracle)],
+        ]),
       } as any,
       {} as any,
       {} as any,
@@ -848,8 +902,6 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       {} as any,
       (() => undefined) as any,
     );
-    jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(baseAssetOracle);
-
     const chunk = await (client as any).priceNeutralBundleDepositorsIx();
 
     expect(chunk.ixs).toHaveLength(1);
@@ -878,5 +930,355 @@ describe("PriceClient Kamino reserve refresh planning", () => {
     });
     expect(decodeSpy).toHaveBeenCalledWith(bundle, Buffer.alloc(0));
     decodeSpy.mockRestore();
+  });
+});
+
+/**
+ * A pricer passes the SOL/USD and base asset oracles as named accounts, and a
+ * stale Kamino reserve among them is refused. Each chunk reports every reserve
+ * it reads so the batch refresh covers them.
+ */
+describe("Pricing chunk Kamino reserve reporting", () => {
+  const SOL_RESERVE = PublicKey.unique();
+  const BASE_RESERVE = PublicKey.unique();
+  // makeClient's vault has PublicKey.default as its base asset.
+  const KAMINO_ROLES: Array<[PublicKey, OracleSpec]> = [
+    [WSOL, KAMINO(SOL_RESERVE)],
+    [PublicKey.default, KAMINO(BASE_RESERVE)],
+  ];
+
+  it("reports the SOL, base asset and obligation reserves once each", async () => {
+    const { client } = makeClient(
+      [RESERVE_A],
+      [KAMINO_LENDING_ACL],
+      [OBLIGATION],
+      KAMINO_ROLES,
+    );
+
+    const chunk = await client.priceKaminoObligationsIxs();
+
+    expectSameReserves(chunk.kaminoReserves, [
+      RESERVE_A,
+      SOL_RESERVE,
+      BASE_RESERVE,
+    ]);
+    const builder = (
+      client.base.mintProgram.methods.priceKaminoObligations as jest.Mock
+    ).mock.results[0].value;
+    expect(builder.accounts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        solUsdOracle: SOL_RESERVE,
+        baseAssetOracle: BASE_RESERVE,
+      }),
+    );
+  });
+
+  it("refreshes the stake pricer's SOL and base asset reserves ahead of it", async () => {
+    const { client, fetchAndParseReserves } = makeClient(
+      [],
+      [STAKE_ACL],
+      [OBLIGATION],
+      KAMINO_ROLES,
+    );
+    // Vault token pricing reports the same two reserves. It is stubbed out
+    // so this row sees only what the stake chunk reports.
+    jest
+      .spyOn(client, "priceVaultTokensIx")
+      .mockResolvedValue({ ixs: [], kaminoReserves: [] });
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(fetchAndParseReserves).toHaveBeenCalledTimes(1);
+    expectSameReserves(fetchAndParseReserves.mock.calls[0][0], [
+      SOL_RESERVE,
+      BASE_RESERVE,
+    ]);
+    expect(ixs).toHaveLength(2);
+    expect(ixs[0].programId.equals(KAMINO_LENDING_PROGRAM)).toBe(true);
+    expect(ixs[1].data).toEqual(Buffer.from([4]));
+    // The public builder still returns the bare instruction.
+    await expect(client.priceStakeAccountsIx()).resolves.toEqual(ixs[1]);
+    const builder = (
+      client.base.mintProgram.methods.priceStakeAccounts as jest.Mock
+    ).mock.results[0].value;
+    expect(builder.accounts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        solUsdOracle: SOL_RESERVE,
+        baseAssetOracle: BASE_RESERVE,
+      }),
+    );
+  });
+
+  it("reports the SOL, base asset and Kamino vault allocation reserves once each", async () => {
+    const shareAta = PublicKey.unique();
+    const tokenMint = PublicKey.unique();
+    const stateModel = {
+      accountType: StateAccountType.VAULT,
+      baseAssetMint: PublicKey.default,
+      externalPositions: [shareAta],
+    };
+    const client = new PriceClient(
+      {
+        vaultPda: VAULT,
+        statePda: STATE,
+        connection: {
+          // The share account exists and the kvault lookup table does not.
+          getMultipleAccountsInfo: jest.fn(async (keys: PublicKey[]) =>
+            keys.map((key) =>
+              key.equals(shareAta) ? accountInfo(TOKEN_PROGRAM_ID) : null,
+            ),
+          ),
+        },
+        fetchStateModel: jest.fn(async () => stateModel),
+        fetchAssetMetas: jest.fn(
+          async () =>
+            new PkMap([
+              [
+                tokenMint,
+                {
+                  asset: tokenMint,
+                  decimals: 6,
+                  oracle: PublicKey.unique(),
+                  programId: TOKEN_PROGRAM_ID,
+                  oracleSource: "Pyth",
+                },
+              ],
+            ]),
+        ),
+        getVaultAta: jest.fn(() => shareAta),
+        ...oracleLookups(KAMINO_ROLES),
+        mintProgram: {
+          methods: {
+            priceKaminoVaultShares: jest.fn(() => methodBuilder(ix(5))),
+          },
+        },
+      } as any,
+      {} as any,
+      {
+        findAndParseKaminoVaults: jest.fn(async () => [
+          {
+            sharesMint: PublicKey.unique(),
+            tokenMint,
+            vaultLookupTable: PublicKey.unique(),
+            vaultAllocationStrategy: [
+              { reserve: RESERVE_A },
+              { reserve: PublicKey.default },
+            ],
+          },
+        ]),
+        getVaultPdasByShareMints: jest.fn(async () => [PublicKey.unique()]),
+        composeRemainingAccounts: jest.fn(
+          (allocations: { reserve: PublicKey }[]) =>
+            allocations.flatMap(({ reserve }) => [
+              { pubkey: MARKET, isSigner: false, isWritable: false },
+              { pubkey: reserve, isSigner: false, isWritable: false },
+            ]),
+        ),
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => undefined) as any,
+    );
+    client.cachedStateModel = stateModel as any;
+
+    const chunk = await client.priceKaminoVaultSharesIx();
+
+    expectSameReserves(chunk!.kaminoReserves, [
+      RESERVE_A,
+      SOL_RESERVE,
+      BASE_RESERVE,
+    ]);
+    const builder = (
+      client.base.mintProgram.methods.priceKaminoVaultShares as jest.Mock
+    ).mock.results[0].value;
+    expect(builder.accounts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        solUsdOracle: SOL_RESERVE,
+        baseAssetOracle: BASE_RESERVE,
+      }),
+    );
+  });
+
+  it("Kamino vault shares reports the reserve behind a vault's deposit token oracle", async () => {
+    const shareAta = PublicKey.unique();
+    const tokenMint = PublicKey.unique();
+    const depositReserve = PublicKey.unique();
+    const stateModel = {
+      accountType: StateAccountType.VAULT,
+      baseAssetMint: PublicKey.default,
+      externalPositions: [shareAta],
+    };
+    const client = new PriceClient(
+      {
+        vaultPda: VAULT,
+        statePda: STATE,
+        connection: {
+          // The share account exists and the kvault lookup table does not.
+          getMultipleAccountsInfo: jest.fn(async (keys: PublicKey[]) =>
+            keys.map((key) =>
+              key.equals(shareAta) ? accountInfo(TOKEN_PROGRAM_ID) : null,
+            ),
+          ),
+        },
+        fetchStateModel: jest.fn(async () => stateModel),
+        fetchAssetMetas: jest.fn(
+          async () =>
+            new PkMap([
+              [
+                tokenMint,
+                {
+                  asset: tokenMint,
+                  decimals: 6,
+                  programId: TOKEN_PROGRAM_ID,
+                  ...KAMINO(depositReserve),
+                },
+              ],
+            ]),
+        ),
+        getVaultAta: jest.fn(() => shareAta),
+        ...oracleLookups(KAMINO_ROLES),
+        mintProgram: {
+          methods: {
+            priceKaminoVaultShares: jest.fn(() => methodBuilder(ix(5))),
+          },
+        },
+      } as any,
+      {} as any,
+      {
+        findAndParseKaminoVaults: jest.fn(async () => [
+          {
+            sharesMint: PublicKey.unique(),
+            tokenMint,
+            vaultLookupTable: PublicKey.unique(),
+            vaultAllocationStrategy: [
+              { reserve: RESERVE_A },
+              { reserve: PublicKey.default },
+            ],
+          },
+        ]),
+        getVaultPdasByShareMints: jest.fn(async () => [PublicKey.unique()]),
+        composeRemainingAccounts: jest.fn(
+          (allocations: { reserve: PublicKey }[]) =>
+            allocations.flatMap(({ reserve }) => [
+              { pubkey: MARKET, isSigner: false, isWritable: false },
+              { pubkey: reserve, isSigner: false, isWritable: false },
+            ]),
+        ),
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => undefined) as any,
+    );
+    client.cachedStateModel = stateModel as any;
+
+    const chunk = await client.priceKaminoVaultSharesIx();
+
+    expectSameReserves(chunk!.kaminoReserves, [
+      RESERVE_A,
+      SOL_RESERVE,
+      BASE_RESERVE,
+      depositReserve,
+    ]);
+  });
+
+  it("reports the SOL, base asset and Orca position reserves once each", async () => {
+    const orcaReserve = PublicKey.unique();
+    const stateModel = {
+      accountType: StateAccountType.VAULT,
+      baseAssetMint: PublicKey.default,
+      baseAssetTokenProgramId: TOKEN_PROGRAM_ID,
+      externalPositions: [ORCA_POSITION],
+      integrationAcls: [ORCA_ACL],
+    };
+    const client = new PriceClient(
+      {
+        vaultPda: VAULT,
+        statePda: STATE,
+        connection: {
+          getMultipleAccountsInfo: jest.fn(async () => [
+            orcaPositionAccountInfo(),
+          ]),
+        },
+        fetchStateModel: jest.fn(async () => stateModel),
+        ...oracleLookups(KAMINO_ROLES),
+        protocolProgram: { programId: PROTOCOL_PROGRAM },
+        extOrcaProgram: { programId: EXT_ORCA },
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => undefined) as any,
+    );
+    const remainingAccountsSpy = jest
+      .spyOn(
+        OrcaWhirlpoolsClient.prototype,
+        "remainingAccountsForPricingWhirlpoolPositions",
+      )
+      .mockResolvedValue({
+        numPositions: 1,
+        remainingAccounts: [],
+        kaminoReserves: [orcaReserve],
+      });
+
+    const chunk = await client.priceOrcaWhirlpoolPositionsIxs(
+      stateModel as any,
+    );
+    remainingAccountsSpy.mockRestore();
+
+    expectSameReserves(chunk!.kaminoReserves, [
+      orcaReserve,
+      SOL_RESERVE,
+      BASE_RESERVE,
+    ]);
+    expect(chunk!.ixs[0].keys.slice(0, 7)).toEqual(
+      extPricerNamedKeys(EXT_ORCA, PROTOCOL_PROGRAM, SOL_RESERVE, BASE_RESERVE),
+    );
+  });
+
+  it("refreshes the Neutral pricer's SOL and base asset reserves ahead of it", async () => {
+    const bundle = PublicKey.unique();
+    const { client, fetchAndParseReserves } = makeClient(
+      [],
+      [NEUTRAL_ACL],
+      [getNeutralUserBundlePda(VAULT, bundle)],
+      KAMINO_ROLES,
+    );
+    (client.base.connection as any).getProgramAccounts.mockResolvedValue([
+      { pubkey: bundle, account: accountInfo(NTBUNDLE_PROGRAM_ID) },
+    ]);
+    const decodeSpy = jest
+      .spyOn(NeutralBundleAccount, "decode")
+      .mockReturnValue({
+        assetAddress: PublicKey.unique(),
+      } as NeutralBundleAccount);
+    // Vault token pricing reports the same two reserves. It is stubbed out
+    // so this row sees only what the Neutral chunk reports.
+    jest
+      .spyOn(client, "priceVaultTokensIx")
+      .mockResolvedValue({ ixs: [], kaminoReserves: [] });
+
+    const ixs = await client.priceVaultIxs();
+    decodeSpy.mockRestore();
+
+    expect(fetchAndParseReserves).toHaveBeenCalledTimes(1);
+    expectSameReserves(fetchAndParseReserves.mock.calls[0][0], [
+      SOL_RESERVE,
+      BASE_RESERVE,
+    ]);
+    expect(ixs).toHaveLength(2);
+    expect(ixs[0].programId.equals(KAMINO_LENDING_PROGRAM)).toBe(true);
+    expect(ixs[1].programId.equals(EXT_NEUTRAL)).toBe(true);
   });
 });

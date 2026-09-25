@@ -11,6 +11,7 @@ import {
   JUPITER_VAULTS_PROGRAM_ID,
   KAMINO_LENDING_PROGRAM,
   KAMINO_OBTRIGATION_SIZE,
+  WSOL,
 } from "../../src/constants";
 import { StateAccountType } from "../../src/models";
 import {
@@ -55,6 +56,7 @@ const BASE_ORACLE = PublicKey.unique();
 const SOL_ORACLE = PublicKey.unique();
 const EXT_JUPITER = PublicKey.unique();
 const PROTOCOL_PROGRAM = PublicKey.unique();
+const BASE_MINT = PublicKey.unique();
 
 function accountInfo(owner: PublicKey, data: Buffer = Buffer.alloc(0)) {
   return {
@@ -165,6 +167,228 @@ function extPricerNamedKeys(
   ];
 }
 
+type OracleSpec = { oracle: PublicKey; oracleSource: string };
+
+const KAMINO = (oracle: PublicKey): OracleSpec => ({
+  oracle,
+  oracleSource: "KaminoReserve",
+});
+const PYTH = (oracle: PublicKey): OracleSpec => ({
+  oracle,
+  oracleSource: "Pyth",
+});
+
+/** SOL/USD and base asset oracles that are not Kamino reserves. */
+const PYTH_ROLES = { sol: PYTH(SOL_ORACLE), base: PYTH(BASE_ORACLE) };
+
+/**
+ * The asset meta lookups of a client whose registrations are `oracles`.
+ * getSolOracle reads the WSOL meta, as BaseClient's does.
+ */
+function assetMetaLookups(oracles: Array<[PublicKey, OracleSpec]>) {
+  const byMint = new Map(
+    oracles.map(([mint, spec]) => [mint.toBase58(), spec]),
+  );
+  const getAssetMeta = jest.fn(async (mint: PublicKey) => {
+    const spec = byMint.get(mint.toBase58());
+    if (!spec) {
+      throw new Error(`Asset not supported: ${mint.toBase58()}`);
+    }
+    return { asset: mint, decimals: 6, programId: TOKEN_PROGRAM_ID, ...spec };
+  });
+  const getSolOracle = jest.fn(async () => (await getAssetMeta(WSOL)).oracle);
+  return { getAssetMeta, getSolOracle };
+}
+
+/**
+ * The refresh covers a set of reserves, and their order in it carries no
+ * meaning.
+ */
+function expectSameReserves(actual: PublicKey[], expected: PublicKey[]) {
+  expect(actual.map((pubkey) => pubkey.toBase58()).sort()).toEqual(
+    expected.map((pubkey) => pubkey.toBase58()).sort(),
+  );
+}
+
+/**
+ * A vault holding one Jupiter Earn position whose underlying asset reads
+ * `underlying`.
+ */
+function jupiterEarnFixture(
+  roles: { sol: OracleSpec; base: OracleSpec },
+  underlying: OracleSpec,
+) {
+  const fTokenAta = PublicKey.unique();
+  const fTokenMint = PublicKey.unique();
+  const underlyingMint = PublicKey.unique();
+  const lending = PublicKey.unique();
+  const reserve = PublicKey.unique();
+
+  const client = new PriceClient(
+    {
+      statePda: STATE,
+      vaultPda: VAULT,
+      connection: {
+        getMultipleAccountsInfo: jest.fn(async () => [
+          accountInfo(TOKEN_PROGRAM_ID, tokenAccountData(fTokenMint, VAULT)),
+        ]),
+        getProgramAccounts: jest.fn(async () => [
+          {
+            pubkey: lending,
+            account: accountInfo(
+              JUPITER_LENDING_PROGRAM_ID,
+              lendingData({ mint: underlyingMint, fTokenMint, reserve }),
+            ),
+          },
+        ]),
+      },
+      fetchStateModel: jest.fn(async () => ({
+        accountType: StateAccountType.VAULT,
+        baseAssetMint: BASE_MINT,
+        externalPositions: [fTokenAta],
+      })),
+      ...assetMetaLookups([
+        [WSOL, roles.sol],
+        [BASE_MINT, roles.base],
+        [underlyingMint, underlying],
+      ]),
+      protocolProgram: { programId: PROTOCOL_PROGRAM },
+      extJupiterProgram: { programId: EXT_JUPITER },
+    } as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    (() => undefined) as any,
+  );
+  jest
+    .spyOn(client as any, "categorizeExternalPositions")
+    .mockResolvedValue({ jupiterEarnAtas: [fTokenAta] });
+
+  return { client, fTokenAta, lending };
+}
+
+/**
+ * A vault holding one Jupiter Borrow position over a supply and a borrow
+ * asset.
+ */
+function jupiterBorrowFixture(
+  roles: { sol: OracleSpec; base: OracleSpec },
+  supply: OracleSpec,
+  borrow: OracleSpec,
+) {
+  const vaultId = 11;
+  const nftId = 7;
+  const position = getPositionPda(vaultId, nftId);
+  const positionMint = getPositionMintPda(vaultId, nftId);
+  const positionTokenAccount = PublicKey.unique();
+  const supplyToken = PublicKey.unique();
+  const borrowToken = PublicKey.unique();
+  const supplyReserve = PublicKey.unique();
+  const borrowReserve = PublicKey.unique();
+  const vaultConfig = getVaultConfigPda(vaultId);
+  const supplyLending = getLendingPda(
+    supplyToken,
+    getFTokenMintPda(supplyToken),
+  );
+  const borrowLending = getLendingPda(
+    borrowToken,
+    getFTokenMintPda(borrowToken),
+  );
+
+  const accountByKey = new Map<string, ReturnType<typeof accountInfo>>([
+    [
+      position.toBase58(),
+      accountInfo(
+        JUPITER_VAULTS_PROGRAM_ID,
+        positionData({ vaultId, nftId, positionMint }),
+      ),
+    ],
+    [
+      vaultConfig.toBase58(),
+      accountInfo(
+        JUPITER_VAULTS_PROGRAM_ID,
+        vaultConfigData({ vaultId, supplyToken, borrowToken }),
+      ),
+    ],
+    [
+      supplyLending.toBase58(),
+      accountInfo(
+        JUPITER_LENDING_PROGRAM_ID,
+        lendingData({
+          mint: supplyToken,
+          fTokenMint: getFTokenMintPda(supplyToken),
+          reserve: supplyReserve,
+        }),
+      ),
+    ],
+    [
+      borrowLending.toBase58(),
+      accountInfo(
+        JUPITER_LENDING_PROGRAM_ID,
+        lendingData({
+          mint: borrowToken,
+          fTokenMint: getFTokenMintPda(borrowToken),
+          reserve: borrowReserve,
+        }),
+      ),
+    ],
+    [
+      supplyReserve.toBase58(),
+      accountInfo(JUPITER_LIQUIDITY_PROGRAM_ID, tokenReserveData(supplyToken)),
+    ],
+    [
+      borrowReserve.toBase58(),
+      accountInfo(JUPITER_LIQUIDITY_PROGRAM_ID, tokenReserveData(borrowToken)),
+    ],
+  ]);
+
+  const client = new PriceClient(
+    {
+      statePda: STATE,
+      vaultPda: VAULT,
+      connection: {
+        getAccountInfo: jest.fn(
+          async (pubkey: PublicKey) =>
+            accountByKey.get(pubkey.toBase58()) ?? null,
+        ),
+        getMultipleAccountsInfo: jest.fn(async () => [
+          accountInfo(TOKEN_PROGRAM_ID, tokenAccountData(positionMint, VAULT)),
+          null,
+        ]),
+      },
+      getVaultAta: jest.fn((mint: PublicKey, programId: PublicKey) =>
+        programId.equals(TOKEN_PROGRAM_ID)
+          ? positionTokenAccount
+          : PublicKey.unique(),
+      ),
+      fetchStateModel: jest.fn(async () => ({
+        accountType: StateAccountType.VAULT,
+        baseAssetMint: BASE_MINT,
+        externalPositions: [position],
+      })),
+      ...assetMetaLookups([
+        [WSOL, roles.sol],
+        [BASE_MINT, roles.base],
+        [supplyToken, supply],
+        [borrowToken, borrow],
+      ]),
+      protocolProgram: { programId: PROTOCOL_PROGRAM },
+      extJupiterProgram: { programId: EXT_JUPITER },
+    } as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    (() => undefined) as any,
+  );
+  jest
+    .spyOn(client as any, "categorizeExternalPositions")
+    .mockResolvedValue({ jupiterBorrowPositions: [position] });
+
+  return { client, position, positionTokenAccount, vaultConfig };
+}
+
 describe("PositionCategorizer Jupiter lend branches", () => {
   it("separates Jupiter Earn fToken ATAs and Jupiter Borrow positions", async () => {
     const jupiterEarnAta = PublicKey.unique();
@@ -232,56 +456,11 @@ describe("PositionCategorizer Jupiter lend branches", () => {
 
 describe("PriceClient Jupiter lend pricing builders", () => {
   it("prepends update_rate before Jupiter Earn pricing", async () => {
-    const fTokenAta = PublicKey.unique();
-    const fTokenMint = PublicKey.unique();
-    const underlyingMint = PublicKey.unique();
-    const lending = PublicKey.unique();
-    const reserve = PublicKey.unique();
     const underlyingOracle = PublicKey.unique();
-
-    const client = new PriceClient(
-      {
-        statePda: STATE,
-        vaultPda: VAULT,
-        connection: {
-          getMultipleAccountsInfo: jest.fn(async () => [
-            accountInfo(TOKEN_PROGRAM_ID, tokenAccountData(fTokenMint, VAULT)),
-          ]),
-          getProgramAccounts: jest.fn(async () => [
-            {
-              pubkey: lending,
-              account: accountInfo(
-                JUPITER_LENDING_PROGRAM_ID,
-                lendingData({ mint: underlyingMint, fTokenMint, reserve }),
-              ),
-            },
-          ]),
-        },
-        fetchStateModel: jest.fn(async () => ({
-          accountType: StateAccountType.VAULT,
-          externalPositions: [fTokenAta],
-        })),
-        getAssetMeta: jest.fn(async () => ({
-          asset: underlyingMint,
-          oracle: underlyingOracle,
-          oracleSource: "Pyth",
-          programId: TOKEN_PROGRAM_ID,
-          decimals: 6,
-        })),
-        getSolOracle: jest.fn(async () => SOL_ORACLE),
-        protocolProgram: { programId: PROTOCOL_PROGRAM },
-        extJupiterProgram: { programId: EXT_JUPITER },
-      } as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      (() => undefined) as any,
+    const { client, fTokenAta, lending } = jupiterEarnFixture(
+      PYTH_ROLES,
+      PYTH(underlyingOracle),
     );
-    jest
-      .spyOn(client as any, "categorizeExternalPositions")
-      .mockResolvedValue({ jupiterEarnAtas: [fTokenAta] });
-    jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(BASE_ORACLE);
 
     const chunk = await client.priceJupiterEarnPositionsIxs();
 
@@ -306,127 +485,10 @@ describe("PriceClient Jupiter lend pricing builders", () => {
   });
 
   it("prepends update_exchange_prices before Jupiter Borrow pricing", async () => {
-    const vaultId = 11;
-    const nftId = 7;
-    const position = getPositionPda(vaultId, nftId);
-    const positionMint = getPositionMintPda(vaultId, nftId);
-    const positionTokenAccount = PublicKey.unique();
-    const supplyToken = PublicKey.unique();
-    const borrowToken = PublicKey.unique();
-    const supplyReserve = PublicKey.unique();
-    const borrowReserve = PublicKey.unique();
     const supplyOracle = PublicKey.unique();
     const borrowOracle = PublicKey.unique();
-    const vaultConfig = getVaultConfigPda(vaultId);
-    const supplyLending = getLendingPda(
-      supplyToken,
-      getFTokenMintPda(supplyToken),
-    );
-    const borrowLending = getLendingPda(
-      borrowToken,
-      getFTokenMintPda(borrowToken),
-    );
-
-    const accountByKey = new Map<string, ReturnType<typeof accountInfo>>([
-      [
-        position.toBase58(),
-        accountInfo(
-          JUPITER_VAULTS_PROGRAM_ID,
-          positionData({ vaultId, nftId, positionMint }),
-        ),
-      ],
-      [
-        vaultConfig.toBase58(),
-        accountInfo(
-          JUPITER_VAULTS_PROGRAM_ID,
-          vaultConfigData({ vaultId, supplyToken, borrowToken }),
-        ),
-      ],
-      [
-        supplyLending.toBase58(),
-        accountInfo(
-          JUPITER_LENDING_PROGRAM_ID,
-          lendingData({
-            mint: supplyToken,
-            fTokenMint: getFTokenMintPda(supplyToken),
-            reserve: supplyReserve,
-          }),
-        ),
-      ],
-      [
-        borrowLending.toBase58(),
-        accountInfo(
-          JUPITER_LENDING_PROGRAM_ID,
-          lendingData({
-            mint: borrowToken,
-            fTokenMint: getFTokenMintPda(borrowToken),
-            reserve: borrowReserve,
-          }),
-        ),
-      ],
-      [
-        supplyReserve.toBase58(),
-        accountInfo(
-          JUPITER_LIQUIDITY_PROGRAM_ID,
-          tokenReserveData(supplyToken),
-        ),
-      ],
-      [
-        borrowReserve.toBase58(),
-        accountInfo(
-          JUPITER_LIQUIDITY_PROGRAM_ID,
-          tokenReserveData(borrowToken),
-        ),
-      ],
-    ]);
-
-    const client = new PriceClient(
-      {
-        statePda: STATE,
-        vaultPda: VAULT,
-        connection: {
-          getAccountInfo: jest.fn(
-            async (pubkey: PublicKey) =>
-              accountByKey.get(pubkey.toBase58()) ?? null,
-          ),
-          getMultipleAccountsInfo: jest.fn(async () => [
-            accountInfo(
-              TOKEN_PROGRAM_ID,
-              tokenAccountData(positionMint, VAULT),
-            ),
-            null,
-          ]),
-        },
-        getVaultAta: jest.fn((mint: PublicKey, programId: PublicKey) =>
-          programId.equals(TOKEN_PROGRAM_ID)
-            ? positionTokenAccount
-            : PublicKey.unique(),
-        ),
-        fetchStateModel: jest.fn(async () => ({
-          accountType: StateAccountType.VAULT,
-          externalPositions: [position],
-        })),
-        getAssetMeta: jest.fn(async (mint: PublicKey) => ({
-          asset: mint,
-          oracle: mint.equals(supplyToken) ? supplyOracle : borrowOracle,
-          oracleSource: "Pyth",
-          programId: TOKEN_PROGRAM_ID,
-          decimals: 6,
-        })),
-        getSolOracle: jest.fn(async () => SOL_ORACLE),
-        protocolProgram: { programId: PROTOCOL_PROGRAM },
-        extJupiterProgram: { programId: EXT_JUPITER },
-      } as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      (() => undefined) as any,
-    );
-    jest
-      .spyOn(client as any, "categorizeExternalPositions")
-      .mockResolvedValue({ jupiterBorrowPositions: [position] });
-    jest.spyOn(client, "getBaseAssetOracle").mockResolvedValue(BASE_ORACLE);
+    const { client, position, positionTokenAccount, vaultConfig } =
+      jupiterBorrowFixture(PYTH_ROLES, PYTH(supplyOracle), PYTH(borrowOracle));
 
     const chunk = await client.priceJupiterBorrowPositionsIxs();
 
@@ -541,5 +603,66 @@ describe("PriceClient Jupiter lend pricing builders", () => {
     await expect(neither.client.priceVaultIxs()).resolves.toEqual([]);
     expect(neither.earnSpy).not.toHaveBeenCalled();
     expect(neither.borrowSpy).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * ext_jupiter's pricers pass the SOL/USD and base asset oracles as named
+ * accounts, and a stale Kamino reserve among them is refused. The chunk
+ * reports every reserve it reads so the batch refresh ahead of it covers them.
+ */
+describe("Jupiter pricing Kamino reserve reporting", () => {
+  const SOL_RESERVE = PublicKey.unique();
+  const BASE_RESERVE = PublicKey.unique();
+  const KAMINO_ROLES = { sol: KAMINO(SOL_RESERVE), base: KAMINO(BASE_RESERVE) };
+
+  it("reports the SOL, base asset and Earn position reserves once each", async () => {
+    const earnReserve = PublicKey.unique();
+    const { client } = jupiterEarnFixture(KAMINO_ROLES, KAMINO(earnReserve));
+
+    const chunk = await client.priceJupiterEarnPositionsIxs();
+
+    expectSameReserves(chunk.kaminoReserves, [
+      SOL_RESERVE,
+      BASE_RESERVE,
+      earnReserve,
+    ]);
+    expect(chunk.ixs[1].keys.slice(0, 7)).toEqual(
+      extPricerNamedKeys(EXT_JUPITER, SOL_RESERVE, BASE_RESERVE),
+    );
+  });
+
+  it("reports the SOL, base asset, supply and borrow reserves once each", async () => {
+    const supplyReserve = PublicKey.unique();
+    const borrowReserve = PublicKey.unique();
+    const { client } = jupiterBorrowFixture(
+      KAMINO_ROLES,
+      KAMINO(supplyReserve),
+      KAMINO(borrowReserve),
+    );
+
+    const chunk = await client.priceJupiterBorrowPositionsIxs();
+
+    expectSameReserves(chunk.kaminoReserves, [
+      SOL_RESERVE,
+      BASE_RESERVE,
+      supplyReserve,
+      borrowReserve,
+    ]);
+    expect(chunk.ixs[1].keys.slice(0, 7)).toEqual(
+      extPricerNamedKeys(EXT_JUPITER, SOL_RESERVE, BASE_RESERVE),
+    );
+  });
+
+  it("reports no reserve for a Pyth sourced base asset", async () => {
+    const earnReserve = PublicKey.unique();
+    const { client } = jupiterEarnFixture(
+      { sol: KAMINO(SOL_RESERVE), base: PYTH(BASE_ORACLE) },
+      KAMINO(earnReserve),
+    );
+
+    const chunk = await client.priceJupiterEarnPositionsIxs();
+
+    expectSameReserves(chunk.kaminoReserves, [SOL_RESERVE, earnReserve]);
   });
 });

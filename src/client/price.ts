@@ -1108,10 +1108,14 @@ export class PriceClient {
         isWritable: true,
       }),
     );
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      this.base.getSolOracle(),
-      this.getBaseAssetOracle(),
-    ]);
+    const {
+      solUsdOracle,
+      baseAssetOracle,
+      kaminoReserves: oracleReserves,
+    } = await this.pricingOracleAccounts();
+    for (const reserve of oracleReserves) {
+      reservesSet.add(reserve);
+    }
 
     const priceIx = await this.base.mintProgram.methods
       .priceKaminoObligations()
@@ -1143,6 +1147,10 @@ export class PriceClient {
     const shareMints: typeof allKvaultMints = [];
     const kvaultStates: typeof allKvaultStates = [];
     const oracles: PublicKey[] = []; // oracle of kvault deposit token
+    const depositTokenAssetMetas: {
+      oracle?: PublicKey;
+      oracleSource?: string;
+    }[] = [];
     const newLookupTableKeys = new PkSet();
     possibleShareAtaAccountsInfo.forEach((info, i) => {
       // share ata must exist and it must be tracked by glam state
@@ -1164,6 +1172,7 @@ export class PriceClient {
           throw new Error(`Oracle unavailable for asset ${tokenMint}`);
         }
         oracles.push(assetMeta.oracle);
+        depositTokenAssetMetas.push(assetMeta);
         newLookupTableKeys.add(vaultLookupTable);
       }
     });
@@ -1227,10 +1236,12 @@ export class PriceClient {
       }
     }
 
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      this.base.getSolOracle(),
-      this.getBaseAssetOracle(),
-    ]);
+    const {
+      solUsdOracle,
+      baseAssetOracle,
+      kaminoReserves: oracleReserves,
+    } = await this.pricingOracleAccounts();
+    collectKaminoReserveOracles(depositTokenAssetMetas, oracleReserves);
 
     const priceIx = await this.base.mintProgram.methods
       .priceKaminoVaultShares(shareAtas.length)
@@ -1242,7 +1253,10 @@ export class PriceClient {
       .remainingAccounts(remainingAccounts)
       .instruction();
 
-    return { ixs: [priceIx], kaminoReserves: reserves };
+    return {
+      ixs: [priceIx],
+      kaminoReserves: Array.from(new PkSet([...reserves, ...oracleReserves])),
+    };
   }
 
   public async priceJupiterEarnPositionsIxs(
@@ -1261,7 +1275,8 @@ export class PriceClient {
     const remainingAccounts: AccountMeta[] = [];
     const ixs: TransactionInstruction[] = [];
     const updatedLendings = new PkSet();
-    const kaminoReserves = new PkSet();
+    const { solUsdOracle, baseAssetOracle, kaminoReserves } =
+      await this.pricingOracleAccounts({ baseAssetMint: model.baseAssetMint });
 
     for (let i = 0; i < jupiterEarnAtas.length; i++) {
       const accountInfo = accountsInfo[i];
@@ -1289,10 +1304,6 @@ export class PriceClient {
       );
     }
 
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      this.base.getSolOracle(),
-      this.getBaseAssetOracle(),
-    ]);
     const priceIx = this.extPricerIx(
       this.base.extJupiterProgram,
       "price_jupiter_earn_positions",
@@ -1318,7 +1329,8 @@ export class PriceClient {
     const remainingAccounts: AccountMeta[] = [];
     const ixs: TransactionInstruction[] = [];
     const updatedVaultStates = new PkSet();
-    const kaminoReserves = new PkSet();
+    const { solUsdOracle, baseAssetOracle, kaminoReserves } =
+      await this.pricingOracleAccounts({ baseAssetMint: model.baseAssetMint });
 
     for (const positionPubkey of jupiterBorrowPositions) {
       const position = await fetchPositionInfo(
@@ -1382,10 +1394,6 @@ export class PriceClient {
       );
     }
 
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      this.base.getSolOracle(),
-      this.getBaseAssetOracle(),
-    ]);
     const priceIx = this.extPricerIx(
       this.base.extJupiterProgram,
       "price_jupiter_borrow_positions",
@@ -1430,8 +1438,20 @@ export class PriceClient {
   /**
    * Returns an instruction that prices stake accounts.
    * If there are no stake accounts, returns null.
+   * The instruction carries no list of the Kamino reserves among its oracles.
+   * priceVaultIxs refreshes them ahead of it.
    */
   async priceStakeAccountsIx(): Promise<TransactionInstruction | null> {
+    const chunk = await this.priceStakeAccountsChunk();
+    return chunk ? chunk.ixs[0] : null;
+  }
+
+  /**
+   * Prices stake accounts and reports the Kamino reserves among the
+   * instruction's SOL/USD and base asset oracles.
+   * If there are no stake accounts, returns null.
+   */
+  private async priceStakeAccountsChunk(): Promise<PricingChunk | null> {
     const stakes = await findStakeAccounts(
       this.base.connection,
       this.base.vaultPda,
@@ -1439,10 +1459,8 @@ export class PriceClient {
     if (stakes.length === 0) {
       return null;
     }
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      this.base.getSolOracle(),
-      this.getBaseAssetOracle(),
-    ]);
+    const { solUsdOracle, baseAssetOracle, kaminoReserves } =
+      await this.pricingOracleAccounts();
     const priceStakesIx = await (this.base.mintProgram.methods as any)
       .priceStakeAccounts()
       .accounts({
@@ -1458,7 +1476,7 @@ export class PriceClient {
         })),
       )
       .instruction();
-    return priceStakesIx;
+    return { ixs: [priceStakesIx], kaminoReserves: Array.from(kaminoReserves) };
   }
 
   private async findPhoenixTraderAccounts(
@@ -1732,10 +1750,13 @@ export class PriceClient {
       return null;
     }
 
-    const [solUsdOracle, baseAssetOracle] = await Promise.all([
-      this.base.getSolOracle(),
-      this.getBaseAssetOracle(),
-    ]);
+    const {
+      solUsdOracle,
+      baseAssetOracle,
+      kaminoReserves: oracleReserves,
+    } = await this.pricingOracleAccounts({
+      baseAssetMint: model.baseAssetMint,
+    });
 
     const priceIx: TransactionInstruction = this.extPricerIx(
       this.base.extOrcaProgram,
@@ -1759,7 +1780,9 @@ export class PriceClient {
 
     return {
       ixs: [priceIx],
-      kaminoReserves: accounts.kaminoReserves,
+      kaminoReserves: Array.from(
+        new PkSet([...accounts.kaminoReserves, ...oracleReserves]),
+      ),
     };
   }
 
@@ -1867,13 +1890,10 @@ export class PriceClient {
       return { ixs: [], kaminoReserves: [] };
     }
 
-    const [solUsdOracle, baseAssetOracle, baseAssetMeta] = await Promise.all([
-      this.base.getSolOracle(),
-      this.getBaseAssetOracle(),
-      this.base.getAssetMeta(stateModel.baseAssetMint),
-    ]);
-
-    const kaminoReserves = collectKaminoReserveOracles([baseAssetMeta]);
+    const { solUsdOracle, baseAssetOracle, kaminoReserves } =
+      await this.pricingOracleAccounts({
+        baseAssetMint: stateModel.baseAssetMint,
+      });
 
     const remainingAccounts: AccountMeta[] = [];
     for (let i = 0; i < positions.length; i++) {
@@ -2113,8 +2133,8 @@ export class PriceClient {
         nativeIntegrationAcl &&
         (nativeIntegrationAcl.protocolsBitmask & STAKE_PROTOCOL) !== 0
       ) {
-        const ix = await this.priceStakeAccountsIx();
-        if (ix) chunks.push({ ixs: [ix], kaminoReserves: [] });
+        const chunk = await this.priceStakeAccountsChunk();
+        if (chunk) chunks.push(chunk);
       }
 
       const rpiIntegrationAcl = integrationAcls.find(
@@ -2231,6 +2251,17 @@ export class PriceClient {
   }
 
   /**
+   * The one place a pricing builder takes its SOL/USD and base asset oracles
+   * from. getSolOracle and getBaseAssetOracle return the bare address without
+   * its source, so a builder that reads them cannot tell that an oracle is a
+   * Kamino reserve, leaves that reserve out of the batch refresh, and the
+   * program refuses it as stale. Every builder that passes both oracles as
+   * named accounts takes them and their reserves from here and adds the
+   * reserves its own positions read. The one exception is priceVaultTokensIx,
+   * which passes the bare addresses because
+   * remainingAccountsForPricingVaultAssets adds the reserves of both roles to
+   * its own reserve list.
+   *
    * Resolves the SOL/USD and base asset oracles a pricing instruction passes
    * as named accounts, together with the Kamino reserves among them. Callers
    * take both from here so the oracle and its source are read once.
