@@ -465,6 +465,11 @@ export class PriceClient {
       externalPositionsSet,
       commitment,
     );
+    // A tracked share account whose mint no Kamino vault state names is listed
+    // as the plain token account it is.
+    const unresolvedShareAtas = kaminoVaultShareAtas.filter(
+      (ata) => !kvaultAtasAndStatesMap.has(ata),
+    );
 
     const kaminoReserves = [...obligationReservesMap.values()]
       .map((v) => Array.from(v.pkValues()))
@@ -479,6 +484,7 @@ export class PriceClient {
         ...kaminoObligations,
         ...kaminoReserves,
         ...kvaultAtas,
+        ...unresolvedShareAtas,
         SYSVAR_CLOCK_PUBKEY, // read unix timestamp from sysvar clock account
       ]),
     );
@@ -506,6 +512,11 @@ export class PriceClient {
       }
     }
 
+    const tokenHoldingPubkeys = [
+      ...tokenPubkeys,
+      ...unresolvedShareAtas.filter((ata) => accountsDataMap.has(ata)),
+    ];
+
     // Build a map of parsed kamino reserves
     const kaminoReservesMap = new PkMap<Reserve>();
     for (let i = 0; i < kaminoReserves.length; i++) {
@@ -525,7 +536,7 @@ export class PriceClient {
     });
 
     const tokenMintDecimalsMap = await this.getTokenMintDecimals(
-      tokenPubkeys,
+      tokenHoldingPubkeys,
       accountsDataMap,
       commitment,
     );
@@ -533,7 +544,7 @@ export class PriceClient {
     const [tokenHoldings, kaminoLendHoldings, kaminoVaultsHoldings] =
       await Promise.all([
         this.getTokenHoldings(
-          tokenPubkeys,
+          tokenHoldingPubkeys,
           accountsDataMap,
           tokenPricesMap,
           tokenMintDecimalsMap,
@@ -700,8 +711,11 @@ export class PriceClient {
       if (info) {
         const tokenAccount = AccountLayout.decode(info.data);
         const mint = new PublicKey(tokenAccount.mint);
-        const kvaultState = shareMintToState.get(mint)!;
-        map.set(shareAtaPubkeys[i], kvaultState);
+        const kvaultState = shareMintToState.get(mint);
+        // A share account whose mint no vault state names stays out of the map.
+        if (kvaultState) {
+          map.set(shareAtaPubkeys[i], kvaultState);
+        }
       }
     }
 
@@ -1132,7 +1146,15 @@ export class PriceClient {
   }
 
   public async priceKaminoVaultSharesIx(): Promise<PricingChunk | null> {
+    // Only share accounts the state tracks are priced, so a state that tracks
+    // no external position needs no Kamino vault lookup.
+    if (!this.cachedStateModel?.externalPositions?.length) {
+      return null;
+    }
     const allKvaultStates = await this.kvaults.findAndParseKaminoVaults();
+    if (allKvaultStates.length === 0) {
+      return null;
+    }
     const allKvaultMints = allKvaultStates.map((kvault) => kvault.sharesMint);
     const assetMetas = await this.base.fetchAssetMetas();
 
@@ -1176,6 +1198,13 @@ export class PriceClient {
         newLookupTableKeys.add(vaultLookupTable);
       }
     });
+
+    // No tracked share account belongs to a vault state the cluster returned.
+    // A share account whose vault state is missing is left unpriced, and
+    // glam_mint refuses the aum with ExternalPositionsNotPriced.
+    if (shareAtas.length === 0) {
+      return null;
+    }
 
     // Resolve any newly-seen kvault lookup tables in a single batch so that
     // downstream callers (e.g. `intoVersionedTransaction`) can use them

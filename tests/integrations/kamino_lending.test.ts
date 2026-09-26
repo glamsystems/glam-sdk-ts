@@ -15,6 +15,7 @@ import {
   GlamClient,
   KAMINO_FARMS_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
+  KAMINO_VAULTS_PROTOCOL,
   KaminoLendingPolicy,
   nameToChars,
   SYSTEM_PROTOCOL,
@@ -41,9 +42,10 @@ describe("kamino_lending", () => {
       integrationAcls: [
         {
           integrationProgram: glamClient.extKaminoProgram.programId,
-          // Lending and farms only: with the vaults protocol enabled, priceVaultIxs looks up
-          // kvault accounts, and the validator has none.
-          protocolsBitmask: KAMINO_LENDING_PROTOCOL | KAMINO_FARMS_PROTOCOL,
+          protocolsBitmask:
+            KAMINO_LENDING_PROTOCOL |
+            KAMINO_VAULTS_PROTOCOL |
+            KAMINO_FARMS_PROTOCOL,
           protocolPolicies: [],
         },
         {

@@ -307,9 +307,7 @@ export class KaminoVaultsClient
         ],
       },
     );
-    if (accounts.length === 0) {
-      throw new Error("Kamino vaults not found");
-    }
+    // A cluster with no Kamino vault accounts answers with an empty list.
     // Parse and cache vault states
     return accounts.map((a) => {
       const vaultState = KVaultState.decode(

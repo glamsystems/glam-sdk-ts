@@ -3,7 +3,8 @@ import {
   PublicKey,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { KaminoVaultsClient } from "../../src/client/kamino/vaults";
 import { OrcaWhirlpoolsClient } from "../../src/client/orca";
 import { PriceClient } from "../../src/client/price";
 import {
@@ -14,6 +15,7 @@ import {
 } from "../../src/client/neutral";
 import {
   KAMINO_LENDING_PROGRAM,
+  KAMINO_VAULTS_PROGRAM,
   ORCA_POSITION_DISCRIMINATOR,
   ORCA_WHIRLPOOLS_PROGRAM_ID,
   PHOENIX_GLOBAL_CONFIG,
@@ -26,6 +28,7 @@ import {
   RPI_PROTOCOL,
   BRIDGE_CCTP_PROTOCOL,
   KAMINO_LENDING_PROTOCOL,
+  KAMINO_VAULTS_PROTOCOL,
   LAYERZERO_OFT_PROTOCOL,
   ORCA_WHIRLPOOLS_PROTOCOL,
   PHOENIX_PROTOCOL,
@@ -233,6 +236,7 @@ function makeClient(
   integrationAcls = [KAMINO_LENDING_ACL],
   externalPositions = [OBLIGATION],
   oracles: Array<[PublicKey, OracleSpec]> = [],
+  kvaults: object = {},
 ) {
   const fetchAndParseReserves = jest.fn(async (pubkeys: PublicKey[]) =>
     pubkeys.map((pubkey) => reserve(pubkey)),
@@ -291,6 +295,7 @@ function makeClient(
           priceVaultTokens: jest.fn(() => methodBuilder(ix(1))),
           priceKaminoObligations: jest.fn(() => methodBuilder(ix(2))),
           priceStakeAccounts: jest.fn(() => methodBuilder(ix(4))),
+          priceKaminoVaultShares: jest.fn(() => methodBuilder(ix(5))),
         },
       },
     } as any,
@@ -313,7 +318,7 @@ function makeClient(
         refreshObligationIx,
       },
     } as any,
-    {} as any,
+    kvaults as any,
     {} as any,
     {} as any,
     {} as any,
@@ -1280,5 +1285,277 @@ describe("Pricing chunk Kamino reserve reporting", () => {
     expect(ixs).toHaveLength(2);
     expect(ixs[0].programId.equals(KAMINO_LENDING_PROGRAM)).toBe(true);
     expect(ixs[1].programId.equals(EXT_NEUTRAL)).toBe(true);
+  });
+});
+
+describe("Kamino vault pricing over a cluster with no Kamino vault accounts", () => {
+  const KAMINO_LENDING_AND_VAULTS_ACL = {
+    integrationProgram: EXT_KAMINO,
+    protocolsBitmask: KAMINO_LENDING_PROTOCOL | KAMINO_VAULTS_PROTOCOL,
+  };
+
+  /** makeClient with the Vaults protocol enabled and a kvault client that finds nothing. */
+  function makeKvaultClient(externalPositions: PublicKey[]) {
+    const findAndParseKaminoVaults = jest.fn(async () => []);
+    const { client } = makeClient(
+      [RESERVE_A, RESERVE_C],
+      [KAMINO_LENDING_AND_VAULTS_ACL],
+      externalPositions,
+      [],
+      {
+        findAndParseKaminoVaults,
+        getVaultPdasByShareMints: jest.fn(async () => []),
+      },
+    );
+    // No account the kvault pricer could read exists.
+    (client.base.connection as any).getMultipleAccountsInfo = jest.fn(
+      async (keys: PublicKey[]) => keys.map(() => null),
+    );
+    return { client, findAndParseKaminoVaults };
+  }
+
+  function tokenAccountInfo(mint: PublicKey, owner: PublicKey, amount: bigint) {
+    const data = Buffer.alloc(AccountLayout.span);
+    AccountLayout.encode(
+      {
+        mint,
+        owner,
+        amount,
+        delegateOption: 0,
+        delegate: PublicKey.default,
+        state: 1,
+        isNativeOption: 0,
+        isNative: BigInt(0),
+        delegatedAmount: BigInt(0),
+        closeAuthorityOption: 0,
+        closeAuthority: PublicKey.default,
+      },
+      data,
+    );
+    return accountInfo(TOKEN_PROGRAM_ID, data);
+  }
+
+  function mintAccountInfo(decimals: number) {
+    const data = Buffer.alloc(MintLayout.span);
+    MintLayout.encode(
+      {
+        mintAuthorityOption: 0,
+        mintAuthority: PublicKey.default,
+        supply: BigInt(0),
+        decimals,
+        isInitialized: true,
+        freezeAuthorityOption: 0,
+        freezeAuthority: PublicKey.default,
+      },
+      data,
+    );
+    return accountInfo(TOKEN_PROGRAM_ID, data);
+  }
+
+  it("finds no Kamino vault and no share mint's vault when the cluster holds none", async () => {
+    const getProgramAccounts = jest.fn(async () => []);
+    const kvaults = new KaminoVaultsClient(
+      { connection: { getProgramAccounts } } as any,
+      {} as any,
+    );
+
+    await expect(kvaults.findAndParseKaminoVaults()).resolves.toEqual([]);
+    await expect(
+      kvaults.getVaultPdasByShareMints([PublicKey.unique()]),
+    ).resolves.toEqual([]);
+    expect(
+      (getProgramAccounts.mock.calls[0] as unknown[])[0] as PublicKey,
+    ).toEqual(KAMINO_VAULTS_PROGRAM);
+  });
+
+  it("prices the obligation when the Vaults protocol is enabled and no Kamino vault exists", async () => {
+    const { client, findAndParseKaminoVaults } = makeKvaultClient([OBLIGATION]);
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(findAndParseKaminoVaults).toHaveBeenCalledTimes(1);
+    // The reserve refresh, the vault token pricer, the obligation refresh and the obligation
+    // pricer. No share account matched a vault state, so no kvault share pricer follows.
+    expect(ixs.map((ix) => [ix.programId.toBase58(), ix.data[0]])).toEqual([
+      [KAMINO_LENDING_PROGRAM.toBase58(), 3],
+      [PublicKey.default.toBase58(), 1],
+      [KAMINO_LENDING_PROGRAM.toBase58(), 3],
+      [PublicKey.default.toBase58(), 2],
+    ]);
+  });
+
+  it("looks up no Kamino vault when the state tracks no external position", async () => {
+    const { client, findAndParseKaminoVaults } = makeKvaultClient([]);
+    client.cachedStateModel = await client.base.fetchStateModel();
+
+    const chunk = await client.priceKaminoVaultSharesIx();
+
+    expect(findAndParseKaminoVaults).not.toHaveBeenCalled();
+    expect(chunk).toBeNull();
+  });
+
+  it("prices the obligation with no share instruction when the cluster's Kamino vault share account is untracked", async () => {
+    const { client, findAndParseKaminoVaults } = makeKvaultClient([OBLIGATION]);
+    (findAndParseKaminoVaults as jest.Mock).mockResolvedValue([
+      {
+        sharesMint: PublicKey.unique(),
+        tokenMint: PublicKey.unique(),
+        vaultLookupTable: PublicKey.unique(),
+      },
+    ]);
+    // The vault does not hold this state's share ata, so the possible share
+    // account the pricer derives from it never matches externalPositions.
+    (client.base as any).getVaultAta = jest.fn(() => PublicKey.unique());
+
+    const ixs = await client.priceVaultIxs();
+
+    expect(findAndParseKaminoVaults).toHaveBeenCalledTimes(1);
+    // The reserve refresh, the vault token pricer, the obligation refresh and the obligation
+    // pricer, same as with no Kamino vault at all. No share account matched the one vault
+    // state the cluster returned, so no kvault share pricer follows it.
+    expect(ixs.map((ix) => [ix.programId.toBase58(), ix.data[0]])).toEqual([
+      [KAMINO_LENDING_PROGRAM.toBase58(), 3],
+      [PublicKey.default.toBase58(), 1],
+      [KAMINO_LENDING_PROGRAM.toBase58(), 3],
+      [PublicKey.default.toBase58(), 2],
+    ]);
+  });
+
+  it("lists a tracked share account no Kamino vault state names as a plain token holding", async () => {
+    const shareAta = PublicKey.unique();
+    const shareMint = PublicKey.unique();
+    const shareAccount = tokenAccountInfo(
+      shareMint,
+      VAULT,
+      BigInt(123_000_000),
+    );
+    const accountAt = (key: PublicKey) =>
+      key.equals(shareAta)
+        ? shareAccount
+        : key.equals(shareMint)
+          ? mintAccountInfo(6)
+          : null;
+    const findAndParseKaminoVaults = jest.fn(async () => []);
+    const client = new PriceClient(
+      {
+        vaultPda: VAULT,
+        statePda: STATE,
+        connection: {
+          getMultipleAccountsInfo: jest.fn(async (keys: PublicKey[]) =>
+            keys.map(accountAt),
+          ),
+          getMultipleAccountsInfoAndContext: jest.fn(
+            async (keys: PublicKey[]) => ({
+              context: { slot: 1 },
+              value: keys.map(accountAt),
+            }),
+          ),
+          // The share account is one of the vault's token accounts.
+          getTokenAccountsByOwner: jest.fn(
+            async (
+              _owner: PublicKey,
+              { programId }: { programId: PublicKey },
+            ) => ({
+              value: programId.equals(TOKEN_PROGRAM_ID)
+                ? [{ pubkey: shareAta, account: shareAccount }]
+                : [],
+            }),
+          ),
+          // The share mint is no Jupiter Earn fToken.
+          getProgramAccounts: jest.fn(async () => []),
+        },
+        fetchStateAccount: jest.fn(async () => ({
+          externalPositions: [shareAta],
+        })),
+      } as any,
+      {} as any,
+      { findAndParseKaminoVaults } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => ({
+        fetchTokensList: jest.fn(async () => ({ tokens: [] })),
+        fetchTokenPrices: jest.fn(async () => []),
+      })) as any,
+    );
+
+    const { holdings } = await client.getVaultHoldings("confirmed");
+
+    expect(findAndParseKaminoVaults).toHaveBeenCalledTimes(1);
+    expect(holdings).toHaveLength(1);
+    const [holding] = holdings;
+    expect(holding.protocol).toBe("Token");
+    expect(holding.mintAddress).toEqual(shareMint);
+    expect(holding.decimals).toBe(6);
+    expect(holding.amount.toString()).toBe("123000000");
+    expect(holding.protocolMeta.tokenAccount).toEqual(shareAta);
+  });
+
+  it("lists no holding for a tracked share account that closes between the categorizer's fetch and the batch fetch", async () => {
+    const shareAta = PublicKey.unique();
+    const shareMint = PublicKey.unique();
+    const shareAccount = tokenAccountInfo(
+      shareMint,
+      VAULT,
+      BigInt(123_000_000),
+    );
+    const findAndParseKaminoVaults = jest.fn(async () => []);
+    const client = new PriceClient(
+      {
+        vaultPda: VAULT,
+        statePda: STATE,
+        connection: {
+          // The categorizer's fetch, and the kvault-state lookup that
+          // follows it, still find the share account.
+          getMultipleAccountsInfo: jest.fn(async (keys: PublicKey[]) =>
+            keys.map((key) => (key.equals(shareAta) ? shareAccount : null)),
+          ),
+          // The share account closes before the batch fetch that prices
+          // holdings runs.
+          getMultipleAccountsInfoAndContext: jest.fn(
+            async (keys: PublicKey[]) => ({
+              context: { slot: 1 },
+              value: keys.map(() => null),
+            }),
+          ),
+          // The share account is one of the vault's token accounts.
+          getTokenAccountsByOwner: jest.fn(
+            async (
+              _owner: PublicKey,
+              { programId }: { programId: PublicKey },
+            ) => ({
+              value: programId.equals(TOKEN_PROGRAM_ID)
+                ? [{ pubkey: shareAta, account: shareAccount }]
+                : [],
+            }),
+          ),
+          // The share mint is no Jupiter Earn fToken.
+          getProgramAccounts: jest.fn(async () => []),
+        },
+        fetchStateAccount: jest.fn(async () => ({
+          externalPositions: [shareAta],
+        })),
+      } as any,
+      {} as any,
+      { findAndParseKaminoVaults } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      (() => ({
+        fetchTokensList: jest.fn(async () => ({ tokens: [] })),
+        fetchTokenPrices: jest.fn(async () => []),
+      })) as any,
+    );
+
+    const { holdings } = await client.getVaultHoldings("confirmed");
+
+    expect(findAndParseKaminoVaults).toHaveBeenCalledTimes(1);
+    expect(holdings).toHaveLength(0);
   });
 });
