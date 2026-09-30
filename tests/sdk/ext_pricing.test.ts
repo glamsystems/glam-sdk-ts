@@ -250,7 +250,12 @@ describe("extPricerIx", () => {
     const declared = Object.values(additions).flatMap(
       ({ instructions }) => instructions,
     );
-    expect([...declared].sort()).toEqual([...NAMES].sort());
+    // The v1 tree also declares additions that are not pricers (the stake
+    // pool's with-slippage handlers); this suite covers the pricers among them.
+    const declaredPricers = declared.filter((name) =>
+      name.startsWith("price_"),
+    );
+    expect([...declaredPricers].sort()).toEqual([...NAMES].sort());
     expect(POSITION_PRICERS).toHaveLength(NAMES.length - 1);
   });
 });
