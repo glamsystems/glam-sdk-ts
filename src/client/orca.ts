@@ -1111,7 +1111,6 @@ class TxBuilder
       .closePositionWithTokenExtensions()
       .accountsPartial({
         ...this.sharedBaseAccounts(signer),
-        whirlpool: accounts.whirlpool,
         position: accounts.position,
         positionMint: accounts.positionMint,
         positionTokenAccount:

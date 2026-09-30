@@ -112,9 +112,6 @@ export type ExtOrca = {
           "address": "11111111111111111111111111111111"
         },
         {
-          "name": "whirlpool"
-        },
-        {
           "name": "position",
           "writable": true
         },
