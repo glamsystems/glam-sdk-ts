@@ -346,6 +346,28 @@ export function assertV1Envelope(tx: unknown, bytes?: Uint8Array): void {
   );
 }
 
+/**
+ * A version 1 transaction a wallet handed back, in the class that writes the
+ * version 1 envelope. A wallet adapter may return a transaction it rebuilt or
+ * deserialized, whose message is the library's own `MessageV1` and cannot
+ * write itself. The message and the signatures are the returned transaction's
+ * own; anything that is not a version 1 message is returned as it came.
+ */
+export function restoreV1Transaction<T>(tx: T): T {
+  const candidate = tx as unknown as VersionedTransaction | null | undefined;
+  if (candidate?.message?.version !== 1) return tx;
+  if (
+    candidate instanceof V1Transaction &&
+    candidate.message instanceof SerializableMessageV1
+  ) {
+    return tx;
+  }
+  return new V1Transaction(
+    SerializableMessageV1.from(candidate.message as MessageV1),
+    candidate.signatures,
+  ) as unknown as T;
+}
+
 // ------------------------------------------------------------- the compile
 
 /**

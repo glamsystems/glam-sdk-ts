@@ -26,6 +26,7 @@ import {
   assertV1Envelope,
   assertV1TransactionLimits,
   compileToV1Message,
+  restoreV1Transaction,
   transactionVersionFromEnv,
   type TransactionVersion,
 } from "../utils/messageV1";
@@ -743,13 +744,16 @@ export class BaseClient {
       }
     }
 
-    const signedTx = await this.wallet.signTransaction(tx);
+    // A wallet may return a transaction it rebuilt, which keeps the message
+    // and the signatures and drops the class that writes the envelope.
+    const signedTx = restoreV1Transaction(
+      await this.wallet.signTransaction(tx),
+    );
     if (additionalSigners.length > 0 && !isLegacyTx) {
       (signedTx as VersionedTransaction).sign(additionalSigners);
     }
     const serializedTx = signedTx.serialize();
-    // And again on what is about to be sent: a wallet may return a transaction
-    // it rebuilt, which keeps the message and drops the envelope.
+    // And again on what is about to be sent.
     assertV1Envelope(signedTx, serializedTx);
 
     // skip simulation since we just did it to compute CUs

@@ -23,7 +23,8 @@ import {
  * the version 0 envelope and reports no error, so a transaction that lost the
  * subclass (a `VersionedTransaction.deserialize` round trip, a wallet adapter
  * that returns a rebuilt transaction) would put wrong bytes on the wire with
- * preflight disabled. These cases hold that shut on both sides of signing.
+ * preflight disabled. A transaction handed in that way is refused before the
+ * wallet is asked; one the wallet hands back that way is put back in its class.
  */
 
 function createClient(wallet: Wallet, blockhash: string) {
@@ -146,25 +147,41 @@ describe("the version 1 envelope is checked where the bytes leave", () => {
     expect(connection.sendRawTransaction).not.toHaveBeenCalled();
   });
 
-  it("refuses when the wallet returns a transaction that dropped the envelope", async () => {
-    const wallet = {
-      publicKey: payer.publicKey,
-      // A wallet adapter that rebuilds what it was handed, keeping the message
-      // and losing the subclass that writes version 1 bytes.
-      signTransaction: jest.fn(async (tx: VersionedTransaction) => {
-        const rebuilt = new VersionedTransaction(tx.message);
-        rebuilt.sign([payer]);
-        return rebuilt;
-      }),
-      signAllTransactions: jest.fn(),
-    } as unknown as Wallet;
-    const { client, connection } = createClient(wallet, blockhash);
+  it("sends the version 1 envelope when the wallet returns a rebuilt transaction", async () => {
+    const tx = v1Transaction();
+    const reference = new V1Transaction(tx.message);
+    reference.sign([payer]);
+    const expected = Buffer.from(reference.serialize());
 
-    await expect(client.sendAndConfirm(v1Transaction())).rejects.toThrow(
-      /does not write the version 1 envelope/,
-    );
-    expect(wallet.signTransaction).toHaveBeenCalledTimes(1);
-    expect(connection.sendRawTransaction).not.toHaveBeenCalled();
+    const rebuilds: Array<(tx: VersionedTransaction) => VersionedTransaction> =
+      [
+        // Keeps the message and loses the subclass that writes version 1 bytes.
+        (signed) =>
+          new VersionedTransaction(signed.message, signed.signatures),
+        // Reads the bytes back: the message is the library's own, which
+        // cannot write itself.
+        (signed) =>
+          VersionedTransaction.deserialize(Buffer.from(signed.serialize())),
+      ];
+
+    for (const rebuild of rebuilds) {
+      const wallet = {
+        publicKey: payer.publicKey,
+        signTransaction: jest.fn(async (tx: VersionedTransaction) => {
+          tx.sign([payer]);
+          return rebuild(tx);
+        }),
+        signAllTransactions: jest.fn(),
+      } as unknown as Wallet;
+      const { client, connection } = createClient(wallet, blockhash);
+
+      await expect(client.sendAndConfirm(tx)).resolves.toBe("txsig");
+
+      const sent = connection.sendRawTransaction.mock
+        .calls[0][0] as unknown as Uint8Array;
+      // The same bytes the wallet signed, signature included.
+      expect(Buffer.from(sent)).toEqual(expected);
+    }
   });
 
   it("leaves version 0 and legacy transactions alone", async () => {
