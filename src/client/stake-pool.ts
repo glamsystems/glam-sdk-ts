@@ -1,6 +1,7 @@
 import { BN } from "@coral-xyz/anchor";
 import {
   PublicKey,
+  StakeProgram,
   VersionedTransaction,
   TransactionSignature,
   ParsedAccountData,
@@ -15,6 +16,10 @@ import { getStakeAccountsWithStates } from "../utils/accounts";
 import { STAKE_POOLS } from "../assets";
 import { StakeClient } from "./stake";
 
+// The program refuses a zero minimum (MinimumOutputRequired); one base unit is the loosest
+// bound it takes, which is what the retired Option<u64> handlers' `None` meant.
+const NO_SLIPPAGE_BOUND = new BN(1);
+
 interface StakePoolAccountData {
   programId: PublicKey;
   depositAuthority: PublicKey;
@@ -24,6 +29,56 @@ interface StakePoolAccountData {
   reserveStake: PublicKey;
   tokenProgramId: PublicKey;
   validatorList: PublicKey;
+  preferredWithdrawValidatorVoteAddress: PublicKey | null;
+  totalLamports: BN;
+  poolTokenSupply: BN;
+}
+
+// The stake pool program's MINIMUM_ACTIVE_STAKE: the least delegation it keeps in a validator
+// stake account, whatever the stake program's minimum.
+const STAKE_POOL_MINIMUM_ACTIVE_STAKE = new BN(1_000_000);
+
+// One entry of the pool's validator list, as the program lays it out (ValidatorStakeInfo):
+// active and transient stake, the last update epoch, the transient seed suffix, four unused
+// bytes, the validator seed suffix, the status and the vote address, 73 bytes.
+const VALIDATOR_LIST_ENTRIES_OFFSET = 9;
+const VALIDATOR_LIST_ENTRY_SIZE = 73;
+
+interface ValidatorListEntry {
+  voteAccountAddress: PublicKey;
+  activeStakeLamports: BN;
+  validatorSeedSuffix: number;
+}
+
+export function decodeValidatorListEntries(data: Buffer): ValidatorListEntry[] {
+  const count = data.readUInt32LE(VALIDATOR_LIST_ENTRIES_OFFSET - 4);
+  const entries: ValidatorListEntry[] = [];
+  for (let i = 0; i < count; i++) {
+    const at = VALIDATOR_LIST_ENTRIES_OFFSET + i * VALIDATOR_LIST_ENTRY_SIZE;
+    const entry = data.subarray(at, at + VALIDATOR_LIST_ENTRY_SIZE);
+    entries.push({
+      activeStakeLamports: new BN(entry.subarray(0, 8), "le"),
+      validatorSeedSuffix: entry.readUInt32LE(36),
+      voteAccountAddress: new PublicKey(entry.subarray(41, 73)),
+    });
+  }
+  return entries;
+}
+
+// The validator stake account of a validator in the pool: the vote address and the pool, and
+// the validator seed suffix as four little-endian bytes when it is not zero.
+export function validatorStakeAccountAddress(
+  programId: PublicKey,
+  stakePool: PublicKey,
+  entry: Pick<ValidatorListEntry, "voteAccountAddress" | "validatorSeedSuffix">,
+): PublicKey {
+  const seeds = [entry.voteAccountAddress.toBuffer(), stakePool.toBuffer()];
+  if (entry.validatorSeedSuffix !== 0) {
+    const suffix = Buffer.alloc(4);
+    suffix.writeUInt32LE(entry.validatorSeedSuffix);
+    seeds.push(suffix);
+  }
+  return PublicKey.findProgramAddressSync(seeds, programId)[0];
 }
 
 class TxBuilder extends BaseTxBuilder<StakePoolClient> {
@@ -55,7 +110,7 @@ class TxBuilder extends BaseTxBuilder<StakePoolClient> {
       tokenProgram,
     );
     const ix = await this.client.base.extStakePoolProgram.methods
-      .depositSol(lamports, null)
+      .depositSolWithSlippage(lamports, NO_SLIPPAGE_BOUND)
       .accounts({
         glamSigner,
         glamState,
@@ -63,8 +118,9 @@ class TxBuilder extends BaseTxBuilder<StakePoolClient> {
         stakePool,
         stakePoolWithdrawAuthority: withdrawAuthority,
         reserveStake,
-        feeAccount,
-        poolTokensTo,
+        destinationPoolAccount: poolTokensTo,
+        managerFeeAccount: feeAccount,
+        referralPoolAccount: poolTokensTo,
         poolMint,
         tokenProgram,
       })
@@ -132,21 +188,22 @@ class TxBuilder extends BaseTxBuilder<StakePoolClient> {
       tokenProgram,
     );
     const ix = await this.client.base.extStakePoolProgram.methods
-      .depositStake(null)
+      .depositStakeWithSlippage(NO_SLIPPAGE_BOUND)
       .accounts({
         glamSigner,
         glamState,
         cpiProgram: stakePoolProgram,
         stakePool,
-        stakePoolDepositAuthority: depositAuthority,
-        stakePoolWithdrawAuthority: withdrawAuthority,
         validatorList,
+        depositAuthority,
+        stakePoolWithdrawAuthority: withdrawAuthority,
+        depositStakeAccount: stakeAccount,
         validatorStakeAccount,
-        reserveStakeAccount: reserveStake,
-        depositStake: stakeAccount,
-        poolTokensTo,
+        reserveStake,
+        destinationPoolAccount: poolTokensTo,
+        managerFeeAccount: feeAccount,
+        referralPoolAccount: poolTokensTo,
         poolMint,
-        feeAccount,
         tokenProgram,
       })
       .instruction();
@@ -169,6 +226,7 @@ class TxBuilder extends BaseTxBuilder<StakePoolClient> {
     deactivate: boolean = false,
     glamSigner: PublicKey,
   ): Promise<[TransactionInstruction[], PublicKey]> {
+    const stakePoolData = await this.client.getStakePoolAccountData(stakePool);
     const {
       programId: stakePoolProgram,
       poolMint,
@@ -177,24 +235,34 @@ class TxBuilder extends BaseTxBuilder<StakePoolClient> {
       tokenProgramId: tokenProgram,
       validatorList,
       reserveStake,
-    } = await this.client.getStakePoolAccountData(stakePool);
+    } = stakePoolData;
 
     const poolTokensFrom = this.client.base.getVaultAta(poolMint, tokenProgram);
     const glamState = this.client.base.statePda;
 
-    // The reserve stake account should NOT be used for withdrawals unless we have no other options.
-    // And only active validator stake accounts should be used.
-    const validatorStakeCandidates = (
-      await getStakeAccountsWithStates(
-        this.client.base.connection,
-        withdrawAuthority,
-      )
-    ).filter((s) => !s.address.equals(reserveStake) && s.state === "active");
+    // The pool's preferred withdraw validator comes first: while it has active stake the pool
+    // refuses every other source. Otherwise any active validator stake account, and the reserve
+    // only when there is none.
+    const preferred = await this.client.getPreferredWithdrawStakeAccount(
+      stakePool,
+      stakePoolData,
+    );
+    const validatorStakeCandidates = preferred
+      ? []
+      : (
+          await getStakeAccountsWithStates(
+            this.client.base.connection,
+            withdrawAuthority,
+          )
+        ).filter(
+          (s) => !s.address.equals(reserveStake) && s.state === "active",
+        );
 
     const validatorStakeAccount =
-      validatorStakeCandidates.length === 0
+      preferred ??
+      (validatorStakeCandidates.length === 0
         ? reserveStake
-        : validatorStakeCandidates[0].address;
+        : validatorStakeCandidates[0].address);
 
     const [stakeAccount, createStakeAccountIx] =
       await this.client.stake.createStakeAccount(glamSigner);
@@ -213,19 +281,20 @@ class TxBuilder extends BaseTxBuilder<StakePoolClient> {
       : [];
 
     const ix = await this.client.base.extStakePoolProgram.methods
-      .withdrawStake(amount, null)
+      .withdrawStakeWithSlippage(amount, NO_SLIPPAGE_BOUND)
       .accounts({
         glamSigner,
         glamState,
         cpiProgram: stakePoolProgram,
-        stake: stakeAccount,
         stakePool,
-        poolMint,
-        poolTokensFrom,
         validatorList,
-        validatorStakeAccount,
         stakePoolWithdrawAuthority: withdrawAuthority,
-        feeAccount,
+        splitStakeSource: validatorStakeAccount,
+        destinationStakeAccount: stakeAccount,
+        destinationStakeAuthority: this.client.base.vaultPda,
+        sourcePoolAccount: poolTokensFrom,
+        managerFeeAccount: feeAccount,
+        poolMint,
         tokenProgram,
       })
       .instruction();
@@ -393,6 +462,58 @@ export class StakePoolClient {
       reserveStake: stakePoolAccountData.reserveStake,
       tokenProgramId: stakePoolAccountData.tokenProgramId,
       validatorList: stakePoolAccountData.validatorList,
+      preferredWithdrawValidatorVoteAddress:
+        stakePoolAccountData.preferredWithdrawValidatorVoteAddress ?? null,
+      totalLamports: new BN(stakePoolAccountData.totalLamports.toString()),
+      poolTokenSupply: new BN(stakePoolAccountData.poolTokenSupply.toString()),
     };
+  }
+
+  /**
+   * The validator stake account a withdrawal draws from while the pool's preferred withdraw
+   * validator holds more than the rent, the minimum delegation and one pool token's worth of
+   * lamports. Above that bound the SPL stake pool program before 2.2.0 and the Sanctum pool
+   * programs refuse any other source. SPL 2.2.0 and later force the preferred validator one
+   * minimum delegation higher; below that they still accept it while some validator holds
+   * active stake above their own bound, and require a transient stake account otherwise. No
+   * deployed pool runs them today. Null when the pool names no preferred validator, its list
+   * does not hold it, or it holds no more than the bound.
+   */
+  async getPreferredWithdrawStakeAccount(
+    stakePool: PublicKey,
+    data: StakePoolAccountData,
+  ): Promise<PublicKey | null> {
+    const vote = data.preferredWithdrawValidatorVoteAddress;
+    if (!vote || data.poolTokenSupply.isZero()) {
+      return null;
+    }
+    const connection = this.base.connection;
+    const list = await connection.getAccountInfo(data.validatorList);
+    if (!list) {
+      return null;
+    }
+    const entry = decodeValidatorListEntries(list.data).find((e) =>
+      e.voteAccountAddress.equals(vote),
+    );
+    if (!entry) {
+      return null;
+    }
+    const rent = new BN(
+      await connection.getMinimumBalanceForRentExemption(StakeProgram.space),
+    );
+    const stakeMinimumDelegation = new BN(
+      (await connection.getStakeMinimumDelegation()).value,
+    );
+    const lamportsPerPoolToken = data.totalLamports
+      .add(data.poolTokenSupply)
+      .subn(1)
+      .div(data.poolTokenSupply);
+    const bound = rent
+      .add(BN.max(stakeMinimumDelegation, STAKE_POOL_MINIMUM_ACTIVE_STAKE))
+      .add(lamportsPerPoolToken);
+    if (entry.activeStakeLamports.lte(bound)) {
+      return null;
+    }
+    return validatorStakeAccountAddress(data.programId, stakePool, entry);
   }
 }

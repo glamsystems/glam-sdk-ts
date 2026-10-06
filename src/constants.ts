@@ -521,7 +521,7 @@ export const getProtocolsAndPermissions = (
     },
   },
   // Exponent integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_exponent/src/state/access.rs
+  // @anchor_v1/programs/ext_exponent/src/state/access.rs
   [getExtExponentProgramId(staging).toBase58()]: {
     [protocolBitflagKey(EXPONENT_CORE_PROTOCOL)]: {
       name: "ExponentCore",
@@ -569,7 +569,7 @@ export const getProtocolsAndPermissions = (
     },
   },
   // Marinade integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_marinade/src/state/access.rs
+  // @anchor_v1/programs/ext_marinade/src/state/access.rs
   [getExtMarinadeProgramId(staging).toBase58()]: {
     [protocolBitflagKey(MARINADE_PROTOCOL)]: {
       name: "Marinade",
@@ -581,7 +581,7 @@ export const getProtocolsAndPermissions = (
     },
   },
   // Stake pool integration program protocols and permissions are defined in:
-  // @anchor/programs/ext_stake_pool/src/state/access.rs
+  // @anchor_v1/programs/ext_stake_pool/src/state/access.rs
   [getExtStakePoolProgramId(staging).toBase58()]: {
     [protocolBitflagKey(STAKE_POOL_PROTOCOL)]: {
       name: "StakePool",

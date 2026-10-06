@@ -14,16 +14,16 @@ export type ExtStakePool = {
   },
   "instructions": [
     {
-      "name": "depositSol",
+      "name": "depositSolWithSlippage",
       "discriminator": [
-        108,
-        81,
-        78,
-        117,
-        125,
-        155,
-        56,
-        200
+        183,
+        44,
+        178,
+        14,
+        3,
+        63,
+        244,
+        231
       ],
       "accounts": [
         {
@@ -117,11 +117,15 @@ export type ExtStakePool = {
           "writable": true
         },
         {
-          "name": "poolTokensTo",
+          "name": "destinationPoolAccount",
           "writable": true
         },
         {
-          "name": "feeAccount",
+          "name": "managerFeeAccount",
+          "writable": true
+        },
+        {
+          "name": "referralPoolAccount",
           "writable": true
         },
         {
@@ -139,23 +143,21 @@ export type ExtStakePool = {
         },
         {
           "name": "minimumPoolTokensOut",
-          "type": {
-            "option": "u64"
-          }
+          "type": "u64"
         }
       ]
     },
     {
-      "name": "depositStake",
+      "name": "depositStakeWithSlippage",
       "discriminator": [
-        160,
-        167,
-        9,
-        220,
-        74,
-        243,
-        228,
-        43
+        62,
+        201,
+        43,
+        176,
+        84,
+        126,
+        81,
+        46
       ],
       "accounts": [
         {
@@ -246,13 +248,13 @@ export type ExtStakePool = {
           "writable": true
         },
         {
-          "name": "stakePoolDepositAuthority"
+          "name": "depositAuthority"
         },
         {
           "name": "stakePoolWithdrawAuthority"
         },
         {
-          "name": "depositStake",
+          "name": "depositStakeAccount",
           "writable": true
         },
         {
@@ -260,15 +262,19 @@ export type ExtStakePool = {
           "writable": true
         },
         {
-          "name": "reserveStakeAccount",
+          "name": "reserveStake",
           "writable": true
         },
         {
-          "name": "poolTokensTo",
+          "name": "destinationPoolAccount",
           "writable": true
         },
         {
-          "name": "feeAccount",
+          "name": "managerFeeAccount",
+          "writable": true
+        },
+        {
+          "name": "referralPoolAccount",
           "writable": true
         },
         {
@@ -276,11 +282,11 @@ export type ExtStakePool = {
           "writable": true
         },
         {
-          "name": "clock",
+          "name": "clockSysvar",
           "address": "SysvarC1ock11111111111111111111111111111111"
         },
         {
-          "name": "stakeHistory",
+          "name": "stakeHistorySysvar",
           "address": "SysvarStakeHistory1111111111111111111111111"
         },
         {
@@ -294,23 +300,21 @@ export type ExtStakePool = {
       "args": [
         {
           "name": "minimumPoolTokensOut",
-          "type": {
-            "option": "u64"
-          }
+          "type": "u64"
         }
       ]
     },
     {
-      "name": "withdrawSol",
+      "name": "withdrawSolWithSlippage",
       "discriminator": [
-        145,
+        75,
+        134,
         131,
-        74,
-        136,
-        65,
-        137,
-        42,
-        38
+        4,
+        227,
+        55,
+        242,
+        84
       ],
       "accounts": [
         {
@@ -400,7 +404,7 @@ export type ExtStakePool = {
           "name": "stakePoolWithdrawAuthority"
         },
         {
-          "name": "poolTokensFrom",
+          "name": "sourcePoolAccount",
           "writable": true
         },
         {
@@ -408,7 +412,11 @@ export type ExtStakePool = {
           "writable": true
         },
         {
-          "name": "feeAccount",
+          "name": "destinationSystemAccount",
+          "writable": true
+        },
+        {
+          "name": "managerFeeAccount",
           "writable": true
         },
         {
@@ -416,11 +424,11 @@ export type ExtStakePool = {
           "writable": true
         },
         {
-          "name": "clock",
+          "name": "clockSysvar",
           "address": "SysvarC1ock11111111111111111111111111111111"
         },
         {
-          "name": "stakeHistory",
+          "name": "stakeHistorySysvar",
           "address": "SysvarStakeHistory1111111111111111111111111"
         },
         {
@@ -438,23 +446,21 @@ export type ExtStakePool = {
         },
         {
           "name": "minimumLamportsOut",
-          "type": {
-            "option": "u64"
-          }
+          "type": "u64"
         }
       ]
     },
     {
-      "name": "withdrawStake",
+      "name": "withdrawStakeWithSlippage",
       "discriminator": [
-        153,
-        8,
-        22,
-        138,
-        105,
-        176,
-        87,
-        66
+        146,
+        251,
+        51,
+        49,
+        110,
+        80,
+        27,
+        0
       ],
       "accounts": [
         {
@@ -548,19 +554,22 @@ export type ExtStakePool = {
           "name": "stakePoolWithdrawAuthority"
         },
         {
-          "name": "validatorStakeAccount",
+          "name": "splitStakeSource",
           "writable": true
         },
         {
-          "name": "stake",
+          "name": "destinationStakeAccount",
           "writable": true
         },
         {
-          "name": "poolTokensFrom",
+          "name": "destinationStakeAuthority"
+        },
+        {
+          "name": "sourcePoolAccount",
           "writable": true
         },
         {
-          "name": "feeAccount",
+          "name": "managerFeeAccount",
           "writable": true
         },
         {
@@ -568,7 +577,7 @@ export type ExtStakePool = {
           "writable": true
         },
         {
-          "name": "clock",
+          "name": "clockSysvar",
           "address": "SysvarC1ock11111111111111111111111111111111"
         },
         {
@@ -586,26 +595,46 @@ export type ExtStakePool = {
         },
         {
           "name": "minimumLamportsOut",
-          "type": {
-            "option": "u64"
-          }
+          "type": "u64"
         }
       ]
     }
   ],
-  "accounts": [
+  "errors": [
     {
-      "name": "stateAccount",
-      "discriminator": [
-        142,
-        247,
-        54,
-        95,
-        85,
-        133,
-        249,
-        103
-      ]
+      "code": 6000,
+      "name": "minimumOutputRequired",
+      "msg": "A minimum output of zero is no bound: pass a nonzero minimum"
+    },
+    {
+      "code": 6001,
+      "name": "zeroAmount",
+      "msg": "The amount in must be nonzero"
+    },
+    {
+      "code": 6002,
+      "name": "solDepositAuthorityUnsupported",
+      "msg": "The pool requires a SOL deposit authority signature, which GLAM does not forward"
+    },
+    {
+      "code": 6003,
+      "name": "solWithdrawAuthorityUnsupported",
+      "msg": "The pool requires a SOL withdraw authority signature, which GLAM does not forward"
+    },
+    {
+      "code": 6004,
+      "name": "referralAccountMismatch",
+      "msg": "The referral pool account must be the destination pool account"
+    },
+    {
+      "code": 6005,
+      "name": "destinationNotVault",
+      "msg": "The destination system account must be the GLAM vault"
+    },
+    {
+      "code": 6006,
+      "name": "poolMintMismatch",
+      "msg": "The pool mint must be the mint the pool stores"
     }
   ],
   "types": [

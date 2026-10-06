@@ -594,21 +594,6 @@ export type ExtMarinade = {
       ]
     }
   ],
-  "accounts": [
-    {
-      "name": "stateAccount",
-      "discriminator": [
-        142,
-        247,
-        54,
-        95,
-        85,
-        133,
-        249,
-        103
-      ]
-    }
-  ],
   "types": [
     {
       "name": "accountType",

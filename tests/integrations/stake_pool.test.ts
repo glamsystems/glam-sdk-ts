@@ -215,10 +215,8 @@ describe("stake_pool", () => {
     }
   });
 
-  // FIXME: this test is flaky:
-  // 'Program log: Error withdrawing from reserve: validator stake accounts have lamports available, please use those first.',
-  // 'Program log: Error: The lamports in the validator stake account is not equal to the minimum',
-  // We might need to clone the validator stake account to withdraw from it.
+  // The pool names a preferred withdraw validator, whose validator stake account is cloned, so
+  // the withdrawal draws from it, as the pool requires while that validator has stake.
   it("[sanctum-multi-valiator] Withdraw 1 phaseSOL to stake account", async () => {
     try {
       const txSig = await glamClient.stakePool.withdrawStake(

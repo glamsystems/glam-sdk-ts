@@ -34,7 +34,7 @@ export const JUPITER_BORROW_PROTOCOL = 1 << 1;
 // Mirror `SupportedProtocols` in anchor/programs/ext_orca/src/state/access.rs.
 export const ORCA_WHIRLPOOLS_PROTOCOL = 1 << 0;
 
-// Mirror `SupportedProtocols` in anchor/programs/ext_exponent/src/state/access.rs.
+// Mirror `SupportedProtocols` in anchor_v1/programs/ext_exponent/src/state/access.rs.
 export const EXPONENT_CORE_PROTOCOL = 1 << 0;
 
 // Mirror `SupportedProtocols` in anchor/programs/ext_loopscale/src/state/access.rs.
@@ -55,10 +55,10 @@ export const BRIDGE_MANAGED_TRANSFERS_PROTOCOL = 0;
 // Mirror `SupportedProtocols` in anchor/programs/ext_rpi/src/state/access.rs.
 export const RPI_PROTOCOL = 1 << 0;
 
-// Mirror `SupportedProtocols` in anchor/programs/ext_marinade/src/state/access.rs.
+// Mirror `SupportedProtocols` in anchor_v1/programs/ext_marinade/src/state/access.rs.
 export const MARINADE_PROTOCOL = 1 << 0;
 
-// Mirror `SupportedProtocols` in anchor/programs/ext_stake_pool/src/state/access.rs.
+// Mirror `SupportedProtocols` in anchor_v1/programs/ext_stake_pool/src/state/access.rs.
 export const STAKE_POOL_PROTOCOL = 1 << 0;
 export const SANCTUM_SINGLE_VALIDATOR_STAKE_POOL_PROTOCOL = 1 << 1;
 export const SANCTUM_MULTI_VALIDATOR_STAKE_POOL_PROTOCOL = 1 << 2;

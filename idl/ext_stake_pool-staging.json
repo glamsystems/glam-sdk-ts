@@ -8,16 +8,16 @@
   },
   "instructions": [
     {
-      "name": "deposit_sol",
+      "name": "deposit_sol_with_slippage",
       "discriminator": [
-        108,
-        81,
-        78,
-        117,
-        125,
-        155,
-        56,
-        200
+        183,
+        44,
+        178,
+        14,
+        3,
+        63,
+        244,
+        231
       ],
       "accounts": [
         {
@@ -111,11 +111,15 @@
           "writable": true
         },
         {
-          "name": "pool_tokens_to",
+          "name": "destination_pool_account",
           "writable": true
         },
         {
-          "name": "fee_account",
+          "name": "manager_fee_account",
+          "writable": true
+        },
+        {
+          "name": "referral_pool_account",
           "writable": true
         },
         {
@@ -133,23 +137,21 @@
         },
         {
           "name": "minimum_pool_tokens_out",
-          "type": {
-            "option": "u64"
-          }
+          "type": "u64"
         }
       ]
     },
     {
-      "name": "deposit_stake",
+      "name": "deposit_stake_with_slippage",
       "discriminator": [
-        160,
-        167,
-        9,
-        220,
-        74,
-        243,
-        228,
-        43
+        62,
+        201,
+        43,
+        176,
+        84,
+        126,
+        81,
+        46
       ],
       "accounts": [
         {
@@ -240,13 +242,13 @@
           "writable": true
         },
         {
-          "name": "stake_pool_deposit_authority"
+          "name": "deposit_authority"
         },
         {
           "name": "stake_pool_withdraw_authority"
         },
         {
-          "name": "deposit_stake",
+          "name": "deposit_stake_account",
           "writable": true
         },
         {
@@ -254,15 +256,19 @@
           "writable": true
         },
         {
-          "name": "reserve_stake_account",
+          "name": "reserve_stake",
           "writable": true
         },
         {
-          "name": "pool_tokens_to",
+          "name": "destination_pool_account",
           "writable": true
         },
         {
-          "name": "fee_account",
+          "name": "manager_fee_account",
+          "writable": true
+        },
+        {
+          "name": "referral_pool_account",
           "writable": true
         },
         {
@@ -270,11 +276,11 @@
           "writable": true
         },
         {
-          "name": "clock",
+          "name": "clock_sysvar",
           "address": "SysvarC1ock11111111111111111111111111111111"
         },
         {
-          "name": "stake_history",
+          "name": "stake_history_sysvar",
           "address": "SysvarStakeHistory1111111111111111111111111"
         },
         {
@@ -288,23 +294,21 @@
       "args": [
         {
           "name": "minimum_pool_tokens_out",
-          "type": {
-            "option": "u64"
-          }
+          "type": "u64"
         }
       ]
     },
     {
-      "name": "withdraw_sol",
+      "name": "withdraw_sol_with_slippage",
       "discriminator": [
-        145,
+        75,
+        134,
         131,
-        74,
-        136,
-        65,
-        137,
-        42,
-        38
+        4,
+        227,
+        55,
+        242,
+        84
       ],
       "accounts": [
         {
@@ -394,7 +398,7 @@
           "name": "stake_pool_withdraw_authority"
         },
         {
-          "name": "pool_tokens_from",
+          "name": "source_pool_account",
           "writable": true
         },
         {
@@ -402,7 +406,11 @@
           "writable": true
         },
         {
-          "name": "fee_account",
+          "name": "destination_system_account",
+          "writable": true
+        },
+        {
+          "name": "manager_fee_account",
           "writable": true
         },
         {
@@ -410,11 +418,11 @@
           "writable": true
         },
         {
-          "name": "clock",
+          "name": "clock_sysvar",
           "address": "SysvarC1ock11111111111111111111111111111111"
         },
         {
-          "name": "stake_history",
+          "name": "stake_history_sysvar",
           "address": "SysvarStakeHistory1111111111111111111111111"
         },
         {
@@ -432,23 +440,21 @@
         },
         {
           "name": "minimum_lamports_out",
-          "type": {
-            "option": "u64"
-          }
+          "type": "u64"
         }
       ]
     },
     {
-      "name": "withdraw_stake",
+      "name": "withdraw_stake_with_slippage",
       "discriminator": [
-        153,
-        8,
-        22,
-        138,
-        105,
-        176,
-        87,
-        66
+        146,
+        251,
+        51,
+        49,
+        110,
+        80,
+        27,
+        0
       ],
       "accounts": [
         {
@@ -542,19 +548,22 @@
           "name": "stake_pool_withdraw_authority"
         },
         {
-          "name": "validator_stake_account",
+          "name": "split_stake_source",
           "writable": true
         },
         {
-          "name": "stake",
+          "name": "destination_stake_account",
           "writable": true
         },
         {
-          "name": "pool_tokens_from",
+          "name": "destination_stake_authority"
+        },
+        {
+          "name": "source_pool_account",
           "writable": true
         },
         {
-          "name": "fee_account",
+          "name": "manager_fee_account",
           "writable": true
         },
         {
@@ -562,7 +571,7 @@
           "writable": true
         },
         {
-          "name": "clock",
+          "name": "clock_sysvar",
           "address": "SysvarC1ock11111111111111111111111111111111"
         },
         {
@@ -580,26 +589,46 @@
         },
         {
           "name": "minimum_lamports_out",
-          "type": {
-            "option": "u64"
-          }
+          "type": "u64"
         }
       ]
     }
   ],
-  "accounts": [
+  "errors": [
     {
-      "name": "StateAccount",
-      "discriminator": [
-        142,
-        247,
-        54,
-        95,
-        85,
-        133,
-        249,
-        103
-      ]
+      "code": 6000,
+      "name": "MinimumOutputRequired",
+      "msg": "A minimum output of zero is no bound: pass a nonzero minimum"
+    },
+    {
+      "code": 6001,
+      "name": "ZeroAmount",
+      "msg": "The amount in must be nonzero"
+    },
+    {
+      "code": 6002,
+      "name": "SolDepositAuthorityUnsupported",
+      "msg": "The pool requires a SOL deposit authority signature, which GLAM does not forward"
+    },
+    {
+      "code": 6003,
+      "name": "SolWithdrawAuthorityUnsupported",
+      "msg": "The pool requires a SOL withdraw authority signature, which GLAM does not forward"
+    },
+    {
+      "code": 6004,
+      "name": "ReferralAccountMismatch",
+      "msg": "The referral pool account must be the destination pool account"
+    },
+    {
+      "code": 6005,
+      "name": "DestinationNotVault",
+      "msg": "The destination system account must be the GLAM vault"
+    },
+    {
+      "code": 6006,
+      "name": "PoolMintMismatch",
+      "msg": "The pool mint must be the mint the pool stores"
     }
   ],
   "types": [

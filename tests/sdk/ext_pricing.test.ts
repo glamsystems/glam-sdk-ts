@@ -250,8 +250,9 @@ describe("extPricerIx", () => {
     const declared = Object.values(additions).flatMap(
       ({ instructions }) => instructions,
     );
-    // The v1 tree also declares additions that are not pricers (the stake
-    // pool's with-slippage handlers); this suite covers the pricers among them.
+    // The v1 tree also declares additions that are not pricers (Phoenix's
+    // conditional orders and native SOL transfers); this suite covers the
+    // pricers among them.
     const declaredPricers = declared.filter((name) =>
       name.startsWith("price_"),
     );
