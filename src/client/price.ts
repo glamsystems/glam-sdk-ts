@@ -6,6 +6,7 @@ import {
   ComputeBudgetProgram,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
+  SYSVAR_INSTRUCTIONS_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
 import { fetchAddressLookupTableAccounts } from "../utils/lookupTables";
@@ -18,6 +19,12 @@ import {
 } from "./kamino/oracles";
 import { OrcaWhirlpoolsClient } from "./orca";
 import { MarginfiClient } from "./marginfi";
+import {
+  decodePhoenixGlobalConfigKeys,
+  phoenixExchangeAccounts,
+  phoenixUpdateTraderStateAccounts,
+  type PhoenixExchangeAccounts,
+} from "./phoenix";
 
 import { BaseClient } from "./base";
 
@@ -101,10 +108,13 @@ import {
   getVaultStatePda,
 } from "./jupiter-lend/shared";
 
-const PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET = 360;
+const PHOENIX_UPDATE_TRADER_STATE_DISCRIMINATOR = [
+  249, 139, 82, 44, 126, 66, 133, 220,
+];
 const PUBKEY_LEN = 32;
 const PHOENIX_TRADER_DISCRIMINATOR = [41, 97, 73, 105, 110, 214, 112, 9];
 const PHOENIX_REQUEST_HEAP_FRAME_BYTES = 256 * 1024;
+
 const ORCA_PRICING_MAX_ACCOUNT_KEYS = 64;
 const NT_BUNDLE_ACCOUNT_DISCRIMINATOR = Buffer.from([
   15, 82, 167, 230, 37, 214, 82, 80,
@@ -1539,33 +1549,34 @@ export class PriceClient {
     });
   }
 
-  private async getPhoenixPerpAssetMap(): Promise<PublicKey> {
-    const accountInfo = await this.base.connection.getAccountInfo(
-      PHOENIX_GLOBAL_CONFIG,
+  /**
+   * The perp asset map and the complete arena groups, from the Phoenix global
+   * config and its two arena headers as read from chain.
+   */
+  private async getPhoenixExchangeAccounts(): Promise<PhoenixExchangeAccounts> {
+    const keys = decodePhoenixGlobalConfigKeys(
+      await this.base.connection.getAccountInfo(PHOENIX_GLOBAL_CONFIG),
     );
-    if (!accountInfo) {
-      throw new Error(
-        `Phoenix global config not found: ${PHOENIX_GLOBAL_CONFIG.toBase58()}`,
-      );
-    }
-    if (!accountInfo.owner.equals(PHOENIX_PROGRAM_ID)) {
-      throw new Error("Phoenix global config has unexpected owner");
-    }
-
-    const offset = PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET;
-    if (accountInfo.data.length < offset + PUBKEY_LEN) {
-      throw new Error("Phoenix global config account data is too short");
-    }
-
-    return new PublicKey(
-      accountInfo.data.subarray(offset, offset + PUBKEY_LEN),
+    const [globalTraderIndexHeader, activeTraderBufferHeader] =
+      await this.base.connection.getMultipleAccountsInfo([
+        keys.globalTraderIndexHeader,
+        keys.activeTraderBufferHeader,
+      ]);
+    return phoenixExchangeAccounts(
+      keys,
+      globalTraderIndexHeader,
+      activeTraderBufferHeader,
     );
   }
 
   /**
-   * Returns Phoenix trader pricing instructions with the required compute
-   * budget pre-instruction, and the Kamino reserves behind the oracles the
-   * pricing instruction reads. If there are no registered Phoenix trader
+   * Returns Phoenix trader pricing instructions, and the Kamino reserves
+   * behind the oracles the pricing instruction reads: the heap frame, one
+   * Phoenix `updateTraderState` per priced trader, then the price
+   * instruction, which refuses a trader with a resting order unless its sync
+   * directly precedes it and reads the syncs through the instructions sysvar
+   * at remaining index 2. Each sync names the complete arena groups the
+   * global config's headers state. If there are no registered Phoenix trader
    * accounts, returns null.
    */
   public async pricePhoenixTradersIxs(
@@ -1579,9 +1590,9 @@ export class PriceClient {
       return null;
     }
 
-    const [oracleAccounts, phoenixPerpAssetMap] = await Promise.all([
+    const [oracleAccounts, exchange] = await Promise.all([
       this.pricingOracleAccounts({ baseAssetMint: model.baseAssetMint }),
-      this.getPhoenixPerpAssetMap(),
+      this.getPhoenixExchangeAccounts(),
     ]);
     const { solUsdOracle, baseAssetOracle, kaminoReserves } = oracleAccounts;
 
@@ -1592,7 +1603,12 @@ export class PriceClient {
         isWritable: false,
       },
       {
-        pubkey: phoenixPerpAssetMap,
+        pubkey: exchange.perpAssetMap,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSVAR_INSTRUCTIONS_PUBKEY,
         isSigner: false,
         isWritable: false,
       },
@@ -1630,6 +1646,14 @@ export class PriceClient {
         ComputeBudgetProgram.requestHeapFrame({
           bytes: PHOENIX_REQUEST_HEAP_FRAME_BYTES,
         }),
+        ...traderAccounts.map(
+          (trader) =>
+            new TransactionInstruction({
+              programId: PHOENIX_PROGRAM_ID,
+              keys: phoenixUpdateTraderStateAccounts(trader, exchange),
+              data: Buffer.from(PHOENIX_UPDATE_TRADER_STATE_DISCRIMINATOR),
+            }),
+        ),
         priceIx,
       ],
       kaminoReserves: Array.from(kaminoReserves),

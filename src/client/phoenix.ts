@@ -24,6 +24,7 @@ import {
   type TraderView,
 } from "@ellipsis-labs/rise";
 import {
+  type AccountInfo,
   type AccountMeta,
   type Connection,
   PublicKey,
@@ -585,6 +586,166 @@ async function confirmPhoenixActivation(
 
 function meta(pubkey: PublicKey | string, isWritable: boolean): AccountMeta {
   return { pubkey: new PublicKey(pubkey), isSigner: false, isWritable };
+}
+
+/** Program, log authority and global config: a Phoenix instruction's first three. */
+function phoenixAccountsPrefix(globalConfigWritable: boolean): AccountMeta[] {
+  return [
+    meta(PHOENIX_PROGRAM_ID, false),
+    meta(PHOENIX_LOG_AUTHORITY, false),
+    meta(PHOENIX_GLOBAL_CONFIG, globalConfigWritable),
+  ];
+}
+
+const PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET = 360;
+const PHOENIX_GLOBAL_CONFIG_GLOBAL_TRADER_INDEX_OFFSET = 392;
+const PHOENIX_GLOBAL_CONFIG_ACTIVE_TRADER_BUFFER_OFFSET = 424;
+const PHOENIX_GLOBAL_CONFIG_READ_LENGTH = 456;
+// An arena header states numArenas and numActiveArenas as u16s at bytes 52 and 54.
+const PHOENIX_ARENA_HEADER_NUM_ARENAS_OFFSET = 52;
+const PHOENIX_ARENA_HEADER_NUM_ACTIVE_ARENAS_OFFSET = 54;
+const PHOENIX_ARENA_HEADER_LENGTH = 56;
+// An arena index is one seed byte, so a group holds at most 256 accounts.
+const PHOENIX_ARENA_GROUP_MAX = 256;
+const PHOENIX_ARENA_GROUPS = {
+  globalTraderIndex: {
+    label: "global trader index",
+    seed: "global_trader_index",
+    discriminator: [145, 92, 169, 6, 5, 144, 1, 205],
+  },
+  activeTraderBuffer: {
+    label: "active trader buffer",
+    seed: "active_trader_buffer",
+    discriminator: [192, 255, 205, 165, 80, 154, 131, 5],
+  },
+} as const;
+
+/** The perp asset map and the two arena headers the Phoenix global config names. */
+export type PhoenixGlobalConfigKeys = {
+  perpAssetMap: PublicKey;
+  globalTraderIndexHeader: PublicKey;
+  activeTraderBufferHeader: PublicKey;
+};
+
+/** The perp asset map and the complete arena groups, each its header first. */
+export type PhoenixExchangeAccounts = {
+  perpAssetMap: PublicKey;
+  globalTraderIndex: PublicKey[];
+  activeTraderBuffer: PublicKey[];
+};
+
+/** The keys the Phoenix global config account names. */
+export function decodePhoenixGlobalConfigKeys(
+  account: AccountInfo<Buffer> | null,
+): PhoenixGlobalConfigKeys {
+  if (!account) {
+    throw new Error(
+      `Phoenix global config not found: ${PHOENIX_GLOBAL_CONFIG.toBase58()}`,
+    );
+  }
+  if (!account.owner.equals(PHOENIX_PROGRAM_ID)) {
+    throw new Error("Phoenix global config has unexpected owner");
+  }
+  if (account.data.length < PHOENIX_GLOBAL_CONFIG_READ_LENGTH) {
+    throw new Error(
+      `Phoenix global config is ${account.data.length} bytes, and the pricing reads its perp asset map at ${PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET}, its global trader index header at ${PHOENIX_GLOBAL_CONFIG_GLOBAL_TRADER_INDEX_OFFSET} and its active trader buffer header at ${PHOENIX_GLOBAL_CONFIG_ACTIVE_TRADER_BUFFER_OFFSET}, ${PHOENIX_GLOBAL_CONFIG_READ_LENGTH} bytes in all`,
+    );
+  }
+  const keyAt = (offset: number) =>
+    new PublicKey(account.data.subarray(offset, offset + 32));
+  return {
+    perpAssetMap: keyAt(PHOENIX_GLOBAL_CONFIG_PERP_ASSET_MAP_OFFSET),
+    globalTraderIndexHeader: keyAt(
+      PHOENIX_GLOBAL_CONFIG_GLOBAL_TRADER_INDEX_OFFSET,
+    ),
+    activeTraderBufferHeader: keyAt(
+      PHOENIX_GLOBAL_CONFIG_ACTIVE_TRADER_BUFFER_OFFSET,
+    ),
+  };
+}
+
+/**
+ * One arena group from its header account: the header, then arenas 1 to
+ * min(numArenas, numActiveArenas) - 1, each the Phoenix PDA of the group's
+ * seed and the index as one byte.
+ */
+function phoenixArenaGroup(
+  group: keyof typeof PHOENIX_ARENA_GROUPS,
+  header: PublicKey,
+  account: AccountInfo<Buffer> | null,
+): PublicKey[] {
+  const { label, seed, discriminator } = PHOENIX_ARENA_GROUPS[group];
+  if (
+    !account ||
+    !account.owner.equals(PHOENIX_PROGRAM_ID) ||
+    account.data.length < PHOENIX_ARENA_HEADER_LENGTH ||
+    discriminator.some((byte, i) => account.data[i] !== byte)
+  ) {
+    throw new Error(
+      `Phoenix ${label} header ${header.toBase58()} is not a Phoenix ${label} header of at least ${PHOENIX_ARENA_HEADER_LENGTH} bytes, and the sync reads its arena counts there`,
+    );
+  }
+  const numArenas = account.data.readUInt16LE(
+    PHOENIX_ARENA_HEADER_NUM_ARENAS_OFFSET,
+  );
+  const numActiveArenas = account.data.readUInt16LE(
+    PHOENIX_ARENA_HEADER_NUM_ACTIVE_ARENAS_OFFSET,
+  );
+  const count = Math.min(numArenas, numActiveArenas);
+  if (count < 1 || count > PHOENIX_ARENA_GROUP_MAX) {
+    throw new Error(
+      `Phoenix ${label} header ${header.toBase58()} states ${numArenas} arenas and ${numActiveArenas} active, and a group holds 1 to ${PHOENIX_ARENA_GROUP_MAX}, the header first`,
+    );
+  }
+  const arenas = [header];
+  for (let index = 1; index < count; index += 1) {
+    arenas.push(
+      PublicKey.findProgramAddressSync(
+        [Buffer.from(seed), Buffer.from([index])],
+        PHOENIX_PROGRAM_ID,
+      )[0],
+    );
+  }
+  return arenas;
+}
+
+/** The exchange accounts from the global config's keys and its two arena headers as read from chain. */
+export function phoenixExchangeAccounts(
+  keys: PhoenixGlobalConfigKeys,
+  globalTraderIndexHeader: AccountInfo<Buffer> | null,
+  activeTraderBufferHeader: AccountInfo<Buffer> | null,
+): PhoenixExchangeAccounts {
+  return {
+    perpAssetMap: keys.perpAssetMap,
+    globalTraderIndex: phoenixArenaGroup(
+      "globalTraderIndex",
+      keys.globalTraderIndexHeader,
+      globalTraderIndexHeader,
+    ),
+    activeTraderBuffer: phoenixArenaGroup(
+      "activeTraderBuffer",
+      keys.activeTraderBufferHeader,
+      activeTraderBufferHeader,
+    ),
+  };
+}
+
+/**
+ * The accounts of Phoenix's `updateTraderState` of `trader`: the complete
+ * global trader index group, then the complete active trader buffer group,
+ * every arena writable.
+ */
+export function phoenixUpdateTraderStateAccounts(
+  trader: PublicKey,
+  exchange: PhoenixExchangeAccounts,
+): AccountMeta[] {
+  return [
+    ...phoenixAccountsPrefix(false),
+    meta(trader, true),
+    meta(exchange.perpAssetMap, false),
+    ...exchange.globalTraderIndex.map((key) => meta(key, true)),
+    ...exchange.activeTraderBuffer.map((key) => meta(key, true)),
+  ];
 }
 
 class TxBuilder
@@ -1202,11 +1363,7 @@ export class PhoenixClient implements ProtocolPolicyClient<PhoenixPolicy> {
    * global config — set true for instructions that mutate exchange state.
    */
   getPhoenixRemainingPrefix(globalConfigWritable: boolean): AccountMeta[] {
-    return [
-      meta(PHOENIX_PROGRAM_ID, false),
-      meta(PHOENIX_LOG_AUTHORITY, false),
-      meta(PHOENIX_GLOBAL_CONFIG, globalConfigWritable),
-    ];
+    return phoenixAccountsPrefix(globalConfigWritable);
   }
 
   /**
@@ -1249,13 +1406,15 @@ export class PhoenixClient implements ProtocolPolicyClient<PhoenixPolicy> {
       indexes.traderPdaIndex,
       indexes.subaccountIndex,
     );
-    return [
-      ...this.getPhoenixRemainingPrefix(false),
-      meta(traderPda, true),
-      meta(snapshot.exchange.perpAssetMap, false),
-      ...snapshot.exchange.globalTraderIndex.map((key) => meta(key, true)),
-      ...snapshot.exchange.activeTraderBuffer.map((key) => meta(key, true)),
-    ];
+    return phoenixUpdateTraderStateAccounts(traderPda, {
+      perpAssetMap: new PublicKey(snapshot.exchange.perpAssetMap),
+      globalTraderIndex: snapshot.exchange.globalTraderIndex.map(
+        (key) => new PublicKey(key),
+      ),
+      activeTraderBuffer: snapshot.exchange.activeTraderBuffer.map(
+        (key) => new PublicKey(key),
+      ),
+    });
   }
 
   /** Fetches the on-chain PhoenixPolicy stored under this vault, if any. */

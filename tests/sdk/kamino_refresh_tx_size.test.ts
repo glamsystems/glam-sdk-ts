@@ -496,6 +496,8 @@ const OBSERVATION_STATE = PublicKey.findProgramAddressSync(
 
 const PHOENIX_TRADER = PublicKey.unique();
 const PHOENIX_PERP_ASSET_MAP = PublicKey.unique();
+const PHOENIX_GLOBAL_TRADER_INDEX = PublicKey.unique();
+const PHOENIX_ACTIVE_TRADER_BUFFER = PublicKey.unique();
 const MARGINFI_ACCOUNT = PublicKey.unique();
 const ORCA_POSITION = PublicKey.unique();
 const LOANS = [PublicKey.unique(), PublicKey.unique()];
@@ -507,9 +509,14 @@ function phoenixTraderAccountInfo() {
   );
 }
 
+// The global config's layout up to the active trader buffer: the perp asset
+// map at 360, the global trader index at 392 and the active trader buffer at
+// 424, each 32 bytes. Each header is its group's first account.
 function phoenixGlobalConfigAccountInfo() {
-  const data = Buffer.alloc(392);
+  const data = Buffer.alloc(456);
   PHOENIX_PERP_ASSET_MAP.toBuffer().copy(data, 360);
+  PHOENIX_GLOBAL_TRADER_INDEX.toBuffer().copy(data, 392);
+  PHOENIX_ACTIVE_TRADER_BUFFER.toBuffer().copy(data, 424);
   return accountInfo(PHOENIX_PROGRAM_ID, data);
 }
 
@@ -539,7 +546,19 @@ type PricingSetup = {
   extraAccounts?: Array<[PublicKey, any]>;
   assetsForPricing?: PublicKey[];
   baseAssetMint?: PublicKey;
+  // Accounts in each Phoenix arena group; the recorded exchange
+  // (fixtures/accounts/phoenix/snapshot.json) has one.
+  phoenixArenas?: number;
 };
+
+/** An arena header stating `arenas` arenas and as many active, u16s at bytes 52 and 54. */
+function arenaHeaderAccountInfo(discriminator: number[], arenas: number) {
+  const data = Buffer.alloc(56);
+  Buffer.from(discriminator).copy(data, 0);
+  data.writeUInt16LE(arenas, 52);
+  data.writeUInt16LE(arenas, 54);
+  return accountInfo(PHOENIX_PROGRAM_ID, data);
+}
 
 /**
  * A PriceClient over the real glam_mint program and the real klend client,
@@ -623,9 +642,18 @@ function makePriceClient(setup: PricingSetup) {
   }
 
   const externalPositions = setup.externalPositions ?? [];
+  const arenas = setup.phoenixArenas ?? 1;
   const connection = makeConnection([
     ...(setup.extraAccounts ?? []),
     [PHOENIX_GLOBAL_CONFIG, phoenixGlobalConfigAccountInfo()],
+    [
+      PHOENIX_GLOBAL_TRADER_INDEX,
+      arenaHeaderAccountInfo([145, 92, 169, 6, 5, 144, 1, 205], arenas),
+    ],
+    [
+      PHOENIX_ACTIVE_TRADER_BUFFER,
+      arenaHeaderAccountInfo([192, 255, 205, 165, 80, 154, 131, 5], arenas),
+    ],
   ]);
   if (protocols.stake) {
     connection.getParsedProgramAccounts = jest.fn(async () => [
@@ -842,8 +870,93 @@ describe("Kamino reserve refresh transaction sizes", () => {
     const row = measure("phoenix trader pricing", ixs);
 
     expect(row.reserves).toBe(3);
-    expect(row.after).toBeLessThanOrEqual(TRANSACTION_SIZE_LIMIT);
+    // The trader's updateTraderState sync over one arena per group, the
+    // recorded exchange's count, and the instructions sysvar the price
+    // instruction reads leave one byte under the packet.
+    expect(row.after).toBe(TRANSACTION_SIZE_LIMIT - 1);
     expect(row.afterWithAlt).toBeLessThanOrEqual(TRANSACTION_SIZE_LIMIT);
+  });
+
+  it("states how many Phoenix traders one pricing transaction has room for, by arena count", async () => {
+    // Each priced trader takes an updateTraderState sync ahead of the price
+    // instruction naming 5 + 2 × arenas accounts, where arenas is the count in
+    // each of the two arena groups: one in the recorded exchange
+    // (fixtures/accounts/phoenix/snapshot.json). The trader is the one account
+    // a sync names that the transaction does not already name; each arena
+    // beyond the first adds one key per group to the transaction.
+    const cost = async (traders: number, arenas: number) => {
+      const accounts = Array.from({ length: traders }, () =>
+        PublicKey.unique(),
+      );
+      const { client } = makePriceClient({
+        oracles: oracleMap([
+          [PRICED_MINT, PYTH],
+          [USDC, KAMINO_ORACLE(RESERVE_KEYS[0])],
+          [WSOL, KAMINO_ORACLE(RESERVE_KEYS[1])],
+          [BASE_MINT, KAMINO_ORACLE(RESERVE_KEYS[2])],
+        ]),
+        externalPositions: accounts,
+        extraAccounts: accounts.map(
+          (trader) => [trader, phoenixTraderAccountInfo()] as [PublicKey, any],
+        ),
+        protocols: { phoenix: true },
+        phoenixArenas: arenas,
+      });
+      const ixs = await client.priceVaultIxs();
+      // The refresh, the vault tokens, the heap frame, a sync per trader and
+      // the price instruction.
+      expect(ixs).toHaveLength(4 + traders);
+      const sync = ixs[3];
+      expect(sync.programId.equals(PHOENIX_PROGRAM_ID)).toBe(true);
+      expect(sync.keys).toHaveLength(5 + 2 * arenas);
+      const alt = lookupTableOver(ixs.filter((ix) => !isReserveRefresh(ix)));
+      return {
+        v0: serializedSize(ixs),
+        v0WithAlt: serializedSize(ixs, [alt]),
+        v1: v1Cost(ixs),
+      };
+    };
+
+    for (const arenas of [1, 2]) {
+      const [one, two] = [await cost(1, arenas), await cost(2, arenas)];
+      // A trader costs 49 + 2 × arenas bytes without a lookup table,
+      // 18 + 2 × arenas with one, and one account key and 50 + 2 × arenas
+      // bytes under version 1.
+      expect(two.v0 - one.v0).toBe(49 + 2 * arenas);
+      expect(two.v0WithAlt - one.v0WithAlt).toBe(18 + 2 * arenas);
+      expect(two.v1.accounts - one.v1.accounts).toBe(1);
+      expect(two.v1.bytes - one.v1.bytes).toBe(50 + 2 * arenas);
+      // The first trader: 1165 + 66 × arenas bytes without a lookup table,
+      // 610 + 4 × arenas with one, 28 + 2 × arenas account keys under
+      // version 1.
+      expect(one.v0).toBe(1165 + 66 * arenas);
+      expect(one.v0WithAlt).toBe(610 + 4 * arenas);
+      expect(one.v1.accounts).toBe(28 + 2 * arenas);
+      // Version 1 has room for 37 - 2 × arenas traders, bound by the account
+      // keys rather than the bytes.
+      const v1Most = (await cost(37 - 2 * arenas, arenas)).v1;
+      expect(v1Most.accounts).toBe(V1_MAX_ACCOUNT_KEYS);
+      expect(v1Most.bytes).toBeLessThanOrEqual(V1_TRANSACTION_SIZE_LIMIT);
+      expect((await cost(38 - 2 * arenas, arenas)).v1.accounts).toBeGreaterThan(
+        V1_MAX_ACCOUNT_KEYS,
+      );
+    }
+
+    // Version 0 without a lookup table: one trader with one byte to spare at
+    // one arena per group, none at two.
+    expect((await cost(1, 1)).v0).toBe(TRANSACTION_SIZE_LIMIT - 1);
+    expect((await cost(2, 1)).v0).toBeGreaterThan(TRANSACTION_SIZE_LIMIT);
+    expect((await cost(1, 2)).v0).toBe(TRANSACTION_SIZE_LIMIT + 65);
+    // Version 0 with the lookup table: 31 traders and 18 bytes to spare at
+    // one arena per group, 28 traders and 20 bytes at two.
+    expect((await cost(31, 1)).v0WithAlt).toBe(TRANSACTION_SIZE_LIMIT - 18);
+    expect((await cost(32, 1)).v0WithAlt).toBeGreaterThan(
+      TRANSACTION_SIZE_LIMIT,
+    );
+    expect((await cost(28, 2)).v0WithAlt).toBe(TRANSACTION_SIZE_LIMIT - 20);
+    expect((await cost(29, 2)).v0WithAlt).toBeGreaterThan(
+      TRANSACTION_SIZE_LIMIT,
+    );
   });
 
   it("marginfi account pricing with both named oracles", async () => {
@@ -1052,9 +1165,10 @@ describe("Kamino reserve refresh transaction sizes", () => {
 
     expect(row.reserves).toBe(5);
     // The refresh, vault tokens, refresh_obligation and Kamino obligations,
-    // Loopscale loans, stake accounts, RPI, the Phoenix heap frame and its
-    // pricing, Orca, bridge, Neutral, the marginfi pulse and its pricing.
-    expect(ixs).toHaveLength(14);
+    // Loopscale loans, stake accounts, RPI, the Phoenix heap frame, its
+    // updateTraderState sync of the one trader and its pricing, Orca, bridge,
+    // Neutral, the marginfi pulse and its pricing.
+    expect(ixs).toHaveLength(15);
     // Each integration is priced by its own program under its own
     // integration authority (anchor_v1/PRICING.md); glam_mint prices the
     // vault tokens, the Kamino obligations and the stake accounts.
@@ -1083,7 +1197,10 @@ describe("Kamino reserve refresh transaction sizes", () => {
     // transaction needs its lookup tables, before the refresh and after it.
     expect(row.before).toBeGreaterThan(TRANSACTION_SIZE_LIMIT);
     expect(row.after).toBeGreaterThan(TRANSACTION_SIZE_LIMIT);
-    expect(row.afterWithAlt).toBeLessThanOrEqual(TRANSACTION_SIZE_LIMIT);
+    // What is left: 140 bytes under the packet with the lookup table, and
+    // three account keys under version 1.
+    expect(row.afterWithAlt).toBe(TRANSACTION_SIZE_LIMIT - 140);
+    expect(row.v1After.accounts).toBe(V1_MAX_ACCOUNT_KEYS - 3);
 
     remainingAccountsSpy.mockRestore();
     decodeSpy.mockRestore();

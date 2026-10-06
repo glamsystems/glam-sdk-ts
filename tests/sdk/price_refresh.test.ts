@@ -1,6 +1,7 @@
 import {
   ComputeBudgetProgram,
   PublicKey,
+  SYSVAR_INSTRUCTIONS_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
 import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -19,6 +20,7 @@ import {
   ORCA_POSITION_DISCRIMINATOR,
   ORCA_WHIRLPOOLS_PROGRAM_ID,
   PHOENIX_GLOBAL_CONFIG,
+  PHOENIX_LOG_AUTHORITY,
   PHOENIX_PROGRAM_ID,
   SEED_OBSERVATION_STATE,
   USDC,
@@ -71,6 +73,18 @@ const PHOENIX_TRADER = new PublicKey(
 );
 const PHOENIX_PERP_ASSET_MAP = new PublicKey(
   "Fe1oM7qbtp6bFUrE1qFjCcqpUEEUrYdw7qkhjUZBjA8s",
+);
+const PHOENIX_GLOBAL_TRADER_INDEX = PublicKey.unique();
+const PHOENIX_ACTIVE_TRADER_BUFFER = PublicKey.unique();
+// Arena 1 of each group: the Phoenix PDA of the group's seed and the index
+// as one byte (Rise's getArenaAddresses).
+const [SECOND_GLOBAL_TRADER_INDEX_ARENA] = PublicKey.findProgramAddressSync(
+  [Buffer.from("global_trader_index"), Buffer.from([1])],
+  PHOENIX_PROGRAM_ID,
+);
+const [SECOND_ACTIVE_TRADER_BUFFER_ARENA] = PublicKey.findProgramAddressSync(
+  [Buffer.from("active_trader_buffer"), Buffer.from([1])],
+  PHOENIX_PROGRAM_ID,
 );
 const SOL_USD_ORACLE = PublicKey.unique();
 const USDC_ORACLE = PublicKey.unique();
@@ -188,9 +202,23 @@ function phoenixTraderAccountInfo() {
   );
 }
 
-function phoenixGlobalConfigAccountInfo(perpAssetMap: PublicKey) {
-  const data = Buffer.alloc(392);
-  perpAssetMap.toBuffer().copy(data, 360);
+// The global config's layout up to the active trader buffer: the perp asset
+// map at 360, the global trader index at 392 and the active trader buffer at
+// 424, each 32 bytes. Each header is its group's first account.
+function phoenixGlobalConfigAccountInfo() {
+  const data = Buffer.alloc(456);
+  PHOENIX_PERP_ASSET_MAP.toBuffer().copy(data, 360);
+  PHOENIX_GLOBAL_TRADER_INDEX.toBuffer().copy(data, 392);
+  PHOENIX_ACTIVE_TRADER_BUFFER.toBuffer().copy(data, 424);
+  return accountInfo(PHOENIX_PROGRAM_ID, data);
+}
+
+/** An arena header stating `arenas` arenas and as many active, u16s at bytes 52 and 54. */
+function arenaHeaderAccountInfo(discriminator: number[], arenas: number) {
+  const data = Buffer.alloc(56);
+  Buffer.from(discriminator).copy(data, 0);
+  data.writeUInt16LE(arenas, 52);
+  data.writeUInt16LE(arenas, 54);
   return accountInfo(PHOENIX_PROGRAM_ID, data);
 }
 
@@ -706,6 +734,19 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       }
       throw new Error(`Unexpected asset meta lookup: ${mint.toBase58()}`);
     });
+    // An exchange whose headers state two arenas in each group.
+    const accounts = new PkMap<any>([
+      [OBLIGATION, accountInfo(PublicKey.unique())],
+      [PHOENIX_TRADER, phoenixTraderAccountInfo()],
+      [
+        PHOENIX_GLOBAL_TRADER_INDEX,
+        arenaHeaderAccountInfo([145, 92, 169, 6, 5, 144, 1, 205], 2),
+      ],
+      [
+        PHOENIX_ACTIVE_TRADER_BUFFER,
+        arenaHeaderAccountInfo([192, 255, 205, 165, 80, 154, 131, 5], 2),
+      ],
+    ]);
     const client = new PriceClient(
       {
         vaultPda: VAULT,
@@ -721,13 +762,12 @@ describe("PriceClient Kamino reserve refresh planning", () => {
         getSolOracle: jest.fn(async () => SOL_USD_ORACLE),
         getAssetMeta,
         connection: {
-          getMultipleAccountsInfo: jest.fn(async () => [
-            accountInfo(PublicKey.unique()),
-            phoenixTraderAccountInfo(),
-          ]),
+          getMultipleAccountsInfo: jest.fn(async (keys: PublicKey[]) =>
+            keys.map((key) => accounts.get(key) ?? null),
+          ),
           getAccountInfo: jest.fn(async (pubkey: PublicKey) =>
             pubkey.equals(PHOENIX_GLOBAL_CONFIG)
-              ? phoenixGlobalConfigAccountInfo(PHOENIX_PERP_ASSET_MAP)
+              ? phoenixGlobalConfigAccountInfo()
               : null,
           ),
         },
@@ -741,13 +781,16 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
       (() => undefined) as any,
     );
 
     const chunk = await client.pricePhoenixTradersIxs();
 
     expect(chunk).toBeTruthy();
-    expect(chunk?.ixs).toHaveLength(2);
+    // The heap frame, Phoenix's updateTraderState sync of the one trader, and
+    // the price instruction.
+    expect(chunk?.ixs).toHaveLength(3);
     expect(chunk?.ixs[0].programId.equals(ComputeBudgetProgram.programId)).toBe(
       true,
     );
@@ -756,7 +799,26 @@ describe("PriceClient Kamino reserve refresh planning", () => {
         ComputeBudgetProgram.requestHeapFrame({ bytes: 256 * 1024 }).data,
       ),
     ).toBe(true);
-    const pricing = chunk!.ixs[1];
+    const sync = chunk!.ixs[1];
+    expect(sync.programId.equals(PHOENIX_PROGRAM_ID)).toBe(true);
+    expect(sync.keys).toEqual(
+      [
+        [PHOENIX_PROGRAM_ID, false],
+        [PHOENIX_LOG_AUTHORITY, false],
+        [PHOENIX_GLOBAL_CONFIG, false],
+        [PHOENIX_TRADER, true],
+        [PHOENIX_PERP_ASSET_MAP, false],
+        [PHOENIX_GLOBAL_TRADER_INDEX, true],
+        [SECOND_GLOBAL_TRADER_INDEX_ARENA, true],
+        [PHOENIX_ACTIVE_TRADER_BUFFER, true],
+        [SECOND_ACTIVE_TRADER_BUFFER_ARENA, true],
+      ].map(([pubkey, isWritable]) => ({
+        pubkey,
+        isSigner: false,
+        isWritable,
+      })),
+    );
+    const pricing = chunk!.ixs[2];
     expect(pricing.programId.equals(EXT_PHOENIX)).toBe(true);
     expect(pricing.data).toEqual(
       Buffer.from(EXT_PRICER_DISCRIMINATORS.price_phoenix_traders),
@@ -778,6 +840,12 @@ describe("PriceClient Kamino reserve refresh planning", () => {
       },
       {
         pubkey: PHOENIX_PERP_ASSET_MAP,
+        isSigner: false,
+        isWritable: false,
+      },
+      // The price instruction reads the sync through the instructions sysvar.
+      {
+        pubkey: SYSVAR_INSTRUCTIONS_PUBKEY,
         isSigner: false,
         isWritable: false,
       },
