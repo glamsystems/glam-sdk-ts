@@ -629,6 +629,11 @@
       "code": 6006,
       "name": "PoolMintMismatch",
       "msg": "The pool mint must be the mint the pool stores"
+    },
+    {
+      "code": 6007,
+      "name": "MinimumOutputNotMet",
+      "msg": "The stake lamports received are below the minimum output"
     }
   ],
   "types": [

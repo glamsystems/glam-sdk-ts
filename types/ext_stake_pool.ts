@@ -635,6 +635,11 @@ export type ExtStakePool = {
       "code": 6006,
       "name": "poolMintMismatch",
       "msg": "The pool mint must be the mint the pool stores"
+    },
+    {
+      "code": 6007,
+      "name": "minimumOutputNotMet",
+      "msg": "The stake lamports received are below the minimum output"
     }
   ],
   "types": [
