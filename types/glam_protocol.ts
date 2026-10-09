@@ -1537,6 +1537,16 @@ export type GlamProtocol = {
       "code": 52009,
       "name": "invalidObligationOwner",
       "msg": "Kamino obligation is not owned by the vault"
+    },
+    {
+      "code": 52010,
+      "name": "invalidStakeLockup",
+      "msg": "Stake account has a lockup"
+    },
+    {
+      "code": 52011,
+      "name": "stakeAccountNotTracked",
+      "msg": "Stake account is not tracked by the vault"
     }
   ],
   "types": [

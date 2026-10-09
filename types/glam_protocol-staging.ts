@@ -885,74 +885,6 @@ export type GlamProtocol = {
       ]
     },
     {
-      "name": "stakeAuthorize",
-      "discriminator": [
-        127,
-        247,
-        88,
-        164,
-        201,
-        0,
-        79,
-        7
-      ],
-      "accounts": [
-        {
-          "name": "glamState",
-          "writable": true
-        },
-        {
-          "name": "glamVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "glamState"
-              }
-            ]
-          }
-        },
-        {
-          "name": "glamSigner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "cpiProgram",
-          "address": "Stake11111111111111111111111111111111111111"
-        },
-        {
-          "name": "stake",
-          "writable": true
-        },
-        {
-          "name": "clock",
-          "address": "SysvarC1ock11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "newAuthority",
-          "type": "pubkey"
-        },
-        {
-          "name": "stakerOrWithdrawer",
-          "type": "u32"
-        }
-      ]
-    },
-    {
       "name": "stakeDeactivate",
       "discriminator": [
         224,
@@ -2116,6 +2048,16 @@ export type GlamProtocol = {
       "code": 52009,
       "name": "invalidObligationOwner",
       "msg": "Kamino obligation is not owned by the vault"
+    },
+    {
+      "code": 52010,
+      "name": "invalidStakeLockup",
+      "msg": "Stake account has a lockup"
+    },
+    {
+      "code": 52011,
+      "name": "stakeAccountNotTracked",
+      "msg": "Stake account is not tracked by the vault"
     }
   ],
   "types": [

@@ -20,7 +20,7 @@ import {
 } from "@marinade.finance/marinade-ts-sdk";
 
 import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
-import { MARINADE_NATIVE_STAKE_AUTHORITY, MSOL } from "../constants";
+import { MSOL } from "../constants";
 import {
   getStakeAccountsWithStates,
   StakeAccountInfo,
@@ -89,48 +89,6 @@ class TxBuilder extends BaseTxBuilder<MarinadeClient> {
   ): Promise<VersionedTransaction> {
     const glamSigner = txOptions.signer || this.client.base.signer;
     const ixs = await this.depositIxs(amount, glamSigner);
-    return this.buildVersionedTx(ixs, txOptions);
-  }
-
-  public async depositNativeIxs(
-    amount: BN,
-    glamSigner: PublicKey,
-  ): Promise<TransactionInstruction[]> {
-    // Create and fund the stake account
-    const [stakeAccount, createStakeAccountIx] =
-      await this.client.stake.createStakeAccount(glamSigner);
-    const initStakeIx = await (this.client.base.protocolProgram.methods as any)
-      .stakeInitialize()
-      .accounts({
-        glamState: this.client.base.statePda,
-        glamSigner,
-        stake: stakeAccount,
-      })
-      .instruction();
-    const fundStakeIx = await this.client.base.protocolProgram.methods
-      .systemTransfer(amount)
-      .accounts({
-        glamState: this.client.base.statePda,
-        glamSigner,
-        to: stakeAccount,
-      })
-      .instruction();
-
-    // Then set stake authority to the marinade key
-    const ix = await (this.client.base.protocolProgram.methods as any)
-      .stakeAuthorize(MARINADE_NATIVE_STAKE_AUTHORITY, 0)
-      .accounts({
-        glamState: this.client.base.statePda,
-        glamSigner,
-        stake: stakeAccount,
-      })
-      .instruction();
-    return [createStakeAccountIx, initStakeIx, fundStakeIx, ix];
-  }
-
-  public async depositNativeTx(amount: BN, txOptions: TxOptions): Promise<any> {
-    const glamSigner = txOptions.signer || this.client.base.signer;
-    const ixs = await this.depositNativeIxs(amount, glamSigner);
     return this.buildVersionedTx(ixs, txOptions);
   }
 
@@ -293,14 +251,6 @@ export class MarinadeClient {
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
     const tx = await this.txBuilder.depositTx(new BN(amount), txOptions);
-    return await this.base.sendAndConfirm(tx);
-  }
-
-  public async depositNative(
-    amount: BN,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.depositNativeTx(amount, txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 

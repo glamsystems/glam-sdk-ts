@@ -82,9 +82,6 @@ export const JITO_TIP_DEFAULT = new PublicKey(
   "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
 );
 
-export const MARINADE_NATIVE_STAKE_AUTHORITY = new PublicKey(
-  "stWirqFCf2Uts1JBL1Jsd3r6VBWhgnpdPxCTe1MFjrq",
-);
 /**
  * Token mints. If no devnet version is defined, assume mainnet and devnet addresses are the same.
  *

@@ -1531,6 +1531,16 @@
       "code": 52009,
       "name": "InvalidObligationOwner",
       "msg": "Kamino obligation is not owned by the vault"
+    },
+    {
+      "code": 52010,
+      "name": "InvalidStakeLockup",
+      "msg": "Stake account has a lockup"
+    },
+    {
+      "code": 52011,
+      "name": "StakeAccountNotTracked",
+      "msg": "Stake account is not tracked by the vault"
     }
   ],
   "types": [

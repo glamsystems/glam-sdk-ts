@@ -117,28 +117,4 @@ describe("marinade", () => {
     const stateModel = await glamClient.fetchStateModel();
     expect(stateModel.externalPositions?.length).toBe(1);
   }, 15_000);
-
-  it("Marinade native deposit", async () => {
-    let stakeAccounts = await getStakeAccountsWithStates(
-      glamClient.provider.connection,
-      glamClient.vaultPda,
-    );
-    expect(stakeAccounts.length).toEqual(1);
-
-    try {
-      const txId = await glamClient.marinade.depositNative(
-        new BN(1_000_000_000),
-      );
-      console.log("authorizeStakeAccount tx:", txId);
-    } catch (e) {
-      console.error(e);
-      throw e;
-    }
-
-    stakeAccounts = await getStakeAccountsWithStates(
-      glamClient.provider.connection,
-      glamClient.vaultPda,
-    );
-    expect(stakeAccounts.length).toEqual(2);
-  });
 });
