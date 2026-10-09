@@ -1541,6 +1541,21 @@
       "code": 52011,
       "name": "StakeAccountNotTracked",
       "msg": "Stake account is not tracked by the vault"
+    },
+    {
+      "code": 52012,
+      "name": "StakeSplitEmptiesSource",
+      "msg": "Stake split would empty the source account"
+    },
+    {
+      "code": 52013,
+      "name": "StakeMergeDestinationActivating",
+      "msg": "Stake merge into a destination in its activation epoch would stake the source's reserve"
+    },
+    {
+      "code": 52014,
+      "name": "StakeMergeDrainsDestination",
+      "msg": "Stake merge would leave the destination below one reserve"
     }
   ],
   "types": [

@@ -103,17 +103,37 @@ describe("native_staking", () => {
   });
 
   it("Merge stake accounts", async () => {
+    // The program refuses a merge into a destination still in its activation
+    // epoch, where the Stake program would stake the source's reserve, so wait
+    // until both accounts are active.
     let stakeAccounts = await getStakeAccountsWithStates(
       connection,
       glamClient.vaultPda,
     );
     expect(stakeAccounts.length).toEqual(2);
-
-    try {
-      const txId = await glamClient.stake.merge(
-        stakeAccounts[0].address,
-        stakeAccounts[1].address,
+    for (let i = 0; i < 60; i++) {
+      if (stakeAccounts.every((account) => account.state === "active")) break;
+      await sleep(2_000);
+      stakeAccounts = await getStakeAccountsWithStates(
+        connection,
+        glamClient.vaultPda,
       );
+    }
+    expect(stakeAccounts.every((account) => account.state === "active")).toBe(
+      true,
+    );
+    // "active" here means delegated in an earlier epoch; the Stake program
+    // merges only stake that has finished warming up, so wait as the move
+    // test does for the stake to be fully activated.
+    await sleep(75_000);
+    const [destination, source] = [
+      stakeAccounts[0].address,
+      stakeAccounts[1].address,
+    ];
+
+    let txId: string;
+    try {
+      txId = await glamClient.stake.merge(destination, source);
       console.log("mergeStakeAccounts tx:", txId);
     } catch (e) {
       console.error(e);
@@ -125,7 +145,36 @@ describe("native_staking", () => {
       glamClient.vaultPda,
     );
     expect(stakeAccounts.length).toEqual(1);
-  });
+    // The merge returned the closed source's reserve to the signer, so the
+    // survivor holds the two balances less one reserve. Rewards land at epoch
+    // boundaries, so compare the transaction's own pre and post balances.
+    const rentPerStake =
+      await glamClient.provider.connection.getMinimumBalanceForRentExemption(
+        STAKE_ACCOUNT_SIZE,
+      );
+    const tx = await connection.getTransaction(txId, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+    const keys = tx!.transaction.message.getAccountKeys({
+      accountKeysFromLookups: tx!.meta?.loadedAddresses,
+    });
+    const indexOf = (key: PublicKey) => {
+      for (let i = 0; i < keys.length; i++) {
+        if (keys.get(i)!.equals(key)) return i;
+      }
+      throw new Error(`account ${key} not in the merge transaction`);
+    };
+    const pre = tx!.meta!.preBalances;
+    const post = tx!.meta!.postBalances;
+    expect(post[indexOf(destination)]).toEqual(
+      pre[indexOf(destination)] + pre[indexOf(source)] - rentPerStake,
+    );
+    expect(post[indexOf(source)]).toEqual(0);
+    expect(post[indexOf(glamClient.vaultPda)]).toEqual(
+      pre[indexOf(glamClient.vaultPda)],
+    );
+  }, 150_000);
 
   it("Deactivate stake accounts", async () => {
     const stakeAccounts = await getStakeAccountsWithStates(

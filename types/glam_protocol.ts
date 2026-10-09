@@ -1547,6 +1547,21 @@ export type GlamProtocol = {
       "code": 52011,
       "name": "stakeAccountNotTracked",
       "msg": "Stake account is not tracked by the vault"
+    },
+    {
+      "code": 52012,
+      "name": "stakeSplitEmptiesSource",
+      "msg": "Stake split would empty the source account"
+    },
+    {
+      "code": 52013,
+      "name": "stakeMergeDestinationActivating",
+      "msg": "Stake merge into a destination in its activation epoch would stake the source's reserve"
+    },
+    {
+      "code": 52014,
+      "name": "stakeMergeDrainsDestination",
+      "msg": "Stake merge would leave the destination below one reserve"
     }
   ],
   "types": [
