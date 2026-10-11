@@ -2890,6 +2890,11 @@ export type ExtLoopscale = {
       "code": 6001,
       "name": "invalidVaultTokenAccount",
       "msg": "Vault token account must be the GLAM vault ATA for the expected mint"
+    },
+    {
+      "code": 6002,
+      "name": "vaultPaidRent",
+      "msg": "The vault's SOL paid for an account Loopscale created; the signer creates it first"
     }
   ],
   "types": [

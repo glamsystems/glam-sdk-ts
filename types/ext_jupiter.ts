@@ -1566,6 +1566,16 @@ export type ExtJupiter = {
       "code": 6008,
       "name": "glamAccountInRemainingAccounts",
       "msg": "Remaining accounts must not include the GLAM state, the vault, the integration authority, or a token account the vault owns"
+    },
+    {
+      "code": 6009,
+      "name": "vaultPaidRent",
+      "msg": "The vault's SOL paid for an account Jupiter created; the signer provides it first"
+    },
+    {
+      "code": 6010,
+      "name": "positionRentMismatch",
+      "msg": "The rent Jupiter took for the new position differs from the signer's prefund"
     }
   ],
   "types": [

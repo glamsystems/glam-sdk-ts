@@ -2884,6 +2884,11 @@
       "code": 6001,
       "name": "InvalidVaultTokenAccount",
       "msg": "Vault token account must be the GLAM vault ATA for the expected mint"
+    },
+    {
+      "code": 6002,
+      "name": "VaultPaidRent",
+      "msg": "The vault's SOL paid for an account Loopscale created; the signer creates it first"
     }
   ],
   "types": [
