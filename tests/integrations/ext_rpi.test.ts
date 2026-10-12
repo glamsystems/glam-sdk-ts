@@ -8,6 +8,7 @@ import {
   USDC,
   WSOL,
   stringToChars,
+  getIntegrationAuthorityPda,
 } from "../../src";
 import {
   airdrop,
@@ -117,10 +118,25 @@ describe("ext_rpi", () => {
   const glamClient = new GlamClient();
   const glamClientDelegate = new GlamClient({ wallet: new Wallet(delegate) });
 
-  const priceVault = async () => {
-    const priceIxs = await glamClient.price.priceVaultIxs();
+  // Exercise the mint-hosted RPI pricer shared by both program trees.
+  // SDK routing and the v1 ext-hosted pricer have separate SDK and LiteSVM coverage.
+  const priceRegisteredPositions = async () => {
+    const priceIx = await glamClient.mintProgram.methods
+      .priceRegisteredPositions()
+      .accountsStrict({
+        glamState: glamClient.statePda,
+        signer: glamClient.signer,
+        observationState: glamClient.rpi.getObservationStatePda(),
+        integrationAuthority: getIntegrationAuthorityPda(
+          glamClient.mintProgram.programId,
+        ),
+        glamProtocol: glamClient.protocolProgram.programId,
+        eventAuthority: null,
+        eventProgram: null,
+      })
+      .instruction();
     const priceTx = await glamClient.rpi.txBuilder.buildVersionedTx(
-      priceIxs,
+      [priceIx],
       txOptions,
     );
     await glamClient.sendAndConfirm(priceTx);
@@ -349,7 +365,7 @@ describe("ext_rpi", () => {
       tokenizedObservationAmount.toString(),
     );
 
-    await priceVault();
+    await priceRegisteredPositions();
 
     const stateAccount = await glamClient.fetchStateAccount();
     const pricedProtocol = stateAccount.pricedProtocols.find(
@@ -393,7 +409,7 @@ describe("ext_rpi", () => {
       storedI128ToString(tokenizedObservation.validatedBaseAssetAmount),
     ).toBe("0");
 
-    await priceVault();
+    await priceRegisteredPositions();
 
     observationState = await glamClient.rpi.fetchObservationState();
     const valuedObservation = findPositionObservation(
