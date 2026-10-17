@@ -79,7 +79,9 @@ export class LoopscaleBorrowClient
     return this.core.getEventAuthorityPda();
   }
 
-  getLoanPda = this.core.getLoanPda;
+  getLoanPda(nonce: BN, borrower?: PublicKey): PublicKey {
+    return this.core.getLoanPda(nonce, borrower);
+  }
 
   getLoanTokenAta(
     loan: PublicKey,
