@@ -1863,8 +1863,9 @@ export class PriceClient {
     }
 
     const transfers = getActiveRegistryTransfers(registry);
-    const [baseAssetMeta, assetMetas] = await Promise.all([
+    const [baseAssetMeta, solUsdOracle, assetMetas] = await Promise.all([
       this.base.getAssetMeta(stateAccount.baseAssetMint),
+      this.base.getSolOracle(),
       Promise.all(
         transfers.map(async (transfer) => ({
           transfer,
@@ -1897,6 +1898,7 @@ export class PriceClient {
         integrationAuthority,
         glamProtocolProgram: this.base.protocolProgram.programId,
         glamConfig: getGlobalConfigPda(),
+        solUsdOracle,
         baseAssetOracle: baseAssetMeta.oracle,
       })
       .remainingAccounts(remainingAccounts)

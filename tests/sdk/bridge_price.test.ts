@@ -12,6 +12,9 @@ const SOURCE_MINT = PublicKey.unique();
 const BASE_RESERVE = new PublicKey(
   "D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59",
 );
+const SOL_ORACLE = new PublicKey(
+  "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE",
+);
 const SOURCE_RESERVE = new PublicKey(
   "Atj6UREVWa7WxbF2EMKNyfmYUY1U1txughe2gjhcPDCo",
 );
@@ -86,6 +89,7 @@ function makeBridgePriceClient() {
       getAssetMeta: jest.fn(async (mint: PublicKey) =>
         mint.equals(BASE_MINT) ? baseAssetMeta : sourceAssetMeta,
       ),
+      getSolOracle: jest.fn(async () => SOL_ORACLE),
     } as any,
     {} as any,
     {} as any,

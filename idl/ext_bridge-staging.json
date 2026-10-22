@@ -8,16 +8,19 @@
   },
   "instructions": [
     {
-      "name": "add_layerzero_oft_route",
+      "name": "add_bridge_route",
+      "docs": [
+        "Adds a route with a new identity and commits the result."
+      ],
       "discriminator": [
-        53,
-        181,
-        204,
+        185,
         38,
-        240,
-        57,
-        218,
-        148
+        47,
+        76,
+        170,
+        103,
+        115,
+        198
       ],
       "accounts": [
         {
@@ -30,16 +33,58 @@
           "signer": true
         },
         {
+          "name": "bridge_routes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        },
+        {
           "name": "glam_protocol_program",
           "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
+          "name": "protocol",
+          "type": "u16"
+        },
+        {
           "name": "route",
           "type": {
             "defined": {
-              "name": "LayerzeroOftRoute"
+              "name": "BridgeRoute"
             }
           }
         }
@@ -142,6 +187,45 @@
           "address": "11111111111111111111111111111111"
         },
         {
+          "name": "bridge_routes",
+          "docs": [
+            "discriminator, the header, the address and the pause, and decodes only the live set."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  1,
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
           "name": "sender_authority_pda"
         },
         {
@@ -201,6 +285,72 @@
               "name": "CctpDepositForBurnArgs"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "close_bridge_routes",
+      "docs": [
+        "Closes a provider's route account once no policy references it."
+      ],
+      "discriminator": [
+        151,
+        223,
+        247,
+        180,
+        197,
+        58,
+        143,
+        6
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bridge_routes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "protocol",
+          "type": "u16"
         }
       ]
     },
@@ -288,7 +438,10 @@
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -394,21 +547,23 @@
       ]
     },
     {
-      "name": "delete_layerzero_oft_route",
+      "name": "init_bridge_routes",
+      "docs": [
+        "Creates a provider's routes account, empty; the route instructions grow it."
+      ],
       "discriminator": [
+        45,
+        95,
         122,
-        191,
-        90,
-        182,
-        160,
-        67,
-        86,
-        227
+        73,
+        198,
+        178,
+        80,
+        180
       ],
       "accounts": [
         {
-          "name": "glam_state",
-          "writable": true
+          "name": "glam_state"
         },
         {
           "name": "glam_signer",
@@ -416,18 +571,48 @@
           "signer": true
         },
         {
-          "name": "glam_protocol_program",
-          "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+          "name": "bridge_routes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "route",
-          "type": {
-            "defined": {
-              "name": "LayerzeroOftRoute"
-            }
-          }
+          "name": "protocol",
+          "type": "u16"
         }
       ]
     },
@@ -549,12 +734,54 @@
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
                 "kind": "account",
                 "path": "glam_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bridge_routes",
+          "docs": [
+            "discriminator, the header, the address and the pause, and decodes only the live set."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  1,
+                  0
+                ]
               }
             ]
           }
@@ -619,6 +846,71 @@
               "name": "ManagedCctpDepositForBurnArgs"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "pause_bridge_routes",
+      "docs": [
+        "Stops a provider's sends at once; the owner or a delegate holding the Pause permission."
+      ],
+      "discriminator": [
+        62,
+        252,
+        48,
+        65,
+        79,
+        190,
+        236,
+        165
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "signer": true
+        },
+        {
+          "name": "bridge_routes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "protocol",
+          "type": "u16"
         }
       ]
     },
@@ -728,7 +1020,10 @@
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -796,6 +1091,45 @@
           "address": "11111111111111111111111111111111"
         },
         {
+          "name": "bridge_routes",
+          "docs": [
+            "discriminator, the header, the address and the pause, and decodes only the live set."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  4,
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
           "name": "instructions",
           "address": "Sysvar1nstructions1111111111111111111111111"
         }
@@ -852,7 +1186,10 @@
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -962,22 +1299,28 @@
           }
         },
         {
+          "name": "sol_usd_oracle"
+        },
+        {
           "name": "base_asset_oracle"
         }
       ],
       "args": []
     },
     {
-      "name": "set_cctp_policy",
+      "name": "remove_bridge_route",
+      "docs": [
+        "Removes every route with the identity and commits the result."
+      ],
       "discriminator": [
-        32,
-        88,
-        254,
-        15,
-        2,
+        16,
+        154,
+        12,
+        127,
+        43,
         206,
-        222,
-        234
+        82,
+        98
       ],
       "accounts": [
         {
@@ -990,16 +1333,58 @@
           "signer": true
         },
         {
+          "name": "bridge_routes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        },
+        {
           "name": "glam_protocol_program",
           "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "policy",
+          "name": "protocol",
+          "type": "u16"
+        },
+        {
+          "name": "identity",
           "type": {
             "defined": {
-              "name": "CctpPolicy"
+              "name": "BridgeRouteIdentity"
             }
           }
         }
@@ -1082,7 +1467,10 @@
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -1142,16 +1530,84 @@
       ]
     },
     {
-      "name": "update_layerzero_oft_route",
+      "name": "unpause_bridge_routes",
+      "docs": [
+        "Resumes a provider's sends; the owner only."
+      ],
       "discriminator": [
-        77,
-        162,
-        99,
-        1,
-        182,
-        142,
-        66,
-        172
+        69,
+        88,
+        140,
+        22,
+        84,
+        85,
+        51,
+        96
+      ],
+      "accounts": [
+        {
+          "name": "glam_state"
+        },
+        {
+          "name": "glam_signer",
+          "signer": true
+        },
+        {
+          "name": "bridge_routes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "protocol",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "update_bridge_route",
+      "docs": [
+        "Replaces the route with the same mint, recipient and provider and commits the result."
+      ],
+      "discriminator": [
+        124,
+        132,
+        202,
+        107,
+        210,
+        121,
+        209,
+        204
       ],
       "accounts": [
         {
@@ -1164,16 +1620,58 @@
           "signer": true
         },
         {
+          "name": "bridge_routes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glam_state"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        },
+        {
           "name": "glam_protocol_program",
           "address": "gstgptmbgJVi5f8ZmSRVZjZkDQwqKa3xWuUtD5WmJHz"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
+          "name": "protocol",
+          "type": "u16"
+        },
+        {
           "name": "route",
           "type": {
             "defined": {
-              "name": "LayerzeroOftRoute"
+              "name": "BridgeRoute"
             }
           }
         }
@@ -1225,7 +1723,10 @@
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -1260,6 +1761,19 @@
         157,
         148,
         202
+      ]
+    },
+    {
+      "name": "BridgeRoutes",
+      "discriminator": [
+        74,
+        244,
+        225,
+        132,
+        216,
+        123,
+        51,
+        107
       ]
     },
     {
@@ -1419,6 +1933,56 @@
       "code": 6025,
       "name": "InvalidDestinationChain",
       "msg": "The destination identifier exceeds the supported range"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidBridgeRoute",
+      "msg": "A bridge route is invalid"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidTransferTerms",
+      "msg": "The transfer terms are invalid"
+    },
+    {
+      "code": 6028,
+      "name": "TransferCostExceedsRoute",
+      "msg": "The transfer's cost exceeds the route's bound"
+    },
+    {
+      "code": 6029,
+      "name": "ProviderControlMismatch",
+      "msg": "The transfer's provider controls do not match the route"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidBridgeRoutes",
+      "msg": "The bridge routes account or set is invalid"
+    },
+    {
+      "code": 6031,
+      "name": "RouteSetNotFound",
+      "msg": "No stored route set carries the committed hash"
+    },
+    {
+      "code": 6032,
+      "name": "RouteSetInUse",
+      "msg": "The route set is still referenced by the vault's policies"
+    },
+    {
+      "code": 6033,
+      "name": "NonCanonicalPolicyList",
+      "msg": "The vault's bridge policy list is not canonical"
+    },
+    {
+      "code": 6034,
+      "name": "BridgeRoutesPaused",
+      "msg": "The provider's routes are paused"
+    },
+    {
+      "code": 6035,
+      "name": "VaultSolBalanceDecreased",
+      "msg": "The vault SOL balance decreased during the bridge transfer"
     }
   ],
   "types": [
@@ -1532,11 +2096,11 @@
             "type": "u64"
           },
           {
-            "name": "protocol",
-            "type": "u16"
+            "name": "destination_chain",
+            "type": "u64"
           },
           {
-            "name": "destination_chain",
+            "name": "protocol",
             "type": "u16"
           },
           {
@@ -1548,11 +2112,20 @@
             "type": "u8"
           },
           {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                4
+              ]
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                2
+                32
               ]
             }
           }
@@ -1594,8 +2167,130 @@
                     "name": "BridgeManagedTransfer"
                   }
                 },
-                16
+                14
               ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeRoute",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "source_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "management_mode",
+            "type": {
+              "defined": {
+                "name": "RouteManagementMode"
+              }
+            }
+          },
+          {
+            "name": "limits",
+            "type": {
+              "defined": {
+                "name": "RouteLimits"
+              }
+            }
+          },
+          {
+            "name": "controls",
+            "type": {
+              "defined": {
+                "name": "ProviderControls"
+              }
+            }
+          },
+          {
+            "name": "destination_chains",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "RouteChain"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeRouteIdentity",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "source_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_program",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeRoutes",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glam_state",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_bitflag",
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "generation",
+            "type": "u64"
+          },
+          {
+            "name": "tightened",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "TightenedSet"
+                }
+              }
+            }
+          },
+          {
+            "name": "sets",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "RouteSet"
+                }
+              }
             }
           }
         ]
@@ -1611,10 +2306,6 @@
             "type": "pubkey"
           },
           {
-            "name": "signer",
-            "type": "pubkey"
-          },
-          {
             "name": "transfer_id",
             "type": "pubkey"
           },
@@ -1623,12 +2314,12 @@
             "type": "u16"
           },
           {
-            "name": "managed",
-            "type": "bool"
-          },
-          {
-            "name": "source_mint",
-            "type": "pubkey"
+            "name": "terms",
+            "type": {
+              "defined": {
+                "name": "TransferTerms"
+              }
+            }
           },
           {
             "name": "source_decimals",
@@ -1639,19 +2330,11 @@
             "type": "pubkey"
           },
           {
-            "name": "provider_program",
-            "type": "pubkey"
-          },
-          {
             "name": "provider_config",
             "type": "pubkey"
           },
           {
             "name": "provider_sender",
-            "type": "pubkey"
-          },
-          {
-            "name": "provider_delegate",
             "type": "pubkey"
           },
           {
@@ -1672,35 +2355,11 @@
             "type": "u16"
           },
           {
-            "name": "source_amount",
-            "type": "u64"
-          },
-          {
-            "name": "quoted_out_amount",
-            "type": "u64"
-          },
-          {
             "name": "initial_source_balance",
             "type": "u64"
           },
           {
             "name": "initial_provider_sequence",
-            "type": "u64"
-          },
-          {
-            "name": "destination_chain",
-            "type": "u16"
-          },
-          {
-            "name": "destination_recipient",
-            "type": "pubkey"
-          },
-          {
-            "name": "quote_expires_at",
-            "type": "i64"
-          },
-          {
-            "name": "prepared_slot",
             "type": "u64"
           },
           {
@@ -1720,40 +2379,6 @@
             "type": {
               "defined": {
                 "name": "DepositForBurnParams"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "CctpDestination",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "domain",
-            "type": "u32"
-          },
-          {
-            "name": "address",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "CctpPolicy",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "allowed_destinations",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "CctpDestination"
-                }
               }
             }
           }
@@ -2296,49 +2921,6 @@
       }
     },
     {
-      "name": "LayerzeroOftRoute",
-      "docs": [
-        "source_mint, destination_chain, destination_recipient, provider_program uniquely identify a route"
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "source_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "destination_chain",
-            "type": "u32"
-          },
-          {
-            "name": "destination_recipient",
-            "type": "pubkey"
-          },
-          {
-            "name": "provider_program",
-            "type": "pubkey"
-          },
-          {
-            "name": "management_mode",
-            "type": {
-              "defined": {
-                "name": "RouteManagementMode"
-              }
-            }
-          },
-          {
-            "name": "min_amount",
-            "type": "u64"
-          },
-          {
-            "name": "max_amount",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "ManagedCctpDepositForBurnArgs",
       "type": {
         "kind": "struct",
@@ -2643,6 +3225,78 @@
       }
     },
     {
+      "name": "ProviderControls",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Cctp",
+            "fields": [
+              {
+                "name": "destination_caller",
+                "type": "pubkey"
+              },
+              {
+                "name": "min_finality_threshold",
+                "type": "u32"
+              }
+            ]
+          },
+          {
+            "name": "LayerzeroOft",
+            "fields": [
+              {
+                "name": "oft_store",
+                "type": "pubkey"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "RouteChain",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "chain",
+            "type": "u64"
+          },
+          {
+            "name": "limits",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "RouteLimits"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RouteLimits",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "min_amount",
+            "type": "u64"
+          },
+          {
+            "name": "max_amount",
+            "type": "u64"
+          },
+          {
+            "name": "max_cost_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
       "name": "RouteManagementMode",
       "type": {
         "kind": "enum",
@@ -2655,6 +3309,41 @@
           },
           {
             "name": "Either"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RouteSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "generation",
+            "type": "u64"
+          },
+          {
+            "name": "hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "len",
+            "type": "u32"
+          },
+          {
+            "name": "routes",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "BridgeRoute"
+                }
+              }
+            }
           }
         ]
       }
@@ -2804,6 +3493,37 @@
       }
     },
     {
+      "name": "TightenedSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "of",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "len",
+            "type": "u32"
+          },
+          {
+            "name": "routes",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "BridgeRoute"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "TimeUnit",
       "type": {
         "kind": "enum",
@@ -2813,6 +3533,84 @@
           },
           {
             "name": "Slot"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferControls",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Cctp",
+            "fields": [
+              {
+                "name": "destination_caller",
+                "type": "pubkey"
+              },
+              {
+                "name": "min_finality_threshold",
+                "type": "u32"
+              }
+            ]
+          },
+          {
+            "name": "LayerzeroOft",
+            "fields": [
+              {
+                "name": "oft_store",
+                "type": "pubkey"
+              },
+              {
+                "name": "composed",
+                "type": "bool"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferTerms",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "source_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "source_amount",
+            "type": "u64"
+          },
+          {
+            "name": "quoted_out_amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination_chain",
+            "type": "u64"
+          },
+          {
+            "name": "destination_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "managed",
+            "type": "bool"
+          },
+          {
+            "name": "controls",
+            "type": {
+              "defined": {
+                "name": "TransferControls"
+              }
+            }
           }
         ]
       }
@@ -2845,6 +3643,11 @@
     }
   ],
   "constants": [
+    {
+      "name": "PROTO_BRIDGE_PERM_PAUSE",
+      "type": "u64",
+      "value": "8"
+    },
     {
       "name": "PROTO_BRIDGE_PERM_SEND",
       "type": "u64",

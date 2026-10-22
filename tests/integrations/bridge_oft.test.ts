@@ -9,6 +9,7 @@ import { Keypair, SystemProgram } from "@solana/web3.js";
 
 import {
   BRIDGE_MANAGED_TRANSFERS_PROTOCOL,
+  GLAM_MINT_PROTOCOL,
   GlamClient,
   LAYERZERO_OFT_PROTOCOL,
   RouteManagementMode,
@@ -35,9 +36,11 @@ const createCommittedOftTransfer = async (
   params: {
     managed?: boolean;
     routeManagementMode?: RouteManagementMode;
+    minAmountLd?: BN;
   } = {},
 ) => {
   const managed = params.managed ?? false;
+  const minAmountLd = params.minAmountLd ?? quotedOutAmount;
   const routeManagementMode =
     params.routeManagementMode ??
     (managed ? RouteManagementMode.ManagedOnly : RouteManagementMode.Either);
@@ -55,6 +58,12 @@ const createCommittedOftTransfer = async (
     baseAssetMint: sourceMint,
     assets: [sourceMint],
     integrationAcls: [
+      // Lets glam_mint's pricing instructions record what they price.
+      {
+        integrationProgram: glamClient.mintProgram.programId,
+        protocolsBitmask: GLAM_MINT_PROTOCOL,
+        protocolPolicies: [],
+      },
       {
         integrationProgram: glamClient.extBridgeProgram.programId,
         protocolsBitmask: LAYERZERO_OFT_PROTOCOL,
@@ -63,15 +72,20 @@ const createCommittedOftTransfer = async (
     ],
   });
 
-  await glamClient.bridge.addLayerzeroOftRoute(
+  // The route binds the mock OFT store and allows a cost of up to 1%.
+  await glamClient.bridge.oft.addRoute(
     {
       sourceMint,
-      destinationChain,
       destinationRecipient,
       providerProgram: mockLayerzeroOftProgram.programId,
       managementMode: routeManagementMode,
-      minAmount: new BN(1_000_000),
-      maxAmount: new BN(50_000_000),
+      limits: {
+        minAmount: new BN(1_000_000),
+        maxAmount: new BN(50_000_000),
+        maxCostBps: 100,
+      },
+      controls: { layerzeroOft: { oftStore } },
+      destinationChains: [destinationChain],
     },
     txOptions,
   );
@@ -112,7 +126,7 @@ const createCommittedOftTransfer = async (
       dstEid: destinationChain,
       to: Array.from(destinationRecipient.toBytes()),
       amountLd: sourceAmount,
-      minAmountLd: quotedOutAmount,
+      minAmountLd,
       options: Buffer.alloc(0),
       composeMsg: null,
       nativeFee: new BN(0),
@@ -176,13 +190,14 @@ describe("bridge_oft", () => {
       custodyTokenAccount,
     } = await createCommittedOftTransfer();
 
-    const policy = await glamClient.bridge.fetchLayerzeroOftPolicy();
-    expect(policy?.routes).toHaveLength(1);
+    const sets = await glamClient.bridge.oft.fetchRouteSets();
+    expect(sets.live).toHaveLength(1);
+    expect(sets.pending).toBeNull();
     expect(
-      policy?.routes[0].providerProgram.equals(
-        mockLayerzeroOftProgram.programId,
-      ),
+      sets.live?.[0].providerProgram.equals(mockLayerzeroOftProgram.programId),
     ).toBe(true);
+    const commitment = await glamClient.bridge.oft.fetchPolicy();
+    expect(commitment?.hash.equals(sets.liveHash!)).toBe(true);
 
     expect(
       await glamClient.bridge.fetchTransferRecordNullable(transferId),
@@ -267,6 +282,13 @@ describe("bridge_oft", () => {
     expect(registry?.managedTransferCount.toString()).toBe("0");
     stateAccount = await glamClient.fetchStateAccount();
     expect(stateAccount.externalPositions).toEqual([]);
+  }, 60_000);
+
+  it("refuses a quote under the route's cost bound before any token moves", async () => {
+    // 1% of 10 USDC is 0.1 USDC; a quote one unit under 9.9 USDC costs more than the route allows.
+    await expect(
+      createCommittedOftTransfer({ minAmountLd: quotedOutAmount.subn(1) }),
+    ).rejects.toThrow(/cost exceeds the route|TransferCostExceedsRoute|6028/);
   }, 60_000);
 
   it("settles a managed OFT transfer directly from committed state", async () => {

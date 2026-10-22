@@ -232,7 +232,14 @@ describe("getProtocolsAndPermissions", () => {
           getExtBridgeProgramId(staging).toBase58(),
           protocolBitflagKey(LAYERZERO_OFT_PROTOCOL),
         ),
-      ).toEqual(["Send", "Validate", "Settle"]);
+      ).toEqual(["Send", "Validate", "Settle", "Pause"]);
+      expect(
+        getPermissionNames(
+          staging,
+          getExtBridgeProgramId(staging).toBase58(),
+          protocolBitflagKey(CCTP_PROTOCOL),
+        ),
+      ).toEqual(["Send", "Validate", "Settle", "Pause"]);
     },
   );
 });

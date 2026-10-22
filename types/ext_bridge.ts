@@ -14,16 +14,19 @@ export type ExtBridge = {
   },
   "instructions": [
     {
-      "name": "addLayerzeroOftRoute",
+      "name": "addBridgeRoute",
+      "docs": [
+        "Adds a route with a new identity and commits the result."
+      ],
       "discriminator": [
-        53,
-        181,
-        204,
+        185,
         38,
-        240,
-        57,
-        218,
-        148
+        47,
+        76,
+        170,
+        103,
+        115,
+        198
       ],
       "accounts": [
         {
@@ -36,16 +39,58 @@ export type ExtBridge = {
           "signer": true
         },
         {
+          "name": "bridgeRoutes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        },
+        {
           "name": "glamProtocolProgram",
           "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
+          "name": "protocol",
+          "type": "u16"
+        },
+        {
           "name": "route",
           "type": {
             "defined": {
-              "name": "layerzeroOftRoute"
+              "name": "bridgeRoute"
             }
           }
         }
@@ -148,6 +193,45 @@ export type ExtBridge = {
           "address": "11111111111111111111111111111111"
         },
         {
+          "name": "bridgeRoutes",
+          "docs": [
+            "discriminator, the header, the address and the pause, and decodes only the live set."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  1,
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
           "name": "senderAuthorityPda"
         },
         {
@@ -207,6 +291,72 @@ export type ExtBridge = {
               "name": "cctpDepositForBurnArgs"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "closeBridgeRoutes",
+      "docs": [
+        "Closes a provider's route account once no policy references it."
+      ],
+      "discriminator": [
+        151,
+        223,
+        247,
+        180,
+        197,
+        58,
+        143,
+        6
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bridgeRoutes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "protocol",
+          "type": "u16"
         }
       ]
     },
@@ -294,7 +444,10 @@ export type ExtBridge = {
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -400,21 +553,23 @@ export type ExtBridge = {
       ]
     },
     {
-      "name": "deleteLayerzeroOftRoute",
+      "name": "initBridgeRoutes",
+      "docs": [
+        "Creates a provider's routes account, empty; the route instructions grow it."
+      ],
       "discriminator": [
+        45,
+        95,
         122,
-        191,
-        90,
-        182,
-        160,
-        67,
-        86,
-        227
+        73,
+        198,
+        178,
+        80,
+        180
       ],
       "accounts": [
         {
-          "name": "glamState",
-          "writable": true
+          "name": "glamState"
         },
         {
           "name": "glamSigner",
@@ -422,18 +577,48 @@ export type ExtBridge = {
           "signer": true
         },
         {
-          "name": "glamProtocolProgram",
-          "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+          "name": "bridgeRoutes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "route",
-          "type": {
-            "defined": {
-              "name": "layerzeroOftRoute"
-            }
-          }
+          "name": "protocol",
+          "type": "u16"
         }
       ]
     },
@@ -555,12 +740,54 @@ export type ExtBridge = {
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
                 "kind": "account",
                 "path": "glamState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bridgeRoutes",
+          "docs": [
+            "discriminator, the header, the address and the pause, and decodes only the live set."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  1,
+                  0
+                ]
               }
             ]
           }
@@ -625,6 +852,71 @@ export type ExtBridge = {
               "name": "managedCctpDepositForBurnArgs"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "pauseBridgeRoutes",
+      "docs": [
+        "Stops a provider's sends at once; the owner or a delegate holding the Pause permission."
+      ],
+      "discriminator": [
+        62,
+        252,
+        48,
+        65,
+        79,
+        190,
+        236,
+        165
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "signer": true
+        },
+        {
+          "name": "bridgeRoutes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "protocol",
+          "type": "u16"
         }
       ]
     },
@@ -734,7 +1026,10 @@ export type ExtBridge = {
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -802,6 +1097,45 @@ export type ExtBridge = {
           "address": "11111111111111111111111111111111"
         },
         {
+          "name": "bridgeRoutes",
+          "docs": [
+            "discriminator, the header, the address and the pause, and decodes only the live set."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  4,
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
           "name": "instructions",
           "address": "Sysvar1nstructions1111111111111111111111111"
         }
@@ -858,7 +1192,10 @@ export type ExtBridge = {
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -968,22 +1305,28 @@ export type ExtBridge = {
           }
         },
         {
+          "name": "solUsdOracle"
+        },
+        {
           "name": "baseAssetOracle"
         }
       ],
       "args": []
     },
     {
-      "name": "setCctpPolicy",
+      "name": "removeBridgeRoute",
+      "docs": [
+        "Removes every route with the identity and commits the result."
+      ],
       "discriminator": [
-        32,
-        88,
-        254,
-        15,
-        2,
+        16,
+        154,
+        12,
+        127,
+        43,
         206,
-        222,
-        234
+        82,
+        98
       ],
       "accounts": [
         {
@@ -996,16 +1339,58 @@ export type ExtBridge = {
           "signer": true
         },
         {
+          "name": "bridgeRoutes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        },
+        {
           "name": "glamProtocolProgram",
           "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "policy",
+          "name": "protocol",
+          "type": "u16"
+        },
+        {
+          "name": "identity",
           "type": {
             "defined": {
-              "name": "cctpPolicy"
+              "name": "bridgeRouteIdentity"
             }
           }
         }
@@ -1088,7 +1473,10 @@ export type ExtBridge = {
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -1148,16 +1536,84 @@ export type ExtBridge = {
       ]
     },
     {
-      "name": "updateLayerzeroOftRoute",
+      "name": "unpauseBridgeRoutes",
+      "docs": [
+        "Resumes a provider's sends; the owner only."
+      ],
       "discriminator": [
-        77,
-        162,
-        99,
-        1,
-        182,
-        142,
-        66,
-        172
+        69,
+        88,
+        140,
+        22,
+        84,
+        85,
+        51,
+        96
+      ],
+      "accounts": [
+        {
+          "name": "glamState"
+        },
+        {
+          "name": "glamSigner",
+          "signer": true
+        },
+        {
+          "name": "bridgeRoutes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "protocol",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "updateBridgeRoute",
+      "docs": [
+        "Replaces the route with the same mint, recipient and provider and commits the result."
+      ],
+      "discriminator": [
+        124,
+        132,
+        202,
+        107,
+        210,
+        121,
+        209,
+        204
       ],
       "accounts": [
         {
@@ -1170,16 +1626,58 @@ export type ExtBridge = {
           "signer": true
         },
         {
+          "name": "bridgeRoutes",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  114,
+                  105,
+                  100,
+                  103,
+                  101,
+                  45,
+                  114,
+                  111,
+                  117,
+                  116,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "glamState"
+              },
+              {
+                "kind": "arg",
+                "path": "protocol"
+              }
+            ]
+          }
+        },
+        {
           "name": "glamProtocolProgram",
           "address": "GLAMpaME8wdTEzxtiYEAa5yD8fZbxZiz2hNtV58RZiEz"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
+          "name": "protocol",
+          "type": "u16"
+        },
+        {
           "name": "route",
           "type": {
             "defined": {
-              "name": "layerzeroOftRoute"
+              "name": "bridgeRoute"
             }
           }
         }
@@ -1231,7 +1729,10 @@ export type ExtBridge = {
                   115,
                   116,
                   114,
-                  121
+                  121,
+                  45,
+                  118,
+                  50
                 ]
               },
               {
@@ -1266,6 +1767,19 @@ export type ExtBridge = {
         157,
         148,
         202
+      ]
+    },
+    {
+      "name": "bridgeRoutes",
+      "discriminator": [
+        74,
+        244,
+        225,
+        132,
+        216,
+        123,
+        51,
+        107
       ]
     },
     {
@@ -1425,6 +1939,56 @@ export type ExtBridge = {
       "code": 6025,
       "name": "invalidDestinationChain",
       "msg": "The destination identifier exceeds the supported range"
+    },
+    {
+      "code": 6026,
+      "name": "invalidBridgeRoute",
+      "msg": "A bridge route is invalid"
+    },
+    {
+      "code": 6027,
+      "name": "invalidTransferTerms",
+      "msg": "The transfer terms are invalid"
+    },
+    {
+      "code": 6028,
+      "name": "transferCostExceedsRoute",
+      "msg": "The transfer's cost exceeds the route's bound"
+    },
+    {
+      "code": 6029,
+      "name": "providerControlMismatch",
+      "msg": "The transfer's provider controls do not match the route"
+    },
+    {
+      "code": 6030,
+      "name": "invalidBridgeRoutes",
+      "msg": "The bridge routes account or set is invalid"
+    },
+    {
+      "code": 6031,
+      "name": "routeSetNotFound",
+      "msg": "No stored route set carries the committed hash"
+    },
+    {
+      "code": 6032,
+      "name": "routeSetInUse",
+      "msg": "The route set is still referenced by the vault's policies"
+    },
+    {
+      "code": 6033,
+      "name": "nonCanonicalPolicyList",
+      "msg": "The vault's bridge policy list is not canonical"
+    },
+    {
+      "code": 6034,
+      "name": "bridgeRoutesPaused",
+      "msg": "The provider's routes are paused"
+    },
+    {
+      "code": 6035,
+      "name": "vaultSolBalanceDecreased",
+      "msg": "The vault SOL balance decreased during the bridge transfer"
     }
   ],
   "types": [
@@ -1538,11 +2102,11 @@ export type ExtBridge = {
             "type": "u64"
           },
           {
-            "name": "protocol",
-            "type": "u16"
+            "name": "destinationChain",
+            "type": "u64"
           },
           {
-            "name": "destinationChain",
+            "name": "protocol",
             "type": "u16"
           },
           {
@@ -1554,11 +2118,20 @@ export type ExtBridge = {
             "type": "u8"
           },
           {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                4
+              ]
+            }
+          },
+          {
             "name": "reserved",
             "type": {
               "array": [
                 "u8",
-                2
+                32
               ]
             }
           }
@@ -1600,8 +2173,130 @@ export type ExtBridge = {
                     "name": "bridgeManagedTransfer"
                   }
                 },
-                16
+                14
               ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "bridgeRoute",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sourceMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "destinationRecipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "providerProgram",
+            "type": "pubkey"
+          },
+          {
+            "name": "managementMode",
+            "type": {
+              "defined": {
+                "name": "routeManagementMode"
+              }
+            }
+          },
+          {
+            "name": "limits",
+            "type": {
+              "defined": {
+                "name": "routeLimits"
+              }
+            }
+          },
+          {
+            "name": "controls",
+            "type": {
+              "defined": {
+                "name": "providerControls"
+              }
+            }
+          },
+          {
+            "name": "destinationChains",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "routeChain"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "bridgeRouteIdentity",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sourceMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "destinationRecipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "providerProgram",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "bridgeRoutes",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "glamState",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocolBitflag",
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "generation",
+            "type": "u64"
+          },
+          {
+            "name": "tightened",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "tightenedSet"
+                }
+              }
+            }
+          },
+          {
+            "name": "sets",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "routeSet"
+                }
+              }
             }
           }
         ]
@@ -1617,10 +2312,6 @@ export type ExtBridge = {
             "type": "pubkey"
           },
           {
-            "name": "signer",
-            "type": "pubkey"
-          },
-          {
             "name": "transferId",
             "type": "pubkey"
           },
@@ -1629,12 +2320,12 @@ export type ExtBridge = {
             "type": "u16"
           },
           {
-            "name": "managed",
-            "type": "bool"
-          },
-          {
-            "name": "sourceMint",
-            "type": "pubkey"
+            "name": "terms",
+            "type": {
+              "defined": {
+                "name": "transferTerms"
+              }
+            }
           },
           {
             "name": "sourceDecimals",
@@ -1645,19 +2336,11 @@ export type ExtBridge = {
             "type": "pubkey"
           },
           {
-            "name": "providerProgram",
-            "type": "pubkey"
-          },
-          {
             "name": "providerConfig",
             "type": "pubkey"
           },
           {
             "name": "providerSender",
-            "type": "pubkey"
-          },
-          {
-            "name": "providerDelegate",
             "type": "pubkey"
           },
           {
@@ -1678,35 +2361,11 @@ export type ExtBridge = {
             "type": "u16"
           },
           {
-            "name": "sourceAmount",
-            "type": "u64"
-          },
-          {
-            "name": "quotedOutAmount",
-            "type": "u64"
-          },
-          {
             "name": "initialSourceBalance",
             "type": "u64"
           },
           {
             "name": "initialProviderSequence",
-            "type": "u64"
-          },
-          {
-            "name": "destinationChain",
-            "type": "u16"
-          },
-          {
-            "name": "destinationRecipient",
-            "type": "pubkey"
-          },
-          {
-            "name": "quoteExpiresAt",
-            "type": "i64"
-          },
-          {
-            "name": "preparedSlot",
             "type": "u64"
           },
           {
@@ -1726,40 +2385,6 @@ export type ExtBridge = {
             "type": {
               "defined": {
                 "name": "depositForBurnParams"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "cctpDestination",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "domain",
-            "type": "u32"
-          },
-          {
-            "name": "address",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "cctpPolicy",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "allowedDestinations",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "cctpDestination"
-                }
               }
             }
           }
@@ -2302,49 +2927,6 @@ export type ExtBridge = {
       }
     },
     {
-      "name": "layerzeroOftRoute",
-      "docs": [
-        "source_mint, destination_chain, destination_recipient, provider_program uniquely identify a route"
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "sourceMint",
-            "type": "pubkey"
-          },
-          {
-            "name": "destinationChain",
-            "type": "u32"
-          },
-          {
-            "name": "destinationRecipient",
-            "type": "pubkey"
-          },
-          {
-            "name": "providerProgram",
-            "type": "pubkey"
-          },
-          {
-            "name": "managementMode",
-            "type": {
-              "defined": {
-                "name": "routeManagementMode"
-              }
-            }
-          },
-          {
-            "name": "minAmount",
-            "type": "u64"
-          },
-          {
-            "name": "maxAmount",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "managedCctpDepositForBurnArgs",
       "type": {
         "kind": "struct",
@@ -2649,6 +3231,78 @@ export type ExtBridge = {
       }
     },
     {
+      "name": "providerControls",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "cctp",
+            "fields": [
+              {
+                "name": "destinationCaller",
+                "type": "pubkey"
+              },
+              {
+                "name": "minFinalityThreshold",
+                "type": "u32"
+              }
+            ]
+          },
+          {
+            "name": "layerzeroOft",
+            "fields": [
+              {
+                "name": "oftStore",
+                "type": "pubkey"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "routeChain",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "chain",
+            "type": "u64"
+          },
+          {
+            "name": "limits",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "routeLimits"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "routeLimits",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "minAmount",
+            "type": "u64"
+          },
+          {
+            "name": "maxAmount",
+            "type": "u64"
+          },
+          {
+            "name": "maxCostBps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
       "name": "routeManagementMode",
       "type": {
         "kind": "enum",
@@ -2661,6 +3315,41 @@ export type ExtBridge = {
           },
           {
             "name": "either"
+          }
+        ]
+      }
+    },
+    {
+      "name": "routeSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "generation",
+            "type": "u64"
+          },
+          {
+            "name": "hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "len",
+            "type": "u32"
+          },
+          {
+            "name": "routes",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "bridgeRoute"
+                }
+              }
+            }
           }
         ]
       }
@@ -2810,6 +3499,37 @@ export type ExtBridge = {
       }
     },
     {
+      "name": "tightenedSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "of",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "len",
+            "type": "u32"
+          },
+          {
+            "name": "routes",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "bridgeRoute"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "timeUnit",
       "type": {
         "kind": "enum",
@@ -2819,6 +3539,84 @@ export type ExtBridge = {
           },
           {
             "name": "slot"
+          }
+        ]
+      }
+    },
+    {
+      "name": "transferControls",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "cctp",
+            "fields": [
+              {
+                "name": "destinationCaller",
+                "type": "pubkey"
+              },
+              {
+                "name": "minFinalityThreshold",
+                "type": "u32"
+              }
+            ]
+          },
+          {
+            "name": "layerzeroOft",
+            "fields": [
+              {
+                "name": "oftStore",
+                "type": "pubkey"
+              },
+              {
+                "name": "composed",
+                "type": "bool"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "transferTerms",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sourceMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "sourceAmount",
+            "type": "u64"
+          },
+          {
+            "name": "quotedOutAmount",
+            "type": "u64"
+          },
+          {
+            "name": "destinationChain",
+            "type": "u64"
+          },
+          {
+            "name": "destinationRecipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "providerProgram",
+            "type": "pubkey"
+          },
+          {
+            "name": "managed",
+            "type": "bool"
+          },
+          {
+            "name": "controls",
+            "type": {
+              "defined": {
+                "name": "transferControls"
+              }
+            }
           }
         ]
       }
@@ -2851,6 +3649,11 @@ export type ExtBridge = {
     }
   ],
   "constants": [
+    {
+      "name": "protoBridgePermPause",
+      "type": "u64",
+      "value": "8"
+    },
     {
       "name": "protoBridgePermSend",
       "type": "u64",

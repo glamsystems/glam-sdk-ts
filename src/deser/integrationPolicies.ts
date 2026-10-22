@@ -12,6 +12,7 @@ import {
   array,
 } from "@coral-xyz/borsh";
 import { PublicKey } from "@solana/web3.js";
+import { createHash } from "crypto";
 
 export class MintPolicy {
   lockupPeriod: number;
@@ -890,49 +891,186 @@ export enum RouteManagementMode {
   Either = 2,
 }
 
-export type LayerzeroOftRoute = {
+/**
+ * The provider parameters an ext_bridge route binds; one variant per provider bit. For CCTP the
+ * default key as destination caller lets anyone deliver the transfer.
+ */
+export type ProviderControls =
+  | { cctp: { destinationCaller: PublicKey; minFinalityThreshold: number } }
+  | { layerzeroOft: { oftStore: PublicKey } };
+
+/**
+ * The amount range and the cost bound a chain's transfers fit. `maxCostBps` bounds
+ * (sourceAmount - quotedOutAmount) / sourceAmount.
+ */
+export type RouteLimits = {
+  minAmount: BN;
+  maxAmount: BN;
+  maxCostBps: number;
+};
+
+/**
+ * One destination chain of a route, by the provider's own id (a CCTP domain, a LayerZero
+ * endpoint id), with limits of its own that replace the route's for that chain. Without them
+ * (absent, or null as Anchor's coder decodes `None`) the route's limits apply.
+ */
+export type RouteChain = {
+  chain: BN;
+  limits?: RouteLimits | null;
+};
+
+/**
+ * One route of ext_bridge's route core: transfers of `sourceMint` to `destinationRecipient`
+ * through `providerProgram` on any of `destinationChains`, in `managementMode`, within the
+ * chain's own limits or else the route's, on the provider terms `controls` pins. A set holds
+ * one route per mint, recipient and provider.
+ */
+export type BridgeRoute = {
   sourceMint: PublicKey;
-  destinationChain: number;
   destinationRecipient: PublicKey;
   providerProgram: PublicKey;
   managementMode: RouteManagementMode;
-  minAmount: BN;
-  maxAmount: BN;
+  /** For every chain without limits of its own. */
+  limits: RouteLimits;
+  controls: ProviderControls;
+  destinationChains: RouteChain[];
 };
 
-const layerzeroOftRouteLayout = struct<LayerzeroOftRoute>([
-  publicKey("sourceMint"),
-  u32("destinationChain"),
-  publicKey("destinationRecipient"),
-  publicKey("providerProgram"),
-  u8("managementMode"),
-  u64("minAmount"),
-  u64("maxAmount"),
-]);
+export const MAX_ROUTES_PER_SET = 16;
+export const MAX_ROUTE_CHAINS = 8;
+/** The most a route may give up on a transfer, ten percent: the program refuses a higher bound. */
+export const MAX_COST_BPS = 1_000;
+const ROUTE_SET_HASH_DOMAIN = Buffer.from("glam:bridge-routes:v2");
 
-export class LayerzeroOftPolicy {
-  routes: LayerzeroOftRoute[];
+function u16le(value: number): Buffer {
+  const buf = Buffer.alloc(2);
+  buf.writeUInt16LE(value, 0);
+  return buf;
+}
 
-  static _layout = struct([vec(layerzeroOftRouteLayout, "routes")]);
+function u32le(value: number): Buffer {
+  const buf = Buffer.alloc(4);
+  buf.writeUInt32LE(value, 0);
+  return buf;
+}
 
-  constructor(routes: LayerzeroOftRoute[]) {
-    this.routes = routes;
+function u64le(value: BN): Buffer {
+  return value.toArrayLike(Buffer, "le", 8);
+}
+
+function encodeProviderControls(controls: ProviderControls): Buffer {
+  if ("cctp" in controls) {
+    return Buffer.concat([
+      Buffer.from([0]),
+      controls.cctp.destinationCaller.toBuffer(),
+      u32le(controls.cctp.minFinalityThreshold),
+    ]);
+  }
+  return Buffer.concat([
+    Buffer.from([1]),
+    controls.layerzeroOft.oftStore.toBuffer(),
+  ]);
+}
+
+function encodeRouteLimits(limits: RouteLimits): Buffer {
+  return Buffer.concat([
+    u64le(limits.minAmount),
+    u64le(limits.maxAmount),
+    u16le(limits.maxCostBps),
+  ]);
+}
+
+/** A chain's id, then its own limits as an `Option`: tag 0, or tag 1 and the 18 bytes. */
+function encodeRouteChain(entry: RouteChain): Buffer {
+  return Buffer.concat([
+    u64le(entry.chain),
+    entry.limits
+      ? Buffer.concat([Buffer.from([1]), encodeRouteLimits(entry.limits)])
+      : Buffer.from([0]),
+  ]);
+}
+
+/** Borsh bytes of one route, as the program serializes `BridgeRoute`. */
+export function encodeBridgeRoute(route: BridgeRoute): Buffer {
+  return Buffer.concat([
+    route.sourceMint.toBuffer(),
+    route.destinationRecipient.toBuffer(),
+    route.providerProgram.toBuffer(),
+    Buffer.from([route.managementMode]),
+    encodeRouteLimits(route.limits),
+    encodeProviderControls(route.controls),
+    u32le(route.destinationChains.length),
+    ...route.destinationChains.map(encodeRouteChain),
+  ]);
+}
+
+/** Borsh bytes of a route's identity (mint, recipient, provider), as `remove_bridge_route` takes it. */
+export function encodeBridgeRouteIdentity(
+  identity: Pick<
+    BridgeRoute,
+    "sourceMint" | "destinationRecipient" | "providerProgram"
+  >,
+): Buffer {
+  return Buffer.concat([
+    identity.sourceMint.toBuffer(),
+    identity.destinationRecipient.toBuffer(),
+    identity.providerProgram.toBuffer(),
+  ]);
+}
+
+/** Borsh bytes of a route set, as the program hashes `Vec<BridgeRoute>`. */
+export function encodeBridgeRoutes(routes: BridgeRoute[]): Buffer {
+  return Buffer.concat([
+    u32le(routes.length),
+    ...routes.map(encodeBridgeRoute),
+  ]);
+}
+
+/**
+ * The hash ext_bridge commits to the vault's state for a route set: sha256("glam:bridge-routes:v2"
+ * ++ glamState ++ protocol LE ++ generation LE ++ borsh(routes)). It covers the vault, the
+ * provider bit, the routes account's write count when the set was written, and the routes,
+ * never the account that holds them. The generation makes the same routes written twice two
+ * commitments.
+ */
+export function routeSetHash(
+  glamState: PublicKey,
+  protocol: number,
+  generation: BN | number,
+  routes: BridgeRoute[],
+): Buffer {
+  return createHash("sha256")
+    .update(ROUTE_SET_HASH_DOMAIN)
+    .update(glamState.toBuffer())
+    .update(u16le(protocol))
+    .update(u64le(new BN(generation)))
+    .update(encodeBridgeRoutes(routes))
+    .digest();
+}
+
+/** The vault state's policy for an ext_bridge provider bit: the hash of its live route set. */
+export class RouteSetCommitment {
+  constructor(readonly hash: Buffer) {
+    if (hash.length !== 32) {
+      throw new Error(`A route set commitment is 32 bytes, got ${hash.length}`);
+    }
   }
 
-  public static decode(
-    buffer: Buffer<ArrayBufferLike>,
-    _staging?: boolean,
-  ): LayerzeroOftPolicy {
-    const data = LayerzeroOftPolicy._layout.decode(
-      buffer,
-    ) as LayerzeroOftPolicy;
-    return new LayerzeroOftPolicy(data.routes);
+  public static decode(buffer: Buffer<ArrayBufferLike>): RouteSetCommitment {
+    if (buffer.length !== 32) {
+      throw new Error(
+        `A route set commitment is 32 bytes, got ${buffer.length}`,
+      );
+    }
+    return new RouteSetCommitment(Buffer.from(buffer));
   }
 
   public encode(): Buffer {
-    const buf = Buffer.alloc(4096);
-    const written = LayerzeroOftPolicy._layout.encode(this, buf);
-    return buf.subarray(0, written);
+    return Buffer.from(this.hash);
+  }
+
+  get hex(): string {
+    return this.hash.toString("hex");
   }
 }
 

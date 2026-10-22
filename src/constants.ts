@@ -68,7 +68,8 @@ export const SEED_OBSERVATION_STATE = "observation-state";
 export const SEED_WORMHOLE_OBSERVATION_CONFIG = "wormhole-observation-config";
 export const SEED_WORMHOLE_HYPERLIQUID_OBSERVATION_CONFIG =
   "wormhole-hl-observation-config";
-export const SEED_BRIDGE_REGISTRY = "bridge-registry";
+export const SEED_BRIDGE_REGISTRY = "bridge-registry-v2";
+export const SEED_BRIDGE_ROUTES = "bridge-routes";
 export const SEED_BRIDGE_SESSION = "bridge-session";
 export const SEED_BRIDGE_TRANSFER_RECORD = "bridge-transfer-record";
 
@@ -540,6 +541,7 @@ export const getProtocolsAndPermissions = (
         [1 << 0]: "Send",
         [1 << 1]: "Validate",
         [1 << 2]: "Settle",
+        [1 << 3]: "Pause",
       },
     },
     [protocolBitflagKey(LAYERZERO_OFT_PROTOCOL)]: {
@@ -549,6 +551,7 @@ export const getProtocolsAndPermissions = (
         [1 << 0]: "Send",
         [1 << 1]: "Validate",
         [1 << 2]: "Settle",
+        [1 << 3]: "Pause",
       },
     },
   },

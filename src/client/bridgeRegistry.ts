@@ -20,7 +20,8 @@ export type LayerzeroOftRouteProfile = {
   nonceAccount?: PublicKey;
   peerConfig: PublicKey;
   providerSender: PublicKey;
-  enforcedOptions: PublicKey;
+  /** The USDT0 program's credits ledger, at account index 3 of its send. */
+  credits: PublicKey;
   tokenEscrow: PublicKey;
   eventAuthority: PublicKey;
   lookupTables?: PublicKey[];
@@ -67,9 +68,7 @@ const MAINNET_USDT0_ARBITRUM_ROUTE_PROFILE: LayerzeroOftRouteProfile = {
   nonceAccount: new PublicKey("uZ8xA3LGpAJ5GHkTLqyvvrBVZa5XjCCRwc2qNvZJKci"),
   peerConfig: new PublicKey("5FEMXXjueR7y6Z1uVDxTm4ZZXFp6XnxR1Xu1WmvwjxBF"),
   providerSender: new PublicKey("HyXJcgYpURfDhgzuyRL7zxP4FhLg7LZQMeDrR4MXZcMN"),
-  enforcedOptions: new PublicKey(
-    "6trV82jqtcqrsMd5ZXKvR6QzLX6bHstBK4wZFx1qrffC",
-  ),
+  credits: new PublicKey("6trV82jqtcqrsMd5ZXKvR6QzLX6bHstBK4wZFx1qrffC"),
   tokenEscrow: new PublicKey("F1YkdxaiLA1eJt12y3uMAQef48Td3zdJfYhzjphma8hG"),
   eventAuthority: new PublicKey("B981t4zrZf3HCgtFFcw32D7Ukoa6saGMomeJcYNRwsQd"),
   lookupTables: [MAINNET_USDT0_OFT_LOOKUP_TABLE],

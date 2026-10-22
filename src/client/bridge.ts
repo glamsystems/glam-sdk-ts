@@ -1,7 +1,9 @@
 import { BN } from "@coral-xyz/anchor";
 import { createHash } from "crypto";
 import {
+  AccountInfo,
   AccountMeta,
+  ComputeBudgetProgram,
   Keypair,
   PublicKey,
   SYSVAR_INSTRUCTIONS_PUBKEY,
@@ -11,13 +13,8 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 
-import {
-  BaseClient,
-  BaseTxBuilder,
-  ProtocolPolicyClient,
-  ProtocolPolicyTxBuilder,
-  TxOptions,
-} from "./base";
+import { BaseClient, BaseTxBuilder, TxOptions } from "./base";
+import { hashMiddleInstructions } from "./bridgeInstructionHash";
 import {
   LayerzeroOftRouteProfile,
   SerializableRouteAccountMeta,
@@ -27,15 +24,20 @@ import { CctpClient } from "./cctp";
 import { fetchMintAndTokenProgram } from "../utils/accounts";
 import { mergeLookupTables } from "../utils/lookupTables";
 import {
-  CctpPolicy,
-  LayerzeroOftPolicy,
-  LayerzeroOftRoute,
+  BridgeRoute,
+  RouteChain,
+  RouteLimits,
   RouteManagementMode,
+  RouteSetCommitment,
+  encodeBridgeRoute,
+  encodeBridgeRouteIdentity,
+  routeSetHash,
 } from "../deser/integrationPolicies";
 import { getIntegrationAuthorityPda } from "../utils/glamPDAs";
 import {
   MESSAGE_TRANSMITTER_V2,
   SEED_BRIDGE_REGISTRY,
+  SEED_BRIDGE_ROUTES,
   SEED_BRIDGE_SESSION,
   TOKEN_MESSENGER_MINTER_V2,
   USDC,
@@ -52,11 +54,89 @@ type RouteManagementModeArg =
   | { managedOnly: Record<string, never> }
   | { either: Record<string, never> };
 
-export type LayerzeroOftRouteInput = Omit<
-  LayerzeroOftRoute,
-  "managementMode"
+/** A destination chain as callers describe it: the id may be a number, the limits left out. */
+export type RouteChainInput = {
+  chain: BN | number;
+  /** Limits of its own, which replace the route's for this chain. */
+  limits?: RouteLimits | null;
+};
+
+/**
+ * A route as callers describe it: the mode in any of its spellings, and each chain either as an
+ * id (a number or a BN), which takes the route's limits, or as a `RouteChainInput`.
+ */
+export type BridgeRouteInput = Omit<
+  BridgeRoute,
+  "managementMode" | "destinationChains"
 > & {
   managementMode: RouteManagementModeArg;
+  destinationChains: (BN | number | RouteChainInput)[];
+};
+
+/** The fields that identify a route within a set; a change to any other field is an update. */
+export type BridgeRouteIdentity = Pick<
+  BridgeRoute,
+  "sourceMint" | "destinationRecipient" | "providerProgram"
+>;
+
+/**
+ * The heap frame a route instruction's transaction requests: ext_bridge's setter and edits
+ * decode the stored sets beside the vault state, which a set at the caps does not fit into the
+ * default 32 KiB. The pause, unpause and close instructions decode the whole account too, so
+ * their transactions carry the frame as well. Sends decode only the set they use and run on the
+ * default heap.
+ */
+export const BRIDGE_ROUTES_HEAP_FRAME_BYTES = 256 * 1024;
+
+/**
+ * The heap frame every owner-side route instruction's transaction starts with. The compute
+ * unit limit is the base client's: it simulates the transaction and sets the limit from the
+ * units it used, with its margin (a tightening beside two sets at the caps measured 208k units
+ * on anchor_v1 and 238k on anchor). A limit instruction built here would be a second one in a
+ * version 0 transaction, which the runtime refuses as a duplicate.
+ */
+function heapFrameIx(): TransactionInstruction {
+  return ComputeBudgetProgram.requestHeapFrame({
+    bytes: BRIDGE_ROUTES_HEAP_FRAME_BYTES,
+  });
+}
+
+/** What a provider's routes account holds beside the state's commitment to one of its sets. */
+export type RouteSets = {
+  /**
+   * The routes a send may use: the tightened set while it tightens the committed set, else
+   * the committed set. Null when the state commits to no stored set.
+   */
+  live: BridgeRoute[] | null;
+  /**
+   * The set the state commits to, which the vault's timelock governs. An edit whose result
+   * tightens the live routes applies at once; any other edit is staged.
+   */
+  committed: BridgeRoute[] | null;
+  /**
+   * The set a timelocked change has staged, if the account holds it, or the tightened set when it
+   * was cut from that set.
+   */
+  pending: BridgeRoute[] | null;
+  liveHash: Buffer | null;
+  /** The staged set's hash, also when `pending` is the tightened set cut from it. */
+  pendingHash: Buffer | null;
+  /**
+   * The staged list holds no commitment for the provider while the live one does, so applying
+   * it stops every send.
+   */
+  pendingCleared: boolean;
+  /**
+   * The account's write count, null without an account. Every set written takes the next count
+   * into its hash, so the same routes written twice are two commitments.
+   */
+  generation: BN | null;
+  /** The count the committed set was written at, which its hash covers. */
+  committedGeneration: BN | null;
+  /** The staged set's count, which its hash covers, also when `pending` is the tightened set. */
+  pendingGeneration: BN | null;
+  /** True while the provider's sends are paused. */
+  paused: boolean;
 };
 
 export type OftTransferParams = {
@@ -115,18 +195,12 @@ type BridgeTransferRecordAccount = {
   providerConfig: PublicKey;
   sourceAmount: BN;
   quotedOutAmount: BN;
-  destinationChain: number;
+  destinationChain: BN;
   destinationRecipient: PublicKey;
   providerEmitter: PublicKey;
   providerSequence: BN;
   committedSlot: BN;
 };
-
-function appendU16Le(parts: Buffer[], value: number) {
-  const out = Buffer.alloc(2);
-  out.writeUInt16LE(value, 0);
-  parts.push(out);
-}
 
 function appendU32Le(parts: Buffer[], value: number) {
   const out = Buffer.alloc(4);
@@ -193,13 +267,27 @@ function encodeLayerzeroOftV2SendData(args: {
   return Buffer.concat(parts);
 }
 
-function resolveLayerzeroOftMinAmountLd(args: {
+/**
+ * The least amount an OFT send quotes the recipient: `minAmountLd` when given; else, under a
+ * route's cost bound, the amount less floor(amount * maxCostBps / 10_000), the lowest quote the
+ * program's check `(amount - quote) * 10_000 <= amount * maxCostBps` admits; else the profile's
+ * default share of the amount; else the amount.
+ */
+export function resolveLayerzeroOftMinAmountLd(args: {
   sourceAmount: BN;
   minAmountLd?: BN;
   routeProfile: LayerzeroOftRouteProfile;
-}) {
+  /** The cost bound the live route sets on the send's chain. */
+  maxCostBps?: number;
+}): BN {
   if (args.minAmountLd) {
     return args.minAmountLd;
+  }
+
+  if (args.maxCostBps !== undefined) {
+    return args.sourceAmount.sub(
+      args.sourceAmount.muln(args.maxCostBps).divn(10_000),
+    );
   }
 
   if (args.routeProfile.defaultMinAmountBps !== undefined) {
@@ -215,31 +303,25 @@ async function sha256(bytes: Buffer): Promise<Buffer> {
   return Buffer.from(await crypto.subtle.digest("SHA-256", bytes));
 }
 
-async function hashMiddleInstructions(
-  instructions: TransactionInstruction[],
-): Promise<Buffer> {
-  const parts: Buffer[] = [];
-  appendU16Le(parts, instructions.length);
-
-  for (const ix of instructions) {
-    parts.push(ix.programId.toBuffer());
-    appendU16Le(parts, ix.keys.length);
-    for (const key of ix.keys) {
-      parts.push(key.pubkey.toBuffer());
-    }
-    appendU32Le(parts, ix.data.length);
-    parts.push(Buffer.from(ix.data));
-  }
-
-  return await sha256(Buffer.concat(parts));
-}
-
 function getBridgeRegistryPda(
   glamState: PublicKey,
   bridgeProgramId: PublicKey,
 ): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from(SEED_BRIDGE_REGISTRY), glamState.toBuffer()],
+    bridgeProgramId,
+  )[0];
+}
+
+function getBridgeRoutesPda(
+  glamState: PublicKey,
+  protocol: number,
+  bridgeProgramId: PublicKey,
+): PublicKey {
+  const protocolLe = Buffer.alloc(2);
+  protocolLe.writeUInt16LE(protocol, 0);
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from(SEED_BRIDGE_ROUTES), glamState.toBuffer(), protocolLe],
     bridgeProgramId,
   )[0];
 }
@@ -308,36 +390,52 @@ function registryTransferToRecord(
   };
 }
 
-function toRouteManagementModeArg(managementMode: RouteManagementModeArg) {
-  if (
-    managementMode &&
-    typeof managementMode === "object" &&
-    ("unmanagedOnly" in managementMode ||
-      "managedOnly" in managementMode ||
-      "either" in managementMode)
-  ) {
-    return managementMode;
+function toRouteManagementMode(
+  managementMode: RouteManagementModeArg,
+): RouteManagementMode {
+  if (managementMode && typeof managementMode === "object") {
+    if ("unmanagedOnly" in managementMode)
+      return RouteManagementMode.UnmanagedOnly;
+    if ("managedOnly" in managementMode) return RouteManagementMode.ManagedOnly;
+    if ("either" in managementMode) return RouteManagementMode.Either;
   }
-
   switch (managementMode) {
     case RouteManagementMode.UnmanagedOnly:
-    case 0:
-      return { unmanagedOnly: {} };
     case RouteManagementMode.ManagedOnly:
-    case 1:
-      return { managedOnly: {} };
     case RouteManagementMode.Either:
-    case 2:
-      return { either: {} };
+      return managementMode;
     default:
       throw new Error(`Unsupported route management mode: ${managementMode}`);
   }
 }
 
-function normalizeRoute(route: LayerzeroOftRouteInput) {
+function toRouteChain(entry: BN | number | RouteChainInput): RouteChain {
+  if (BN.isBN(entry) || typeof entry === "number") {
+    return { chain: new BN(entry) };
+  }
+  return entry.limits
+    ? { chain: new BN(entry.chain), limits: entry.limits }
+    : { chain: new BN(entry.chain) };
+}
+
+export function normalizeBridgeRoute(route: BridgeRouteInput): BridgeRoute {
   return {
     ...route,
-    managementMode: toRouteManagementModeArg(route.managementMode),
+    managementMode: toRouteManagementMode(route.managementMode),
+    destinationChains: route.destinationChains.map(toRouteChain),
+  };
+}
+
+/** A route as the Anchor coder decodes it, back into the SDK's type. */
+function fromRouteAccount(route: any): BridgeRoute {
+  return {
+    sourceMint: route.sourceMint,
+    destinationRecipient: route.destinationRecipient,
+    providerProgram: route.providerProgram,
+    managementMode: toRouteManagementMode(route.managementMode),
+    limits: route.limits,
+    controls: route.controls,
+    destinationChains: route.destinationChains,
   };
 }
 
@@ -414,133 +512,225 @@ function resolveRouteAccountPubkey(
   throw new Error("Unsupported LayerZero OFT route account placeholder");
 }
 
-class TxBuilder
-  extends BaseTxBuilder<BridgeClient>
-  implements ProtocolPolicyTxBuilder<LayerzeroOftPolicy>
-{
-  async setPolicyIx(
-    policy: LayerzeroOftPolicy,
+class TxBuilder extends BaseTxBuilder<BridgeClient> {
+  /**
+   * One of the owner's route instructions over the shared account list. The argument is encoded
+   * by hand with the layout the program hashes: Anchor's instruction coder encodes into a
+   * 1000-byte buffer, and a set at the caps is larger.
+   */
+  private routeIx(
+    name: string,
+    protocol: number,
+    argument: Buffer,
+    signer?: PublicKey,
+  ): TransactionInstruction {
+    const program = this.client.base.extBridgeProgram;
+    const discriminator = program.idl.instructions.find(
+      (ix) => ix.name === name,
+    )?.discriminator;
+    if (!discriminator) {
+      throw new Error(`The ext_bridge IDL has no ${name} instruction`);
+    }
+    const protocolLe = Buffer.alloc(2);
+    protocolLe.writeUInt16LE(protocol, 0);
+    return new TransactionInstruction({
+      programId: program.programId,
+      keys: [
+        {
+          pubkey: this.client.base.statePda,
+          isSigner: false,
+          isWritable: true,
+        },
+        {
+          pubkey: signer || this.client.base.signer,
+          isSigner: true,
+          isWritable: true,
+        },
+        {
+          pubkey: this.client.getRoutesPda(protocol),
+          isSigner: false,
+          isWritable: true,
+        },
+        {
+          pubkey: this.client.base.protocolProgram.programId,
+          isSigner: false,
+          isWritable: false,
+        },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: Buffer.concat([Buffer.from(discriminator), protocolLe, argument]),
+    });
+  }
+
+  /** Creates the provider's routes account, empty; the route instructions grow it. */
+  async initRoutesIx(
+    protocol: number,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
-    return await this.client.base.protocolProgram.methods
-      .setProtocolPolicy(
-        this.client.base.extBridgeProgram.programId,
-        LAYERZERO_OFT_PROTOCOL,
-        policy.encode(),
-      )
-      .accounts({
+    return await this.client.base.extBridgeProgram.methods
+      .initBridgeRoutes(protocol)
+      .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
+        bridgeRoutes: this.client.getRoutesPda(protocol),
       })
       .instruction();
   }
 
-  async setPolicyTx(
-    policy: LayerzeroOftPolicy,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.setPolicyIx(policy, txOptions.signer);
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
-  async clearPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
-    return await this.clearProtocolPolicyIx(
-      this.client.base.extBridgeProgram.programId,
-      LAYERZERO_OFT_PROTOCOL,
+  async addRouteIx(
+    protocol: number,
+    route: BridgeRouteInput,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return this.routeIx(
+      "addBridgeRoute",
+      protocol,
+      encodeBridgeRoute(normalizeBridgeRoute(route)),
       signer,
     );
   }
 
-  async clearPolicyTx(
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    return await this.clearProtocolPolicyTx(
-      this.client.base.extBridgeProgram.programId,
-      LAYERZERO_OFT_PROTOCOL,
-      txOptions,
-    );
-  }
-
-  async setCctpPolicyIx(
-    policy: CctpPolicy,
+  async updateRouteIx(
+    protocol: number,
+    route: BridgeRouteInput,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
-    return await this.client.base.extBridgeProgram.methods
-      .setCctpPolicy(policy)
-      .accountsPartial({
-        glamState: this.client.base.statePda,
-        glamSigner: signer || this.client.base.signer,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
-      })
-      .instruction();
-  }
-
-  async setCctpPolicyTx(
-    policy: CctpPolicy,
-    txOptions: TxOptions = {},
-  ): Promise<VersionedTransaction> {
-    const ix = await this.setCctpPolicyIx(policy, txOptions.signer);
-    return await this.buildVersionedTx([ix], txOptions);
-  }
-
-  async clearCctpPolicyIx(signer?: PublicKey): Promise<TransactionInstruction> {
-    return await this.clearProtocolPolicyIx(
-      this.client.base.extBridgeProgram.programId,
-      CCTP_PROTOCOL,
+    return this.routeIx(
+      "updateBridgeRoute",
+      protocol,
+      encodeBridgeRoute(normalizeBridgeRoute(route)),
       signer,
     );
   }
 
-  async clearCctpPolicyTx(
+  async removeRouteIx(
+    protocol: number,
+    identity: BridgeRouteIdentity,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return this.routeIx(
+      "removeBridgeRoute",
+      protocol,
+      encodeBridgeRouteIdentity(identity),
+      signer,
+    );
+  }
+
+  /**
+   * A route instruction's transaction: the heap frame, `init_bridge_routes` when the
+   * provider's account does not exist yet, then the instruction.
+   */
+  async routeIxs(
+    protocol: number,
+    ix: TransactionInstruction,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction[]> {
+    const ixs = [heapFrameIx()];
+    if (!(await this.client.routesAccountInitialized(protocol))) {
+      ixs.push(await this.initRoutesIx(protocol, signer));
+    }
+    ixs.push(ix);
+    return ixs;
+  }
+
+  async addRouteTx(
+    protocol: number,
+    route: BridgeRouteInput,
     txOptions: TxOptions = {},
   ): Promise<VersionedTransaction> {
-    return await this.clearProtocolPolicyTx(
-      this.client.base.extBridgeProgram.programId,
-      CCTP_PROTOCOL,
+    const ix = await this.addRouteIx(protocol, route, txOptions.signer);
+    return await this.buildVersionedTx(
+      await this.routeIxs(protocol, ix, txOptions.signer),
       txOptions,
     );
   }
 
-  async addLayerzeroOftRouteIx(
-    route: LayerzeroOftRouteInput,
+  async updateRouteTx(
+    protocol: number,
+    route: BridgeRouteInput,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.updateRouteIx(protocol, route, txOptions.signer);
+    return await this.buildVersionedTx(
+      await this.routeIxs(protocol, ix, txOptions.signer),
+      txOptions,
+    );
+  }
+
+  async removeRouteTx(
+    protocol: number,
+    identity: BridgeRouteIdentity,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.removeRouteIx(protocol, identity, txOptions.signer);
+    return await this.buildVersionedTx(
+      await this.routeIxs(protocol, ix, txOptions.signer),
+      txOptions,
+    );
+  }
+
+  /** Stops the provider's sends at once: the owner, or a delegate holding the Pause permission. */
+  async pauseRoutesIx(
+    protocol: number,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
     return await this.client.base.extBridgeProgram.methods
-      .addLayerzeroOftRoute(normalizeRoute(route))
+      .pauseBridgeRoutes(protocol)
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        bridgeRoutes: this.client.getRoutesPda(protocol),
       })
       .instruction();
   }
 
-  async updateLayerzeroOftRouteIx(
-    route: LayerzeroOftRouteInput,
+  /** Resumes the provider's sends at once: the owner only. */
+  async unpauseRoutesIx(
+    protocol: number,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
     return await this.client.base.extBridgeProgram.methods
-      .updateLayerzeroOftRoute(normalizeRoute(route))
+      .unpauseBridgeRoutes(protocol)
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        bridgeRoutes: this.client.getRoutesPda(protocol),
       })
       .instruction();
   }
 
-  async deleteLayerzeroOftRouteIx(
-    route: LayerzeroOftRouteInput,
+  async closeRoutesIx(
+    protocol: number,
     signer?: PublicKey,
   ): Promise<TransactionInstruction> {
     return await this.client.base.extBridgeProgram.methods
-      .deleteLayerzeroOftRoute(normalizeRoute(route))
+      .closeBridgeRoutes(protocol)
       .accountsPartial({
         glamState: this.client.base.statePda,
         glamSigner: signer || this.client.base.signer,
-        glamProtocolProgram: this.client.base.protocolProgram.programId,
+        bridgeRoutes: this.client.getRoutesPda(protocol),
       })
       .instruction();
+  }
+
+  async closeRoutesTx(
+    protocol: number,
+    txOptions: TxOptions = {},
+  ): Promise<VersionedTransaction> {
+    const ix = await this.closeRoutesIx(protocol, txOptions.signer);
+    return await this.buildVersionedTx([heapFrameIx(), ix], txOptions);
+  }
+
+  /** Deletes the provider's commitment; its routes account can then be closed. */
+  async clearRoutesPolicyIx(
+    protocol: number,
+    signer?: PublicKey,
+  ): Promise<TransactionInstruction> {
+    return await this.clearProtocolPolicyIx(
+      this.client.base.extBridgeProgram.programId,
+      protocol,
+      signer,
+    );
   }
 
   async buildOftTransferTx(
@@ -626,6 +816,7 @@ class TxBuilder
         glamProtocolProgram: this.client.base.protocolProgram.programId,
         systemProgram: SystemProgram.programId,
         instructions: SYSVAR_INSTRUCTIONS_PUBKEY,
+        bridgeRoutes: this.client.getRoutesPda(LAYERZERO_OFT_PROTOCOL),
       });
     prepareMethod.remainingAccounts(prepareRemainingAccounts);
     const prepareIx = await prepareMethod.instruction();
@@ -667,13 +858,93 @@ class TxBuilder
   }
 }
 
-class LayerzeroOftBridgeProtocolClient {
-  public constructor(readonly bridge: BridgeClient) {}
+/** The route surface one provider bit shares: the live and pending sets, and edits over them. */
+class BridgeProtocolRoutes {
+  public constructor(
+    readonly bridge: BridgeClient,
+    readonly protocol: number,
+  ) {}
+
+  getRoutesPda(): PublicKey {
+    return this.bridge.getRoutesPda(this.protocol);
+  }
+
+  /** The state's commitment for this provider, or null when none is set. */
+  async fetchPolicy(): Promise<RouteSetCommitment | null> {
+    return await this.bridge.fetchRoutesCommitment(this.protocol);
+  }
+
+  async fetchRouteSets(): Promise<RouteSets> {
+    return await this.bridge.fetchRouteSets(this.protocol);
+  }
+
+  /** The routes a send uses today, or null when the state commits to no stored set. */
+  async fetchRoutes(): Promise<BridgeRoute[] | null> {
+    return (await this.fetchRouteSets()).live;
+  }
+
+  async closeRoutes(txOptions: TxOptions = {}) {
+    return await this.bridge.closeRoutes(this.protocol, txOptions);
+  }
+
+  async clearPolicy(txOptions: TxOptions = {}) {
+    return await this.bridge.clearRoutesPolicy(this.protocol, txOptions);
+  }
+
+  /**
+   * Adds a route. Under a timelock it is staged, a removed route put back included: the live
+   * routes admit nothing of its identity, so adding one always adds risk.
+   */
+  async addRoute(route: BridgeRouteInput, txOptions: TxOptions = {}) {
+    return await this.bridge.addRoute(this.protocol, route, txOptions);
+  }
+
+  /**
+   * Replaces the route with the same mint, recipient and provider. Under a timelock a change
+   * that tightens the live route applies to the live routes at once and replaces the route in a
+   * staged set when that set holds it. A change tightens when it adds no chain, widens no mode,
+   * keeps the caller or store, lowers no finality floor, and leaves on every chain a maximum and
+   * a cost bound no higher in the limits that apply there (the chain's own, else the route's);
+   * the minimum moves either way. Any other change is staged and waits the window, a raise back
+   * toward the committed terms included, as an edit of the staged set where one exists (if that
+   * set does not hold the route, the program refuses and `addRoute` is the instruction that
+   * puts it there). Touching a staged set restarts the vault's whole timelock window.
+   */
+  async updateRoute(route: BridgeRouteInput, txOptions: TxOptions = {}) {
+    return await this.bridge.updateRoute(this.protocol, route, txOptions);
+  }
+
+  /** Removes the route at once, and from a staged set if one holds it. */
+  async removeRoute(identity: BridgeRouteIdentity, txOptions: TxOptions = {}) {
+    return await this.bridge.removeRoute(this.protocol, identity, txOptions);
+  }
+
+  /** Stops this provider's sends at once: the owner, or a delegate holding the Pause permission. */
+  async pause(txOptions: TxOptions = {}) {
+    return await this.bridge.pauseRoutes(this.protocol, txOptions);
+  }
+
+  /** Resumes this provider's sends at once: the owner only. */
+  async unpause(txOptions: TxOptions = {}) {
+    return await this.bridge.unpauseRoutes(this.protocol, txOptions);
+  }
+}
+
+class LayerzeroOftBridgeProtocolClient extends BridgeProtocolRoutes {
+  public constructor(bridge: BridgeClient) {
+    super(bridge, LAYERZERO_OFT_PROTOCOL);
+  }
 
   async buildSendTx(params: LayerzeroOftSendParams, txOptions: TxOptions = {}) {
     return await this.bridge.buildLayerzeroOftSendTx(params, txOptions);
   }
 
+  /**
+   * Without `minAmountLd` the quote concedes exactly the cost bound the live route of the send's
+   * mint, recipient and program sets on its chain: the amount less
+   * floor(amount * maxCostBps / 10_000), the lowest quote the program admits. With no such live
+   * route on that chain it is the route profile's default, 99.5 % of the amount for USDT0.
+   */
   async send(
     params: LayerzeroOftSendParams,
     txOptions: TxOptions = {},
@@ -683,8 +954,10 @@ class LayerzeroOftBridgeProtocolClient {
   }
 }
 
-class CctpBridgeProtocolClient {
-  public constructor(readonly bridge: BridgeClient) {}
+class CctpBridgeProtocolClient extends BridgeProtocolRoutes {
+  public constructor(bridge: BridgeClient) {
+    super(bridge, CCTP_PROTOCOL);
+  }
 
   private cctpClient() {
     return new CctpClient(this.bridge.base);
@@ -700,18 +973,6 @@ class CctpBridgeProtocolClient {
   ): Promise<TransactionSignature> {
     const { tx, additionalSigners } = await this.buildSendTx(params, txOptions);
     return await this.bridge.base.sendAndConfirm(tx, additionalSigners);
-  }
-
-  async fetchPolicy() {
-    return await this.bridge.fetchCctpPolicy();
-  }
-
-  async setPolicy(policy: CctpPolicy, txOptions: TxOptions = {}) {
-    return await this.bridge.setCctpPolicy(policy, txOptions);
-  }
-
-  async clearPolicy(txOptions: TxOptions = {}) {
-    return await this.bridge.clearCctpPolicy(txOptions);
   }
 
   async receiveUsdc(
@@ -751,7 +1012,7 @@ class CctpBridgeProtocolClient {
   }
 }
 
-export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
+export class BridgeClient {
   readonly txBuilder: TxBuilder;
   readonly cctp: CctpBridgeProtocolClient;
   readonly oft: LayerzeroOftBridgeProtocolClient;
@@ -765,6 +1026,14 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
   getRegistryPda(): PublicKey {
     return getBridgeRegistryPda(
       this.base.statePda,
+      this.base.extBridgeProgram.programId,
+    );
+  }
+
+  getRoutesPda(protocol: number): PublicKey {
+    return getBridgeRoutesPda(
+      this.base.statePda,
+      protocol,
       this.base.extBridgeProgram.programId,
     );
   }
@@ -887,7 +1156,7 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
         isWritable: true,
       },
       {
-        pubkey: args.routeProfile.enforcedOptions,
+        pubkey: args.routeProfile.credits,
         isSigner: false,
         isWritable: true,
       },
@@ -916,6 +1185,34 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
     ] satisfies AccountMeta[];
   }
 
+  /**
+   * The cost bound the live OFT routes set for a send on `destinationChain`: the chain's own
+   * limits, else its route's. Undefined when no live route has the send's mint, recipient and
+   * program, or that route does not list the chain: a send the program refuses.
+   */
+  private async liveLayerzeroOftMaxCostBps(params: {
+    sourceMint: PublicKey;
+    destinationRecipient: PublicKey;
+    providerProgram: PublicKey;
+    destinationChain: number;
+  }): Promise<number | undefined> {
+    const { live } = await this.fetchRouteSets(LAYERZERO_OFT_PROTOCOL);
+    const route = live?.find(
+      (candidate) =>
+        candidate.sourceMint.equals(params.sourceMint) &&
+        candidate.destinationRecipient.equals(params.destinationRecipient) &&
+        candidate.providerProgram.equals(params.providerProgram),
+    );
+    const chain = new BN(params.destinationChain);
+    const entry = route?.destinationChains.find((candidate) =>
+      candidate.chain.eq(chain),
+    );
+    if (!route || !entry) {
+      return undefined;
+    }
+    return (entry.limits ?? route.limits).maxCostBps;
+  }
+
   private async buildLayerzeroOftSendInstruction(params: {
     sourceMint: PublicKey;
     sourceAmount: BN;
@@ -935,10 +1232,17 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
       destinationChain: params.destinationChain,
       providerProgram: params.providerProgram,
     });
-    const { tokenProgram } = await fetchMintAndTokenProgram(
-      this.base.connection,
-      params.sourceMint,
-    );
+    const [{ tokenProgram }, maxCostBps] = await Promise.all([
+      fetchMintAndTokenProgram(this.base.connection, params.sourceMint),
+      params.minAmountLd
+        ? undefined
+        : this.liveLayerzeroOftMaxCostBps({
+            sourceMint: params.sourceMint,
+            destinationRecipient: params.destinationRecipient,
+            providerProgram: routeProfile.providerProgram,
+            destinationChain: params.destinationChain,
+          }),
+    ]);
     const providerReceipt = this.resolveLayerzeroOftNonceAccount({
       routeProfile,
       destinationChain: params.destinationChain,
@@ -975,6 +1279,7 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
             sourceAmount: params.sourceAmount,
             minAmountLd: params.minAmountLd,
             routeProfile,
+            maxCostBps,
           }),
           options,
           composeMsg: params.composeMsg,
@@ -985,51 +1290,268 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
     };
   }
 
-  async fetchPolicy(): Promise<LayerzeroOftPolicy | null> {
-    return await this.base.fetchProtocolPolicy(
-      this.base.extBridgeProgram.programId,
-      LAYERZERO_OFT_PROTOCOL,
-      LayerzeroOftPolicy,
+  /** The state's live commitment for a provider bit, or null when it holds none. */
+  async fetchRoutesCommitment(
+    protocol: number,
+  ): Promise<RouteSetCommitment | null> {
+    // A policy of another length is one the program reads as no commitment: a blob an earlier
+    // release stored, or a raw write.
+    try {
+      return await this.base.fetchProtocolPolicy(
+        this.base.extBridgeProgram.programId,
+        protocol,
+        RouteSetCommitment,
+      );
+    } catch (error) {
+      if (error instanceof Error && /32 bytes/.test(error.message)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * The commitment a timelocked change has staged for a provider bit, if any. glam_protocol
+   * stages a copy of the whole integration list whenever any policy is staged, so a staged hash
+   * equal to the live one is that copy, not a proposal for this provider.
+   */
+  async fetchStagedRoutesCommitment(
+    protocol: number,
+  ): Promise<RouteSetCommitment | null> {
+    const [state, live] = await Promise.all([
+      this.base.fetchStateAccount(),
+      this.fetchRoutesCommitment(protocol),
+    ]);
+    const staged = state.params?.[2]?.find(
+      (field: any) => field.value?.vecIntegrationAcl !== undefined,
+    );
+    const acls: any[] | undefined = staged?.value?.vecIntegrationAcl?.val;
+    const acl = acls?.find((candidate: any) =>
+      candidate.integrationProgram.equals(this.base.extBridgeProgram.programId),
+    );
+    const policy = acl?.protocolPolicies?.find(
+      (candidate: any) => Number(candidate.protocolBitflag) === protocol,
+    );
+    if (!policy || policy.data.length !== 32) {
+      return null;
+    }
+    const commitment = RouteSetCommitment.decode(Buffer.from(policy.data));
+    return live !== null && commitment.hash.equals(live.hash)
+      ? null
+      : commitment;
+  }
+
+  /**
+   * Whether the integration list a timelocked change has staged holds no commitment for a
+   * provider bit: no ext_bridge entry, or no 32-byte policy for the bit in it. A cleared policy
+   * stages this way, as glam_protocol removes the bit's entry from its copy of the list.
+   */
+  async fetchStagedRoutesClear(protocol: number): Promise<boolean> {
+    const state = await this.base.fetchStateAccount();
+    const staged = state.params?.[2]?.find(
+      (field: any) => field.value?.vecIntegrationAcl !== undefined,
+    );
+    if (!staged) {
+      return false;
+    }
+    const acls: any[] = staged.value.vecIntegrationAcl?.val ?? [];
+    const acl = acls.find((candidate: any) =>
+      candidate.integrationProgram.equals(this.base.extBridgeProgram.programId),
+    );
+    const policy = acl?.protocolPolicies?.find(
+      (candidate: any) => Number(candidate.protocolBitflag) === protocol,
+    );
+    return !policy || policy.data.length !== 32;
+  }
+
+  /**
+   * The provider's routes account as the program wrote it, or null when nothing the program
+   * initialized is at its address: no account, or one somebody funded there. Anyone can send
+   * lamports to the derived address, which leaves a system-owned account with no data;
+   * `init_bridge_routes` initializes that account as it does an empty address, so a reader treats
+   * it as absent and a route edit still starts with the creation.
+   */
+  async fetchRoutesAccount(protocol: number) {
+    const info = await this.base.connection.getAccountInfo(
+      this.getRoutesPda(protocol),
+    );
+    if (!this.isInitializedRoutesAccount(info)) {
+      return null;
+    }
+    return this.base.extBridgeProgram.coder.accounts.decode(
+      "bridgeRoutes",
+      info.data,
     );
   }
 
-  async fetchLayerzeroOftPolicy(): Promise<LayerzeroOftPolicy | null> {
-    return await this.fetchPolicy();
-  }
-
-  async fetchCctpPolicy(): Promise<CctpPolicy | null> {
-    return await this.base.fetchProtocolPolicy(
-      this.base.extBridgeProgram.programId,
-      CCTP_PROTOCOL,
-      CctpPolicy,
+  /** Whether the program initialized the provider's routes account. */
+  async routesAccountInitialized(protocol: number): Promise<boolean> {
+    return this.isInitializedRoutesAccount(
+      await this.base.connection.getAccountInfo(this.getRoutesPda(protocol)),
     );
   }
 
-  async setCctpPolicy(
-    policy: CctpPolicy,
+  /** Owned by ext_bridge and starting with the `BridgeRoutes` discriminator. */
+  private isInitializedRoutesAccount(
+    info: AccountInfo<Buffer> | null,
+  ): info is AccountInfo<Buffer> {
+    if (!info || !info.owner.equals(this.base.extBridgeProgram.programId)) {
+      return false;
+    }
+    const discriminator = this.base.extBridgeProgram.idl.accounts?.find(
+      (account) => account.name === "bridgeRoutes",
+    )?.discriminator;
+    if (!discriminator) {
+      throw new Error("ext_bridge's IDL declares no BridgeRoutes account");
+    }
+    const prefix = Buffer.from(discriminator);
+    return (
+      info.data.length >= prefix.length &&
+      info.data.subarray(0, prefix.length).equals(prefix)
+    );
+  }
+
+  /**
+   * The provider's stored sets, resolved against the state: the committed set is the one the
+   * live commitment names, the pending set the one a staged commitment names, each rehashed
+   * with the generation it was written at and checked against its hash as the program does
+   * before trusting it. The live routes are the tightened set while it tightens the committed
+   * set, else the committed set. The pending routes are the tightened set when it was cut from
+   * the staged set, which is what the program edits a proposal from.
+   */
+  async fetchRouteSets(protocol: number): Promise<RouteSets> {
+    const [account, live, staged, cleared] = await Promise.all([
+      this.fetchRoutesAccount(protocol),
+      this.fetchRoutesCommitment(protocol),
+      this.fetchStagedRoutesCommitment(protocol),
+      this.fetchStagedRoutesClear(protocol),
+    ]);
+    const resolve = (commitment: RouteSetCommitment | null) => {
+      if (!account || !commitment) {
+        return null;
+      }
+      const set = account.sets.find((candidate: any) =>
+        Buffer.from(candidate.hash).equals(commitment.hash),
+      );
+      if (!set) {
+        return null;
+      }
+      const routes = set.routes.map(fromRouteAccount);
+      const hash = routeSetHash(
+        this.base.statePda,
+        protocol,
+        set.generation,
+        routes,
+      );
+      return hash.equals(commitment.hash)
+        ? { generation: set.generation, routes }
+        : null;
+    };
+    const committed = resolve(live);
+    const pending = resolve(staged);
+    const tightened: any = account?.tightened;
+    const cutFrom = (commitment: RouteSetCommitment | null) =>
+      commitment !== null &&
+      tightened &&
+      Buffer.from(tightened.of).equals(commitment.hash);
+    const tightens = committed !== null && cutFrom(live);
+    return {
+      live: tightens
+        ? tightened.routes.map(fromRouteAccount)
+        : (committed?.routes ?? null),
+      committed: committed?.routes ?? null,
+      pending:
+        pending !== null && cutFrom(staged)
+          ? tightened.routes.map(fromRouteAccount)
+          : (pending?.routes ?? null),
+      liveHash: live?.hash ?? null,
+      pendingHash: staged?.hash ?? null,
+      pendingCleared: live !== null && cleared,
+      generation: account?.generation ?? null,
+      committedGeneration: committed?.generation ?? null,
+      pendingGeneration: pending?.generation ?? null,
+      paused: Boolean(account?.paused),
+    };
+  }
+
+  async addRoute(
+    protocol: number,
+    route: BridgeRouteInput,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.setCctpPolicyTx(policy, txOptions);
+    const tx = await this.txBuilder.addRouteTx(protocol, route, txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 
-  async clearCctpPolicy(
+  async updateRoute(
+    protocol: number,
+    route: BridgeRouteInput,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.clearCctpPolicyTx(txOptions);
+    const tx = await this.txBuilder.updateRouteTx(protocol, route, txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 
-  async setPolicy(
-    policy: LayerzeroOftPolicy,
+  async removeRoute(
+    protocol: number,
+    identity: BridgeRouteIdentity,
     txOptions: TxOptions = {},
   ): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.setPolicyTx(policy, txOptions);
+    const tx = await this.txBuilder.removeRouteTx(
+      protocol,
+      identity,
+      txOptions,
+    );
     return await this.base.sendAndConfirm(tx);
   }
 
-  async clearPolicy(txOptions: TxOptions = {}): Promise<TransactionSignature> {
-    const tx = await this.txBuilder.clearPolicyTx(txOptions);
+  async pauseRoutes(
+    protocol: number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const ix = await this.txBuilder.pauseRoutesIx(protocol, txOptions.signer);
+    const tx = await this.txBuilder.buildVersionedTx(
+      [heapFrameIx(), ix],
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async unpauseRoutes(
+    protocol: number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const ix = await this.txBuilder.unpauseRoutesIx(protocol, txOptions.signer);
+    const tx = await this.txBuilder.buildVersionedTx(
+      [heapFrameIx(), ix],
+      txOptions,
+    );
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  /**
+   * Closes a provider's routes account once no policy references it. To tear a vault down
+   * without stranding rent: clear the policy (under a timelock the clear is itself staged:
+   * wait out the window and apply it) or emergency-remove the integration, make sure no staged
+   * change still names the set, close each routes account, then close the state.
+   */
+  async closeRoutes(
+    protocol: number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const tx = await this.txBuilder.closeRoutesTx(protocol, txOptions);
+    return await this.base.sendAndConfirm(tx);
+  }
+
+  async clearRoutesPolicy(
+    protocol: number,
+    txOptions: TxOptions = {},
+  ): Promise<TransactionSignature> {
+    const ix = await this.txBuilder.clearRoutesPolicyIx(
+      protocol,
+      txOptions.signer,
+    );
+    const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
     return await this.base.sendAndConfirm(tx);
   }
 
@@ -1057,51 +1579,6 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
     return transfer
       ? registryTransferToRecord(transfer, this.base.statePda)
       : null;
-  }
-
-  async addLayerzeroOftRoute(
-    route: LayerzeroOftRouteInput,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const glamSigner = txOptions.signer || this.base.signer;
-    const ixs: TransactionInstruction[] = [];
-
-    if (!(await this.fetchPolicy())) {
-      ixs.push(
-        await this.txBuilder.setPolicyIx(
-          new LayerzeroOftPolicy([]),
-          glamSigner,
-        ),
-      );
-    }
-
-    ixs.push(await this.txBuilder.addLayerzeroOftRouteIx(route, glamSigner));
-    const tx = await this.txBuilder.buildVersionedTx(ixs, txOptions);
-    return await this.base.sendAndConfirm(tx);
-  }
-
-  async updateLayerzeroOftRoute(
-    route: LayerzeroOftRouteInput,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ix = await this.txBuilder.updateLayerzeroOftRouteIx(
-      route,
-      txOptions.signer,
-    );
-    const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
-    return await this.base.sendAndConfirm(tx);
-  }
-
-  async deleteLayerzeroOftRoute(
-    route: LayerzeroOftRouteInput,
-    txOptions: TxOptions = {},
-  ): Promise<TransactionSignature> {
-    const ix = await this.txBuilder.deleteLayerzeroOftRouteIx(
-      route,
-      txOptions.signer,
-    );
-    const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);
-    return await this.base.sendAndConfirm(tx);
   }
 
   async buildOftTransferTx(
@@ -1211,8 +1688,10 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
           params: depositForBurnParams,
         });
 
+    // accountsPartial: the routes account and the protocol program are resolvable from the IDL
+    // (seeds, a fixed address) and so absent from the type `accounts` takes.
     const ix = await method
-      .accounts({
+      .accountsPartial({
         glamState: this.base.statePda,
         glamSigner: txOptions.signer || this.base.signer,
         ...(params.managed ? { bridgeRegistry } : {}),
@@ -1227,6 +1706,9 @@ export class BridgeClient implements ProtocolPolicyClient<LayerzeroOftPolicy> {
         burnTokenMint: usdcAddress,
         messageSentEventData: messageSentEventAccountKeypair.publicKey,
         eventAuthority: pdas.tokenMessengerEventAuthority,
+        bridgeRoutes: this.getRoutesPda(CCTP_PROTOCOL),
+        // Named, not resolved from the IDL's constant: the staging IDL carries the mainnet id.
+        glamProtocolProgram: this.base.protocolProgram.programId,
       })
       .instruction();
     const tx = await this.txBuilder.buildVersionedTx([ix], txOptions);

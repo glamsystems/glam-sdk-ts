@@ -1197,9 +1197,11 @@ describe("Kamino reserve refresh transaction sizes", () => {
     // transaction needs its lookup tables, before the refresh and after it.
     expect(row.before).toBeGreaterThan(TRANSACTION_SIZE_LIMIT);
     expect(row.after).toBeGreaterThan(TRANSACTION_SIZE_LIMIT);
-    // What is left: 140 bytes under the packet with the lookup table, and
-    // three account keys under version 1.
-    expect(row.afterWithAlt).toBe(TRANSACTION_SIZE_LIMIT - 140);
+    // What is left: 139 bytes under the packet with the lookup table (the
+    // bridge pricer reads the SOL/USD oracle the vault-token pricer already
+    // carries: one more index byte, no new key), and three account keys
+    // under version 1.
+    expect(row.afterWithAlt).toBe(TRANSACTION_SIZE_LIMIT - 139);
     expect(row.v1After.accounts).toBe(V1_MAX_ACCOUNT_KEYS - 3);
 
     remainingAccountsSpy.mockRestore();
