@@ -1,0 +1,113 @@
+# Template. The public sync (sync_to_public_repos.yml, sync-kit) installs it
+# on each npm mirror's main as .github/workflows/publish.yml, with
+# scripts/release/mirror/publish.mjs as .github/release/publish.mjs and the
+# record .github/release-companion.json (scripts/sdk-release/companion.mjs
+# install-kit). The owner creates the npm-next environment (an owner approval
+# required), holds the environment secret NPM_FIRST_VERSION_TOKEN there for
+# each package's first version, and creates the npm trusted publisher for
+# this workflow once the package exists.
+# The release train's advance stage tags the mirror's release commit and
+# attaches the signed train manifest, its Sigstore bundle and the tarballs to
+# the tag's prerelease; this workflow publishes those bytes and builds nothing.
+name: Publish
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+concurrency:
+  group: publish-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  CONTROLLER_IDENTITY: https://github.com/glamsystems/glam/.github/workflows/release_train.yml@refs/heads/main
+  CONTROLLER_ISSUER: https://token.actions.githubusercontent.com
+  COSIGN_VERSION: v3.1.4
+  # The sha256 of the v3.1.4 cosign-linux-amd64 release binary, from the
+  # release's cosign_checksums.txt, verified against its Sigstore bundle.
+  COSIGN_SHA256: 424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa
+  # npm trusted publishing needs npm 11.5.1 or later; the pin is confirmed.
+  NPM_VERSION: 11.6.2
+
+jobs:
+  verify:
+    if: github.repository_owner == 'glamsystems'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.0
+      - name: Install cosign at a pinned digest
+        run: |
+          test "$COSIGN_SHA256" != unset || { echo "COSIGN_SHA256 is not pinned"; exit 1; }
+          curl -fsSLo "$RUNNER_TEMP/cosign" "https://github.com/sigstore/cosign/releases/download/$COSIGN_VERSION/cosign-linux-amd64"
+          echo "$COSIGN_SHA256  $RUNNER_TEMP/cosign" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/cosign"
+      - name: Download the train assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --dir train
+      - name: Verify the manifest's signature and signer
+        run: >-
+          "$RUNNER_TEMP/cosign" verify-blob train/train-manifest.json
+          --bundle train/train-manifest.sigstore.json
+          --certificate-identity "$CONTROLLER_IDENTITY"
+          --certificate-oidc-issuer "$CONTROLLER_ISSUER"
+          --certificate-github-workflow-repository glamsystems/glam
+          --certificate-github-workflow-ref refs/heads/main
+          --certificate-github-workflow-trigger workflow_dispatch
+      - name: Check this mirror's entry and each tarball
+        run: >-
+          node .github/release/publish.mjs verify
+          --manifest train/train-manifest.json --tarballs train
+          --repository "$GITHUB_REPOSITORY" --repository-id "$GITHUB_REPOSITORY_ID" --sha "$GITHUB_SHA"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: train
+          path: train
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: verify
+    if: github.repository_owner == 'glamsystems'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: npm-next
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.0
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: train
+          path: train
+      - name: Pin npm
+        run: npm install --global "npm@$NPM_VERSION" && test "$(npm --version)" = "$NPM_VERSION"
+      - name: Check this mirror's entry and each tarball again
+        run: >-
+          node .github/release/publish.mjs verify
+          --manifest train/train-manifest.json --tarballs train
+          --repository "$GITHUB_REPOSITORY" --repository-id "$GITHUB_REPOSITORY_ID" --sha "$GITHUB_SHA"
+      - name: Publish in manifest order
+        env:
+          NPM_FIRST_VERSION_TOKEN: ${{ secrets.NPM_FIRST_VERSION_TOKEN }}
+        run: >-
+          node .github/release/publish.mjs publish
+          --manifest train/train-manifest.json --tarballs train
+          --repository "$GITHUB_REPOSITORY" --workflow .github/workflows/publish.yml
