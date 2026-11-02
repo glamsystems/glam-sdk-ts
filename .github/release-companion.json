@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "kind": "kit-mirror",
+  "files": [
+    ".github/release/publish.mjs",
+    ".github/workflows/publish.yml"
+  ]
+}
