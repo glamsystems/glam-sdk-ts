@@ -7,19 +7,33 @@
 //   publish — before the first write, read every member's package and
 //             version without a cache, fail the train when a version is
 //             present with another integrity, and decide each member's
-//             credential. A member whose package has no version on the
-//             registry has no trusted publisher yet and publishes its first
-//             version with the npm-next token NPM_FIRST_VERSION_TOKEN; every
-//             other member publishes through the trusted publisher alone.
-//             Then per member in manifest order: publish the exact tarball
-//             and wait for it when absent, write nothing when present with
-//             equal integrity; in both, download the published tarball,
+//             credential and tag. A member whose package has no version on
+//             the registry has no trusted publisher yet and stages its first
+//             version with the npm-next token NPM_FIRST_VERSION_TOKEN under
+//             the tag latest, and every other member stages through the
+//             trusted publisher alone under the train's channel. Then per member in
+//             manifest order: stage the exact tarball when absent, write
+//             nothing when present with equal integrity. A staged version
+//             stays invisible on the registry until the owner approves it on
+//             npmjs.com with two factor authentication, so this run neither
+//             waits for it nor checks it. It logs that the version awaits
+//             approval and lists the same line in the step summary, under
+//             a heading that asks for approval in manifest order. This script
+//             cannot see a staged version, so a second run while a member
+//             awaits approval stages that member again. A first version with
+//             a prerelease part is refused, because this release train does
+//             not point latest at a prerelease. For a member already
+//             present, download the published tarball,
 //             compare sha512 and check that its provenance names this
 //             repository and workflow and attests the release commit at
-//             refs/tags/v<version>, so a retry after a failed check repeats
-//             the check, whether the token is still set or not. A train that
-//             writes nothing while the token is set ends with a line that
-//             says to delete the secret.
+//             refs/tags/v<version>, so a run after the approval checks what
+//             was approved, whether the token is still set or not. The
+//             approval of a brand new package's first version also publishes
+//             a permanent untagged placeholder version 0.0.0-stage, and when
+//             that version was staged under the channel, latest would land on
+//             the placeholder, which is why a first version is staged under
+//             latest. A train that writes nothing while the token is set ends
+//             with a line that says to delete the secret.
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -245,15 +259,33 @@ export async function observe(
   };
 }
 
-/** Whether the registry has any version of a package, read without a cache. */
+/**
+ * The version npm publishes, untagged and permanent, when the owner approves
+ * the first staged version of a new package. Its packument entry carries
+ * `stub: true`.
+ */
+export const STAGE_PLACEHOLDER = "0.0.0-stage";
+
+/**
+ * Whether the registry has any version of a package, read without a cache.
+ * A packument whose every version is a placeholder holds no release, so no
+ * trusted publisher was created for it and the package counts as absent.
+ */
 export async function observePackage(name, { fetch = globalThis.fetch } = {}) {
   const response = await fetch(`${REGISTRY}/${name.replace("/", "%2f")}`, {
     cache: "no-store",
     headers: { accept: "application/json", "cache-control": "no-cache" },
   });
   if (response.status === 404) return "absent";
-  if (response.status === 200) return "present";
-  throw new Error(`${name}: the registry answered ${response.status}`);
+  if (response.status !== 200)
+    throw new Error(`${name}: the registry answered ${response.status}`);
+  const versions = Object.entries((await response.json())?.versions ?? {});
+  return versions.length &&
+    versions.every(
+      ([key, entry]) => key === STAGE_PLACEHOLDER || entry?.stub === true,
+    )
+    ? "absent"
+    : "present";
 }
 
 export const FIRST_VERSION_TOKEN = "NPM_FIRST_VERSION_TOKEN";
@@ -263,10 +295,10 @@ export const MODES = Object.freeze({
 });
 
 /**
- * The credential each member publishes with, by name. npm attaches a trusted
+ * The credential each member stages with, by name. npm attaches a trusted
  * publisher only to a package that exists, so a member whose package is
- * absent publishes its first version with the npm-next token; a member whose
- * package is present publishes through the trusted publisher, with or without
+ * absent stages its first version with the npm-next token, and a member
+ * whose package is present stages through the trusted publisher, with or without
  * the token. `pending` is the members that still need a publication, every
  * member when omitted. Refuses the train when a first version has no token,
  * and when the token is set, no member is a first version and a member is
@@ -285,6 +317,14 @@ export function publishModes(members, presence, token, pending = members) {
   const first = members
     .filter((member) => modes.get(member.name) === MODES.firstVersion)
     .map((member) => member.name);
+  for (const member of members)
+    if (
+      modes.get(member.name) === MODES.firstVersion &&
+      String(member.version).includes("-")
+    )
+      throw new Error(
+        `${member.name}@${member.version} is a first version with a prerelease part. A first version is approved under latest, and this release train does not point latest at a prerelease. Ship the first version of ${member.name} in a train with a stable version.`,
+      );
   if (first.length && !token)
     throw new Error(
       `${first.join(", ")} ${first.length === 1 ? "has" : "have"} no version on the registry, so no trusted publisher can exist; set ${FIRST_VERSION_TOKEN} in the npm-next environment for this first publish`,
@@ -294,30 +334,6 @@ export function publishModes(members, presence, token, pending = members) {
       `${FIRST_VERSION_TOKEN} is set but ${members.map((member) => member.name).join(", ")} already exist on the registry; delete the secret and publish through the trusted publisher`,
     );
   return modes;
-}
-
-/** Polls until the version is present with `integrity`; refuses another. */
-export async function awaitPropagation({
-  member,
-  read,
-  attempts = 30,
-  delayMs = 10_000,
-  sleep,
-}) {
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const observed = await read(member);
-    if (observed !== null) {
-      if (observed.integrity !== member.sha512)
-        throw new Error(
-          `${member.name}@${member.version}: the registry holds ${observed.integrity}, not ${member.sha512}`,
-        );
-      return observed;
-    }
-    if (attempt < attempts) await sleep(delayMs);
-  }
-  throw new Error(
-    `${member.name}@${member.version} did not appear after ${attempts} reads`,
-  );
 }
 
 /** The run the tag v<version> starts: its ref and the commit it attests. */
@@ -397,9 +413,12 @@ export async function publishTrain({
   publish,
   download,
   provenance,
-  sleep,
   env = process.env,
   log = () => {},
+  summarize = (line) => {
+    if (env.GITHUB_STEP_SUMMARY)
+      fs.appendFileSync(env.GITHUB_STEP_SUMMARY, `${escapeLine(line)}\n`);
+  },
 }) {
   const outcomes = [];
   const source = publishSource(manifest, repository);
@@ -435,19 +454,34 @@ export async function publishTrain({
     members.every(
       (member) => modes.get(member.name) === MODES.trustedPublisher,
     );
+  // The step summary lists the staged versions under one heading, in
+  // manifest order, which is the order the owner approves them in.
+  let headed = false;
+  const summarizeStaged = (line) => {
+    if (!headed) summarize("Staged versions, approve in this order:");
+    headed = true;
+    summarize(`- ${line}`);
+  };
   for (const member of members) {
     const mode = modes.get(member.name);
-    const decision = decisions.get(member.name);
-    let published = observed.get(member.name);
-    if (decision === "publish") {
+    if (decisions.get(member.name) === "publish") {
+      // A staged version is invisible until the owner approves it, so the
+      // run neither waits for it nor checks it.
+      const tag = mode === MODES.firstVersion ? "latest" : manifest.channel;
       publish(path.join(tarballs, tarballName(member)), {
+        tag,
         token: mode === MODES.firstVersion ? token : null,
       });
-      published = await awaitPropagation({ member, read, sleep });
+      const line = `${member.name}@${member.version}: staged under ${tag}, awaiting approval on npmjs.com, ${mode}`;
+      log(line);
+      summarizeStaged(line);
+      outcomes.push({ name: member.name, decision: "staged", mode });
+      continue;
     }
+    const decision = decisions.get(member.name);
     await verifyPublished({
       member,
-      published,
+      published: observed.get(member.name),
       repository,
       workflowPath,
       source,
@@ -465,24 +499,36 @@ export async function publishTrain({
 }
 
 /**
- * Runs `npm publish` on one tarball. NODE_AUTH_TOKEN is the npm-next token
- * for a first version and the empty string otherwise, so the `.npmrc` line
- * setup-node wrote never holds the literal `${NODE_AUTH_TOKEN}` and only the
- * OIDC-exchanged credential authenticates a trusted-publisher publish. The
- * token reaches npm's environment as NODE_AUTH_TOKEN alone: never under its
- * own name, never as an argument, never in a log line.
+ * Runs `npm stage publish` on one tarball under `tag`. For a first version
+ * NODE_AUTH_TOKEN is the npm-next token, which reaches npm's environment
+ * under that name alone: never under its own name, never as an argument,
+ * never in a log line. Without a token the environment stays as setup-node
+ * made it, so the OIDC exchange of the trusted publisher authenticates the
+ * staging. The secret's own name is removed from npm's environment in both.
  */
-export function npmPublish(file, { token = null, spawn = spawnSync } = {}) {
-  const env = { ...process.env, NODE_AUTH_TOKEN: token ?? "" };
+export function npmStage(file, { tag, token = null, spawn = spawnSync } = {}) {
+  if (typeof tag !== "string" || !tag)
+    throw new Error(`npm stage publish ${path.basename(file)} names no tag`);
+  const env = { ...process.env };
+  if (token) env.NODE_AUTH_TOKEN = token;
   delete env[FIRST_VERSION_TOKEN];
   const result = spawn(
     "npm",
-    ["publish", file, "--tag", "next", "--access", "public", "--provenance"],
+    [
+      "stage",
+      "publish",
+      file,
+      "--tag",
+      tag,
+      "--access",
+      "public",
+      "--provenance",
+    ],
     { stdio: "inherit", env },
   );
   if (result.status !== 0)
     throw new Error(
-      `npm publish ${path.basename(file)} exited ${result.status}`,
+      `npm stage publish ${path.basename(file)} exited ${result.status}`,
     );
 }
 
@@ -511,16 +557,15 @@ async function fetchProvenance(url) {
 // `##[`, the Actions runner's legacy command marker, as `\u005b`, so no line
 // this command prints begins with text a manifest, a tarball or the registry
 // supplies, or carries a workflow command from one.
-const printLine = (stream, text) =>
-  stream.write(
-    `${String(text)
-      .replace(
-        /[\u0000-\u001f\u007f\u2028\u2029]/gu,
-        (character) =>
-          `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
-      )
-      .replace(/##\[/g, "##\\u005b")}\n`,
-  );
+const escapeLine = (text) =>
+  String(text)
+    .replace(
+      /[\u0000-\u001f\u007f\u2028\u2029]/gu,
+      (character) =>
+        `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+    )
+    .replace(/##\[/g, "##\\u005b");
+const printLine = (stream, text) => stream.write(`${escapeLine(text)}\n`);
 
 if (
   process.argv[1] &&
@@ -559,10 +604,9 @@ if (
         workflowPath: values.workflow,
         read: (member) => observe(member),
         readPackage: (name) => observePackage(name),
-        publish: (file, options) => npmPublish(file, options),
+        publish: (file, options) => npmStage(file, options),
         download: fetchBytes,
         provenance: fetchProvenance,
-        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
         log: (line) => printLine(process.stdout, line),
       });
     } else
