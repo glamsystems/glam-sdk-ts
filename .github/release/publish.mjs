@@ -83,7 +83,7 @@ export function memberManifestOf(bytes) {
   const tar = gunzipSync(bytes);
   const members = [];
   let longName = null;
-  for (let offset = 0; offset + 512 <= tar.length; ) {
+  for (let offset = 0; offset + 512 <= tar.length;) {
     const block = tar.subarray(offset, offset + 512);
     if (block.every((byte) => byte === 0)) break;
     const size = octal(block, 124, 12);
